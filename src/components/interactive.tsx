@@ -13,7 +13,7 @@ export function Testimonials({ items }: { items: Testimonial[] }) {
   const n = items.length
   return (
     <figure className="testimonial cut-lg" style={{ margin: 0 }}>
-      <Mark size={52} right="var(--navy)" />
+      <Mark size={52} right="var(--ink)" />
       <blockquote style={{ marginTop: 24 }} aria-live="polite">
         <span className={t.quote.startsWith('[') ? 'placeholder-text' : undefined}>{t.quote}</span>
       </blockquote>

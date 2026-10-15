@@ -14,10 +14,11 @@ export function Mark({ size = 40, left = 'var(--accent-fill)', right = 'currentC
   )
 }
 
-export function Logo({ tone = 'light', height = 40 }: { tone?: 'light' | 'dark'; height?: number }) {
+export function Logo({ tone = 'light', height = 40, className }: { tone?: 'light' | 'dark'; height?: number; className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      className={className}
       src={tone === 'dark' ? '/brand/bi-horizontal-dark.svg' : '/brand/bi-horizontal-light.svg'}
       alt="Breaking Ice Productions"
       height={height}

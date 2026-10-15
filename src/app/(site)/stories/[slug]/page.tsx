@@ -144,7 +144,7 @@ export default async function ProjectPage({ params }: Props) {
       <section className="section ruled" aria-label="Quote">
         <div className="wrap">
           <figure className="pull" style={{ margin: 0 }}>
-            <Mark size={56} right="var(--navy)" />
+            <Mark size={56} right="var(--ink)" />
             <blockquote className={cs.pullQuote ? '' : 'placeholder-text'}>{cs.pullQuote?.quote ?? '[A true line from someone on camera, or from the client.]'}</blockquote>
             <figcaption className="stack" style={{ gap: 2 }}>
               <span className="eyebrow">{cs.pullQuote?.name ?? '[Name]'}</span>

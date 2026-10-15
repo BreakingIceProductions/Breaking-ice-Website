@@ -108,7 +108,7 @@ export default async function ServicePage({ params }: Props) {
         <section className="section ruled" aria-label="Testimonial">
           <div className="wrap">
             <figure className="pull" style={{ margin: 0 }}>
-              <Mark size={52} right="var(--navy)" />
+              <Mark size={52} right="var(--ink)" />
               <blockquote>{sv.testimonial.quote}</blockquote>
               <figcaption className="stack" style={{ gap: 2 }}>
                 <span className="eyebrow">{sv.testimonial.name}</span>

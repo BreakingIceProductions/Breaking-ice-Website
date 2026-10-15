@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import type { Settings } from '@/lib/types'
 import { Logo } from './brand'
+import { ThemeToggle } from './theme-toggle'
 
 type NavLoc = Settings['locations'][number]
 
@@ -38,7 +39,8 @@ export function Header({ locations, cta }: { locations: NavLoc[]; cta: string })
     <header className="site-header">
       <div className="wrap">
         <Link href="/" className="logo-link" aria-label="Breaking Ice Productions, home">
-          <Logo />
+          <Logo className="logo-for-light" />
+          <Logo tone="dark" className="logo-for-dark" />
         </Link>
         <nav className="main-nav" aria-label="Main">
           <Link href="/stories" aria-current={cur('/stories')}>Stories</Link>
@@ -54,10 +56,13 @@ export function Header({ locations, cta }: { locations: NavLoc[]; cta: string })
           </span>
           <Link href="/contact" aria-current={cur('/contact')}>Contact</Link>
         </nav>
-        <Link href="/contact" className="btn btn-primary header-cta">{cta}</Link>
-        <button ref={btnRef} type="button" className="menu-btn" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 8h16M4 16h16" /></svg>
-        </button>
+        <div className="header-tools">
+          <Link href="/contact" className="btn btn-primary header-cta">{cta}</Link>
+          <ThemeToggle />
+          <button ref={btnRef} type="button" className="menu-btn" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 8h16M4 16h16" /></svg>
+          </button>
+        </div>
       </div>
 
       {open && (
