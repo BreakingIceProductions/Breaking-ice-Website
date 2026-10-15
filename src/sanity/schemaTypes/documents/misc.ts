@@ -4,7 +4,7 @@ import { ImageIcon } from '@sanity/icons/Image'
 import { PinIcon } from '@sanity/icons/Pin'
 import { UserIcon } from '@sanity/icons/User'
 import { defineArrayMember, defineField, defineType } from 'sanity'
-import { GROUPS, seoField } from '../objects/shared'
+import { GROUPS, seoField, seoFieldTab } from '../objects/shared'
 
 export const testimonial = defineType({
   name: 'testimonial',
@@ -80,7 +80,7 @@ export const location = defineType({
       ],
     }),
     defineField({ name: 'mapImage', title: 'Map image', type: 'altImage', group: 'content' }),
-    seoField,
+    seoFieldTab,
   ],
 })
 

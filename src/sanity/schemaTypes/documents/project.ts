@@ -1,6 +1,6 @@
 import { PlayIcon } from '@sanity/icons/Play'
 import { defineArrayMember, defineField, defineType } from 'sanity'
-import { CATEGORIES, GROUPS, seoField } from '../objects/shared'
+import { CATEGORIES, GROUPS, seoFieldTab } from '../objects/shared'
 
 export const project = defineType({
   name: 'project',
@@ -86,7 +86,7 @@ export const project = defineType({
     }),
     defineField({ name: 'featuredOnHome', title: 'Featured on home', type: 'boolean', group: 'listing', initialValue: false }),
     defineField({ name: 'order', type: 'number', group: 'listing' }),
-    seoField,
+    seoFieldTab,
   ],
   orderings: [{ title: 'Order', name: 'order', by: [{ field: 'order', direction: 'asc' }] }],
   preview: {

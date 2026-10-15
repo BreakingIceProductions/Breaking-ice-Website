@@ -89,4 +89,7 @@ export const GROUPS = [
   { name: 'seo', title: 'SEO' },
 ]
 
-export const seoField = defineField({ name: 'seo', title: 'SEO', type: 'seo', group: 'seo' })
+/** SEO field for documents without tabs. */
+export const seoField = defineField({ name: 'seo', title: 'SEO', type: 'seo' })
+/** SEO field for documents with Content / Cards & listings / SEO tabs. */
+export const seoFieldTab = defineField({ name: 'seo', title: 'SEO', type: 'seo', group: 'seo' })

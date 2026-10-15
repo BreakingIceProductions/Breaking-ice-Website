@@ -2,7 +2,7 @@ import { CogIcon } from '@sanity/icons/Cog'
 import { DocumentIcon } from '@sanity/icons/Document'
 import { HomeIcon } from '@sanity/icons/Home'
 import { defineArrayMember, defineField, defineType } from 'sanity'
-import { seoField } from '../objects/shared'
+import { seoField, seoFieldTab } from '../objects/shared'
 
 const text = (name: string, title?: string) => defineField({ name, title, type: 'string' })
 const longText = (name: string, title?: string) => defineField({ name, title, type: 'text', rows: 3 })
@@ -110,7 +110,7 @@ export const homePage = defineType({
     defineField({ ...text('founderTitle', 'Founder title'), group: 'sections' }),
     defineField({ name: 'founder', type: 'reference', to: [{ type: 'person' }], group: 'sections' }),
     defineField({ ...text('locationsTitle', 'Locations title'), group: 'sections' }),
-    seoField,
+    seoFieldTab,
   ],
   preview: { prepare: () => ({ title: 'Home page' }) },
 })

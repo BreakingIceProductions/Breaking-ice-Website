@@ -1,6 +1,6 @@
 import { TagIcon } from '@sanity/icons/Tag'
 import { defineArrayMember, defineField, defineType } from 'sanity'
-import { GROUPS, seoField } from '../objects/shared'
+import { GROUPS, seoFieldTab } from '../objects/shared'
 
 export const service = defineType({
   name: 'service',
@@ -67,7 +67,7 @@ export const service = defineType({
       type: 'string',
       group: 'seo',
     }),
-    seoField,
+    seoFieldTab,
   ],
   orderings: [{ title: 'Order', name: 'order', by: [{ field: 'order', direction: 'asc' }] }],
 })

@@ -1,6 +1,6 @@
 import { DocumentTextIcon } from '@sanity/icons/DocumentText'
 import { defineArrayMember, defineField, defineType } from 'sanity'
-import { GROUPS, seoField } from '../objects/shared'
+import { GROUPS, seoFieldTab } from '../objects/shared'
 
 export const caseStudy = defineType({
   name: 'caseStudy',
@@ -50,7 +50,7 @@ export const caseStudy = defineType({
       group: 'content',
       initialValue: false,
     }),
-    seoField,
+    seoFieldTab,
   ],
   preview: { select: { title: 'internalTitle' } },
 })
