@@ -19,7 +19,7 @@ export const siteSettings = defineType({
     { name: 'seo', title: 'SEO defaults' },
   ],
   fields: [
-    defineField({ name: 'tagline', type: 'string', group: 'brand', initialValue: 'We stay until it’s true.' }),
+    defineField({ name: 'tagline', type: 'string', group: 'brand', initialValue: 'Past the surface.' }),
     defineField({ name: 'footerDescription', title: 'Footer description', type: 'text', rows: 2, group: 'brand' }),
     defineField({ name: 'email', type: 'string', group: 'brand' }),
     defineField({ name: 'phone', type: 'string', group: 'brand' }),

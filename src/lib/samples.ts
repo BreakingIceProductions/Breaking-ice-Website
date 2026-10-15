@@ -89,7 +89,7 @@ export const SAMPLE_TESTIMONIALS: Testimonial[] = [1, 2, 3].map((n) => ({
 }))
 
 export const DEFAULT_SETTINGS: Settings = {
-  tagline: 'We stay until it’s true.',
+  tagline: 'Past the surface.',
   footerDescription: 'Video production for the human stories inside organizations. Alberta and the Northwest Territories.',
   email: '[email]',
   phone: '[phone]',

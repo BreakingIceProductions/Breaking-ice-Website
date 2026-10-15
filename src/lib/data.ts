@@ -64,7 +64,7 @@ export async function getHome() {
     fullReel: page.fullReel as string | undefined,
     heroEyebrow: pick(page.heroEyebrow, 'Video production · Alberta & the Northwest Territories'),
     heroHeadline: pick(page.heroHeadline, 'We tell the human stories inside organizations.'),
-    heroSubline: pick(page.heroSubline, 'Films for companies, communities, crews and nonprofits. We stay until it’s true.'),
+    heroSubline: pick(page.heroSubline, 'Films for companies, communities, crews and nonprofits. We take the time to earn trust, so the real story comes out.'),
     introEyebrow: pick(page.introEyebrow, 'Who we are'),
     introBody: pick(
       page.introBody,
