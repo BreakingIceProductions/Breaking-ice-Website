@@ -1,0 +1,96 @@
+import { PlayIcon } from '@sanity/icons/Play'
+import { defineArrayMember, defineField, defineType } from 'sanity'
+import { CATEGORIES, GROUPS, seoField } from '../objects/shared'
+
+export const project = defineType({
+  name: 'project',
+  title: 'Project',
+  type: 'document',
+  icon: PlayIcon,
+  groups: GROUPS,
+  fields: [
+    defineField({ name: 'title', type: 'string', group: ['content', 'listing'], validation: (r) => r.required() }),
+    defineField({
+      name: 'slug',
+      type: 'slug',
+      group: 'content',
+      options: { source: 'title', maxLength: 80 },
+      validation: (r) => r.required(),
+    }),
+    defineField({
+      name: 'storyType',
+      title: 'Story type',
+      type: 'string',
+      group: ['content', 'listing'],
+      initialValue: 'film',
+      options: { list: [{ title: 'Film', value: 'film' }, { title: 'Photo story', value: 'photo' }], layout: 'radio' },
+    }),
+    defineField({ name: 'client', type: 'string', group: ['content', 'listing'] }),
+    defineField({ name: 'location', title: 'Place (shown on the card)', type: 'string', group: ['content', 'listing'] }),
+    defineField({
+      name: 'region',
+      title: 'Region page',
+      description: 'Which location page this story appears on',
+      type: 'reference',
+      to: [{ type: 'location' }],
+      group: 'content',
+    }),
+    defineField({
+      name: 'category',
+      type: 'string',
+      group: ['content', 'listing'],
+      options: { list: CATEGORIES },
+    }),
+    defineField({
+      name: 'services',
+      type: 'array',
+      group: 'content',
+      of: [defineArrayMember({ type: 'reference', to: [{ type: 'service' }] })],
+    }),
+    defineField({ name: 'year', type: 'number', group: 'content' }),
+    defineField({
+      name: 'cardVideo',
+      title: 'Card video (silent preview loop)',
+      type: 'videoUrl',
+      group: 'listing',
+      hidden: ({ parent }) => parent?.storyType === 'photo',
+    }),
+    defineField({ name: 'thumbnail', title: 'Thumbnail / poster', type: 'altImage', group: 'listing' }),
+    defineField({
+      name: 'heroVideo',
+      title: 'Hero video (the film)',
+      type: 'videoUrl',
+      group: 'content',
+      hidden: ({ parent }) => parent?.storyType === 'photo',
+    }),
+    defineField({
+      name: 'heroImage',
+      title: 'Hero image (photo stories)',
+      type: 'altImage',
+      group: 'content',
+      hidden: ({ parent }) => parent?.storyType !== 'photo',
+    }),
+    defineField({
+      name: 'transcript',
+      type: 'portableText',
+      group: 'content',
+      hidden: ({ parent }) => parent?.storyType === 'photo',
+    }),
+    defineField({ name: 'captionsFile', title: 'Captions file (.vtt)', type: 'file', group: 'content' }),
+    defineField({
+      name: 'caseStudy',
+      title: 'Case study',
+      type: 'reference',
+      to: [{ type: 'caseStudy' }],
+      group: 'content',
+    }),
+    defineField({ name: 'featuredOnHome', title: 'Featured on home', type: 'boolean', group: 'listing', initialValue: false }),
+    defineField({ name: 'order', type: 'number', group: 'listing' }),
+    seoField,
+  ],
+  orderings: [{ title: 'Order', name: 'order', by: [{ field: 'order', direction: 'asc' }] }],
+  preview: {
+    select: { title: 'title', client: 'client', media: 'thumbnail' },
+    prepare: ({ title, client, media }) => ({ title, subtitle: client, media }),
+  },
+})
