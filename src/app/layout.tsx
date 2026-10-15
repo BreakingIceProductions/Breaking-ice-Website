@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Archivo, Newsreader } from 'next/font/google'
+import { SITE_URL } from '@/lib/site'
 import './globals.css'
 
 // Only the Latin subset is preloaded (covers é, á, ú, as in Sahtú). Fewer bytes before the headline paints.
@@ -21,7 +22,7 @@ const newsreader = Newsreader({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://breakingiceproductions.com'),
+  metadataBase: new URL(SITE_URL),
   title: { default: 'Breaking Ice Productions', template: '%s · Breaking Ice Productions' },
   description: 'Video production for the human stories inside organizations. Alberta and the Northwest Territories.',
   // Pre-launch: keep everything out of search engines.
