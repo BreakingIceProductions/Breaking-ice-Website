@@ -2,19 +2,22 @@ import type { Metadata, Viewport } from 'next'
 import { Archivo, Newsreader } from 'next/font/google'
 import './globals.css'
 
+// Only the Latin subset is preloaded (covers é, á, ú, as in Sahtú). Fewer bytes before the headline paints.
 const archivo = Archivo({
-  subsets: ['latin', 'latin-ext'],
+  subsets: ['latin'],
   axes: ['wdth'],
   variable: '--font-archivo',
   display: 'swap',
 })
 
 const newsreader = Newsreader({
-  subsets: ['latin', 'latin-ext'],
+  subsets: ['latin'],
   style: 'italic',
-  axes: ['opsz'],
+  weight: '400', // one static weight: much smaller than the variable font
   variable: '--font-newsreader',
   display: 'swap',
+  // Accent face only: don't let it compete with the page for bandwidth.
+  preload: false,
 })
 
 export const metadata: Metadata = {

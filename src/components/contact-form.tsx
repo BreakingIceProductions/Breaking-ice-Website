@@ -1,8 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Opt = { value: string; label: string }
 
@@ -29,7 +28,12 @@ export function ContactForm({
   bookingLink?: string
   email: string
 }) {
-  const params = useSearchParams()
+  // Prefill from ?type= after load, so the form itself is in the server HTML.
+  const [type, setType] = useState('')
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('type')
+    if (t) setType(t)
+  }, [])
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'invalid'>('idle')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [name, setName] = useState('')
@@ -113,7 +117,7 @@ export function ContactForm({
         </div>
         <div className="field full">
           <label htmlFor="c-type">What do you need?</label>
-          <select className="input" id="c-type" name="type" defaultValue={params.get('type') ?? ''}>
+          <select className="input" id="c-type" name="type" value={type} onChange={(e) => setType(e.target.value)}>
             <option value="">Select one</option>
             {services.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             <option value="something-else">Something else</option>

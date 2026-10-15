@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { Eyebrow } from '@/components/brand'
 import { ContactForm } from '@/components/contact-form'
 import { getContact, getServices, getSettings, pick } from '@/lib/data'
@@ -30,8 +29,7 @@ export default async function ContactPage() {
       </section>
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap contact-grid">
-          <Suspense>
-            <ContactForm
+                      <ContactForm
               services={services.map((sv) => ({ value: sv.slug, label: sv.title }))}
               budget={pick(c.budgetOptions, ['[Range 1]', '[Range 2]', '[Range 3]', 'Not sure yet'])}
               timeline={pick(c.timelineOptions, ['[Option 1]', '[Option 2]', '[Option 3]', 'Flexible'])}
@@ -43,8 +41,7 @@ export default async function ContactPage() {
               bookingLink={s.bookingLink}
               email={s.email}
             />
-          </Suspense>
-          <aside className="stack" style={{ gap: 24 }}>
+                    <aside className="stack" style={{ gap: 24 }}>
             <div id="book" className="book-card dark cut-lg">
               <span className="eyebrow">Rather talk first?</span>
               <span className="h3">Book a 20-minute call</span>

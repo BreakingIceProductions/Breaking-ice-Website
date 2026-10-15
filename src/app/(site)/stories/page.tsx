@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { Eyebrow } from '@/components/brand'
 import { ClosingBand } from '@/components/sections'
 import { StoriesGrid } from '@/components/stories-grid'
@@ -25,10 +24,8 @@ export default async function StoriesPage() {
       </section>
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
-          <Suspense>
-            <StoriesGrid projects={projects} />
-          </Suspense>
-        </div>
+                      <StoriesGrid projects={projects} />
+                  </div>
       </section>
       <ClosingBand s={s} secondary={false} />
     </>

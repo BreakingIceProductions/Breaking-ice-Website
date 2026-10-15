@@ -74,7 +74,7 @@ export function useCategoryFilter(projects: ProjectCard[], initial: string | nul
     window.history.replaceState(null, '', url)
   }
   const list = cat ? projects.filter((p) => p.category === cat) : projects
-  return { cat, select, list }
+  return { cat, select, list, setCat }
 }
 
 export function CategoryChips({ cat, select, count }: { cat: string | null; select: (c: string | null) => void; count: number }) {
