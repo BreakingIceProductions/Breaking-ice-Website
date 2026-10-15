@@ -388,3 +388,6 @@ textarea.input { min-height: 160px; resize: vertical; }
 
 /* Preview ribbon (pre-launch) */
 .preview-ribbon { background: var(--copper); color: var(--navy); font-size: 13px; font-weight: 600; text-align: center; padding: 6px 12px; letter-spacing: .02em; }
+
+/* Contact form spam trap */
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }

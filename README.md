@@ -18,6 +18,19 @@ npm run dev     # http://localhost:3000, Studio at /studio
 
 See `.env.example`. `SITE_PASSWORD` turns on the pre-launch password lock.
 
+## Contact form
+
+`src/app/api/contact/route.ts` sends each enquiry to whichever destinations are configured
+(email via Resend, Slack, Google Sheet; see `.env.example`). With none configured the form says
+it isn't switched on and offers a pre-filled email instead. Spam: hidden honeypot field,
+a 3-second minimum, and a light per-IP rate limit.
+
+## Analytics
+
+Vercel Web Analytics (page views) plus custom events: `Contact form sent`, `Contact form failed`,
+`Booking link click`, `Email click`, `Phone click`, `Video play`. Enable Web Analytics on the
+project in Vercel to start recording; custom events need Vercel Pro.
+
 ## Pre-launch switches to flip on launch day
 
 1. Remove `SITE_PASSWORD` in Vercel.

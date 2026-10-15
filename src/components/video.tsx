@@ -1,5 +1,7 @@
 'use client'
 
+import { track } from '@vercel/analytics'
+
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -61,7 +63,7 @@ export function VideoLoop({
 }
 
 /** A full player with sound, opened in a lightbox. Esc closes. */
-export function PlayerButton({ url, children, className = 'reel-link' }: { url?: string; children: React.ReactNode; className?: string }) {
+export function PlayerButton({ url, children, className = 'reel-link', trackAs = 'Video' }: { url?: string; children: React.ReactNode; className?: string; trackAs?: string }) {
   const [open, setOpen] = useState(false)
   const src = embedUrl(url, 'play')
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -80,7 +82,7 @@ export function PlayerButton({ url, children, className = 'reel-link' }: { url?:
 
   return (
     <>
-      <button type="button" className={className} onClick={() => setOpen(true)}>
+      <button type="button" className={className} onClick={() => { setOpen(true); track('Video play', { video: trackAs, page: window.location.pathname }) }}>
         {children}
       </button>
       {open &&

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { track } from '@vercel/analytics'
 import { useEffect, useRef, useState } from 'react'
 
 type Opt = { value: string; label: string }
@@ -34,13 +35,19 @@ export function ContactForm({
     const t = new URLSearchParams(window.location.search).get('type')
     if (t) setType(t)
   }, [])
-  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'invalid'>('idle')
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'invalid' | 'failed'>('idle')
+  const [mailto, setMailto] = useState('')
+  const [failNote, setFailNote] = useState('')
+  const startedAt = useRef(0)
+  useEffect(() => {
+    startedAt.current = Date.now()
+  }, [])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [name, setName] = useState('')
   const alertRef = useRef<HTMLDivElement>(null)
   const doneRef = useRef<HTMLDivElement>(null)
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
     const errs: Record<string, string> = {}
@@ -54,13 +61,43 @@ export function ContactForm({
       setTimeout(() => alertRef.current?.focus(), 0)
       return
     }
-    setName(String(f.get('name')).split(' ')[0])
+    const first = String(f.get('name')).trim().split(' ')[0]
+    setName(first)
     setState('sending')
-    // Preview build: nothing is sent yet. Slack, Google Sheet and inbox are wired in the next round.
-    setTimeout(() => {
-      setState('sent')
-      setTimeout(() => doneRef.current?.focus(), 0)
-    }, 600)
+    const typeLabel = services.find((x) => x.value === type)?.label
+      || ({ 'something-else': 'Something else', 'not-sure': 'Not sure yet' } as Record<string, string>)[type]
+      || ''
+    const payload = {
+      name: f.get('name'), email: f.get('email'), organization: f.get('organization'),
+      type: typeLabel, story: f.get('story'), budget: f.get('budget'), timeline: f.get('timeline'),
+      heard: f.get('heard'), website: f.get('website'), startedAt: startedAt.current,
+      page: window.location.pathname + window.location.search,
+    }
+    // If sending fails, the visitor can still email with everything they typed.
+    const bodyText = `${payload.story}\n\n${payload.name}${payload.organization ? `, ${payload.organization}` : ''}`
+    setMailto(`mailto:${email}?subject=${encodeURIComponent(`Enquiry${typeLabel ? `: ${typeLabel}` : ''}`)}&body=${encodeURIComponent(String(bodyText))}`)
+    try {
+      const res = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (res.ok) {
+        track('Contact form sent', { type: typeLabel || 'unspecified', heard: String(payload.heard || 'unspecified') })
+        setState('sent')
+        setTimeout(() => doneRef.current?.focus(), 0)
+        return
+      }
+      const data = await res.json().catch(() => ({}))
+      setFailNote(
+        data.error === 'not-configured'
+          ? 'This form isn’t switched on yet, so your message wasn’t sent.'
+          : data.error === 'too-many'
+            ? 'That’s a lot of messages in a short time, so we paused this one.'
+            : 'Something went wrong on our end and your message didn’t send.',
+      )
+    } catch {
+      setFailNote('We couldn’t reach the server, so your message didn’t send.')
+    }
+    track('Contact form failed')
+    setState('failed')
+    setTimeout(() => alertRef.current?.focus(), 0)
   }
 
   if (state === 'sent') {
@@ -82,7 +119,6 @@ export function ContactForm({
           <Link className="btn btn-secondary" href="/stories">See the stories</Link>
           <Link className="link-arrow" href="/">Back to home <span aria-hidden="true">→</span></Link>
         </div>
-        <p className="caption" style={{ margin: 0 }}>Preview: nothing was actually sent. The form is connected in the next build round.</p>
       </div>
     )
   }
@@ -100,6 +136,17 @@ export function ContactForm({
           </ul>
         </div>
       )}
+      {state === 'failed' && (
+        <div ref={alertRef} tabIndex={-1} role="alert" className="alert">
+          <strong>{failNote}</strong>
+          <span>Nothing you typed is lost. <a href={mailto}>Email it to {email} instead</a> (it opens with your message filled in), or try Send again.</span>
+        </div>
+      )}
+      {/* Spam trap: hidden from people and screen readers. */}
+      <div className="hp" aria-hidden="true">
+        <label htmlFor="c-website">Website</label>
+        <input id="c-website" name="website" tabIndex={-1} autoComplete="off" />
+      </div>
       <div className="form">
         <div className="field">
           <label htmlFor="c-name">Name</label>

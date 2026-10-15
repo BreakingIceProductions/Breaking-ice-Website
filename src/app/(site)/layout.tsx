@@ -1,5 +1,6 @@
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
+import { Tracking } from '@/components/tracking'
 import { getSettings } from '@/lib/data'
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Header locations={s.locations} cta={s.primaryCta} />
       <main id="main">{children}</main>
       <Footer s={s} />
+      <Tracking bookingLink={s.bookingLink} />
     </>
   )
 }

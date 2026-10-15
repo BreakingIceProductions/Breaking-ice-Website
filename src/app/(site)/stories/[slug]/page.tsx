@@ -62,7 +62,7 @@ export default async function ProjectPage({ params }: Props) {
             {cs.summary ?? '[Summary: what this story is, in one or two sentences.]'}
           </p>
           {!isPhoto && (
-            <PlayerButton url={p.heroVideo} className="btn btn-secondary">
+            <PlayerButton url={p.heroVideo} className="btn btn-secondary" trackAs={`Story: ${p.title}`}>
               <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
               Watch the film
             </PlayerButton>

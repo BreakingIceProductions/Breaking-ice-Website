@@ -38,7 +38,7 @@ export default async function HomePage() {
           <div className="btn-row">
             <Btn href="/contact">{s.primaryCta}</Btn>
             <Btn href="/stories" variant="secondary">{s.secondaryCta}</Btn>
-            <PlayerButton url={h.fullReel}>
+            <PlayerButton url={h.fullReel} trackAs="Showreel">
               <span className="ring" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="14" height="14"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
               </span>
