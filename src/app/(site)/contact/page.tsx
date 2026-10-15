@@ -5,7 +5,7 @@ import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
   const c = await getContact()
-  return seoMeta(c.seo, 'Start a conversation', 'Tell us about the story. We’ll get back to you, usually within a day or two.')
+  return seoMeta(c.seo, 'Start a conversation', 'Tell us about the story. We’ll get back to you, usually within a day or two.', { path: '/contact', eyebrow: 'Contact' })
 }
 
 export default async function ContactPage() {
@@ -29,19 +29,19 @@ export default async function ContactPage() {
       </section>
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap contact-grid">
-                      <ContactForm
-              services={services.map((sv) => ({ value: sv.slug, label: sv.title }))}
-              budget={pick(c.budgetOptions, ['[Range 1]', '[Range 2]', '[Range 3]', 'Not sure yet'])}
-              timeline={pick(c.timelineOptions, ['[Option 1]', '[Option 2]', '[Option 3]', 'Flexible'])}
-              heard={pick(c.heardOptions, ['Google search', 'Referral / word of mouth', 'Social media', 'Saw your work', 'Other'])}
-              privacyLine={pick(c.privacyLine, '[How we use what you send: one short line.]')}
-              successHeadline={pick(c.successHeadline, 'Thanks. We’ve got it.')}
-              successMessage={pick(c.successMessage, 'Hi [first name], we’ll read this properly and get back to you soon.')}
-              nextSteps={nextSteps}
-              bookingLink={s.bookingLink}
-              email={s.email}
-            />
-                    <aside className="stack" style={{ gap: 24 }}>
+          <ContactForm
+            services={services.map((sv) => ({ value: sv.slug, label: sv.title }))}
+            budget={pick(c.budgetOptions, ['[Range 1]', '[Range 2]', '[Range 3]', 'Not sure yet'])}
+            timeline={pick(c.timelineOptions, ['[Option 1]', '[Option 2]', '[Option 3]', 'Flexible'])}
+            heard={pick(c.heardOptions, ['Google search', 'Referral / word of mouth', 'Social media', 'Saw your work', 'Other'])}
+            privacyLine={pick(c.privacyLine, '[How we use what you send: one short line.]')}
+            successHeadline={pick(c.successHeadline, 'Thanks. We’ve got it.')}
+            successMessage={pick(c.successMessage, 'Hi [first name], we’ll read this properly and get back to you soon.')}
+            nextSteps={nextSteps}
+            bookingLink={s.bookingLink}
+            email={s.email}
+          />
+          <aside className="stack" style={{ gap: 24 }}>
             <div id="book" className="book-card dark cut-lg">
               <span className="eyebrow">Rather talk first?</span>
               <span className="h3">Book a 20-minute call</span>

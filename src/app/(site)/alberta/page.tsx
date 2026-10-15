@@ -4,7 +4,7 @@ import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
   const { loc } = await getLocation('alberta')
-  return seoMeta(loc?.seo, 'Video production across Alberta', 'Corporate and brand video from Stony Plain, minutes from Edmonton. Working across Alberta.')
+  return seoMeta(loc?.seo, 'Video production across Alberta', 'Corporate and brand video from Stony Plain, minutes from Edmonton. Working across Alberta.', { path: '/alberta', eyebrow: 'Alberta', image: loc?.heroImage })
 }
 
 export default function AlbertaPage() {

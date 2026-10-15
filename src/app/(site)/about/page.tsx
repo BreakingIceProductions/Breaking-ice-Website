@@ -7,7 +7,7 @@ import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
   const a = await getAbout()
-  return seoMeta(a.seo, 'About', 'From the North to Alberta: who we are and how we work.')
+  return seoMeta(a.seo, 'About', 'From the North to Alberta: who we are and how we work.', { path: '/about', eyebrow: 'About' })
 }
 
 export default async function AboutPage() {

@@ -6,7 +6,9 @@ import { ClosingBand, RichText } from '@/components/sections'
 import { PlayerButton, VideoLoop } from '@/components/video'
 import { getNextProject, getProjectBySlug, getProjects, getSettings } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
-import { CATEGORY_LABELS } from '@/lib/video'
+import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
+import { SITE_URL } from '@/lib/site'
+import { CATEGORY_LABELS, embedUrl } from '@/lib/video'
 import { urlFor } from '@/sanity/client'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -20,7 +22,11 @@ export async function generateMetadata({ params }: Props) {
   const { slug } = await params
   const p = await getProjectBySlug(slug)
   if (!p) return {}
-  return seoMeta(p.caseStudy?.seo ?? p.seo, p.title, p.caseStudy?.summary)
+  return seoMeta(p.caseStudy?.seo ?? p.seo, p.title, p.caseStudy?.summary, {
+    path: `/stories/${p.slug}`,
+    eyebrow: ['Story', p.category && CATEGORY_LABELS[p.category]].filter(Boolean).join(' · '),
+    image: p.thumbnail,
+  })
 }
 
 export default async function ProjectPage({ params }: Props) {
@@ -37,8 +43,29 @@ export default async function ProjectPage({ params }: Props) {
     ? cs.results
     : [1, 2, 3].map((n) => ({ headline: `[Result ${n}]`, detail: '[What changed, in one sentence]' }))
 
+  // Video details for Google (needs a real film, a poster and a year).
+  const playUrl = embedUrl(p.heroVideo, 'play')
+  const transcriptText = Array.isArray(p.transcript)
+    ? (p.transcript as { children?: { text?: string }[] }[]).map((b) => (b.children ?? []).map((c) => c.text ?? '').join('')).join('\n').slice(0, 20000)
+    : undefined
+  const videoLd = !isPhoto && playUrl && poster && p.year
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'VideoObject',
+        name: p.title,
+        description: cs.summary ?? p.title,
+        thumbnailUrl: [poster],
+        uploadDate: `${p.year}-01-01`,
+        embedUrl: playUrl,
+        url: `${SITE_URL}/stories/${p.slug}`,
+        publisher: { '@id': ORG_ID },
+        transcript: transcriptText || undefined,
+      }
+    : null
+
   return (
     <>
+      <JsonLd data={[breadcrumbLd([['Stories', '/stories'], [p.title, `/stories/${p.slug}`]]), ...(videoLd ? [videoLd] : [])]} />
       {/* Hero film */}
       <section className="dark" aria-label="Film">
         {isPhoto ? (

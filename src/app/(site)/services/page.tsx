@@ -6,7 +6,7 @@ import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
   const p = await getSimplePage('servicesPage')
-  return seoMeta(p.seo, 'Corporate video production services', 'Organizational and brand films, social stories, event coverage, retainers and documentary, from Alberta to the NWT.')
+  return seoMeta(p.seo, 'Corporate video production services', 'Organizational and brand films, social stories, event coverage, retainers and documentary, from Alberta to the NWT.', { path: '/services', eyebrow: 'Services' })
 }
 
 export default async function ServicesPage() {

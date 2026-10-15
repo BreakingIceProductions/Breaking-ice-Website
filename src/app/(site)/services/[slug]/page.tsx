@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
+import { SITE_URL } from '@/lib/site'
 import { notFound } from 'next/navigation'
 import { Btn, Eyebrow, Mark } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
@@ -17,7 +19,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params
   const sv = await getServiceBySlug(slug)
-  return sv ? seoMeta(sv.seo, sv.title, sv.summary) : {}
+  return sv ? seoMeta(sv.seo, sv.title, sv.summary, { path: `/services/${sv.slug}`, eyebrow: 'Services', image: sv.cardImage }) : {}
 }
 
 export default async function ServicePage({ params }: Props) {
@@ -39,7 +41,26 @@ export default async function ServicePage({ params }: Props) {
 
   return (
     <>
-      {faqLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />}
+      <JsonLd
+        data={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Service',
+            '@id': `${SITE_URL}/services/${sv.slug}#service`,
+            name: sv.title,
+            serviceType: sv.title,
+            description: sv.summary,
+            url: `${SITE_URL}/services/${sv.slug}`,
+            provider: { '@id': ORG_ID },
+            areaServed: [
+              { '@type': 'AdministrativeArea', name: 'Alberta' },
+              { '@type': 'AdministrativeArea', name: 'Northwest Territories' },
+            ],
+          },
+          breadcrumbLd([['Services', '/services'], [sv.title, `/services/${sv.slug}`]]),
+          ...(faqLd ? [faqLd] : []),
+        ]}
+      />
       <section className="page-head" style={{ paddingTop: 'var(--space-12)' }}>
         <div className="wrap">
           <nav className="breadcrumb" aria-label="Breadcrumb">

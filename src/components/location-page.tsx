@@ -3,23 +3,35 @@ import { notFound } from 'next/navigation'
 import { Btn, Eyebrow, Still } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
 import { ClosingBand, RichText } from '@/components/sections'
+import { JsonLd, ORG_ID, breadcrumbLd, real } from '@/components/json-ld'
 import { getLocation, getSettings } from '@/lib/data'
+import { SITE_URL } from '@/lib/site'
 
 export async function LocationPage({ slug }: { slug: string }) {
   const [{ loc, projects }, s] = await Promise.all([getLocation(slug), getSettings()])
   if (!loc) notFound()
   const other = s.locations.find((l) => l.slug !== slug)
+  // A local business entry per region, tied to the main organization (helps the Google map pack).
+  const places = (loc.areaServed ?? []).flatMap((g) => g.places ?? []).filter((p) => real(p))
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'ProfessionalService',
-    name: 'Breaking Ice Productions',
-    areaServed: loc.title,
-    address: loc.base ? { '@type': 'PostalAddress', addressLocality: loc.base.split(',')[0], addressRegion: loc.base.split(',')[1]?.trim(), addressCountry: 'CA' } : undefined,
+    '@id': `${SITE_URL}/${slug}#business`,
+    name: `Breaking Ice Productions · ${loc.title}`,
+    url: `${SITE_URL}/${slug}`,
+    parentOrganization: { '@id': ORG_ID },
+    description: `Corporate and brand video production across ${loc.title}.`,
+    email: real(loc.email) ?? real(s.email),
+    telephone: real(loc.phone) ?? real(s.phone),
+    areaServed: [{ '@type': 'AdministrativeArea', name: loc.title }, ...places.map((name) => ({ '@type': 'Place', name }))],
+    address: loc.base
+      ? { '@type': 'PostalAddress', addressLocality: loc.base.split(',')[0].trim(), addressRegion: loc.base.split(',')[1]?.trim(), addressCountry: 'CA' }
+      : undefined,
   }
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <JsonLd data={[ld, breadcrumbLd([[loc.title, `/${slug}`]])]} />
       <section className="page-head">
         <div className="wrap grid-2" style={{ alignItems: 'center' }}>
           <div className="stack">

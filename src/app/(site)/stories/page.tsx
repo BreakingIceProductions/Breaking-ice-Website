@@ -6,7 +6,7 @@ import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
   const p = await getSimplePage('storiesPage')
-  return seoMeta(p.seo, 'Stories', 'Films and photo stories from organizations across Alberta and the Northwest Territories.')
+  return seoMeta(p.seo, 'Stories', 'Films and photo stories from organizations across Alberta and the Northwest Territories.', { path: '/stories', eyebrow: 'Stories' })
 }
 
 export default async function StoriesPage() {
@@ -24,8 +24,8 @@ export default async function StoriesPage() {
       </section>
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
-                      <StoriesGrid projects={projects} />
-                  </div>
+          <StoriesGrid projects={projects} />
+        </div>
       </section>
       <ClosingBand s={s} secondary={false} />
     </>
