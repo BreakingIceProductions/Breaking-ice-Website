@@ -76,7 +76,14 @@ export const project = defineType({
       group: 'content',
       hidden: ({ parent }) => parent?.storyType === 'photo',
     }),
-    defineField({ name: 'captionsFile', title: 'Captions file (.vtt)', type: 'file', group: 'content' }),
+    defineField({
+      name: 'captionsFile',
+      title: 'Captions file (.vtt)',
+      description: 'Upload the same captions to Vimeo or YouTube too: that’s what the player shows. This file is offered as a download for accessibility.',
+      type: 'file',
+      group: 'content',
+      options: { accept: '.vtt,text/vtt' },
+    }),
     defineField({
       name: 'caseStudy',
       title: 'Case study',

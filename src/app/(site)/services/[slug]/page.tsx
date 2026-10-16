@@ -4,12 +4,22 @@ import { SITE_URL } from '@/lib/site'
 import { notFound } from 'next/navigation'
 import { Btn, Eyebrow, Mark } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
+import { ProcessCompact } from '@/components/process-compact'
 import { ClosingBand, RichText } from '@/components/sections'
 import { VideoLoop } from '@/components/video'
 import { getProjects, getServiceBySlug, getServices, getSettings } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
+import type { PT } from '@/lib/types'
+import { CATEGORY_LABELS } from '@/lib/video'
 
 type Props = { params: Promise<{ slug: string }> }
+
+/** Plain text of each block when every block is a [placeholder], so samples keep the placeholder style. */
+function placeholderLines(value: PT | undefined): string[] | null {
+  if (!value?.length) return null
+  const lines = value.map((b) => (b?.children ?? []).map((c: { text?: string }) => c.text ?? '').join(''))
+  return lines.every((l) => l.startsWith('[')) ? lines : null
+}
 
 export async function generateStaticParams() {
   const services = await getServices()
@@ -29,6 +39,8 @@ export default async function ServicePage({ params }: Props) {
   const related = sv.relatedProjects?.length ? sv.relatedProjects : projects.slice(0, 3)
   const others = all.filter((o) => o.slug !== sv.slug)
   const faq = sv.faq ?? []
+  const industries = [...new Set(related.map((p) => p.category).filter((c): c is string => Boolean(c)))]
+  const descriptionSample = placeholderLines(sv.description)
   const contactHref = `/contact?type=${encodeURIComponent(sv.slug)}`
 
   const faqLd = faq.length && !faq[0].question?.startsWith('[')
@@ -85,11 +97,32 @@ export default async function ServicePage({ params }: Props) {
         </div>
       </section>
 
+      <section className="section ruled" aria-labelledby="about-service">
+        <div className="wrap split">
+          <h2 id="about-service" className="eyebrow" style={{ margin: 0 }}>About this service</h2>
+          <div className="body-lg">
+            <RichText
+              value={descriptionSample ? null : sv.description}
+              fallback={descriptionSample ?? '[Two or three short paragraphs: what this service is and how it runs.]'}
+            />
+          </div>
+        </div>
+      </section>
+
       <section className="section ruled" aria-labelledby="who">
         <div className="wrap split">
           <h2 id="who" className="eyebrow" style={{ margin: 0 }}>Who it’s for</h2>
           <div className="body-lg">
             <RichText value={sv.whoItsFor} fallback="[Who this is for, in plain words: the organizations, the situations, the goals. Written for the people searching for it.]" />
+            {industries.length > 0 && (
+              <ul className="industry-tags" aria-label="Industries we’ve made these for">
+                {industries.map((c) => (
+                  <li key={c}>
+                    <Link href={`/stories?category=${encodeURIComponent(c)}`}>{CATEGORY_LABELS[c] ?? c}</Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </section>
@@ -111,6 +144,14 @@ export default async function ServicePage({ params }: Props) {
           </div>
         </div>
       </section>
+
+      {s.processSteps?.length > 0 && (
+        <section className="section ruled" aria-labelledby="how">
+          <div className="wrap">
+            <ProcessCompact steps={s.processSteps} />
+          </div>
+        </section>
+      )}
 
       <section className="section ruled" aria-labelledby="work">
         <div className="wrap">

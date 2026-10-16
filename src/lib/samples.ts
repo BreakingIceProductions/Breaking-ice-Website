@@ -29,6 +29,16 @@ export const SAMPLE_SERVICES: Service[] = SERVICE_ROWS.map(([slug, title, summar
   title,
   summary,
   showAsFullCard: full,
+  description: [
+    '[Two or three short paragraphs: what this service is, in plain words, and what working on it together looks like.]',
+    '[What makes the result worth having: who watches it, where it lives, and what it helps your people do.]',
+  ].map((text, n) => ({
+    _type: 'block',
+    _key: `d${n}`,
+    style: 'normal',
+    markDefs: [],
+    children: [{ _type: 'span', _key: `d${n}s`, text, marks: [] }],
+  })),
   included: ['[Included item]', '[Included item]', '[Included item]', '[Included item]'],
   timeline: '[e.g. 4–8 weeks]',
   timelineNote: '[From first conversation to delivery, and what shapes it]',
@@ -100,5 +110,8 @@ export const DEFAULT_SETTINGS: Settings = {
   closingHeadline: 'Have a story worth telling?',
   processSteps: SAMPLE_STEPS,
   copyrightName: 'Breaking Ice Productions',
+  notFoundEyebrow: '404 · Page not found',
+  notFoundHeadline: 'This page isn’t here.',
+  notFoundMessage: 'But the stories are.',
   locations: SAMPLE_LOCATIONS.map(({ _id, title, slug, baseLine }) => ({ _id, title, slug, baseLine })),
 }

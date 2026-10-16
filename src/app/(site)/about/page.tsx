@@ -20,7 +20,7 @@ export default async function AboutPage() {
     <>
       <section className="page-head">
         <div className="wrap">
-          <Eyebrow>About</Eyebrow>
+          <Eyebrow>{pick(a.heroEyebrow, 'About')}</Eyebrow>
           <h1 className="display-xl">{pick(a.heroHeadline, 'From the North to Alberta')}</h1>
           <p className="body-lg muted" style={{ margin: 0, maxWidth: '56ch' }}>
             {pick(a.heroIntro, 'Breaking Ice Productions tells the human stories inside organizations, working from Stony Plain, Alberta and Norman Wells, NWT.')}
@@ -36,7 +36,7 @@ export default async function AboutPage() {
       <section className="section ruled" aria-labelledby="story">
         <div className="wrap split">
           <div className="stack" style={{ gap: 12 }}>
-            <Eyebrow>Our story</Eyebrow>
+            <Eyebrow>{pick(a.storyEyebrow, 'Our story')}</Eyebrow>
             <h2 id="story" className="h2">{pick(a.storyTitle, 'Why we stay')}</h2>
           </div>
           <div className="body-lg">
@@ -48,18 +48,18 @@ export default async function AboutPage() {
       <section className="section ruled" aria-labelledby="journey">
         <div className="wrap">
           <div className="sec-head">
-            <Eyebrow>From the North to Alberta</Eyebrow>
+            <Eyebrow>{pick(a.journeyEyebrow, 'From the North to Alberta')}</Eyebrow>
             <h2 id="journey" className="h2">{pick(a.journeyTitle, 'Two places, one way of working')}</h2>
           </div>
           <div className="grid-2">
             <Link href="/northwest-territories" className="loc-card">
-              <Still label="Norman Wells" ratio="ratio-169" />
-              <span className="eyebrow">Where it began</span>
+              <Still image={a.journeyNorthImage} label="Norman Wells" ratio="ratio-169" width={1000} />
+              <span className="eyebrow">{pick(a.journeyNorthText, 'Where it began')}</span>
               <span className="h2">Norman Wells · the Sahtú</span>
             </Link>
             <Link href="/alberta" className="loc-card">
-              <Still label="Stony Plain" ratio="ratio-169" />
-              <span className="eyebrow">Where we are now</span>
+              <Still image={a.journeyAlbertaImage} label="Stony Plain" ratio="ratio-169" width={1000} />
+              <span className="eyebrow">{pick(a.journeyAlbertaText, 'Where we are now')}</span>
               <span className="h2">Stony Plain · Edmonton region</span>
             </Link>
           </div>
@@ -78,8 +78,8 @@ export default async function AboutPage() {
         <div className="wrap">
           <div className="sec-head-row">
             <div className="sec-head">
-              <Eyebrow>How we work</Eyebrow>
-              <h2 id="how" className="h2">Listen first</h2>
+              <Eyebrow>{pick(a.processEyebrow, 'How we work')}</Eyebrow>
+              <h2 id="how" className="h2">{pick(a.processTitle, 'Listen first')}</h2>
             </div>
             <Link className="link-arrow" href="/services">Our services <span aria-hidden="true">→</span></Link>
           </div>
@@ -91,7 +91,7 @@ export default async function AboutPage() {
         <div className="wrap grid-2" style={{ alignItems: 'start' }}>
           <Still image={founder.portrait} label="Portrait" ratio="ratio-45" cut={false} width={900} />
           <div className="stack" style={{ gap: 16 }}>
-            <Eyebrow>Founder</Eyebrow>
+            <Eyebrow>{pick(a.founderEyebrow, 'Founder')}</Eyebrow>
             <h2 id="founder" className="h1">{founder.name ?? 'Josh Ferguson'}</h2>
             <span className="caption">{founder.role ?? 'Owner & creative director'}</span>
             <RichText value={founder.bio} fallback={['[Founder bio: background, the North, why this work. Three short paragraphs.]']} />
@@ -104,7 +104,7 @@ export default async function AboutPage() {
       <section className="section ruled" aria-labelledby="believe">
         <div className="wrap">
           <div className="sec-head">
-            <Eyebrow>What we believe</Eyebrow>
+            <Eyebrow>{pick(a.beliefsEyebrow, 'What we believe')}</Eyebrow>
             <h2 id="believe" className="quote" style={{ fontSize: 'clamp(30px, 3.4vw, 44px)', lineHeight: 1.2, margin: 0 }}>{pick(a.beliefsTitle, s.tagline)}</h2>
           </div>
           <div className="grid-3">

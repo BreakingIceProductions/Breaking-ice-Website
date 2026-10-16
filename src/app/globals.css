@@ -224,7 +224,7 @@ button { font: inherit; color: inherit; }
 .nav-group .nav-label { color: var(--ink-muted); font-weight: 400; }
 .nav-sep { color: var(--slate); }
 .menu-btn { flex: none; display: none; width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--ink); background: transparent; align-items: center; justify-content: center; cursor: pointer; }
-@media (max-width: 1100px) {
+@media (max-width: 1279px) {
   .main-nav, .header-cta { display: none; }
   .menu-btn { display: inline-flex; }
   .logo-link { --logo-h: 30px; }

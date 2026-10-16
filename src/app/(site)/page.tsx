@@ -1,9 +1,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLink, Btn, Eyebrow, SectionHead, Still } from '@/components/brand'
+import { ArrowLink, Btn, Eyebrow, Still } from '@/components/brand'
 import { LocationCard, ServiceCard, StoryCard } from '@/components/cards'
 import { Checklist, Testimonials } from '@/components/interactive'
 import { ClosingBand, Process, RichText } from '@/components/sections'
+import { SwipeRail } from '@/components/swipe-rail'
 import { PlayerButton, VideoLoop } from '@/components/video'
 import { getHome, getLocation, getServices, getSettings } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
@@ -70,15 +71,16 @@ export default async function HomePage() {
       </section>
 
       {/* Client logos */}
-      <section className="section" aria-label="Organizations we’ve worked with" style={{ paddingTop: 0 }}>
+      <section className="section" aria-labelledby="logos-title" style={{ paddingTop: 0 }}>
         <div className="wrap">
+          <h2 id="logos-title" className="sr-only">{h.logoStripTitle}</h2>
           <div className="divider" style={{ marginBottom: 'var(--space-8)' }}>
-            <span className="caption" style={{ letterSpacing: '.18em', textTransform: 'uppercase', fontSize: 12 }}>Trusted by</span>
+            <span className="caption" style={{ letterSpacing: '.18em', textTransform: 'uppercase', fontSize: 12 }}>{h.logoStripEyebrow}</span>
           </div>
           <div className="logo-strip">
             <div className="logo-track">
               {[...logos, ...logos].map((l, i) => (
-                <div className="logo-item" key={`${l._id}-${i}`} aria-hidden={i >= logos.length}>
+                <div className={`logo-item${i >= logos.length ? ' logo-dup' : ''}`} key={`${l._id}-${i}`} aria-hidden={i >= logos.length}>
                   {l.logo?.asset ? (
                     <Image src={urlFor(l.logo).height(80).url()} alt={l.name} width={160} height={40} />
                   ) : (
@@ -95,10 +97,12 @@ export default async function HomePage() {
       <section className="section ruled" aria-labelledby="process-title">
         <div className="wrap">
           <div className="sec-head">
-            <Eyebrow>How we work</Eyebrow>
+            <Eyebrow>{h.processEyebrow}</Eyebrow>
             <h2 id="process-title" className="h2">{h.processTitle}</h2>
           </div>
-          <Process steps={s.processSteps} />
+          <SwipeRail className="home-rail">
+            <Process steps={s.processSteps} />
+          </SwipeRail>
         </div>
       </section>
 
@@ -107,14 +111,16 @@ export default async function HomePage() {
         <div className="wrap">
           <div className="sec-head-row">
             <div className="sec-head">
-              <Eyebrow>Selected stories</Eyebrow>
+              <Eyebrow>{h.storiesEyebrow}</Eyebrow>
               <h2 id="stories-title" className="h2">{h.storiesTitle}</h2>
             </div>
             <ArrowLink href="/stories">All stories</ArrowLink>
           </div>
-          <div className="grid-3">
-            {h.projects.map((p) => <StoryCard key={p._id} p={p} />)}
-          </div>
+          <SwipeRail className="home-rail">
+            <div className="grid-3">
+              {h.projects.map((p) => <StoryCard key={p._id} p={p} />)}
+            </div>
+          </SwipeRail>
         </div>
       </section>
 
@@ -122,8 +128,8 @@ export default async function HomePage() {
       <section className="section ruled" aria-labelledby="t-title">
         <div className="wrap">
           <div className="sec-head">
-            <Eyebrow>In their words</Eyebrow>
-            <h2 id="t-title" className="sr-only">{h.testimonialsTitle}</h2>
+            <Eyebrow>{h.testimonialsEyebrow}</Eyebrow>
+            <h2 id="t-title" className="h2">{h.testimonialsTitle}</h2>
           </div>
           <Testimonials items={h.testimonials} />
         </div>
@@ -133,7 +139,7 @@ export default async function HomePage() {
       <section className="section ruled" aria-labelledby="check-title">
         <div className="wrap grid-2" style={{ alignItems: 'start' }}>
           <div className="sec-head" style={{ marginBottom: 0 }}>
-            <Eyebrow>Sound familiar?</Eyebrow>
+            <Eyebrow>{h.checklistEyebrow}</Eyebrow>
             <h2 id="check-title" className="h1">{h.checklistTitle}</h2>
           </div>
           <Checklist situations={h.situations} closing={h.checklistClosing} cta={s.primaryCta} />
@@ -145,7 +151,7 @@ export default async function HomePage() {
         <div className="wrap">
           <div className="sec-head-row">
             <div className="sec-head">
-              <Eyebrow>Services</Eyebrow>
+              <Eyebrow>{h.servicesEyebrow}</Eyebrow>
               <h2 id="svc-title" className="h2">{h.servicesTitle}</h2>
             </div>
             <ArrowLink href="/services">All services</ArrowLink>
@@ -164,7 +170,7 @@ export default async function HomePage() {
             <Still image={h.founder?.onLocationPhoto} label="On location" ratio="ratio-45" width={700} />
           </div>
           <div className="stack" style={{ gap: 20 }}>
-            <Eyebrow>Founder</Eyebrow>
+            <Eyebrow>{h.founderEyebrow}</Eyebrow>
             <h2 id="founder-title" className="h1">{h.founderTitle}</h2>
             <RichText
               value={h.founder?.founderNote}
@@ -185,8 +191,10 @@ export default async function HomePage() {
       {/* Locations */}
       <section className="section ruled" aria-labelledby="loc-title">
         <div className="wrap">
-          <SectionHead eyebrow="Where we work" />
-          <h2 id="loc-title" className="sr-only">{h.locationsTitle}</h2>
+          <div className="sec-head">
+            <Eyebrow>{h.locationsEyebrow}</Eyebrow>
+            <h2 id="loc-title" className="h2">{h.locationsTitle}</h2>
+          </div>
           <div className="grid-2">
             {locations.map((l) => l && <LocationCard key={l._id} l={l} />)}
           </div>

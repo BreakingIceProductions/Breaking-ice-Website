@@ -6,6 +6,9 @@ import { seoField, seoFieldTab } from '../objects/shared'
 
 const text = (name: string, title?: string) => defineField({ name, title, type: 'string' })
 const longText = (name: string, title?: string) => defineField({ name, title, type: 'text', rows: 3 })
+/** A short text field that shows the site's built-in default as its help text. */
+const copy = (name: string, title: string, fallback: string, group?: string) =>
+  defineField({ name, title, type: 'string', group, description: `Leave empty to use “${fallback}”.` })
 
 export const siteSettings = defineType({
   name: 'siteSettings',
@@ -16,6 +19,7 @@ export const siteSettings = defineType({
     { name: 'brand', title: 'Brand & contact', default: true },
     { name: 'process', title: 'Process steps' },
     { name: 'shared', title: 'Shared copy' },
+    { name: 'notFound', title: '404 page' },
     { name: 'seo', title: 'SEO defaults' },
   ],
   fields: [
@@ -57,6 +61,9 @@ export const siteSettings = defineType({
       ],
     }),
     defineField({ name: 'copyrightName', title: 'Copyright name', type: 'string', group: 'shared', initialValue: 'Breaking Ice Productions' }),
+    copy('notFoundEyebrow', '404 eyebrow', '404 · Page not found', 'notFound'),
+    copy('notFoundHeadline', '404 headline', 'This page isn’t here.', 'notFound'),
+    copy('notFoundMessage', '404 message', 'But the stories are.', 'notFound'),
     defineField({ name: 'defaultSeo', title: 'Default SEO', type: 'seo', group: 'seo' }),
   ],
   preview: { prepare: () => ({ title: 'Site settings' }) },
@@ -94,8 +101,13 @@ export const homePage = defineType({
         }),
       ],
     }),
+    copy('logoStripEyebrow', 'Logo strip eyebrow', 'Trusted by', 'sections'),
+    copy('logoStripTitle', 'Logo strip title (read by screen readers)', 'Organizations we’ve worked with', 'sections'),
+    copy('processEyebrow', 'Process eyebrow', 'How we work', 'sections'),
     defineField({ ...text('processTitle', 'Process title'), group: 'sections' }),
+    copy('storiesEyebrow', 'Stories eyebrow', 'Selected stories', 'sections'),
     defineField({ ...text('storiesTitle', 'Stories title'), group: 'sections' }),
+    copy('testimonialsEyebrow', 'Testimonials eyebrow', 'Testimonials', 'sections'),
     defineField({ ...text('testimonialsTitle', 'Testimonials title'), group: 'sections' }),
     defineField({
       name: 'testimonials',
@@ -103,12 +115,16 @@ export const homePage = defineType({
       group: 'sections',
       of: [defineArrayMember({ type: 'reference', to: [{ type: 'testimonial' }] })],
     }),
+    copy('checklistEyebrow', 'Checklist eyebrow', 'Sound familiar?', 'sections'),
     defineField({ ...text('checklistTitle', 'Checklist title'), group: 'sections' }),
     defineField({ name: 'situations', type: 'array', group: 'sections', of: [defineArrayMember({ type: 'string' })] }),
     defineField({ ...text('checklistClosing', 'Checklist closing line'), group: 'sections' }),
+    copy('servicesEyebrow', 'Services eyebrow', 'Services', 'sections'),
     defineField({ ...text('servicesTitle', 'Services title'), group: 'sections' }),
+    copy('founderEyebrow', 'Founder eyebrow', 'Founder', 'sections'),
     defineField({ ...text('founderTitle', 'Founder title'), group: 'sections' }),
     defineField({ name: 'founder', type: 'reference', to: [{ type: 'person' }], group: 'sections' }),
+    copy('locationsEyebrow', 'Locations eyebrow', 'Locations', 'sections'),
     defineField({ ...text('locationsTitle', 'Locations title'), group: 'sections' }),
     seoFieldTab,
   ],
@@ -121,12 +137,19 @@ export const aboutPage = defineType({
   type: 'document',
   icon: DocumentIcon,
   fields: [
+    copy('heroEyebrow', 'Hero eyebrow', 'About'),
     text('heroHeadline', 'Hero headline'),
     longText('heroIntro', 'Hero intro'),
     defineField({ name: 'heroVideo', title: 'Hero video', type: 'videoUrl' }),
+    copy('storyEyebrow', 'Story eyebrow', 'Our story'),
     text('storyTitle', 'Story title'),
     defineField({ name: 'storyBody', title: 'Story', type: 'portableText' }),
+    copy('journeyEyebrow', 'Journey eyebrow', 'From the North to Alberta'),
     text('journeyTitle', 'Journey title'),
+    defineField({ name: 'journeyNorthImage', title: 'Journey image (North)', type: 'altImage' }),
+    copy('journeyNorthText', 'Journey text (North)', 'Where it began'),
+    defineField({ name: 'journeyAlbertaImage', title: 'Journey image (Alberta)', type: 'altImage' }),
+    copy('journeyAlbertaText', 'Journey text (Alberta)', 'Where we are now'),
     defineField({
       name: 'milestones',
       type: 'array',
@@ -138,7 +161,11 @@ export const aboutPage = defineType({
         }),
       ],
     }),
+    copy('processEyebrow', 'Process eyebrow', 'How we work'),
+    copy('processTitle', 'Process title', 'Listen first'),
+    copy('founderEyebrow', 'Founder eyebrow', 'Founder'),
     defineField({ name: 'founder', type: 'reference', to: [{ type: 'person' }] }),
+    copy('beliefsEyebrow', 'Beliefs eyebrow', 'What we believe'),
     text('beliefsTitle', 'Beliefs title'),
     defineField({
       name: 'beliefs',
@@ -167,7 +194,20 @@ const simplePage = (name: string, title: string) =>
   })
 
 export const storiesPage = simplePage('storiesPage', 'Stories page')
-export const servicesPage = simplePage('servicesPage', 'Services page')
+export const servicesPage = defineType({
+  name: 'servicesPage',
+  title: 'Services page',
+  type: 'document',
+  icon: DocumentIcon,
+  fields: [
+    text('eyebrow'),
+    text('headline'),
+    longText('intro'),
+    defineField({ ...text('processTitle', 'Process title'), description: 'Defaults to “Four steps, every time”.' }),
+    seoField,
+  ],
+  preview: { prepare: () => ({ title: 'Services page' }) },
+})
 
 export const contactPage = defineType({
   name: 'contactPage',
@@ -175,8 +215,10 @@ export const contactPage = defineType({
   type: 'document',
   icon: DocumentIcon,
   fields: [
+    copy('eyebrow', 'Eyebrow', 'Contact'),
     text('headline'),
     longText('intro'),
+    copy('submitLabel', 'Submit button label', 'Send'),
     defineField({ name: 'budgetOptions', type: 'array', of: [defineArrayMember({ type: 'string' })] }),
     defineField({ name: 'timelineOptions', type: 'array', of: [defineArrayMember({ type: 'string' })] }),
     defineField({ name: 'heardOptions', title: 'How did you hear options', type: 'array', of: [defineArrayMember({ type: 'string' })] }),
@@ -192,6 +234,15 @@ export const contactPage = defineType({
           fields: [defineField({ name: 'title', type: 'string' }), defineField({ name: 'text', type: 'string' })],
         }),
       ],
+    }),
+    copy('errorHeadline', 'Validation error headline', 'A couple of things need a look:'),
+    defineField({
+      ...text('deliveryErrorHeadline', 'Delivery error headline'),
+      description: 'Shown when the message couldn’t be sent. Leave empty to show the specific reason (e.g. “Something went wrong on our end and your message didn’t send.”).',
+    }),
+    defineField({
+      ...longText('deliveryErrorMessage', 'Delivery error message'),
+      description: 'Leave empty to use “Nothing you typed is lost.” The email link and Try again button follow it.',
     }),
     text('successHeadline', 'Success headline'),
     longText('successMessage', 'Success message'),

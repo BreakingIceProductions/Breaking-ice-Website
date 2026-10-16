@@ -10,7 +10,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
     <>
       <a href="#main" className="skip">Skip to content</a>
       <div className="preview-ribbon">Private preview · sample content · not yet public</div>
-      <Header locations={s.locations} cta={s.primaryCta} />
+      <Header locations={s.locations} cta={s.primaryCta} social={s.social} />
       <main id="main">{children}</main>
       <Footer s={s} />
       <Tracking bookingLink={s.bookingLink} />

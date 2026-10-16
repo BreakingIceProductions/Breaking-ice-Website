@@ -24,6 +24,13 @@ export const service = defineType({
     defineField({ name: 'order', type: 'number', group: 'listing' }),
     defineField({ name: 'heroHeadline', title: 'Hero headline', type: 'string', group: 'content' }),
     defineField({ name: 'clip', title: 'Service clip', type: 'videoUrl', group: 'content' }),
+    defineField({
+      name: 'description',
+      title: 'Description',
+      description: 'Two or three short paragraphs: what this service is and how it runs. Shown under the hero.',
+      type: 'portableText',
+      group: 'content',
+    }),
     defineField({ name: 'whoItsFor', title: 'Who it’s for', type: 'portableText', group: 'content' }),
     defineField({
       name: 'included',

@@ -80,6 +80,17 @@ export const location = defineType({
       ],
     }),
     defineField({ name: 'mapImage', title: 'Map image', type: 'altImage', group: 'content' }),
+    defineField({ name: 'storiesEyebrow', title: 'Stories eyebrow', type: 'string', group: 'content', description: 'Leave empty to use “Stories from here”.' }),
+    defineField({ name: 'storiesTitle', title: 'Stories title', type: 'string', group: 'content', description: 'Leave empty to use “Work in [title]”.' }),
+    defineField({ name: 'areaEyebrow', title: 'Area eyebrow', type: 'string', group: 'content', description: 'Leave empty to use “Area served”.' }),
+    defineField({ name: 'areaTitle', title: 'Area title', type: 'string', group: 'content', description: 'Leave empty to use “Where we go from [base town]”.' }),
+    defineField({
+      name: 'closingHeadline',
+      title: 'Closing headline (optional override)',
+      type: 'string',
+      group: 'content',
+      description: 'Leave empty to use the closing band headline from Site settings.',
+    }),
     seoFieldTab,
   ],
 })

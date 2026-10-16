@@ -17,6 +17,10 @@ export function ContactForm({
   nextSteps,
   bookingLink,
   email,
+  submitLabel = 'Send',
+  errorHeadline = 'A couple of things need a look:',
+  deliveryErrorHeadline,
+  deliveryErrorMessage = 'Nothing you typed is lost.',
 }: {
   services: Opt[]
   budget: string[]
@@ -28,12 +32,33 @@ export function ContactForm({
   nextSteps: { title: string; text: string }[]
   bookingLink?: string
   email: string
+  submitLabel?: string
+  errorHeadline?: string
+  /** CMS override; when empty the specific reason is shown instead. */
+  deliveryErrorHeadline?: string
+  deliveryErrorMessage?: string
 }) {
-  // Prefill from ?type= after load, so the form itself is in the server HTML.
+  const formRef = useRef<HTMLFormElement>(null)
+  // Prefill from the URL after load, so the form itself is in the server HTML.
+  // ?type=<service-slug> comes from service pages; ?name=, ?email=, ?organization= from the client portal.
   const [type, setType] = useState('')
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('type')
-    if (t) setType(t)
+    const q = new URLSearchParams(window.location.search)
+    const form = formRef.current
+    const fill = (field: string, value: string | null) => {
+      const el = form?.elements.namedItem(field) as HTMLInputElement | HTMLTextAreaElement | null
+      if (el && value && !el.value.trim()) el.value = value.slice(0, 500)
+    }
+    fill('name', q.get('name'))
+    fill('email', q.get('email'))
+    fill('organization', q.get('organization'))
+    const t = q.get('type')
+    if (t) {
+      setType(t)
+      const service = services.find((x) => x.value === t)
+      if (service) fill('story', `We’re looking for help with ${service.label}: `)
+    }
+    // Only on first load, so it never overwrites what the visitor has typed.
   }, [])
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'invalid' | 'failed'>('idle')
   const [mailto, setMailto] = useState('')
@@ -127,10 +152,10 @@ export function ContactForm({
   const inv = (k: string) => (errors[k] ? { 'aria-invalid': true, 'aria-describedby': `e-${k}` } : {})
 
   return (
-    <form className="stack" style={{ gap: 28 }} onSubmit={onSubmit} noValidate aria-label="Contact form">
+    <form ref={formRef} className="stack" style={{ gap: 28 }} onSubmit={onSubmit} noValidate aria-label="Contact form">
       {state === 'invalid' && (
         <div ref={alertRef} tabIndex={-1} role="alert" className="alert">
-          <strong>A couple of things need a look:</strong>
+          <strong>{errorHeadline}</strong>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {Object.entries(errors).map(([k, v]) => <li key={k}><a href={`#c-${k}`}>{v}</a></li>)}
           </ul>
@@ -138,8 +163,14 @@ export function ContactForm({
       )}
       {state === 'failed' && (
         <div ref={alertRef} tabIndex={-1} role="alert" className="alert">
-          <strong>{failNote}</strong>
-          <span>Nothing you typed is lost. <a href={mailto}>Email it to {email} instead</a> (it opens with your message filled in), or try Send again.</span>
+          <strong>{deliveryErrorHeadline || failNote}</strong>
+          <span>
+            {deliveryErrorHeadline ? `${failNote} ` : ''}
+            {deliveryErrorMessage} <a href={mailto}>Email it to {email} instead</a> (it opens with your message filled in), or try again.
+          </span>
+          <div className="btn-row" style={{ marginTop: 8 }}>
+            <button type="submit" className="btn btn-secondary">Try again</button>
+          </div>
         </div>
       )}
       {/* Spam trap: hidden from people and screen readers. */}
@@ -199,7 +230,7 @@ export function ContactForm({
         </div>
       </div>
       <div className="btn-row">
-        <button type="submit" className="btn btn-primary" disabled={state === 'sending'}>{state === 'sending' ? 'Sending…' : 'Send'}</button>
+        <button type="submit" className="btn btn-primary" disabled={state === 'sending'}>{state === 'sending' ? 'Sending…' : submitLabel}</button>
         <span className="caption">Or email <a className="text-link" href={`mailto:${email}`}>{email}</a></span>
       </div>
       <p className="caption" style={{ margin: 0 }}>

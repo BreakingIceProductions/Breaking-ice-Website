@@ -24,6 +24,7 @@ export type Service = {
   showAsFullCard?: boolean
   heroHeadline?: string
   clip?: string
+  description?: PT
   whoItsFor?: PT
   included?: string[]
   timeline?: string
@@ -59,6 +60,11 @@ export type Location = {
   travelNote?: string
   areaServed?: { _key: string; name?: string; places?: string[] }[]
   mapImage?: Img
+  storiesEyebrow?: string
+  storiesTitle?: string
+  areaEyebrow?: string
+  areaTitle?: string
+  closingHeadline?: string
   seo?: Seo
 }
 
@@ -88,6 +94,9 @@ export type Settings = {
   closingHeadline: string
   processSteps: ProcessStep[]
   copyrightName: string
+  notFoundEyebrow: string
+  notFoundHeadline: string
+  notFoundMessage: string
   defaultSeo?: Seo
   locations: Pick<Location, '_id' | 'title' | 'slug' | 'baseLine'>[]
 }

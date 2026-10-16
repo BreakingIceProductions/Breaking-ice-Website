@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from 'next'
 import { Archivo, Newsreader } from 'next/font/google'
 import { SITE_URL } from '@/lib/site'
 import './globals.css'
+import './css/pages.css'
+import './css/story.css'
+import './css/services.css'
 
 // Only the Latin subset is preloaded (covers é, á, ú, as in Sahtú). Fewer bytes before the headline paints.
 const archivo = Archivo({

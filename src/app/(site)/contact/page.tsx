@@ -1,5 +1,6 @@
 import { Eyebrow } from '@/components/brand'
 import { ContactForm } from '@/components/contact-form'
+import { PhoneLink } from '@/components/sections'
 import { getContact, getServices, getSettings, pick } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
 
@@ -20,7 +21,7 @@ export default async function ContactPage() {
     <>
       <section className="page-head" style={{ paddingBottom: 'var(--space-12)' }}>
         <div className="wrap">
-          <Eyebrow>Contact</Eyebrow>
+          <Eyebrow>{pick(c.eyebrow, 'Contact')}</Eyebrow>
           <h1 className="display-xl">{pick(c.headline, 'Start a conversation')}</h1>
           <p className="body-lg muted" style={{ margin: 0, maxWidth: '52ch' }}>
             {pick(c.intro, 'No pitch, no pressure. Tell us a little about the story and we’ll take it from there.')}
@@ -40,6 +41,10 @@ export default async function ContactPage() {
             nextSteps={nextSteps}
             bookingLink={s.bookingLink}
             email={s.email}
+            submitLabel={pick(c.submitLabel, 'Send')}
+            errorHeadline={pick(c.errorHeadline, 'A couple of things need a look:')}
+            deliveryErrorHeadline={c.deliveryErrorHeadline?.trim() || undefined}
+            deliveryErrorMessage={pick(c.deliveryErrorMessage, 'Nothing you typed is lost.')}
           />
           <aside className="stack" style={{ gap: 24 }}>
             <div id="book" className="book-card dark cut-lg">
@@ -55,7 +60,7 @@ export default async function ContactPage() {
             <div className="panel stack" style={{ gap: 8 }}>
               <span className="eyebrow">Talk directly</span>
               <a className="h3" style={{ textDecoration: 'none' }} href={`mailto:${s.email}`}>{s.email}</a>
-              <span className="h3">{s.phone}</span>
+              <PhoneLink className="h3" style={{ textDecoration: 'none' }} phone={s.phone} />
             </div>
             <div className="stack" style={{ gap: 8 }}>
               <span className="eyebrow">What happens next</span>

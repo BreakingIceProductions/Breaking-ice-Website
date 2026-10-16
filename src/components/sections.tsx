@@ -14,11 +14,30 @@ const ptComponents: PortableTextComponents = {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export function RichText({ value, fallback }: { value?: any[] | null; fallback?: string | string[] }) {
+/** Plain text of a Portable Text block. */
+export const blockText = (b: any): string => b?.children?.map((c: any) => c.text).join('') ?? ''
+
+/** URL-safe id for a heading, so "On this page" links can jump to it. */
+export const headingId = (text: string, key?: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `h-${key ?? 'section'}`
+
+const anchoredComponents: PortableTextComponents = {
+  ...ptComponents,
+  block: {
+    h2: ({ children, value }) => <h2 id={headingId(blockText(value), value?._key)}>{children}</h2>,
+  },
+}
+
+export function RichText({ value, fallback, anchors }: { value?: any[] | null; fallback?: string | string[]; anchors?: boolean }) {
   if (value?.length) {
     return (
       <div className="prose">
-        <PortableText value={value} components={ptComponents} />
+        <PortableText value={value} components={anchors ? anchoredComponents : ptComponents} />
       </div>
     )
   }
@@ -30,6 +49,13 @@ export function RichText({ value, fallback }: { value?: any[] | null; fallback?:
       ))}
     </div>
   )
+}
+
+/** A phone number as a tel: link, or plain text while it's still a placeholder. */
+export function PhoneLink({ phone, className, style }: { phone: string; className?: string; style?: React.CSSProperties }) {
+  const digits = phone.replace(/[^\d+]/g, '')
+  if (digits.replace('+', '').length < 7) return <span className={className} style={style}>{phone}</span>
+  return <a className={className} style={style} href={`tel:${digits}`}>{phone}</a>
 }
 
 /** Navy closing band over the shard field, with exactly one copper quote. */
@@ -68,7 +94,7 @@ export function Process({ steps, compact }: { steps: ProcessStep[]; compact?: bo
                 <dt>What you get</dt>
                 <dd className={st.youGet?.startsWith('[') ? 'placeholder-text' : ''}>{st.youGet}</dd>
               </dl>
-              <details>
+              <details open={i === 0}>
                 <summary>What’s inside <span className="pm" aria-hidden="true" /></summary>
                 <div style={{ paddingBottom: 8, fontSize: 15 }}>
                   <RichText value={st.inside} fallback={st.insideText} />

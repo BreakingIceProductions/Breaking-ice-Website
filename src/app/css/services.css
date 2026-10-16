@@ -1,0 +1,48 @@
+/* Services overview + service detail. Tokens only (dark mode redefines them). */
+
+/* Service detail · industry tags (categories of the related stories) */
+.industry-tags { list-style: none; padding: 0; margin: var(--space-6) 0 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.industry-tags a {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 var(--space-3);
+  border: 1.5px solid var(--line); border-radius: var(--radius-pill);
+  font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink); text-decoration: none; transition: border-color .15s, color .15s;
+}
+.industry-tags a:hover { border-color: var(--ink); color: var(--accent); }
+
+/* Service detail · compact process (number, title, one line) */
+.process-compact { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6) var(--space-8); }
+.process-compact li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); align-items: baseline; border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.process-compact-title { margin: 0 0 var(--space-1); font-size: 17px; line-height: 24px; font-weight: 700; color: var(--ink); }
+.process-compact p { margin: 0; font-size: 15px; line-height: 22px; }
+@media (max-width: 600px) { .process-compact { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); } }
+
+/* Services overview · mobile: compact rows, Photography as a text link */
+@media (max-width: 600px) {
+  .svc-overview .grid-3 { grid-template-columns: minmax(0, 1fr); gap: 0; border-top: 1px solid var(--line); }
+  .svc-overview .svc-card { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+  .svc-overview .svc-card:hover { border-color: var(--line); }
+  .svc-overview .svc-card .media { display: none; }
+  .svc-overview .svc-card:not(.svc-also) .body {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-4); row-gap: var(--space-1);
+    align-items: center; padding: var(--space-4) 0; min-height: 44px;
+  }
+  .svc-overview .svc-card:not(.svc-also) .h3 { grid-column: 1; margin: 0; font-size: 18px; line-height: 24px; }
+  .svc-overview .svc-card:not(.svc-also) .body > p {
+    grid-column: 1; font-size: 15px; line-height: 22px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* "Learn more →" collapses to the arrow alone, at the row's right edge */
+  .svc-overview .svc-card:not(.svc-also) .link-arrow {
+    grid-column: 2; grid-row: 1 / span 2; margin: 0; align-self: center;
+    font-size: 0; border-bottom: 0; padding: 0; color: var(--accent);
+  }
+  .svc-overview .svc-card:not(.svc-also) .link-arrow > span { font-size: 22px; line-height: 1; }
+
+  /* Photography "also" tile → one plain text link row: "Also: Photography →" */
+  .svc-overview .svc-also .body { display: flex; flex-direction: row; align-items: center; gap: var(--space-2); padding: var(--space-4) 0; min-height: 44px; }
+  .svc-overview .svc-also .h3,
+  .svc-overview .svc-also .body > p { display: none; }
+  .svc-overview .svc-also .eyebrow::after { content: ':'; }
+  .svc-overview .svc-also .link-arrow { margin: 0; }
+}

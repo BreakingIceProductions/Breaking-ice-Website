@@ -63,9 +63,22 @@ export function VideoLoop({
 }
 
 /** A full player with sound, opened in a lightbox. Esc closes. */
-export function PlayerButton({ url, children, className = 'reel-link', trackAs = 'Video' }: { url?: string; children: React.ReactNode; className?: string; trackAs?: string }) {
+export function PlayerButton({
+  url,
+  children,
+  className = 'reel-link',
+  trackAs = 'Video',
+  captions,
+}: {
+  url?: string
+  children: React.ReactNode
+  className?: string
+  trackAs?: string
+  /** The film has captions: start the player with them switched on. */
+  captions?: boolean
+}) {
   const [open, setOpen] = useState(false)
-  const src = embedUrl(url, 'play')
+  const src = embedUrl(url, 'play', { captions })
   const closeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {

@@ -1,16 +1,17 @@
+import Link from 'next/link'
 import { Eyebrow } from '@/components/brand'
 import { ServiceCard } from '@/components/cards'
 import { ClosingBand, Process } from '@/components/sections'
-import { getServices, getSettings, getSimplePage, pick } from '@/lib/data'
+import { getServices, getServicesPage, getSettings, pick } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
-  const p = await getSimplePage('servicesPage')
+  const p = await getServicesPage()
   return seoMeta(p.seo, 'Corporate video production services', 'Organizational and brand films, social stories, event coverage, retainers and documentary, from Alberta to the NWT.', { path: '/services', eyebrow: 'Services' })
 }
 
 export default async function ServicesPage() {
-  const [page, services, s] = await Promise.all([getSimplePage('servicesPage'), getServices(), getSettings()])
+  const [page, services, s] = await Promise.all([getServicesPage(), getServices(), getSettings()])
   return (
     <>
       <section className="page-head">
@@ -22,16 +23,19 @@ export default async function ServicesPage() {
           </p>
         </div>
       </section>
-      <section className="section" style={{ paddingTop: 0 }}>
+      <section className="section svc-overview" style={{ paddingTop: 0 }}>
         <div className="wrap grid-3">
           {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
         </div>
       </section>
       <section className="section ruled" aria-labelledby="how">
         <div className="wrap">
-          <div className="sec-head">
-            <Eyebrow>How we work</Eyebrow>
-            <h2 id="how" className="h2">Four steps, every time</h2>
+          <div className="sec-head-row">
+            <div className="sec-head">
+              <Eyebrow>How we work</Eyebrow>
+              <h2 id="how" className="h2">{pick(page.processTitle, 'Four steps, every time')}</h2>
+            </div>
+            <Link className="link-arrow" href="/about">About us <span aria-hidden="true">→</span></Link>
           </div>
           <Process steps={s.processSteps} compact />
         </div>

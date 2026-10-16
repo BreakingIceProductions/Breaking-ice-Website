@@ -17,7 +17,7 @@ const TESTIMONIAL = `_id, quote, name, role, organization, "projectSlug": projec
 export async function getSettings(): Promise<Settings> {
   const data = await sanityFetch<any>(`{
     "s": *[_id == "siteSettings"][0]{ tagline, footerDescription, email, phone, bookingLink, social, primaryCta, secondaryCta,
-      closingEyebrow, closingHeadline, copyrightName, defaultSeo,
+      closingEyebrow, closingHeadline, copyrightName, defaultSeo, notFoundEyebrow, notFoundHeadline, notFoundMessage,
       processSteps[]{ _key, title, line, clip, youBring, youGet, inside } },
     "locations": *[_type == "location" && defined(slug.current)] | order(title asc){ _id, title, "slug": slug.current, baseLine }
   }`)
@@ -36,6 +36,9 @@ export async function getSettings(): Promise<Settings> {
     closingHeadline: pick(s.closingHeadline, d.closingHeadline),
     processSteps: pick(s.processSteps, d.processSteps),
     copyrightName: pick(s.copyrightName, d.copyrightName),
+    notFoundEyebrow: pick(s.notFoundEyebrow, d.notFoundEyebrow),
+    notFoundHeadline: pick(s.notFoundHeadline, d.notFoundHeadline),
+    notFoundMessage: pick(s.notFoundMessage, d.notFoundMessage),
     defaultSeo: s.defaultSeo,
     locations: pick(data?.locations, d.locations),
   }
@@ -76,16 +79,25 @@ export async function getHome() {
       { value: '[00]', label: '[Stat: communities filmed in]' },
       { value: '[00]', label: '[Stat: organizations served]' },
     ]),
+    logoStripEyebrow: pick(page.logoStripEyebrow, 'Trusted by'),
+    logoStripTitle: pick(page.logoStripTitle, 'Organizations we’ve worked with'),
+    processEyebrow: pick(page.processEyebrow, 'How we work'),
     processTitle: pick(page.processTitle, 'Four steps, every time'),
+    storiesEyebrow: pick(page.storiesEyebrow, 'Selected stories'),
     storiesTitle: pick(page.storiesTitle, 'Stories we’ve told'),
+    testimonialsEyebrow: pick(page.testimonialsEyebrow, 'Testimonials'),
     testimonialsTitle: pick(page.testimonialsTitle, 'In their words'),
     testimonials,
+    checklistEyebrow: pick(page.checklistEyebrow, 'Sound familiar?'),
     checklistTitle: pick(page.checklistTitle, 'Is this you?'),
     situations: pick<string[]>(page.situations, ['[Situation 1]', '[Situation 2]', '[Situation 3]', '[Situation 4]']),
     checklistClosing: pick(page.checklistClosing, '[Closing line: then let’s talk.]'),
+    servicesEyebrow: pick(page.servicesEyebrow, 'Services'),
     servicesTitle: pick(page.servicesTitle, 'What we make'),
+    founderEyebrow: pick(page.founderEyebrow, 'Founder'),
     founderTitle: pick(page.founderTitle, 'Hi, I’m Josh.'),
     founder: page.founder ?? null,
+    locationsEyebrow: pick(page.locationsEyebrow, 'Locations'),
     locationsTitle: pick(page.locationsTitle, 'Where we work'),
     seo: page.seo ?? null,
     projects,
@@ -96,7 +108,7 @@ export async function getHome() {
 export async function getProjectBySlug(slug: string) {
   const data = await sanityFetch<any>(
     `*[_type == "project" && slug.current == $slug][0]{
-      ${CARD}, year, heroVideo, heroImage, transcript, seo,
+      ${CARD}, year, heroVideo, heroImage, transcript, seo, "captionsUrl": captionsFile.asset->url,
       "services": services[]->{ title, "slug": slug.current },
       caseStudy->{ summary, challenge, peopleHeadline, people, peopleImage, whatMattered, gallery, resultsIntro, results,
         pullQuote->{ ${TESTIMONIAL} }, nextProject->{ ${CARD} }, seo }
@@ -124,7 +136,7 @@ export async function getServices(): Promise<Service[]> {
 export async function getServiceBySlug(slug: string): Promise<Service | null> {
   const data = await sanityFetch<Service>(
     `*[_type == "service" && slug.current == $slug][0]{
-      _id, title, "slug": slug.current, summary, heroHeadline, clip, whoItsFor, included, timeline, timelineNote, faq, seo,
+      _id, title, "slug": slug.current, summary, heroHeadline, clip, description, whoItsFor, included, timeline, timelineNote, faq, seo,
       relatedProjects[]->{ ${CARD} },
       testimonial->{ ${TESTIMONIAL} },
       "fallbackProjects": *[_type == "project" && references(^._id)][0...3]{ ${CARD} }
@@ -136,6 +148,11 @@ export async function getServiceBySlug(slug: string): Promise<Service | null> {
     return { ...data, relatedProjects: pick(data.relatedProjects, d.fallbackProjects ?? []) }
   }
   return SAMPLE_SERVICES.find((s) => s.slug === slug) ?? null
+}
+
+/** Services page singleton (adds Process title to the simple-page fields). */
+export async function getServicesPage(): Promise<{ eyebrow?: string; headline?: string; intro?: string; processTitle?: string; seo?: any }> {
+  return (await sanityFetch<any>(`*[_id == "servicesPage"][0]{ eyebrow, headline, intro, processTitle, seo }`)) ?? {}
 }
 
 export async function getLocation(slug: string) {

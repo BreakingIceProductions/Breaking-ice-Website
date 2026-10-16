@@ -45,10 +45,13 @@ export const caseStudy = defineType({
     defineField({
       name: 'releasesOnFile',
       title: 'Releases on file',
-      description: 'Everyone on camera or quoted has signed a release',
+      description:
+        'Tick only when signed releases from everyone on camera or quoted are on file. This case study can’t be published until it’s ticked.',
       type: 'boolean',
       group: 'content',
       initialValue: false,
+      validation: (r) =>
+        r.custom((v) => v === true || 'Tick this once signed releases from everyone on camera are on file. A case study can’t be published without them.'),
     }),
     seoFieldTab,
   ],
