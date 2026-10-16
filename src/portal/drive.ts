@@ -86,44 +86,77 @@ async function getFolder(id: string) {
   }
 }
 
-async function findOrCreate(name: string, parent: string) {
-  const existing = (await children(parent, true)).find((f) => f.name === name)
-  if (existing) return existing.id
+async function createFolder(name: string, parent: string, sanityId?: string) {
   const f = await drive<{ id: string }>(`/files?supportsAllDrives=true&fields=id`, {
     method: 'POST',
-    body: JSON.stringify({ name, mimeType: FOLDER, parents: [parent] }),
+    body: JSON.stringify({ name, mimeType: FOLDER, parents: [parent], ...(sanityId ? { appProperties: { sanityId } } : {}) }),
   })
   return f.id
 }
 
-/** A folder we stored before: reuse it (renaming it if the title changed in the Studio). Never deletes anything. */
-async function ensureNamed(storedId: string | undefined, name: string, parent: string, write: (id: string) => Promise<void>) {
-  if (storedId) {
-    const f = await getFolder(storedId)
+/** Subfolders live inside a project's own folder, so finding them by name is safe. */
+async function findOrCreateSub(name: string, parent: string) {
+  const existing = (await children(parent, true)).find((f) => f.name === name)
+  return existing ? existing.id : createFolder(name, parent)
+}
+
+/** A folder we made earlier for this exact Sanity document (tagged with its ID), wherever it is. */
+async function findTagged(sanityId: string) {
+  const q = `appProperties has { key='sanityId' and value='${qs(sanityId)}' } and mimeType = '${FOLDER}' and trashed = false`
+  const r = await drive<{ files: { id: string }[] }>(
+    `/files?${ALL}&corpora=drive&driveId=${portalEnv.sharedDriveId}&pageSize=1&fields=files(id)&q=${encodeURIComponent(q)}`,
+  )
+  return r.files[0]?.id
+}
+
+/**
+ * The folder for one client or project. Matched by its stored ID or its Sanity tag,
+ * never by name, so two clients called the same thing can never share a folder.
+ * Renames follow the Studio. Never deletes anything.
+ */
+async function ensureFolder(doc: { _id: string; driveFolderId?: string }, name: string, parent: string) {
+  if (doc.driveFolderId) {
+    const f = await getFolder(doc.driveFolderId)
     if (f) {
       if (f.name !== name) await drive(`/files/${f.id}?supportsAllDrives=true`, { method: 'PATCH', body: JSON.stringify({ name }) })
       return f.id
     }
   }
-  const id = await findOrCreate(name, parent)
-  if (id !== storedId) await write(id)
+  const id = (await findTagged(doc._id)) ?? (await createFolder(name, parent, doc._id))
+  await setDriveFolder(doc._id, id)
+  doc.driveFolderId = id
   return id
 }
 
 const subCache = new Map<string, { at: number; subs: Record<Sub, string> }>()
+const inflight = new Map<string, Promise<Record<Sub, string>>>()
+const clientInflight = new Map<string, Promise<string>>()
 
-/** Creates (or finds) the client and project folders and their three subfolders. */
-export async function ensureProjectFolders(p: ClientProject): Promise<Record<Sub, string>> {
-  const hit = p.driveFolderId && subCache.get(p.driveFolderId)
-  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.subs
-  const clientFolder = await ensureNamed(p.client.driveFolderId, safeName(p.client.organizationName), portalEnv.sharedDriveId, (id) =>
-    setDriveFolder(p.client._id, id),
-  )
-  const projectFolder = await ensureNamed(p.driveFolderId, safeName(p.title), clientFolder, (id) => setDriveFolder(p._id, id))
-  const subs = {} as Record<Sub, string>
-  for (const name of SUBFOLDERS) subs[name] = await findOrCreate(name, projectFolder)
-  subCache.set(projectFolder, { at: Date.now(), subs })
-  return subs
+/** Several projects of one new client must not each create a client folder. */
+function ensureClientFolder(c: ClientProject['client']) {
+  const running = clientInflight.get(c._id)
+  if (running) return running
+  const job = ensureFolder(c, safeName(c.organizationName), portalEnv.sharedDriveId).finally(() => clientInflight.delete(c._id))
+  clientInflight.set(c._id, job)
+  return job
+}
+
+/** Creates (or finds) the client and project folders and their three subfolders, one project at a time. */
+export function ensureProjectFolders(p: ClientProject): Promise<Record<Sub, string>> {
+  const running = inflight.get(p._id)
+  if (running) return running
+  const job = (async () => {
+    const hit = p.driveFolderId && subCache.get(p.driveFolderId)
+    if (hit && Date.now() - hit.at < 10 * 60_000) return hit.subs
+    const clientFolder = await ensureClientFolder(p.client)
+    const projectFolder = await ensureFolder(p, safeName(p.title), clientFolder)
+    const subs = {} as Record<Sub, string>
+    for (const name of SUBFOLDERS) subs[name] = await findOrCreateSub(name, projectFolder)
+    subCache.set(projectFolder, { at: Date.now(), subs })
+    return subs
+  })().finally(() => inflight.delete(p._id))
+  inflight.set(p._id, job)
+  return job
 }
 
 export async function listProjectFiles(p: ClientProject): Promise<DriveFile[]> {

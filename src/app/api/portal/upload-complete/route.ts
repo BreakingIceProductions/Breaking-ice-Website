@@ -2,7 +2,7 @@ import { SITE_URL } from '@/lib/site'
 import { portalEnv } from '@/portal/config'
 import { addActivity } from '@/portal/data'
 import { notifyJosh, sendEmail } from '@/portal/email'
-import { json, projectAccess, sameOrigin } from '@/portal/http'
+import { json, limited, projectAccess, sameOrigin } from '@/portal/http'
 
 export const runtime = 'nodejs'
 
@@ -15,6 +15,7 @@ export async function POST(req: Request) {
   const a = await projectAccess(typeof body.project === 'string' ? body.project : null)
   if (!a) return json({ ok: false }, 404)
   if (a.session.demo) return json({ ok: true })
+  if (limited(`done:${a.session.email}`, 20, 60 * 60_000)) return json({ ok: false, error: 'too-many' }, 429)
   const names: string[] = (Array.isArray(body.files) ? body.files : []).slice(0, 50).map((f: { name?: string }) => String(f?.name ?? '').slice(0, 200))
   const total = (Array.isArray(body.files) ? body.files : []).reduce((s: number, f: { size?: number }) => s + (Number(f?.size) || 0), 0)
   if (!names.length) return json({ ok: false }, 400)
@@ -22,12 +23,14 @@ export async function POST(req: Request) {
   const what = names.length === 1 ? names[0] : `${names.length} files`
   await addActivity(a.project._id, `${who} uploaded ${what}`, 'upload')
   const line = `${who} (${a.project.client.organizationName}) uploaded ${what} (${size(total)}) to ${a.project.title}.`
-  await notifyJosh(`📁 ${line} ${SITE_URL}/studio/portal`)
+  // Escape Slack's control characters so file names can't ping channels or fake links.
+  const slackSafe = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  await notifyJosh(`📁 ${slackSafe} ${SITE_URL}/studio/portal`)
   await sendEmail({
     to: [portalEnv.replyTo],
     subject: `Upload: ${what} · ${a.project.title}`,
     text: `${line}\n\n${names.join('\n')}\n\nIt's in Google Drive › BI Clients › ${a.project.client.organizationName} › ${a.project.title} › From client.`,
-    html: `<p>${line.replace(/</g, '&lt;')}</p><ul>${names.map((n) => `<li>${n.replace(/</g, '&lt;')}</li>`).join('')}</ul><p>It’s in Google Drive › BI Clients › ${a.project.client.organizationName.replace(/</g, '&lt;')} › ${a.project.title.replace(/</g, '&lt;')} › From client.</p>`,
+    html: `<p>${line.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p><ul>${names.map((n) => `<li>${n.replace(/</g, '&lt;')}</li>`).join('')}</ul><p>It’s in Google Drive › BI Clients › ${a.project.client.organizationName.replace(/</g, '&lt;')} › ${a.project.title.replace(/</g, '&lt;')} › From client.</p>`,
   }).catch((e) => console.error('[portal] upload email failed', e))
   return json({ ok: true })
 }

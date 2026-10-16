@@ -26,9 +26,10 @@ export default async function Dashboard() {
 
   let recent: (DriveFile & { project: ClientProject })[] = []
   if (session.demo) recent = sampleFiles().map((f) => ({ ...f, project: projects[0] }))
+  // Only projects whose folders already exist: the dashboard never creates folders.
   else if (driveReady())
     recent = (
-      await Promise.all(active.slice(0, 4).map((p) => listProjectFiles(p).then((fs) => fs.map((f) => ({ ...f, project: p }))).catch(() => [])))
+      await Promise.all(active.filter((p) => p.driveFolderId).slice(0, 4).map((p) => listProjectFiles(p).then((fs) => fs.map((f) => ({ ...f, project: p }))).catch(() => [])))
     )
       .flat()
       .sort((a, b) => b.modifiedTime.localeCompare(a.modifiedTime))

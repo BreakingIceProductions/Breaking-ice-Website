@@ -29,6 +29,7 @@ export type Deliverable = {
   notes?: string
   dontEmail?: boolean
   readyVersion?: number
+  versionedAt?: string
   readyAt?: string
   notifiedVersion?: number
   notifiedAt?: string

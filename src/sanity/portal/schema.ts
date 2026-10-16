@@ -176,12 +176,6 @@ export const clientProject = defineType({
             defineField({ name: 'length', title: 'Length', description: 'e.g. 2:45', type: 'string' }),
             defineField({ name: 'notes', title: 'Note to the client', description: 'What changed and what to look for. Shown in the portal and the email.', type: 'text', rows: 3 }),
             defineField({ name: 'dontEmail', title: 'Don’t send the email for this version', type: 'boolean', initialValue: false }),
-            defineField({ name: 'readyVersion', type: 'number', hidden: true }),
-            defineField({ name: 'readyAt', type: 'datetime', hidden: true }),
-            defineField({ name: 'notifiedVersion', title: 'Email sent for version', type: 'number', ...auto }),
-            defineField({ name: 'notifiedAt', title: 'Email sent at', type: 'datetime', ...auto }),
-            defineField({ name: 'remindedVersion', title: 'Reminder sent for version', type: 'number', ...auto }),
-            defineField({ name: 'viewedVersion', title: 'Client viewed version', type: 'number', ...auto }),
           ],
           preview: {
             select: { title: 'title', version: 'version', status: 'status', media: 'thumbnail' },
@@ -202,22 +196,6 @@ export const clientProject = defineType({
       group: 'links',
     }),
     defineField({ name: 'driveFolderId', title: 'Google Drive folder ID', type: 'string', group: 'links', ...auto }),
-    defineField({
-      name: 'activity',
-      title: 'Activity',
-      type: 'array',
-      group: 'links',
-      readOnly: true,
-      description: 'Set automatically from Frame.io and portal uploads. Newest first.',
-      of: [
-        defineArrayMember({
-          type: 'object',
-          name: 'activityItem',
-          fields: [defineField({ name: 'at', type: 'datetime' }), defineField({ name: 'text', type: 'string' }), defineField({ name: 'kind', type: 'string' })],
-          preview: { select: { title: 'text', subtitle: 'at' } },
-        }),
-      ],
-    }),
   ],
   orderings: [{ title: 'Newest', name: 'newest', by: [{ field: '_createdAt', direction: 'desc' }] }],
   preview: {

@@ -1,3 +1,4 @@
+import { after } from 'next/server'
 import { SITE_URL } from '@/lib/site'
 import { normEmail, signLinkToken, startPending } from '@/portal/auth'
 import { emailReady, portalReady } from '@/portal/config'
@@ -21,16 +22,17 @@ export async function POST(req: Request) {
   if (!portalReady() || !emailReady()) return json({ ok: false, error: 'not-configured' }, 503)
 
   const code = await startPending(email)
-  const clients = await findClientsByEmail(email)
-  if (clients.length) {
+  // The lookup and email happen after we answer, so response time never hints at who's a client.
+  after(async () => {
+    const clients = await findClientsByEmail(email)
+    if (!clients.length) return
     const next = typeof body.next === 'string' && body.next.startsWith('/portal/') ? body.next : '/portal'
     const link = `${SITE_URL}/portal/auth?token=${encodeURIComponent(await signLinkToken(email, next))}`
     try {
       await sendEmail({ to: [email], ...signInEmail({ link, code }) })
     } catch (e) {
       console.error('[portal] sign-in email failed', e)
-      return json({ ok: false, error: 'send-failed' }, 502)
     }
-  }
+  })
   return json({ ok: true })
 }

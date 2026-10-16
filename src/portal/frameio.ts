@@ -1,7 +1,7 @@
 import 'server-only'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { portalEnv } from './config'
-import { addActivity, allProjects, updateDeliverable } from './data'
+import { addActivity, allProjects, updateDeliverable, updateDeliverableState } from './data'
 import type { ClientProject, Deliverable } from './types'
 
 /**
@@ -42,7 +42,11 @@ export async function handleFrameio(e: FrameioEvent) {
     case 'file.versioned': {
       const hit = byResource('frameioFileUrl')
       if (hit) {
+        // Frame.io may deliver an event more than once (and signed requests are valid for 5 minutes),
+        // so a second bump for the same deliverable inside 5 minutes is treated as a repeat.
+        if (hit.d.versionedAt && Date.now() - Date.parse(hit.d.versionedAt) < 5 * 60_000) return { matched: true, duplicate: true }
         const version = (hit.d.version || 1) + 1
+        await updateDeliverableState(hit.p._id, hit.d._key, { versionedAt: new Date().toISOString() })
         await updateDeliverable(hit.p._id, hit.d._key, { version, status: 'awaiting-feedback' })
         await addActivity(hit.p._id, `Version ${version} of ${hit.d.title} uploaded`, 'version')
         return { matched: true }
@@ -53,7 +57,7 @@ export async function handleFrameio(e: FrameioEvent) {
     case 'share.viewed': {
       const hit = byResource('shareUrl')
       if (hit && hit.d.viewedVersion !== hit.d.version) {
-        await updateDeliverable(hit.p._id, hit.d._key, { viewedVersion: hit.d.version })
+        await updateDeliverableState(hit.p._id, hit.d._key, { viewedVersion: hit.d.version })
         await addActivity(hit.p._id, `${hit.d.title} v${hit.d.version} was viewed`, 'view')
       }
       return { matched: Boolean(hit) }

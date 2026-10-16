@@ -3,6 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { jwtVerify, SignJWT } from 'jose'
 import { cookies } from 'next/headers'
 import { LINK_MINUTES, SESSION_DAYS, sessionSecret } from './config'
+import { countSignInAttempt } from './data'
 import { DEMO_EMAIL } from './samples'
 import type { Session } from './types'
 
@@ -81,7 +82,8 @@ export async function checkCode(code: string): Promise<{ ok: true; email: string
   }
   const email = String(payload.e)
   const attempts = Number(payload.a) || 0
-  if (attempts >= 5) return { ok: false, reason: 'locked' }
+  // Counted before comparing, so a burst of parallel guesses can't all slip through.
+  if (attempts >= 5 || !(await countSignInAttempt(email))) return { ok: false, reason: 'locked' }
   const expected = Buffer.from(codeFor(email, String(payload.r)))
   const given = Buffer.from(code.replace(/\D/g, '').padEnd(6, 'x').slice(0, 6))
   if (given.length === expected.length && timingSafeEqual(given, expected)) {
