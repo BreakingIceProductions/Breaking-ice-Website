@@ -56,6 +56,7 @@ export function Footer({ s }: { s: Settings }) {
           <span>
             <Link href="/privacy">Privacy</Link>
             <Link href="/accessibility">Accessibility</Link>
+            <Link href="/portal/sign-in">Client login</Link>
           </span>
         </div>
       </div>

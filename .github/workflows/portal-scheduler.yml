@@ -1,0 +1,35 @@
+# Runs the client-portal scheduler every 10 minutes: "new version" emails
+# (after the 10-minute hold), feedback reminders, and Google Drive folders.
+#
+# Setup: GitHub → Settings → Secrets and variables → Actions
+#   Secret   CRON_SECRET  same value as CRON_SECRET in Vercel
+#   Variable SITE_URL     e.g. https://breakingiceproductions.com (defaults to the Vercel preview)
+#
+# Once on Vercel Pro you can switch to Vercel Cron instead (see README) and delete this file.
+name: Portal scheduler
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call the scheduler
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://breaking-ice-website.vercel.app' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET isn't set yet; nothing to do."
+            exit 0
+          fi
+          code=$(curl -sS -o out.json -w '%{http_code}' -H "Authorization: Bearer $CRON_SECRET" "$SITE_URL/api/portal/cron" || echo 000)
+          cat out.json || true
+          echo
+          echo "HTTP $code"
+          # Only fail (and email you) when the site itself errors.
+          case "$code" in 5*) exit 1 ;; esac

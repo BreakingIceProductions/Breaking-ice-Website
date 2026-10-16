@@ -7,6 +7,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 export function proxy(request: NextRequest) {
   const password = process.env.SITE_PASSWORD
   if (!password) return NextResponse.next()
+  // Webhooks, the scheduler and the portal's own APIs check their own credentials.
+  if (request.nextUrl.pathname.startsWith('/api/')) return NextResponse.next()
 
   const user = process.env.SITE_USER || 'breakingice'
   const header = request.headers.get('authorization')

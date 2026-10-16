@@ -83,6 +83,7 @@ export function Header({ locations, cta }: { locations: NavLoc[]; cta: string })
               <Link key={l._id} href={`/${l.slug}`} className="small">{l.title}</Link>
             ))}
             <Link href="/contact" style={{ marginTop: 12 }}>Contact</Link>
+            <Link href="/portal/sign-in" className="small" style={{ marginTop: 12 }}>Client login</Link>
           </nav>
           <Link href="/contact" className="btn btn-primary" style={{ width: '100%' }}>{cta}</Link>
         </div>

@@ -13,11 +13,13 @@
     "@sanity/image-url": "^2.1.1",
     "@sanity/vision": "^6.19.0",
     "@vercel/analytics": "^2.0.1",
+    "jose": "^6.2.12",
     "next": "^16.4.1",
     "next-sanity": "^13.3.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "sanity": "^6.19.0",
+    "server-only": "^0.0.1",
     "styled-components": "^6.6.0"
   },
   "devDependencies": {
