@@ -133,9 +133,11 @@ export async function ensureXeroContact(c: OfficeClient) {
 export type XeroInvoice = { InvoiceID: string; InvoiceNumber?: string; Status: string; AmountDue?: number; Total?: number }
 
 /** Always a draft: nothing reaches the client until you approve and send it in Xero. */
-export async function createDraftInvoice(contactId: string, line: { description: string; amount: number; reference?: string }) {
+export async function createDraftInvoice(contactId: string, line: { description: string; amount: number; reference?: string }, idempotencyKey: string) {
   const r = await call<{ Invoices: XeroInvoice[] }>('/Invoices', {
     method: 'POST',
+    // A double click or a retried request returns the same invoice instead of making a second one.
+    headers: { 'Idempotency-Key': idempotencyKey.slice(0, 128) },
     body: JSON.stringify({
       Invoices: [
         {

@@ -3,7 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { jwtVerify, SignJWT } from 'jose'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { LINK_MINUTES, sessionSecret } from '@/portal/config'
+import { LINK_MINUTES, portalEnv } from '@/portal/config'
 import { countSignInAttempt } from '@/portal/data'
 import { sameOrigin } from '@/portal/http'
 import { adminSampleMode, isAdminEmail } from './config'
@@ -17,7 +17,11 @@ import { adminSampleMode, isAdminEmail } from './config'
 const SESSION = 'bi_admin'
 const PENDING = 'bi_admin_pending'
 const SESSION_DAYS = 14
-const key = () => new TextEncoder().encode(sessionSecret())
+// Only ever the real PORTAL_SECRET: never the portal's demo fallback, so an admin cookie can't be forged on a half-configured deploy.
+const key = () => {
+  if (!portalEnv.secret) throw new Error('PORTAL_SECRET is not set')
+  return new TextEncoder().encode(portalEnv.secret)
+}
 const secure = process.env.NODE_ENV === 'production'
 const cookieOpts = (maxAge: number) => ({ httpOnly: true, secure, sameSite: 'lax' as const, path: '/', maxAge })
 
@@ -35,7 +39,7 @@ export async function readAdminLink(token: string) {
 }
 
 const codeFor = (email: string, nonce: string) =>
-  (createHmac('sha256', sessionSecret()).update(`admin|${email}|${nonce}`).digest().readUInt32BE(0) % 1_000_000).toString().padStart(6, '0')
+  (createHmac('sha256', portalEnv.secret).update(`admin|${email}|${nonce}`).digest().readUInt32BE(0) % 1_000_000).toString().padStart(6, '0')
 
 export async function startAdminPending(email: string) {
   const nonce = randomBytes(12).toString('base64url')
@@ -87,7 +91,7 @@ export async function startAdminSession(email: string) {
 
 export async function getAdminSession(): Promise<{ email: string; sample?: boolean } | null> {
   if (adminSampleMode()) return { email: 'josh@breakingiceproductions.com', sample: true }
-  if (!sessionSecret()) return null
+  if (!portalEnv.secret) return null
   const raw = (await cookies()).get(SESSION)?.value
   if (!raw) return null
   try {
@@ -112,8 +116,12 @@ export async function requireAdmin() {
   return s
 }
 
-/** For API routes: same-site and signed in, or null. */
+/**
+ * For API routes: signed in, and the request provably comes from our own pages.
+ * Stricter than the portal: an Origin header (or Sec-Fetch-Site: same-origin) is required.
+ */
 export async function adminFromRequest(req: Request) {
-  if (!sameOrigin(req)) return null
+  const fromUs = req.headers.get('sec-fetch-site') === 'same-origin' || (Boolean(req.headers.get('origin')) && sameOrigin(req))
+  if (!fromUs) return null
   return getAdminSession()
 }

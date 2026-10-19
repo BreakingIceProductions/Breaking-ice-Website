@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/admin/auth'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getProject } from '@/admin/data'
@@ -15,6 +16,7 @@ import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS } from '@/sanity/portal/office-
 type Props = { params: Promise<{ id: string }> }
 
 export async function generateMetadata({ params }: Props) {
+  await requireAdmin()
   const { id } = await params
   return { title: (await getProject(id))?.title ?? 'Project' }
 }
@@ -23,6 +25,7 @@ const studioHref = (id: string) => `/studio/portal/structure/clientProject;${enc
 const INVOICE_WORD: Record<string, string> = { draft: 'Draft', submitted: 'Awaiting approval', authorised: 'Awaiting payment', paid: 'Paid', voided: 'Voided', deleted: 'Deleted' }
 
 export default async function ProjectPage({ params }: Props) {
+  await requireAdmin()
   const { id } = await params
   const p = await getProject(id)
   if (!p) notFound()

@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/admin/auth'
 import { adminEnv, calendarReady, ticktickReady, xeroReady } from '@/admin/config'
 import { fmtDay } from '@/admin/dates'
 import { serviceAccountEmail } from '@/admin/google'
@@ -11,6 +12,7 @@ type Props = { searchParams: Promise<Record<string, string | undefined>> }
 const NAMES: Record<string, string> = { ticktick: 'TickTick', xero: 'Xero' }
 
 export default async function Settings({ searchParams }: Props) {
+  await requireAdmin()
   const sp = await searchParams
   const [tt, xero] = await Promise.all([ticktickConnection().catch(() => null), xeroConnection().catch(() => null)])
   const sa = serviceAccountEmail()

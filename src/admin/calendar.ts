@@ -65,17 +65,20 @@ const hashOf = (w: Wanted) => createHash('sha1').update(JSON.stringify(w)).diges
 
 function body(p: OfficeProject, w: Wanted) {
   const tz = adminEnv.timeZone
-  const timed = w.time && (!w.end || w.end === w.start)
-  const [h, m] = (w.time ?? '00:00').split(':').map(Number)
-  const endHour = `${String(Math.min(23, h + 1)).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+  const [h, m] = (w.time ?? '').split(':').map(Number)
+  const timed = Number.isInteger(h) && Number.isInteger(m) && h >= 0 && h < 24 && m >= 0 && m < 60 && (!w.end || w.end === w.start)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const startAt = `${pad(h)}:${pad(m)}`
+  // One hour long; a late start stops at midnight rather than running backwards.
+  const endAt = h >= 23 ? '23:59' : `${pad(h + 1)}:${pad(m)}`
   return {
     summary: w.summary,
     location: w.location,
     description: `Breaking Ice back office: ${p.title}. Change this date in the project, not here (edits here are overwritten).`,
     colorId: w.color,
-    start: timed ? { dateTime: `${w.start}T${w.time}:00`, timeZone: tz } : { date: w.start },
+    start: timed ? { dateTime: `${w.start}T${startAt}:00`, timeZone: tz } : { date: w.start },
     // All-day events end on the day after their last day.
-    end: timed ? { dateTime: `${w.start}T${endHour}:00`, timeZone: tz } : { date: addDays(w.end && w.end > w.start ? w.end : w.start, 1) },
+    end: timed ? { dateTime: `${w.start}T${endAt}:00`, timeZone: tz } : { date: addDays(w.end && w.end > w.start ? w.end : w.start, 1) },
     extendedProperties: { private: { boProject: p._id, boSource: w.source } },
     reminders: { useDefault: true },
   }

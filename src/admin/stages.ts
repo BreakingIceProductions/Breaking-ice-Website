@@ -222,7 +222,11 @@ export async function runStage(p: OfficeProject, to: PipelineStage, skip: string
         const d = a.data as { kind: 'deposit' | 'final' | 'retainer'; amount: number }
         const contact = await ensureXeroContact(p.client)
         const what = d.kind === 'deposit' ? 'Deposit' : d.kind === 'retainer' ? 'Monthly retainer' : 'Balance'
-        const inv = await createDraftInvoice(contact, { description: `${p.title}: ${what.toLowerCase()}`, amount: d.amount, reference: p.title })
+        const inv = await createDraftInvoice(
+          contact,
+          { description: `${p.title}: ${what.toLowerCase()}`, amount: d.amount, reference: p.title },
+          `bi-${p._id}-${d.kind}${d.kind === 'retainer' ? `-${today().slice(0, 7)}` : ''}`,
+        )
         await addInvoiceRecord(p._id, {
           kind: d.kind,
           id: inv.InvoiceID,

@@ -152,7 +152,8 @@ export async function setDriveFolder(docId: string, folderId: string) {
 
 /** All projects, for the scheduler and webhooks. */
 export async function allProjects(filter = 'true') {
-  return ((await q<ClientProject[]>(`*[_type == "clientProject" && defined(slug.current) && ${filter}]{${PROJECT_FIELDS}}`)) ?? []).map(decorate)
+  // Leads and quotes aren't in the portal yet, so no emails, folders or webhooks for them either.
+  return ((await q<ClientProject[]>(`*[_type == "clientProject" && defined(slug.current) && !(pipelineStage in $hidden) && ${filter}]{${PROJECT_FIELDS}}`, { hidden: PRE_PORTAL_STAGES })) ?? []).map(decorate)
 }
 
 export const producerFor = (p: { client: PortalClient }, settings: typeof DEFAULT_PORTAL) =>

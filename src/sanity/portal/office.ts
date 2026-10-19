@@ -64,7 +64,7 @@ export const officeFields = [
           defineField({ name: 'title', type: 'string', description: 'e.g. “Shoot day 1” or “Edmonton → Norman Wells”', validation: (r) => r.required() }),
           defineField({ name: 'start', title: 'Start date', type: 'date', validation: (r) => r.required() }),
           defineField({ name: 'end', title: 'End date (for multi-day blocks)', type: 'date' }),
-          defineField({ name: 'time', title: 'Time (optional, e.g. 10:00)', type: 'string', validation: (r) => r.regex(/^([01]?\d|2[0-3]):[0-5]\d$/, { name: '24-hour time' }) }),
+          defineField({ name: 'time', title: 'Time (optional, 24-hour, e.g. 09:30)', type: 'string', validation: (r) => r.regex(/^([01]\d|2[0-3]):[0-5]\d$/, { name: '24-hour time' }) }),
           defineField({ name: 'location', type: 'string' }),
         ],
         preview: {

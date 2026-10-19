@@ -1,3 +1,4 @@
+import { requireAdmin } from '@/admin/auth'
 import Link from 'next/link'
 import { listProjects } from '@/admin/data'
 import { fmtDay } from '@/admin/dates'
@@ -9,6 +10,7 @@ import { PIPELINE_STAGES, REGIONS } from '@/sanity/portal/office-constants'
 export const metadata = { title: 'Projects' }
 
 export default async function Projects() {
+  await requireAdmin()
   const projects = await listProjects()
   return (
     <div className="a-page">

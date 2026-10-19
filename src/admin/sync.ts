@@ -51,7 +51,8 @@ async function shiftTasks(p: OfficeProject, log: string[]) {
       await updateTaskDue(p._id, t._key, due)
       log.push(`task moved: ${t.title} → ${due}`)
     } catch (e) {
-      // A task you deleted or finished in TickTick just stays as it is.
+      // A task you deleted or finished in TickTick stays as it is; record the new date so it isn't retried every run.
+      await updateTaskDue(p._id, t._key, due).catch(() => {})
       log.push(`task not moved (${t.title}): ${String(e).slice(0, 80)}`)
     }
   }

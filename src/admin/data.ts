@@ -213,7 +213,7 @@ function open<T>(sealed?: string): T | null {
   if (!sealed) return null
   try {
     const [iv, tag, body] = sealed.split('.').map((s) => Buffer.from(s, 'base64url'))
-    const d = createDecipheriv('aes-256-gcm', cryptoKey(), iv)
+    const d = createDecipheriv('aes-256-gcm', cryptoKey(), iv, { authTagLength: 16 })
     d.setAuthTag(tag)
     return JSON.parse(Buffer.concat([d.update(body), d.final()]).toString('utf8')) as T
   } catch {
@@ -230,6 +230,7 @@ export async function getConnection<T>(name: Connection): Promise<T | null> {
 }
 
 export async function saveConnection(name: Connection, value: unknown | null) {
+  if (!portalEnv.secret) throw new Error('PORTAL_SECRET is not set, so tokens can’t be stored safely')
   await portalClient.createIfNotExists({ _id: SECRETS_ID, _type: 'boSecrets' })
   if (value === null) await portalClient.patch(SECRETS_ID).unset([name]).commit()
   else await portalClient.patch(SECRETS_ID).set({ [name]: seal(value) }).commit()
