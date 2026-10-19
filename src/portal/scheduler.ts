@@ -1,5 +1,6 @@
 import 'server-only'
 import { SITE_URL } from '@/lib/site'
+import { syncOffice } from '@/admin/sync'
 import { signLinkToken } from './auth'
 import { driveReady, emailReady } from './config'
 import { addActivity, allProjects, claimDeliverable, cleanSignInGuards, freshState, getPortalSettings, producerFor, updateDeliverableState } from './data'
@@ -18,6 +19,8 @@ import type { ClientProject, Deliverable } from './types'
  *                or after N days (Portal settings, default 7) when there’s no due date.
  *                Never sooner than a day after the first email.
  *  Folders       every active project gets its Drive folders, and renames follow the Studio.
+ *  Back office   calendar events, TickTick due dates and Xero invoice statuses
+ *                catch up with the projects (src/admin/sync.ts).
  *
  *  Each email is claimed before it's sent (a write that only succeeds if nothing changed
  *  since we read the project), so a run that's cut short or overlaps another can never
@@ -99,6 +102,13 @@ export async function runScheduler(now = Date.now()) {
       if (p.status === 'delivered' && p.driveFolderId) continue
       await ensureProjectFolders(p).catch((e) => log.push(`folders failed for ${p.title}: ${String(e).slice(0, 120)}`))
     }
+  }
+
+  // 3. Back office: calendar, TickTick due dates and invoice statuses follow the projects.
+  try {
+    log.push(...(await syncOffice(started + 52_000)))
+  } catch (e) {
+    log.push(`office sync failed: ${String(e).slice(0, 160)}`)
   }
 
   await cleanSignInGuards()

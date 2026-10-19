@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { createImageUrlBuilder } from '@sanity/image-url'
 import { createClient } from 'next-sanity'
 import { apiVersion, projectId } from '@/sanity/env'
+import { PRE_PORTAL_STAGES } from '@/sanity/portal/office-constants'
 import { portalEnv, portalReady } from './config'
 import { DEFAULT_PORTAL, SAMPLE_CLIENT, sampleProjects } from './samples'
 import type { ClientProject, Deliverable, PortalClient, PortalSettings, SanityImage, Session } from './types'
@@ -84,8 +85,10 @@ export async function getAccess(session: Session) {
   const clients = await findClientsByEmail(session.email)
   if (!clients.length) return { clients, projects: [] as ClientProject[], name: undefined }
   const projects =
-    (await q<ClientProject[]>(`*[_type == "clientProject" && client._ref in $ids && defined(slug.current)] | order(_updatedAt desc){${PROJECT_FIELDS}}`, {
+    (await q<ClientProject[]>(`*[_type == "clientProject" && client._ref in $ids && defined(slug.current) && !(pipelineStage in $hidden)] | order(_updatedAt desc){${PROJECT_FIELDS}}`, {
       ids: clients.map((c) => c._id),
+      // Leads and quotes live in the back office only; clients see a project once it's booked.
+      hidden: PRE_PORTAL_STAGES,
     })) ?? []
   const contact = clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === session.email)
   return { clients, projects: projects.map(decorate), name: contact?.name?.split(' ')[0] }
