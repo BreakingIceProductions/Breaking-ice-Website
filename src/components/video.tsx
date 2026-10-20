@@ -55,8 +55,8 @@ export function VideoLoop({
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
     const host = (ref.current.closest('.card, .proj-card') as HTMLElement | null) ?? ref.current
-    const enter = () => { setLive(true); setHot(true) }
-    const leave = () => { setHot(false); setShown(false) }
+    const enter = () => { hotRef.current = true; setLive(true); setHot(true) }
+    const leave = () => { hotRef.current = false; setHot(false); setShown(false) }
     host.addEventListener('pointerenter', enter)
     host.addEventListener('pointerleave', leave)
     host.addEventListener('focusin', enter)
@@ -87,7 +87,7 @@ export function VideoLoop({
     const f = frame.current
     if (!f) return
     let start = -1
-    let active = !hoverOnly
+    const isActive = () => !hoverOnly || hotRef.current
     const post = (m: Record<string, unknown>) => f.contentWindow?.postMessage(JSON.stringify(m), 'https://player.vimeo.com')
     const onLoad = () => {
       post({ method: 'addEventListener', value: 'timeupdate' })
@@ -104,17 +104,18 @@ export function VideoLoop({
         if (duration > 0) { start = duration * startAt; post({ method: 'setCurrentTime', value: start }) }
         return
       }
-      if (seconds >= start - 0.3 && active) setShown(true)
+      if (seconds >= start - 0.3 && isActive()) setShown(true)
       if (seconds > start + segment) post({ method: 'setCurrentTime', value: start })
     }
     f.addEventListener('load', onLoad)
     window.addEventListener('message', onMsg)
-    const fallback = window.setTimeout(() => { if (active) setShown(true) }, 4500)
+    const fallback = window.setTimeout(() => { if (isActive()) setShown(true) }, 4500)
     // hoverOnly: play while hot, pause when not
     const sync = () => {
-      active = !hoverOnly || hotRef.current
-      post({ method: active ? 'play' : 'pause' })
-      if (active && start >= 0) setShown(true)
+      const on = isActive()
+      post({ method: on ? 'play' : 'pause' })
+      if (!on) setShown(false)
+      else if (start >= 0) setShown(true)
     }
     syncRef.current = sync
     return () => { syncRef.current = null; f.removeEventListener('load', onLoad); window.removeEventListener('message', onMsg); window.clearTimeout(fallback) }
