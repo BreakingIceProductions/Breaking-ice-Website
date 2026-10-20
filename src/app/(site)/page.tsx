@@ -4,6 +4,7 @@ import { ArrowLink, Btn, Eyebrow, Logo, Still } from '@/components/brand'
 import { LocationCard, ServiceCard, StoryCard } from '@/components/cards'
 import { Checklist, Testimonials } from '@/components/interactive'
 import { ClosingBand, Process, RichText } from '@/components/sections'
+import { ReturnCalculator } from '@/components/return-calculator'
 import { SwipeRail } from '@/components/swipe-rail'
 import { PlayerButton, VideoLoop } from '@/components/video'
 import { getHome, getLocation, getServices, getSettings } from '@/lib/data'
@@ -139,6 +140,18 @@ export default async function HomePage() {
             <h2 id="t-title" className="h2">{h.testimonialsTitle}</h2>
           </div>
           <Testimonials items={h.testimonials} />
+        </div>
+      </section>
+
+      {/* What a film could be worth */}
+      <section className="section dark" aria-labelledby="calc-title">
+        <div className="wrap" style={{ maxWidth: 1040 }}>
+          <div className="sec-head" style={{ marginInline: 'auto', textAlign: 'center', alignItems: 'center' }}>
+            <Eyebrow>The return</Eyebrow>
+            <h2 id="calc-title" className="h1">A film that earns its keep. See what that could be worth over a year.</h2>
+            <p className="hero-sub" style={{ margin: 0 }}>Move the sliders to your own numbers. It is the same maths we walk through together when we talk.</p>
+          </div>
+          <ReturnCalculator cta={s.primaryCta} />
         </div>
       </section>
 
