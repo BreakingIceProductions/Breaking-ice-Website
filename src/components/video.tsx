@@ -114,8 +114,9 @@ export function VideoLoop({
     const sync = () => {
       const on = isActive()
       post({ method: on ? 'play' : 'pause' })
-      if (!on) setShown(false)
-      else if (start >= 0) setShown(true)
+      if (!on) { setShown(false); return }
+      // Resuming: show straight away if we already know where we are, otherwise give the player a moment, then show anyway.
+      window.setTimeout(() => { if (isActive()) setShown(true) }, start >= 0 ? 0 : 2500)
     }
     syncRef.current = sync
     return () => { syncRef.current = null; f.removeEventListener('load', onLoad); window.removeEventListener('message', onMsg); window.clearTimeout(fallback) }
