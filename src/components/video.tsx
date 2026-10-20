@@ -23,6 +23,7 @@ export function VideoLoop({
   priority,
   startAt = 0.25,
   segment = 12,
+  hoverOnly,
 }: {
   url?: string
   posterUrl?: string | null
@@ -35,15 +36,36 @@ export function VideoLoop({
   startAt?: number
   /** How many seconds the preview plays before it loops back to that point. */
   segment?: number
+  /** Stay a still image until the pointer is over the card, then play the preview. Touch devices stay still. */
+  hoverOnly?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const frame = useRef<HTMLIFrameElement>(null)
+  const hotRef = useRef(false)
+  const syncRef = useRef<(() => void) | null>(null)
   const [live, setLive] = useState(false)
   const [shown, setShown] = useState(false)
+  const [hot, setHot] = useState(false)
   const src = embedUrl(url, 'loop')
   const isVimeo = !!src && src.startsWith('https://player.vimeo.com/')
 
+  // hoverOnly: load and play while the pointer is over the card; pause and return to the still when it leaves
   useEffect(() => {
+    if (!hoverOnly || !src || !ref.current) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
+    const host = (ref.current.closest('.card, .proj-card') as HTMLElement | null) ?? ref.current
+    const enter = () => { setLive(true); setHot(true) }
+    const leave = () => { setHot(false); setShown(false) }
+    host.addEventListener('pointerenter', enter)
+    host.addEventListener('pointerleave', leave)
+    host.addEventListener('focusin', enter)
+    host.addEventListener('focusout', leave)
+    return () => { host.removeEventListener('pointerenter', enter); host.removeEventListener('pointerleave', leave); host.removeEventListener('focusin', enter); host.removeEventListener('focusout', leave) }
+  }, [hoverOnly, src])
+
+  useEffect(() => {
+    if (hoverOnly) return
     if (!src || !ref.current) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const io = new IntersectionObserver(
@@ -57,7 +79,7 @@ export function VideoLoop({
     )
     io.observe(ref.current)
     return () => io.disconnect()
-  }, [src])
+  }, [src, hoverOnly])
 
   // Vimeo previews: jump to ~25% in, fade in only once there, and loop a short segment from that point.
   useEffect(() => {
@@ -65,6 +87,7 @@ export function VideoLoop({
     const f = frame.current
     if (!f) return
     let start = -1
+    let active = !hoverOnly
     const post = (m: Record<string, unknown>) => f.contentWindow?.postMessage(JSON.stringify(m), 'https://player.vimeo.com')
     const onLoad = () => {
       post({ method: 'addEventListener', value: 'timeupdate' })
@@ -81,14 +104,26 @@ export function VideoLoop({
         if (duration > 0) { start = duration * startAt; post({ method: 'setCurrentTime', value: start }) }
         return
       }
-      if (seconds >= start - 0.3) setShown(true)
+      if (seconds >= start - 0.3 && active) setShown(true)
       if (seconds > start + segment) post({ method: 'setCurrentTime', value: start })
     }
     f.addEventListener('load', onLoad)
     window.addEventListener('message', onMsg)
-    const fallback = window.setTimeout(() => setShown(true), 4500)
-    return () => { f.removeEventListener('load', onLoad); window.removeEventListener('message', onMsg); window.clearTimeout(fallback) }
-  }, [live, isVimeo, startAt, segment])
+    const fallback = window.setTimeout(() => { if (active) setShown(true) }, 4500)
+    // hoverOnly: play while hot, pause when not
+    const sync = () => {
+      active = !hoverOnly || hotRef.current
+      post({ method: active ? 'play' : 'pause' })
+      if (active && start >= 0) setShown(true)
+    }
+    syncRef.current = sync
+    return () => { syncRef.current = null; f.removeEventListener('load', onLoad); window.removeEventListener('message', onMsg); window.clearTimeout(fallback) }
+  }, [live, isVimeo, startAt, segment, hoverOnly])
+
+  useEffect(() => {
+    hotRef.current = hot
+    syncRef.current?.()
+  }, [hot])
 
   return (
     <div ref={ref} className={`media ${onDark ? 'on-dark' : ''} ${className}`}>
@@ -106,7 +141,7 @@ export function VideoLoop({
           tabIndex={-1}
           allow="autoplay; fullscreen"
           loading="lazy"
-          style={isVimeo ? { opacity: shown ? 1 : 0, transition: 'opacity .8s ease' } : undefined}
+          style={isVimeo ? { opacity: shown && (!hoverOnly || hot) ? 1 : 0, transition: 'opacity .6s ease' } : undefined}
         />
       )}
     </div>

@@ -15,7 +15,7 @@ export function StoryCard({ p, priority }: { p: ProjectCard; priority?: boolean 
         {isPhoto ? (
           <Still image={p.thumbnail} label="Photo story" />
         ) : (
-          <VideoLoop url={p.cardVideo} posterUrl={poster} posterAlt={p.thumbnail?.alt} label="Preview loop" className="ratio-43 cut-lg" priority={priority} />
+          <VideoLoop url={p.cardVideo} posterUrl={poster} posterAlt={p.thumbnail?.alt} label="Preview loop" className="ratio-43 cut-lg" priority={priority} hoverOnly />
         )}
       </div>
       <div className="stack" style={{ gap: 6 }}>
