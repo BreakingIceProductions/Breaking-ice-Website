@@ -253,7 +253,7 @@ button { font: inherit; color: inherit; }
 .hero { position: relative; min-height: min(88vh, 860px); display: flex; align-items: flex-end; overflow: hidden; }
 .hero-media { position: absolute; inset: 0; }
 .hero-media .media { position: absolute; inset: 0; height: 100%; }
-.hero-media iframe { width: 177.78vh; min-width: 100%; height: 56.25vw; min-height: 100%; left: 50%; top: 50%; translate: -50% -50%; inset: auto; }
+.hero-media iframe { inset: auto; left: 50%; top: 50%; translate: -50% -50%; width: 177.78vh; min-width: 100%; height: 56.25vw; min-height: 100%; }
 .hero-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(24, 32, 47, .15) 0%, rgba(24, 32, 47, .35) 45%, rgba(24, 32, 47, .92) 100%); pointer-events: none; }
 .hero-content { position: relative; padding-top: calc(var(--space-24) + 40px); padding-bottom: var(--space-16); }
 .hero-content .display-xl { max-width: 15ch; margin: var(--space-4) 0 var(--space-6); }
@@ -307,9 +307,9 @@ button { font: inherit; color: inherit; }
 /* Story cards */
 .card { display: flex; flex-direction: column; gap: var(--space-4); text-decoration: none; color: inherit; }
 .card .media { transition: transform .4s; }
-/* Card previews: zoom the 16:9 loop to fill the card (iframes ignore object-fit) */
-.card .media, .proj-card .media { container-type: size; }
-.card .media > iframe, .proj-card .media > iframe { inset: auto; top: 50%; left: 50%; width: max(100cqw, 177.78cqh); height: max(100cqh, 56.25cqw); transform: translate(-50%, -50%); }
+/* Card previews: the Vimeo player letterboxes its 16:9 video inside the iframe, so make the iframe as tall as the 4:3 card
+   (and 4/3 as wide) and centre it. This fills the card; the sides are cropped. */
+.card .media.ratio-43 > iframe { inset: auto; left: 50%; top: 50%; width: 133.4%; height: 100%; transform: translate(-50%, -50%); }
 .card:hover .card-title { color: var(--accent); }
 .card-frame { position: relative; }
 .card-frame .tag { position: absolute; left: 0; top: var(--space-4); z-index: 2; }
