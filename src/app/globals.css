@@ -284,8 +284,9 @@ button { font: inherit; color: inherit; }
 .logo-track { display: flex; gap: var(--space-12); width: max-content; animation: marquee 50s linear infinite; }
 .logo-strip:hover .logo-track { animation-play-state: paused; }
 .logo-item { height: 56px; min-width: 150px; display: flex; align-items: center; justify-content: center; color: var(--ink-muted); font-size: 13px; border: 1px dashed var(--input-line); border-radius: var(--radius-sm); padding: 0 var(--space-6); }
-.logo-item img { max-height: 40px; width: auto; filter: grayscale(1); opacity: .8; }
-:root[data-theme='dark'] .logo-item img { filter: grayscale(1) brightness(0) invert(1); opacity: .75; }
+.logo-item:has(img) { border: 0; padding: 0 var(--space-4); }
+.logo-item img { max-height: 44px; max-width: 170px; width: auto; height: auto; object-fit: contain; filter: brightness(0); opacity: .85; }
+:root[data-theme='dark'] .logo-item img { filter: brightness(0) invert(1); opacity: .8; }
 @keyframes marquee { to { transform: translateX(-50%); } }
 
 /* Process */
