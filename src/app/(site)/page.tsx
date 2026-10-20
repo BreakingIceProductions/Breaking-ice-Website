@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLink, Btn, Eyebrow, Still } from '@/components/brand'
+import { ArrowLink, Btn, Eyebrow, Logo, Still } from '@/components/brand'
 import { LocationCard, ServiceCard, StoryCard } from '@/components/cards'
 import { Checklist, Testimonials } from '@/components/interactive'
 import { ClosingBand, Process, RichText } from '@/components/sections'
@@ -23,8 +23,15 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* Calm first screen: just the name, then the film */}
+      <section className="splash dark" aria-label="Breaking Ice Productions">
+        <Logo tone="light" height={112} className="splash-logo" />
+        <p className="splash-line">{h.heroEyebrow}</p>
+        <a href="#film" className="scroll-cue splash-cue">Scroll to explore <span aria-hidden="true">↓</span></a>
+      </section>
+
       {/* Hero: full-bleed reel */}
-      <section className="hero dark" aria-label="Introduction">
+      <section id="film" className="hero dark" aria-label="Introduction">
         <div className="hero-media">
           <VideoLoop url={h.heroReel} posterUrl={poster} posterAlt={h.heroPoster?.alt} label="" onDark priority />
           {!h.heroReel && !poster && (
