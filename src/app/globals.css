@@ -306,6 +306,9 @@ button { font: inherit; color: inherit; }
 /* Story cards */
 .card { display: flex; flex-direction: column; gap: var(--space-4); text-decoration: none; color: inherit; }
 .card .media { transition: transform .4s; }
+/* Card previews: zoom the 16:9 loop to fill the card (iframes ignore object-fit) */
+.card .media, .proj-card .media { container-type: size; }
+.card .media > iframe, .proj-card .media > iframe { inset: auto; top: 50%; left: 50%; width: max(100cqw, 177.78cqh); height: max(100cqh, 56.25cqw); transform: translate(-50%, -50%); }
 .card:hover .card-title { color: var(--accent); }
 .card-frame { position: relative; }
 .card-frame .tag { position: absolute; left: 0; top: var(--space-4); z-index: 2; }
