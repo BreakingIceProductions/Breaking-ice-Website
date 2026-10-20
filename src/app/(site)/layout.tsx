@@ -1,5 +1,6 @@
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
+import { Motion } from '@/components/motion'
 import { JsonLd, organizationLd } from '@/components/json-ld'
 import { Tracking } from '@/components/tracking'
 import { getSettings } from '@/lib/data'
@@ -13,6 +14,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Header locations={s.locations} cta={s.primaryCta} social={s.social} />
       <main id="main">{children}</main>
       <Footer s={s} />
+      <Motion />
       <Tracking bookingLink={s.bookingLink} />
       <JsonLd data={organizationLd(s)} />
     </>

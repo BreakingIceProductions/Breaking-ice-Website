@@ -5,6 +5,7 @@ import { LocationCard, ServiceCard, StoryCard } from '@/components/cards'
 import { Checklist, Testimonials } from '@/components/interactive'
 import { ClosingBand, Process, RichText } from '@/components/sections'
 import { ReturnCalculator } from '@/components/return-calculator'
+import { SplitHeading } from '@/components/split-heading'
 import { SwipeRail } from '@/components/swipe-rail'
 import { PlayerButton, VideoLoop } from '@/components/video'
 import { getHome, getLocation, getServices, getSettings } from '@/lib/data'
@@ -42,7 +43,7 @@ export default async function HomePage() {
         <div className="hero-scrim" />
         <div className="wrap hero-content">
           <Eyebrow>{h.heroEyebrow}</Eyebrow>
-          <h1 className="display-xl">{h.heroHeadline}</h1>
+          <SplitHeading as="h1" className="display-xl" text={h.heroHeadline} />
           <p className="hero-sub">{h.heroSubline}</p>
           <div className="btn-row">
             <Btn href="/contact">{s.primaryCta}</Btn>
@@ -148,7 +149,7 @@ export default async function HomePage() {
         <div className="wrap" style={{ maxWidth: 1040 }}>
           <div className="sec-head" style={{ marginInline: 'auto', textAlign: 'center', alignItems: 'center' }}>
             <Eyebrow>The return</Eyebrow>
-            <h2 id="calc-title" className="h1">A film that earns its keep. See what that could be worth over a year.</h2>
+            <SplitHeading as="h2" className="h1" text="A film that earns its keep. See what that could be worth over a year." />
             <p className="hero-sub" style={{ margin: 0 }}>Move the sliders to your own numbers. It is the same maths we walk through together when we talk.</p>
           </div>
           <ReturnCalculator cta={s.primaryCta} />
