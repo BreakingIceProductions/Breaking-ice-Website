@@ -28,6 +28,27 @@ export function Logo({ tone = 'light', height = 40, className }: { tone?: 'light
   )
 }
 
+/**
+ * Vertical and stacked lockups. tone="auto" renders the light-background and dark-background versions and lets the
+ * theme pick one (see .logo-for-light / .logo-for-dark); tone="dark" is for bands that are always dark (splash, footer).
+ */
+export function Lockup({ variant = 'vertical', tone = 'auto', height = 200, className }: { variant?: 'vertical' | 'stacked'; tone?: 'auto' | 'dark'; height?: number; className?: string }) {
+  const ratio = variant === 'vertical' ? 812.52 / 878.71 : 1 // padded viewBoxes; width follows the file
+  const style = { height: `var(--lh, ${height}px)`, width: 'auto' } as const
+  const dim = { height, width: Math.round(height * (variant === 'vertical' ? ratio : 1.48)) }
+  const img = (src: string, cls?: string) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className={cls} src={src} alt={cls === 'logo-for-dark' ? '' : 'Breaking Ice Productions'} aria-hidden={cls === 'logo-for-dark' ? true : undefined} style={style} {...dim} />
+  )
+  if (tone === 'dark') return <span className={`lockup ${className ?? ''}`}>{img(`/brand/bi-${variant}-ondark.svg`)}</span>
+  return (
+    <span className={`lockup ${className ?? ''}`}>
+      {img(`/brand/bi-${variant}-onlight.svg`, 'logo-for-light')}
+      {img(`/brand/bi-${variant}-ondark.svg`, 'logo-for-dark')}
+    </span>
+  )
+}
+
 export function Eyebrow({ children, as: As = 'span' }: { children: ReactNode; as?: 'span' | 'p' | 'h2' }) {
   return <As className="eyebrow" style={{ margin: 0 }}>{children}</As>
 }

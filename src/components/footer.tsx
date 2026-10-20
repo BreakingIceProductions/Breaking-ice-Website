@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Settings } from '@/lib/types'
-import { Logo } from './brand'
+import { Lockup } from './brand'
 
 export function Footer({ s }: { s: Settings }) {
   const social = [
@@ -14,7 +14,7 @@ export function Footer({ s }: { s: Settings }) {
       <div className="wrap">
         <div className="footer-grid">
           <div className="stack" style={{ gap: 20 }}>
-            <Link href="/" aria-label="Breaking Ice Productions, home"><Logo tone="dark" height={36} /></Link>
+            <Link href="/" aria-label="Breaking Ice Productions, home"><Lockup variant="stacked" tone="dark" height={96} /></Link>
             <p className="muted" style={{ margin: 0, maxWidth: '36ch', fontSize: 15, lineHeight: '24px' }}>{s.footerDescription}</p>
             <p className="quote" style={{ margin: 0, fontSize: 22, lineHeight: '30px' }}>{s.tagline}</p>
           </div>
