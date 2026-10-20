@@ -75,7 +75,7 @@ export function VideoLoop({
       let d: { event?: string; data?: { seconds?: number; duration?: number } }
       try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data } catch { return }
       if (d.event === 'finish' && start >= 0) { post({ method: 'setCurrentTime', value: start }); post({ method: 'play' }); return }
-      if (d.event !== 'timeupdate' || !d.data) return
+      if ((d.event !== 'timeupdate' && d.event !== 'playProgress') || !d.data) return
       const { seconds = 0, duration = 0 } = d.data
       if (start < 0) {
         if (duration > 0) { start = duration * startAt; post({ method: 'setCurrentTime', value: start }) }
