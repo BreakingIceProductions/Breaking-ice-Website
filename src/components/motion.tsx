@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react'
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 
 /**
- * The site's quiet details: reveal-on-scroll, headline words, a touch of parallax, a progress line and back-to-top.
+ * The site's quiet details: reveal-on-scroll, headline words, a progress line and back-to-top.
  * Motion is skipped for visitors who ask for reduced motion. Without JS the page is simply the plain page.
  */
 export function Motion() {
@@ -34,11 +34,6 @@ export function Motion() {
         if (!reduced) {
           const splash = document.querySelector<HTMLElement>('.splash')
           if (splash) splash.style.setProperty('--sp', String(clamp(y / (splash.offsetHeight * 0.75))))
-          const hero = document.querySelector<HTMLElement>('.hero')
-          if (hero) {
-            const r = hero.getBoundingClientRect()
-            if (r.bottom > 0 && r.top < window.innerHeight) hero.style.setProperty('--hy', `${Math.round((window.innerHeight - r.top) * 0.08)}px`)
-          }
         }
       })
     }
@@ -72,7 +67,6 @@ export function Motion() {
           else groups.push([el])
         })
       })
-      document.querySelectorAll<HTMLElement>('.hero-content > *').forEach((el) => { if (!el.classList.contains('split-h')) groups.push([el]) })
       const io = new IntersectionObserver((entries) => {
         entries.forEach((en) => { if (en.isIntersecting) { (en.target as HTMLElement).classList.add('rv-in'); io.unobserve(en.target) } })
       }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' })

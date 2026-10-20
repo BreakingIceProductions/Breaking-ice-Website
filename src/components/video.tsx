@@ -21,6 +21,8 @@ export function VideoLoop({
   className = '',
   onDark,
   priority,
+  startAt = 0.25,
+  segment = 12,
 }: {
   url?: string
   posterUrl?: string | null
@@ -29,10 +31,17 @@ export function VideoLoop({
   className?: string
   onDark?: boolean
   priority?: boolean
+  /** Where a Vimeo preview starts, as a fraction of the film (intros are often slow or a single colour). */
+  startAt?: number
+  /** How many seconds the preview plays before it loops back to that point. */
+  segment?: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const frame = useRef<HTMLIFrameElement>(null)
   const [live, setLive] = useState(false)
+  const [shown, setShown] = useState(false)
   const src = embedUrl(url, 'loop')
+  const isVimeo = !!src && src.startsWith('https://player.vimeo.com/')
 
   useEffect(() => {
     if (!src || !ref.current) return
@@ -50,6 +59,37 @@ export function VideoLoop({
     return () => io.disconnect()
   }, [src])
 
+  // Vimeo previews: jump to ~25% in, fade in only once there, and loop a short segment from that point.
+  useEffect(() => {
+    if (!live || !isVimeo) return
+    const f = frame.current
+    if (!f) return
+    let start = -1
+    const post = (m: Record<string, unknown>) => f.contentWindow?.postMessage(JSON.stringify(m), 'https://player.vimeo.com')
+    const onLoad = () => {
+      post({ method: 'addEventListener', value: 'timeupdate' })
+      post({ method: 'addEventListener', value: 'finish' })
+    }
+    const onMsg = (e: MessageEvent) => {
+      if (e.origin !== 'https://player.vimeo.com' || e.source !== f.contentWindow) return
+      let d: { event?: string; data?: { seconds?: number; duration?: number } }
+      try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data } catch { return }
+      if (d.event === 'finish' && start >= 0) { post({ method: 'setCurrentTime', value: start }); post({ method: 'play' }); return }
+      if (d.event !== 'timeupdate' || !d.data) return
+      const { seconds = 0, duration = 0 } = d.data
+      if (start < 0) {
+        if (duration > 0) { start = duration * startAt; post({ method: 'setCurrentTime', value: start }) }
+        return
+      }
+      if (seconds >= start - 0.3) setShown(true)
+      if (seconds > start + segment) post({ method: 'setCurrentTime', value: start })
+    }
+    f.addEventListener('load', onLoad)
+    window.addEventListener('message', onMsg)
+    const fallback = window.setTimeout(() => setShown(true), 4500)
+    return () => { f.removeEventListener('load', onLoad); window.removeEventListener('message', onMsg); window.clearTimeout(fallback) }
+  }, [live, isVimeo, startAt, segment])
+
   return (
     <div ref={ref} className={`media ${onDark ? 'on-dark' : ''} ${className}`}>
       {posterUrl ? (
@@ -57,7 +97,18 @@ export function VideoLoop({
       ) : (
         !src && label && <Placeholder label={label} play />
       )}
-      {live && src && <iframe src={src} title="" aria-hidden="true" tabIndex={-1} allow="autoplay; fullscreen" loading="lazy" />}
+      {live && src && (
+        <iframe
+          ref={frame}
+          src={src}
+          title=""
+          aria-hidden="true"
+          tabIndex={-1}
+          allow="autoplay; fullscreen"
+          loading="lazy"
+          style={isVimeo ? { opacity: shown ? 1 : 0, transition: 'opacity .8s ease' } : undefined}
+        />
+      )}
     </div>
   )
 }

@@ -84,14 +84,16 @@ export default async function ProjectPage({ params }: Props) {
     <>
       <JsonLd data={[breadcrumbLd([['Stories', '/stories'], [p.title, `/stories/${p.slug}`]]), ...(videoLd ? [videoLd] : [])]} />
       {/* Hero film */}
-      <section className="dark" aria-label="Film">
-        {isPhoto ? (
-          <Still image={p.heroImage} label="Hero photograph" ratio="ratio-169" cut={false} width={2000} onDark priority sizes="100vw" />
-        ) : (
-          <div style={{ position: 'relative' }}>
-            <VideoLoop url={p.heroVideo} posterUrl={poster ?? heroImg} label="The film" className="ratio-169" onDark priority />
-          </div>
-        )}
+      <section className="dark film-section" aria-label="Film">
+        <div className="wrap">
+          {isPhoto ? (
+            <Still image={p.heroImage} label="Hero photograph" ratio="ratio-169" cut={false} width={2000} onDark priority sizes="100vw" />
+          ) : (
+            <div style={{ position: 'relative' }}>
+              <VideoLoop url={p.heroVideo} posterUrl={poster ?? heroImg} label="The film" className="ratio-169" onDark priority />
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="page-head" style={{ paddingTop: 'var(--space-16)' }}>

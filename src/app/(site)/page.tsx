@@ -32,31 +32,33 @@ export default async function HomePage() {
         <a href="#film" className="scroll-cue splash-cue">Scroll to explore <span aria-hidden="true">↓</span></a>
       </section>
 
-      {/* Hero: full-bleed reel */}
-      <section id="film" className="hero dark" aria-label="Introduction">
-        <div className="hero-media">
-          <VideoLoop url={h.heroReel} posterUrl={poster} posterAlt={h.heroPoster?.alt} label="" onDark priority />
-          {!h.heroReel && !poster && (
-            <span className="hero-note">Hero reel: add a Vimeo/YouTube link and poster image in the Studio</span>
-          )}
-        </div>
-        <div className="hero-scrim" />
-        <div className="wrap hero-content">
-          <Eyebrow>{h.heroEyebrow}</Eyebrow>
-          <SplitHeading as="h1" className="display-xl" text={h.heroHeadline} />
-          <p className="hero-sub">{h.heroSubline}</p>
-          <div className="btn-row">
-            <Btn href="/contact">{s.primaryCta}</Btn>
-            <Btn href="/stories" variant="secondary">{s.secondaryCta}</Btn>
-            <PlayerButton url={h.fullReel} trackAs="Showreel">
-              <span className="ring" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
-              </span>
-              Watch the reel
-            </PlayerButton>
+      {/* Hero: the reel, contained in a soft frame */}
+      <section id="film" className="hero hero-contained dark" aria-label="Introduction">
+        <div className="wrap">
+          <div className="hero-head">
+            <div className="stack" style={{ gap: 'var(--space-4)' }}>
+              <Eyebrow>{h.heroEyebrow}</Eyebrow>
+              <SplitHeading as="h1" className="display-xl" text={h.heroHeadline} />
+            </div>
+            <div className="hero-aside">
+              <p className="hero-sub">{h.heroSubline}</p>
+              <div className="btn-row">
+                <Btn href="/contact">{s.primaryCta}</Btn>
+                <Btn href="/stories" variant="secondary">{s.secondaryCta}</Btn>
+                <PlayerButton url={h.fullReel} trackAs="Showreel">
+                  <span className="ring" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
+                  </span>
+                  Watch the reel
+                </PlayerButton>
+              </div>
+            </div>
           </div>
-          <div>
-            <a href="#intro" className="scroll-cue">Scroll <span aria-hidden="true">↓</span></a>
+          <div className="hero-frame">
+            <VideoLoop url={h.heroReel} posterUrl={poster} posterAlt={h.heroPoster?.alt} label="" className="ratio-169" onDark priority />
+            {!h.heroReel && !poster && (
+              <span className="hero-note">Hero reel: add a Vimeo/YouTube link and poster image in the Studio</span>
+            )}
           </div>
         </div>
       </section>
