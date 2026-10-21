@@ -170,34 +170,49 @@ export function PlayerButton({
   const [open, setOpen] = useState(false)
   const src = embedUrl(url, 'play', { captions })
   const closeRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const openerRef = useRef<HTMLButtonElement>(null)
 
+  // Focus in on open, back to the button on close; keep Tab inside the dialog meanwhile.
   useEffect(() => {
     if (!open) return
+    const opener = openerRef.current
     closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+      else if (e.key === 'Tab' && dialogRef.current) {
+        const f = Array.from(dialogRef.current.querySelectorAll<HTMLElement>('button, iframe'))
+        if (!f.length) return
+        const first = f[0]
+        const last = f[f.length - 1]
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      }
+    }
     document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      opener?.focus()
     }
   }, [open])
 
   return (
     <>
-      <button type="button" className={className} onClick={() => { setOpen(true); track('Video play', { video: trackAs, page: window.location.pathname }) }}>
+      <button ref={openerRef} type="button" className={className} onClick={() => { setOpen(true); track('Video play', { video: trackAs, page: window.location.pathname }) }}>
         {children}
       </button>
       {open &&
         createPortal(
-          <div className="lightbox" role="dialog" aria-modal="true" aria-label="Video player" onClick={() => setOpen(false)}>
+          <div ref={dialogRef} className="lightbox" role="dialog" aria-modal="true" aria-label={`Video player: ${trackAs}`} onClick={() => setOpen(false)}>
             <button ref={closeRef} className="lightbox-close" type="button" aria-label="Close video" onClick={() => setOpen(false)}>
               ×
             </button>
             <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
               <div className="media ratio-169 on-dark">
                 {src ? (
-                  <iframe src={src} title="Video" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+                  <iframe src={src} title={trackAs} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
                 ) : (
                   <Placeholder label="The full film plays here once a YouTube or Vimeo link is added in the Studio" play />
                 )}

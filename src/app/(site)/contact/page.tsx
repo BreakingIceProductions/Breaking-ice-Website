@@ -48,16 +48,14 @@ export default async function ContactPage() {
           />
           <aside className="stack" style={{ gap: 24 }} aria-labelledby="other-ways">
             <h2 id="other-ways" className="sr-only">Other ways to reach us</h2>
-            <div id="book" className="book-card dark">
-              <span className="eyebrow">Rather talk first?</span>
-              <span className="h3">Book a 20-minute call</span>
-              <p className="muted" style={{ margin: 0 }}>Pick a time that suits you. No prep needed.</p>
-              {s.bookingLink ? (
+            {s.bookingLink && (
+              <div id="book" className="book-card dark">
+                <span className="eyebrow">Rather talk first?</span>
+                <span className="h3">Book a 20-minute call</span>
+                <p className="muted" style={{ margin: 0 }}>Pick a time that suits you. No prep needed.</p>
                 <a className="btn btn-primary" href={s.bookingLink} target="_blank" rel="noopener noreferrer">Pick a time ↗</a>
-              ) : (
-                <span className="caption" style={{ color: 'var(--ink-inverse-muted)' }}>[Booking link: add your Google appointment schedule in Site settings]</span>
-              )}
-            </div>
+              </div>
+            )}
             <div className="panel stack contact-direct" style={{ gap: 8 }}>
               <span className="eyebrow">Talk directly</span>
               <a className="h3" href={`mailto:${s.email}`}>{s.email}</a>

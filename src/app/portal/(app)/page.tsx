@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PrefillContactLink } from '@/components/prefill-contact-link'
 import { getSettings } from '@/lib/data'
 import { driveReady } from '@/portal/config'
 import { requireAccess } from '@/portal/current'
@@ -38,7 +39,7 @@ export default async function Dashboard() {
   const org = clients.map((c) => c.organizationName).join(' · ')
   const producer = projects[0] ? producerFor(projects[0], ps) : clients[0]?.producer?.name ? clients[0].producer : ps.producer
   const me = clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === session.email)
-  const contactHref = `/contact?${new URLSearchParams({ name: me?.name ?? '', email: session.demo ? '' : session.email, organization: clients[0]?.organizationName ?? '' })}`
+  const prefill = { name: me?.name ?? '', email: session.demo ? '' : session.email, organization: clients[0]?.organizationName ?? '' }
 
   if (!clients.length) {
     return (
@@ -171,7 +172,7 @@ export default async function Dashboard() {
           <section className="p-card p-card-dark dark" aria-labelledby="new-h">
             <h2 id="new-h" className="p-label">Something new?</h2>
             <p style={{ margin: 0 }}>{ps.newProjectLine}</p>
-            <Link className="btn btn-primary btn-sm" href={contactHref}>Start a conversation</Link>
+            <PrefillContactLink className="btn btn-primary btn-sm" prefill={prefill}>Start a conversation</PrefillContactLink>
           </section>
         </aside>
       </div>

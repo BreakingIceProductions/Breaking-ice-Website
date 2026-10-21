@@ -18,8 +18,9 @@ export function Testimonials({ items }: { items: Testimonial[] }) {
         <span className={t.quote.startsWith('[') ? 'placeholder-text' : undefined}>{t.quote}</span>
       </blockquote>
       <figcaption>
-        <span className="by">{t.name}</span>
-        <span className="muted">{[t.role, t.organization].filter(Boolean).join(', ')}</span>
+        {/* Never a person's name on the site: role and organization only. */}
+        <span className="by">{t.role ?? t.organization}</span>
+        {t.role && t.organization && <span className="muted">{t.organization}</span>}
         {t.projectSlug && (
           <Link className="link-arrow" href={`/stories/${t.projectSlug}`} style={{ marginTop: 12, alignSelf: 'flex-start' }}>
             See the story <span aria-hidden="true">→</span>

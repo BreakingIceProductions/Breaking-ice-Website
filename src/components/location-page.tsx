@@ -80,7 +80,7 @@ export async function LocationPage({ slug }: { slug: string }) {
       )}
 
       <section className="section ruled" aria-labelledby="area">
-        <div className="wrap grid-2" style={{ alignItems: 'start' }}>
+        <div className={`wrap ${loc.mapImage?.asset ? 'grid-2' : ''}`} style={{ alignItems: 'start' }}>
           <div className="stack" style={{ gap: 16 }}>
             <Eyebrow>{pick(loc.areaEyebrow, 'Area served')}</Eyebrow>
             <h2 id="area" className="h2">{pick(loc.areaTitle, `Where we go from ${loc.base?.split(',')[0] ?? loc.title}`)}</h2>
@@ -96,7 +96,7 @@ export async function LocationPage({ slug }: { slug: string }) {
               ))}
             </div>
           </div>
-          <Still image={loc.mapImage} label="Map of the area served" ratio="ratio-43" />
+          {loc.mapImage?.asset && <Still image={loc.mapImage} label="Map of the area served" ratio="ratio-43" />}
         </div>
       </section>
 

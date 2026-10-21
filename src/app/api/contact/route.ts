@@ -39,6 +39,8 @@ function limited(ip: string) {
 }
 
 const clean = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max)
+/** Slack mrkdwn treats < > & as markup (<!channel>, links): escape them in visitor text. */
+const slackEsc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
 export async function POST(req: Request) {
@@ -51,7 +53,8 @@ export async function POST(req: Request) {
 
   // Spam traps: a hidden field people never fill, and a minimum time on the page.
   const startedAt = Number(body.startedAt) || 0
-  if (clean(body.website, 200) || (startedAt && Date.now() - startedAt < 3000)) {
+  // A real form always sends startedAt; a missing one is treated as a bot too.
+  if (clean(body.website, 200) || !startedAt || Date.now() - startedAt < 3000) {
     return NextResponse.json({ ok: true }) // look successful to bots
   }
 
@@ -135,9 +138,9 @@ async function sendSlack(e: Enquiry) {
       text: `New enquiry from ${e.name}`,
       blocks: [
         { type: 'header', text: { type: 'plain_text', text: `New enquiry: ${e.name}`.slice(0, 150) } },
-        { type: 'section', fields: rows(e).map(([k, v]) => ({ type: 'mrkdwn', text: `*${k}*\n${v}`.slice(0, 2000) })).slice(0, 10) },
-        { type: 'section', text: { type: 'mrkdwn', text: `>${e.story.slice(0, 2900).replace(/\n/g, '\n>')}` } },
-        { type: 'context', elements: [{ type: 'mrkdwn', text: `<mailto:${e.email}|Reply to ${e.name}>` }] },
+        { type: 'section', fields: rows(e).map(([k, v]) => ({ type: 'mrkdwn', text: `*${k}*\n${slackEsc(String(v))}`.slice(0, 2000) })).slice(0, 10) },
+        { type: 'section', text: { type: 'mrkdwn', text: `>${slackEsc(e.story.slice(0, 2900)).replace(/\n/g, '\n>')}` } },
+        { type: 'context', elements: [{ type: 'mrkdwn', text: `<mailto:${e.email}|Reply to ${slackEsc(e.name)}>` }] },
       ],
     }),
   })

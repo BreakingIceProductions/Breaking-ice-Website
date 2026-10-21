@@ -159,7 +159,7 @@ export async function getLocation(slug: string) {
   const data = await sanityFetch<any>(
     `{
       "loc": *[_type == "location" && slug.current == $slug][0]{ ..., "slug": slug.current },
-      "projects": *[_type == "project" && region->slug.current == $slug] | order(_createdAt desc)[0...6]{ ${CARD} }
+      "projects": *[_type == "project" && region->slug.current == $slug] | order(coalesce(order, 999) asc, _createdAt desc)[0...6]{ ${CARD} }
     }`,
     { slug },
   )

@@ -41,16 +41,18 @@ export function Footer({ s }: { s: Settings }) {
               <li><a href={`tel:${s.phone.replace(/[^\d+]/g, '')}`}>{s.phone}</a></li>
             </ul>
           </div>
-          <div>
-            <h2>Follow</h2>
-            <ul>
-              {social.map(([label, href]) => (
-                <li key={label}>
-                  {href ? <a href={href} target="_blank" rel="noopener noreferrer">{label}</a> : <span className="muted">{label}</span>}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {social.some(([, href]) => href) && (
+            <div>
+              <h2>Follow</h2>
+              <ul>
+                {social.filter(([, href]) => href).map(([label, href]) => (
+                  <li key={label}>
+                    <a href={href} target="_blank" rel="noopener noreferrer">{label}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         <div className="footer-legal">
           <span>© {new Date().getFullYear()} {s.copyrightName}</span>

@@ -7,6 +7,7 @@ export default async function NotFound() {
   const s = await getSettings()
   return (
     <>
+    <a href="#main" className="skip">Skip to content</a>
     <Header locations={s.locations} cta={s.primaryCta} social={s.social} />
     <main id="main">
     <section className="notfound dark shard-field">

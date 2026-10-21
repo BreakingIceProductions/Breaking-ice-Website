@@ -16,6 +16,8 @@ export async function LegalPage({ slug, title }: { slug: string; title: string }
   const headings = (body ?? [])
     .filter((b) => b._type === 'block' && b.style === 'h2')
     .map((b) => ({ text: blockText(b), id: headingId(blockText(b), b._key) }))
+  // A short page with no section headings needs no contents list; placeholders only while the page is unwritten.
+  const showToc = headings.length > 0 || !doc
 
   return (
     <>
@@ -29,7 +31,8 @@ export async function LegalPage({ slug, title }: { slug: string; title: string }
         </div>
       </section>
       <section className="section flush-top">
-        <div className="wrap legal-grid">
+        <div className={`wrap legal-grid ${showToc ? '' : 'single'}`}>
+          {showToc && (
           <nav aria-label="On this page" className="legal-toc" style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
             <span className="label">On this page</span>
             <ul className="shard-list" style={{ marginTop: 16, fontSize: 15 }}>
@@ -42,6 +45,7 @@ export async function LegalPage({ slug, title }: { slug: string; title: string }
                 : ['[Heading 1]', '[Heading 2]', '[Heading 3]'].map((h) => <li key={h}>{h}</li>)}
             </ul>
           </nav>
+          )}
           <article className="legal-body" style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
             <RichText value={body} anchors fallback={[`[${title} text comes from you or your lawyer. Nothing is drafted here.]`]} />
             <div className="panel" style={{ marginTop: 'var(--space-12)' }}>

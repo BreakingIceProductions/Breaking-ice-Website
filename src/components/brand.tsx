@@ -59,9 +59,9 @@ export function Btn({ href, children, variant = 'primary', external }: { href: s
   return <Link className={cls} href={href}>{children}</Link>
 }
 
-export function ArrowLink({ href, children }: { href: string; children: ReactNode }) {
+export function ArrowLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
   return (
-    <Link className="link-arrow" href={href}>
+    <Link className={`link-arrow ${className ?? ''}`} href={href}>
       {children} <span aria-hidden="true">→</span>
     </Link>
   )
@@ -125,7 +125,8 @@ export function Still({
           style={{ objectFit: 'cover' }}
         />
       ) : (
-        <Placeholder label={label} />
+        // No picture yet: a quiet brand pattern, never a labelled grey box on a live page.
+        <div className="media-pattern" aria-hidden="true" data-label={label} />
       )}
     </div>
   )

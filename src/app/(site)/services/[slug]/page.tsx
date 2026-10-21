@@ -86,11 +86,7 @@ export default async function ServicePage({ params }: Props) {
               <p className="body-lg muted" style={{ margin: '0 0 var(--space-8)' }}>{sv.summary}</p>
               <div className="btn-row">
                 <Btn href={contactHref}>{s.primaryCta}</Btn>
-                {s.bookingLink ? (
-                  <Btn href={s.bookingLink} variant="secondary" external>Book a 20-minute call</Btn>
-                ) : (
-                  <Btn href="/contact#book" variant="secondary">Book a 20-minute call</Btn>
-                )}
+                {s.bookingLink && <Btn href={s.bookingLink} variant="secondary" external>Book a 20-minute call</Btn>}
               </div>
             </div>
             <VideoLoop
@@ -181,8 +177,9 @@ export default async function ServicePage({ params }: Props) {
               <Mark size={52} right="var(--ink)" />
               <blockquote>{sv.testimonial.quote}</blockquote>
               <figcaption className="stack" style={{ gap: 2 }}>
-                <span className="eyebrow">{sv.testimonial.name}</span>
-                <span className="muted">{[sv.testimonial.role, sv.testimonial.organization].filter(Boolean).join(', ')}</span>
+                {/* Never a person's name on the site: role and organization only. */}
+                <span className="eyebrow">{sv.testimonial.role ?? sv.testimonial.organization}</span>
+                {sv.testimonial.role && sv.testimonial.organization && <span className="muted">{sv.testimonial.organization}</span>}
               </figcaption>
             </figure>
           </div>

@@ -90,7 +90,7 @@ export default async function ProjectPage({ params }: Props) {
             <Still image={p.heroImage} label="Hero photograph" ratio="ratio-169" width={2000} onDark priority sizes="100vw" />
           ) : (
             <div style={{ position: 'relative' }}>
-              <VideoLoop url={p.heroVideo} posterUrl={poster ?? heroImg} label="The film" className="ratio-169" onDark priority />
+              <VideoLoop url={p.heroVideo} posterUrl={poster ?? heroImg} posterAlt={p.thumbnail?.alt ?? ""} label="The film" className="ratio-169" onDark priority />
             </div>
           )}
         </div>
@@ -121,19 +121,21 @@ export default async function ProjectPage({ params }: Props) {
       <section style={{ paddingBottom: 'var(--space-16)' }}>
         <div className="wrap">
           <dl className="meta-row">
-            <div><dt>Client</dt><dd>{p.client ?? '[Client]'}</dd></div>
-            <div><dt>Place</dt><dd>{p.location ?? '[Place]'}</dd></div>
-            <div>
-              <dt>Services</dt>
-              <dd>
-                {p.services?.length
-                  ? p.services.map((sv: { slug: string; title: string }, i: number) => (
-                      <span key={sv.slug}>{i > 0 && ' · '}<Link className="text-link" href={`/services/${sv.slug}`}>{sv.title}</Link></span>
-                    ))
-                  : '[Services]'}
-              </dd>
-            </div>
-            <div><dt>Year</dt><dd>{p.year ?? '[Year]'}</dd></div>
+            {(p.client || p.sample) && <div><dt>Client</dt><dd>{p.client ?? '[Client]'}</dd></div>}
+            {(p.location || p.sample) && <div><dt>Place</dt><dd>{p.location ?? '[Place]'}</dd></div>}
+            {(p.services?.length || p.sample) && (
+              <div>
+                <dt>Services</dt>
+                <dd>
+                  {p.services?.length
+                    ? p.services.map((sv: { slug: string; title: string }, i: number) => (
+                        <span key={sv.slug}>{i > 0 && ' · '}<Link className="text-link" href={`/services/${sv.slug}`}>{sv.title}</Link></span>
+                      ))
+                    : '[Services]'}
+                </dd>
+              </div>
+            )}
+            {(p.year || p.sample) && <div><dt>Year</dt><dd>{p.year ?? '[Year]'}</dd></div>}
           </dl>
         </div>
       </section>
@@ -169,7 +171,7 @@ export default async function ProjectPage({ params }: Props) {
         </>
       )}
 
-      {!isPhoto && (full || hasTranscript || captionsUrl) && (
+      {!isPhoto && (hasTranscript || captionsUrl || p.sample) && (
         <section className="section" aria-labelledby="transcript-h">
           <div className="wrap split">
             <h2 id="transcript-h" className="eyebrow">Transcript</h2>
@@ -194,18 +196,21 @@ export default async function ProjectPage({ params }: Props) {
         <>
           {!isPhoto && stillsSection}
 
-          <section className="section ruled" aria-label="Quote">
-            <div className="wrap">
-              <figure className="pull" style={{ margin: 0 }}>
-                <Mark size={56} right="var(--ink)" />
-                <blockquote className={cs.pullQuote ? '' : 'placeholder-text'}>{cs.pullQuote?.quote ?? '[A true line from someone on camera, or from the client.]'}</blockquote>
-                <figcaption className="stack" style={{ gap: 2 }}>
-                  <span className="eyebrow">{cs.pullQuote?.name ?? '[Name]'}</span>
-                  <span className="muted">{[cs.pullQuote?.role ?? '[Role]', cs.pullQuote?.organization ?? '[Organization]'].join(', ')}</span>
-                </figcaption>
-              </figure>
-            </div>
-          </section>
+          {(cs.pullQuote || p.sample) && (
+            <section className="section ruled" aria-label="Quote">
+              <div className="wrap">
+                <figure className="pull" style={{ margin: 0 }}>
+                  <Mark size={56} right="var(--ink)" />
+                  <blockquote className={cs.pullQuote ? '' : 'placeholder-text'}>{cs.pullQuote?.quote ?? '[A true line from someone on camera, or from the client.]'}</blockquote>
+                  {/* Never a person's name on the site: role and organization only. */}
+                  <figcaption className="stack" style={{ gap: 2 }}>
+                    <span className="eyebrow">{cs.pullQuote?.role ?? cs.pullQuote?.organization ?? '[Role]'}</span>
+                    {cs.pullQuote?.role && cs.pullQuote?.organization && <span className="muted">{cs.pullQuote.organization}</span>}
+                  </figcaption>
+                </figure>
+              </div>
+            </section>
+          )}
 
           <section className="section ruled" aria-labelledby="results">
             <div className="wrap split">

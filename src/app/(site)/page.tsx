@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { ArrowLink, Btn, Eyebrow, Lockup, Still } from '@/components/brand'
+import { MarqueePause } from '@/components/marquee-pause'
 import { LocationCard, ServiceCard, StoryCard } from '@/components/cards'
 import { Checklist, Testimonials } from '@/components/interactive'
 import { ClosingBand, Process, RichText } from '@/components/sections'
@@ -28,6 +29,8 @@ export default async function HomePage() {
       <section className="splash dark" aria-label="Breaking Ice Productions">
         <Lockup variant="vertical" tone="dark" height={300} className="splash-logo" />
         <p className="splash-line">{h.heroEyebrow}</p>
+        {/* Phones only: one quiet way in, without scrolling. */}
+        <ArrowLink href="/contact" className="splash-cta">{s.primaryCta}</ArrowLink>
         <a href="#film" className="scroll-cue splash-cue">Scroll to explore <span aria-hidden="true">↓</span></a>
       </section>
 
@@ -35,10 +38,7 @@ export default async function HomePage() {
       <section id="film" className="hero hero-contained dark" aria-label="Introduction">
         <div className="wrap">
           <div className="hero-head">
-            <div className="stack" style={{ gap: 'var(--space-4)' }}>
-              <Eyebrow>{h.heroEyebrow}</Eyebrow>
-              <SplitHeading as="h1" className="display-xl" text={h.heroHeadline} />
-            </div>
+            <SplitHeading as="h1" className="display-xl" text={h.heroHeadline} />
             <div className="hero-aside">
               <p className="hero-sub">{h.heroSubline}</p>
               <div className="btn-row">
@@ -86,8 +86,9 @@ export default async function HomePage() {
           <h2 id="logos-title" className="sr-only">{h.logoStripTitle}</h2>
           <div className="divider" style={{ marginBottom: 'var(--space-8)' }}>
             <span className="label">{h.logoStripEyebrow}</span>
+            <MarqueePause target="logo-strip" />
           </div>
-          <div className="logo-strip">
+          <div className="logo-strip" id="logo-strip">
             <div className="logo-track">
               {[...logos, ...logos].map((l, i) => (
                 <div className={`logo-item${i >= logos.length ? ' logo-dup' : ''}`} key={`${l._id}-${i}`} aria-hidden={i >= logos.length}>
@@ -178,9 +179,12 @@ export default async function HomePage() {
             </div>
             <ArrowLink href="/services">All services</ArrowLink>
           </div>
-          <div className="grid-3">
-            {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
-          </div>
+          {/* Phones: a swipe rail like stories and process, so six cards don't stack into one long column. */}
+          <SwipeRail className="home-rail">
+            <div className="grid-3">
+              {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
+            </div>
+          </SwipeRail>
         </div>
       </section>
 
