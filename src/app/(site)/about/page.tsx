@@ -4,14 +4,16 @@ import { ClosingBand, Process, RichText } from '@/components/sections'
 import { VideoLoop } from '@/components/video'
 import { getAbout, getSettings, pick } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
+import { vimeoPoster } from '@/lib/vimeo'
 
 export async function generateMetadata() {
   const a = await getAbout()
-  return seoMeta(a.seo, 'About', 'From the North to Alberta: who we are and how we work.', { path: '/about', eyebrow: 'About' })
+  return seoMeta(a.seo, 'About', 'Founded in Norman Wells, NWT in 2022 and now also based in Stony Plain, Alberta. Meet Josh Ferguson and the patient, people-first way we make films.', { path: '/about', eyebrow: 'About' })
 }
 
 export default async function AboutPage() {
   const [a, s] = await Promise.all([getAbout(), getSettings()])
+  const heroPoster = await vimeoPoster(a.heroVideo, 1600)
   const milestones: { _key?: string; year: string; text: string }[] = pick(a.milestones, [1, 2, 3, 4].map((n) => ({ year: '[Year]', text: `[Milestone ${n}]` })))
   const beliefs: { _key?: string; title: string; body: string }[] = pick(a.beliefs, [1, 2, 3].map((n) => ({ title: `[Belief ${n}]`, body: '[Two or three sentences.]' })))
   const founder = a.founder ?? {}
@@ -29,7 +31,7 @@ export default async function AboutPage() {
       </section>
       <section style={{ paddingBottom: 'var(--section)' }}>
         <div className="wrap">
-          <VideoLoop url={a.heroVideo} label="About film" className="ratio-169 cut-lg" />
+          <VideoLoop url={a.heroVideo} posterUrl={heroPoster} label="About film" className="ratio-169 cut-lg" priority />
         </div>
       </section>
 

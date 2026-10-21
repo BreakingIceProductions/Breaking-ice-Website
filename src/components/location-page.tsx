@@ -5,7 +5,8 @@ import { StoryCard } from '@/components/cards'
 import { ClosingBand, PhoneLink, RichText } from '@/components/sections'
 import { JsonLd, ORG_ID, breadcrumbLd, real } from '@/components/json-ld'
 import { getLocation, getSettings, pick } from '@/lib/data'
-import { SITE_URL } from '@/lib/site'
+import { SITE_NAME, SITE_URL } from '@/lib/site'
+import { urlFor } from '@/sanity/client'
 
 export async function LocationPage({ slug }: { slug: string }) {
   const [{ loc, projects }, s] = await Promise.all([getLocation(slug), getSettings()])
@@ -17,8 +18,10 @@ export async function LocationPage({ slug }: { slug: string }) {
     '@context': 'https://schema.org',
     '@type': 'ProfessionalService',
     '@id': `${SITE_URL}/${slug}#business`,
-    name: `Breaking Ice Productions · ${loc.title}`,
+    // The exact business name; the region comes through areaServed and address.
+    name: SITE_NAME,
     url: `${SITE_URL}/${slug}`,
+    image: loc.heroImage?.asset ? urlFor(loc.heroImage).width(1200).url() : `${SITE_URL}/brand/bi-icon-512.png`,
     parentOrganization: { '@id': ORG_ID },
     description: `Corporate and brand video production across ${loc.title}.`,
     email: real(loc.email) ?? real(s.email),

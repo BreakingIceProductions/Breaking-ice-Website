@@ -11,6 +11,7 @@ import { getProjects, getServiceBySlug, getServices, getSettings } from '@/lib/d
 import { seoMeta } from '@/lib/seo'
 import type { PT } from '@/lib/types'
 import { CATEGORY_LABELS } from '@/lib/video'
+import { urlFor } from '@/sanity/client'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -29,7 +30,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params
   const sv = await getServiceBySlug(slug)
-  return sv ? seoMeta(sv.seo, sv.title, sv.summary, { path: `/services/${sv.slug}`, eyebrow: 'Services', image: sv.cardImage }) : {}
+  return sv ? seoMeta(sv.seo, sv.title, `${sv.summary} From Stony Plain, AB and Norman Wells, NT, for organizations across Alberta and the NWT.`, { path: `/services/${sv.slug}`, eyebrow: 'Services', image: sv.cardImage }) : {}
 }
 
 export default async function ServicePage({ params }: Props) {
@@ -92,7 +93,14 @@ export default async function ServicePage({ params }: Props) {
                 )}
               </div>
             </div>
-            <VideoLoop url={sv.clip} label={`${sv.title} clip`} className="ratio-43 cut-lg" />
+            <VideoLoop
+              url={sv.clip}
+              posterUrl={sv.cardImage?.asset ? urlFor(sv.cardImage).width(1200).height(900).fit('crop').url() : null}
+              posterAlt={sv.cardImage?.alt}
+              label={`${sv.title} clip`}
+              className="ratio-43 cut-lg"
+              priority
+            />
           </div>
         </div>
       </section>

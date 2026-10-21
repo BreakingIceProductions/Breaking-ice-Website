@@ -11,7 +11,7 @@ const pick = <T,>(value: T | null | undefined, fallback: T): T => {
   return value
 }
 
-const CARD = `_id, title, "slug": slug.current, storyType, client, location, category, cardVideo, thumbnail`
+const CARD = `_id, _updatedAt, title, "slug": slug.current, storyType, client, location, category, cardVideo, thumbnail`
 const TESTIMONIAL = `_id, quote, name, role, organization, "projectSlug": project->slug.current`
 
 export async function getSettings(): Promise<Settings> {
@@ -128,7 +128,7 @@ export async function getNextProject(currentSlug: string): Promise<ProjectCard |
 
 export async function getServices(): Promise<Service[]> {
   const rows = await sanityFetch<Service[]>(
-    `*[_type == "service" && defined(slug.current)] | order(coalesce(order, 999) asc){ _id, title, "slug": slug.current, summary, cardImage, showAsFullCard }`,
+    `*[_type == "service" && defined(slug.current)] | order(coalesce(order, 999) asc){ _id, _updatedAt, title, "slug": slug.current, summary, cardImage, showAsFullCard }`,
   )
   return pick(rows, SAMPLE_SERVICES)
 }
@@ -136,7 +136,7 @@ export async function getServices(): Promise<Service[]> {
 export async function getServiceBySlug(slug: string): Promise<Service | null> {
   const data = await sanityFetch<Service>(
     `*[_type == "service" && slug.current == $slug][0]{
-      _id, title, "slug": slug.current, summary, heroHeadline, clip, description, whoItsFor, included, timeline, timelineNote, faq, seo,
+      _id, title, "slug": slug.current, summary, cardImage, heroHeadline, clip, description, whoItsFor, included, timeline, timelineNote, faq, seo,
       relatedProjects[]->{ ${CARD} },
       testimonial->{ ${TESTIMONIAL} },
       "fallbackProjects": *[_type == "project" && references(^._id)][0...3]{ ${CARD} }

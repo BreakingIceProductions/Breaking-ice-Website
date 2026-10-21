@@ -14,6 +14,7 @@ export function StoriesGrid({ projects }: { projects: ProjectCard[] }) {
   }, [setCat])
   return (
     <>
+      <h2 className="sr-only">All stories</h2>
       <CategoryChips cat={cat} select={select} count={list.length} />
       {list.length ? (
         <div className="grid-3">

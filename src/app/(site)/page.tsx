@@ -14,7 +14,7 @@ import { urlFor } from '@/sanity/client'
 
 export async function generateMetadata() {
   const h = await getHome()
-  return seoMeta(h.seo, 'Corporate & brand video in Alberta & the NWT', h.heroSubline, { path: '/', eyebrow: 'Video production · Alberta & the NWT' })
+  return seoMeta(h.seo, 'Breaking Ice Productions · Video in Alberta & the NWT', h.heroSubline, { path: '/', eyebrow: 'Video production · Alberta & the NWT' })
 }
 
 export default async function HomePage() {

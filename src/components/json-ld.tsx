@@ -20,10 +20,18 @@ export function organizationLd(s: Settings) {
       '@id': ORG_ID,
       name: SITE_NAME,
       url: SITE_URL,
-      logo: `${SITE_URL}/brand/bi-horizontal-light.svg`,
+      // Google wants a square raster logo, at least 112px.
+      logo: `${SITE_URL}/brand/bi-icon-512.png`,
+      image: `${SITE_URL}/brand/bi-icon-512.png`,
       email: real(s.email),
       telephone: real(s.phone),
       slogan: real(s.tagline),
+      foundingDate: '2022',
+      founder: { '@type': 'Person', name: 'Josh Ferguson' },
+      address: [
+        { '@type': 'PostalAddress', addressLocality: 'Stony Plain', addressRegion: 'AB', addressCountry: 'CA' },
+        { '@type': 'PostalAddress', addressLocality: 'Norman Wells', addressRegion: 'NT', addressCountry: 'CA' },
+      ],
       areaServed: [
         { '@type': 'AdministrativeArea', name: 'Alberta' },
         { '@type': 'AdministrativeArea', name: 'Northwest Territories' },

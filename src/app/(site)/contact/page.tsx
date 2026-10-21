@@ -6,7 +6,7 @@ import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
   const c = await getContact()
-  return seoMeta(c.seo, 'Start a conversation', 'Tell us about the story. We’ll get back to you, usually within a day or two.', { path: '/contact', eyebrow: 'Contact' })
+  return seoMeta(c.seo, 'Start a conversation', 'Tell us about the story and the people in it. Josh reads every message and replies within two business days. No pitch, no pressure.', { path: '/contact', eyebrow: 'Contact' })
 }
 
 export default async function ContactPage() {
@@ -46,7 +46,8 @@ export default async function ContactPage() {
             deliveryErrorHeadline={c.deliveryErrorHeadline?.trim() || undefined}
             deliveryErrorMessage={pick(c.deliveryErrorMessage, 'Nothing you typed is lost.')}
           />
-          <aside className="stack" style={{ gap: 24 }}>
+          <aside className="stack" style={{ gap: 24 }} aria-labelledby="other-ways">
+            <h2 id="other-ways" className="sr-only">Other ways to reach us</h2>
             <div id="book" className="book-card dark cut-lg">
               <span className="eyebrow">Rather talk first?</span>
               <span className="h3">Book a 20-minute call</span>

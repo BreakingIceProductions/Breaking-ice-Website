@@ -7,7 +7,7 @@ import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
   const p = await getServicesPage()
-  return seoMeta(p.seo, 'Corporate video production services', 'Organizational and brand films, social stories, event coverage, retainers and documentary, from Alberta to the NWT.', { path: '/services', eyebrow: 'Services' })
+  return seoMeta(p.seo, 'Video production services', 'Organizational and brand films, social stories, event coverage, retainers and documentary, from Alberta to the NWT.', { path: '/services', eyebrow: 'Services' })
 }
 
 export default async function ServicesPage() {
@@ -23,7 +23,8 @@ export default async function ServicesPage() {
           </p>
         </div>
       </section>
-      <section className="section svc-overview" style={{ paddingTop: 0 }}>
+      <section className="section svc-overview" style={{ paddingTop: 0 }} aria-labelledby="all-services">
+        <h2 id="all-services" className="sr-only">All services</h2>
         <div className="wrap grid-3">
           {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
         </div>

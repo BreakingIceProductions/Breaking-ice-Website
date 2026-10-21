@@ -29,10 +29,14 @@ const mark = (left: string, right: string) =>
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 43.9"><polygon points="0,0 20,0 20,29.9 0,43.9" fill="${left}"/><polygon points="28,0 48,0 48,29.9 28,43.9" fill="${right}"/></svg>`,
   ).toString('base64')}`
 
+const EYEBROWS = /^(Story( · [A-Za-z &]+)?|About|Contact|Services|Stories|Alberta|Northwest Territories|Legal|Video production · Alberta & the NWT)$/
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const title = (searchParams.get('title') || 'We tell the human stories inside organizations.').slice(0, 110)
-  const eyebrow = (searchParams.get('eyebrow') || 'Video production · Alberta & the NWT').slice(0, 60)
+  // Only the labels the site itself uses, so the card can't be made to say anything else up top.
+  const askedEyebrow = searchParams.get('eyebrow') ?? ''
+  const eyebrow = EYEBROWS.test(askedEyebrow) ? askedEyebrow : 'Video production · Alberta & the NWT'
   const size = title.length > 70 ? 58 : title.length > 40 ? 68 : 80
 
   const [bold, semi, logoSrc] = await Promise.all([load('archivo-expanded-bold.ttf'), load('archivo-semibold.ttf'), logoData()])
