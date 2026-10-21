@@ -165,10 +165,13 @@ export async function getLocation(slug: string) {
   )
   const sample = SAMPLE_LOCATIONS.find((l) => l.slug === slug) ?? null
   const loc: Location | null = data?.loc ? { ...sample, ...data.loc } : sample
-  const projects: ProjectCard[] = pick(
-    data?.projects,
-    SAMPLE_PROJECTS.filter((p) => (slug === 'alberta' ? p.location?.endsWith('AB') : p.location?.endsWith('NT'))),
-  )
+  // Samples only stand in while the location itself is unpublished; a real location with no projects shows none.
+  const projects: ProjectCard[] = data?.loc
+    ? (data.projects ?? [])
+    : pick(
+        data?.projects,
+        SAMPLE_PROJECTS.filter((p) => (slug === 'alberta' ? p.location?.endsWith('AB') : p.location?.endsWith('NT'))),
+      )
   return { loc, projects }
 }
 
