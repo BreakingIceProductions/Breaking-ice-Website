@@ -17,12 +17,12 @@ export default async function StoriesPage() {
         <div className="wrap">
           <Eyebrow>{pick(page.eyebrow, 'Stories')}</Eyebrow>
           <h1 className="display-xl">{pick(page.headline, 'The people inside the work')}</h1>
-          <p className="body-lg muted" style={{ margin: 0, maxWidth: '56ch' }}>
+          <p className="body-lg muted lede">
             {pick(page.intro, 'Films and photo stories from companies, communities, crews and nonprofits across Alberta and the Northwest Territories.')}
           </p>
         </div>
       </section>
-      <section className="section" style={{ paddingTop: 0 }}>
+      <section className="section flush-top">
         <div className="wrap">
           <StoriesGrid projects={projects} />
         </div>

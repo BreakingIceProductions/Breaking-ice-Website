@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Btn, Eyebrow, Mark, Still } from '@/components/brand'
+import { Btn, Eyebrow, Mark, Still, ArrowLink } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
 import { ClosingBand, RichText } from '@/components/sections'
 import { SingleStill, Stills } from '@/components/stills'
@@ -87,7 +87,7 @@ export default async function ProjectPage({ params }: Props) {
       <section className="dark film-section" aria-label="Film">
         <div className="wrap">
           {isPhoto ? (
-            <Still image={p.heroImage} label="Hero photograph" ratio="ratio-169" cut={false} width={2000} onDark priority sizes="100vw" />
+            <Still image={p.heroImage} label="Hero photograph" ratio="ratio-169" width={2000} onDark priority sizes="100vw" />
           ) : (
             <div style={{ position: 'relative' }}>
               <VideoLoop url={p.heroVideo} posterUrl={poster ?? heroImg} label="The film" className="ratio-169" onDark priority />
@@ -96,7 +96,7 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       </section>
 
-      <section className="page-head" style={{ paddingTop: 'var(--space-16)' }}>
+      <section className="page-head after-film">
         <div className="wrap">
           <nav className="breadcrumb" aria-label="Breadcrumb">
             <Link href="/stories">← All stories</Link>
@@ -105,7 +105,7 @@ export default async function ProjectPage({ params }: Props) {
           <Eyebrow>{CATEGORY_LABELS[p.category ?? ''] ?? 'Story'}</Eyebrow>
           <h1 className="h1">{p.title}</h1>
           {(summary || p.sample) && (
-            <p className="body-lg muted" style={{ margin: '0 0 var(--space-8)', maxWidth: '58ch' }}>
+            <p className="body-lg muted lede" style={{ marginBottom: 'var(--space-8)' }}>
               {summary ?? '[Summary: what this story is, in one or two sentences.]'}
             </p>
           )}
@@ -144,7 +144,7 @@ export default async function ProjectPage({ params }: Props) {
         <>
           <section className="section ruled" aria-labelledby="challenge">
             <div className="wrap split">
-              <h2 id="challenge" className="eyebrow" style={{ margin: 0 }}>The challenge</h2>
+              <h2 id="challenge" className="eyebrow">The challenge</h2>
               <div className="body-lg"><RichText value={cs.challenge} fallback="[What the organization needed, and what made it hard.]" /></div>
             </div>
           </section>
@@ -153,7 +153,7 @@ export default async function ProjectPage({ params }: Props) {
             <div className="wrap grid-2" style={{ alignItems: 'center' }}>
               <SingleStill image={cs.peopleImage} label="The people" ratio="ratio-45" width={900} />
               <div className="stack" style={{ gap: 16 }}>
-                <h2 id="people" className="eyebrow" style={{ margin: 0 }}>The people</h2>
+                <h2 id="people" className="eyebrow">The people</h2>
                 <p className="h2" style={{ margin: 0 }}>{cs.peopleHeadline ?? '[Whose story this is]'}</p>
                 <RichText value={cs.people} fallback="[Who we met, and how trust was built.]" />
               </div>
@@ -162,7 +162,7 @@ export default async function ProjectPage({ params }: Props) {
 
           <section className="section ruled" aria-labelledby="mattered">
             <div className="wrap split">
-              <h2 id="mattered" className="eyebrow" style={{ margin: 0 }}>What mattered</h2>
+              <h2 id="mattered" className="eyebrow">What mattered</h2>
               <div className="body-lg"><RichText value={cs.whatMattered} fallback="[The moments and truths the film was built around.]" /></div>
             </div>
           </section>
@@ -172,7 +172,7 @@ export default async function ProjectPage({ params }: Props) {
       {!isPhoto && (full || hasTranscript || captionsUrl) && (
         <section className="section" aria-labelledby="transcript-h">
           <div className="wrap split">
-            <h2 id="transcript-h" className="eyebrow" style={{ margin: 0 }}>Transcript</h2>
+            <h2 id="transcript-h" className="eyebrow">Transcript</h2>
             <div>
               <details className="transcript">
                 <summary>Read the transcript</summary>
@@ -210,7 +210,7 @@ export default async function ProjectPage({ params }: Props) {
           <section className="section ruled" aria-labelledby="results">
             <div className="wrap split">
               <div className="stack" style={{ gap: 12 }}>
-                <h2 id="results" className="eyebrow" style={{ margin: 0 }}>Results</h2>
+                <h2 id="results" className="eyebrow">Results</h2>
                 {cs.resultsIntro && <p className="muted" style={{ margin: 0 }}>{cs.resultsIntro}</p>}
               </div>
               <div className="results">
@@ -231,8 +231,8 @@ export default async function ProjectPage({ params }: Props) {
         <section className="section ruled" aria-labelledby="next">
           <div className="wrap">
             <div className="sec-head-row">
-              <h2 id="next" className="eyebrow" style={{ margin: 0 }}>Next story</h2>
-              <Link href="/stories" className="link-arrow">All stories <span aria-hidden="true">→</span></Link>
+              <h2 id="next" className="eyebrow">Next story</h2>
+              <ArrowLink href="/stories">All stories</ArrowLink>
             </div>
             <div style={{ maxWidth: 640 }}><StoryCard p={next} /></div>
           </div>

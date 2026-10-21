@@ -168,7 +168,7 @@ export default async function Dashboard() {
             )}
             {active[0] && <Link className="link-arrow" href={`/portal/${active[0].slug}#files`}>Upload files <span aria-hidden="true">→</span></Link>}
           </section>
-          <section className="p-card p-card-dark dark cut-lg" aria-labelledby="new-h">
+          <section className="p-card p-card-dark dark" aria-labelledby="new-h">
             <h2 id="new-h" className="p-label">Something new?</h2>
             <p style={{ margin: 0 }}>{ps.newProjectLine}</p>
             <Link className="btn btn-primary btn-sm" href={contactHref}>Start a conversation</Link>

@@ -12,7 +12,7 @@ export function Testimonials({ items }: { items: Testimonial[] }) {
   if (!t) return null
   const n = items.length
   return (
-    <figure className="testimonial cut-lg" style={{ margin: 0 }}>
+    <figure className="testimonial" style={{ margin: 0 }}>
       <Mark size={52} right="var(--ink)" />
       <blockquote style={{ marginTop: 24 }} aria-live="polite">
         <span className={t.quote.startsWith('[') ? 'placeholder-text' : undefined}>{t.quote}</span>
@@ -53,7 +53,7 @@ export function Checklist({ situations, closing, cta }: { situations: string[]; 
       ))}
       <div aria-live="polite">
         {any && (
-          <div className="reveal dark cut-lg">
+          <div className="reveal dark">
             <p className="body-lg" style={{ margin: 0 }}>{closing}</p>
             <Link href="/contact" className="btn btn-primary">{cta}</Link>
           </div>

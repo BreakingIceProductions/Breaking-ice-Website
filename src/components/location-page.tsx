@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Btn, Eyebrow, Still } from '@/components/brand'
+import { Btn, Eyebrow, Still, ArrowLink } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
 import { ClosingBand, PhoneLink, RichText } from '@/components/sections'
 import { JsonLd, ORG_ID, breadcrumbLd, real } from '@/components/json-ld'
@@ -50,10 +50,10 @@ export async function LocationPage({ slug }: { slug: string }) {
                 }
               />
             </div>
-            <dl className="panel" style={{ margin: 'var(--space-6) 0 var(--space-8)', padding: 'var(--space-6)', display: 'flex', flexWrap: 'wrap', gap: '8px 32px' }}>
-              <div><dt className="caption">Base</dt><dd style={{ margin: 0, fontWeight: 600 }}>{loc.base}</dd></div>
-              <div><dt className="caption">Email</dt><dd style={{ margin: 0 }}><a className="text-link" href={`mailto:${pick(loc.email, s.email)}`}>{pick(loc.email, s.email)}</a></dd></div>
-              <div><dt className="caption">Phone</dt><dd style={{ margin: 0 }}><PhoneLink className="text-link" phone={pick(loc.phone, s.phone)} /></dd></div>
+            <dl className="panel contact-facts">
+              <div><dt className="caption">Base</dt><dd style={{ fontWeight: 600 }}>{loc.base}</dd></div>
+              <div><dt className="caption">Email</dt><dd><a className="text-link" href={`mailto:${pick(loc.email, s.email)}`}>{pick(loc.email, s.email)}</a></dd></div>
+              <div><dt className="caption">Phone</dt><dd><PhoneLink className="text-link" phone={pick(loc.phone, s.phone)} /></dd></div>
             </dl>
             <div className="btn-row">
               <Btn href="/contact">{s.primaryCta}</Btn>
@@ -72,7 +72,7 @@ export async function LocationPage({ slug }: { slug: string }) {
                 <Eyebrow>{pick(loc.storiesEyebrow, 'Stories from here')}</Eyebrow>
                 <h2 id="local" className="h2">{pick(loc.storiesTitle, `Work in ${loc.title}`)}</h2>
               </div>
-              <Link className="link-arrow" href="/stories">All stories <span aria-hidden="true">→</span></Link>
+              <ArrowLink href="/stories">All stories</ArrowLink>
             </div>
             <div className="grid-3">{projects.map((p) => <StoryCard key={p._id} p={p} />)}</div>
           </div>
@@ -88,7 +88,7 @@ export async function LocationPage({ slug }: { slug: string }) {
             <div className="area-groups" style={{ marginTop: 'var(--space-6)' }}>
               {(loc.areaServed ?? []).map((g) => (
                 <div key={g._key}>
-                  <h3 className="caption" style={{ margin: 0, fontWeight: 600, letterSpacing: '.14em', textTransform: 'uppercase', fontSize: 12 }}>{g.name}</h3>
+                  <h3 className="label">{g.name}</h3>
                   <ul className="places">
                     {(g.places ?? []).map((pl) => <li key={pl}>{pl}</li>)}
                   </ul>

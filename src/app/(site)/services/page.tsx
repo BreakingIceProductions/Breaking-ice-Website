@@ -1,5 +1,4 @@
-import Link from 'next/link'
-import { Eyebrow } from '@/components/brand'
+import { Eyebrow, ArrowLink } from '@/components/brand'
 import { ServiceCard } from '@/components/cards'
 import { ClosingBand, Process } from '@/components/sections'
 import { getServices, getServicesPage, getSettings, pick } from '@/lib/data'
@@ -18,12 +17,12 @@ export default async function ServicesPage() {
         <div className="wrap">
           <Eyebrow>{pick(page.eyebrow, 'Services')}</Eyebrow>
           <h1 className="display-xl">{pick(page.headline, 'Films that sound like your people')}</h1>
-          <p className="body-lg muted" style={{ margin: 0, maxWidth: '56ch' }}>
+          <p className="body-lg muted lede">
             {pick(page.intro, 'Video first. Organizational and brand films lead, with room for whatever your story needs.')}
           </p>
         </div>
       </section>
-      <section className="section svc-overview" style={{ paddingTop: 0 }} aria-labelledby="all-services">
+      <section className="section svc-overview flush-top" aria-labelledby="all-services">
         <h2 id="all-services" className="sr-only">All services</h2>
         <div className="wrap grid-3">
           {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
@@ -36,7 +35,7 @@ export default async function ServicesPage() {
               <Eyebrow>How we work</Eyebrow>
               <h2 id="how" className="h2">{pick(page.processTitle, 'Four steps, every time')}</h2>
             </div>
-            <Link className="link-arrow" href="/about">About us <span aria-hidden="true">→</span></Link>
+            <ArrowLink href="/about">About us</ArrowLink>
           </div>
           <Process steps={s.processSteps} compact />
         </div>

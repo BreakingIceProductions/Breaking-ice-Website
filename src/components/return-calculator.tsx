@@ -15,7 +15,7 @@ export function ReturnCalculator({ cta }: { cta: string }) {
   const pct = (v: number, min: number, max: number) => `${((v - min) / (max - min)) * 100}%`
 
   return (
-    <div className="calc cut-lg">
+    <div className="calc">
       <div className="calc-row">
         <label htmlFor={`${id}-v`} className="calc-q">What is one new customer, recruit or supporter worth to you?</label>
         <output className="calc-val" htmlFor={`${id}-v`}>{money(value)}</output>

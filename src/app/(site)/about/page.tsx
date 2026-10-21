@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Btn, Eyebrow, Still } from '@/components/brand'
+import { Btn, Eyebrow, Still, ArrowLink } from '@/components/brand'
 import { ClosingBand, Process, RichText } from '@/components/sections'
 import { VideoLoop } from '@/components/video'
 import { getAbout, getSettings, pick } from '@/lib/data'
@@ -24,14 +24,14 @@ export default async function AboutPage() {
         <div className="wrap">
           <Eyebrow>{pick(a.heroEyebrow, 'About')}</Eyebrow>
           <h1 className="display-xl">{pick(a.heroHeadline, 'From the North to Alberta')}</h1>
-          <p className="body-lg muted" style={{ margin: 0, maxWidth: '56ch' }}>
+          <p className="body-lg muted lede">
             {pick(a.heroIntro, 'Breaking Ice Productions tells the human stories inside organizations, working from Stony Plain, Alberta and Norman Wells, NWT.')}
           </p>
         </div>
       </section>
       <section style={{ paddingBottom: 'var(--section)' }}>
         <div className="wrap">
-          <VideoLoop url={a.heroVideo} posterUrl={heroPoster} label="About film" className="ratio-169 cut-lg" priority />
+          <VideoLoop url={a.heroVideo} posterUrl={heroPoster} label="About film" className="ratio-169" priority />
         </div>
       </section>
 
@@ -56,18 +56,22 @@ export default async function AboutPage() {
           <div className="grid-2">
             <Link href="/northwest-territories" className="loc-card">
               <Still image={a.journeyNorthImage} label="Norman Wells" ratio="ratio-169" width={1000} />
-              <span className="eyebrow">{pick(a.journeyNorthText, 'Where it began')}</span>
-              <span className="h2">Norman Wells · the Sahtú</span>
+              <span className="stack" style={{ gap: 'var(--space-2)' }}>
+                <span className="eyebrow">{pick(a.journeyNorthText, 'Where it began')}</span>
+                <span className="h2">Norman Wells · the Sahtú</span>
+              </span>
             </Link>
             <Link href="/alberta" className="loc-card">
               <Still image={a.journeyAlbertaImage} label="Stony Plain" ratio="ratio-169" width={1000} />
-              <span className="eyebrow">{pick(a.journeyAlbertaText, 'Where we are now')}</span>
-              <span className="h2">Stony Plain · Edmonton region</span>
+              <span className="stack" style={{ gap: 'var(--space-2)' }}>
+                <span className="eyebrow">{pick(a.journeyAlbertaText, 'Where we are now')}</span>
+                <span className="h2">Stony Plain · Edmonton region</span>
+              </span>
             </Link>
           </div>
-          <ol className="grid-4" style={{ listStyle: 'none', padding: 0, margin: 'var(--space-12) 0 0' }}>
+          <ol className="grid-4 milestones">
             {milestones.map((m, i) => (
-              <li key={m._key ?? i} style={{ borderTop: '2px solid var(--ink)', paddingTop: 16 }}>
+              <li key={m._key ?? i}>
                 <div className="step-num">{m.year}</div>
                 <div className={m.text.startsWith('[') ? 'placeholder-text' : undefined}>{m.text}</div>
               </li>
@@ -83,7 +87,7 @@ export default async function AboutPage() {
               <Eyebrow>{pick(a.processEyebrow, 'How we work')}</Eyebrow>
               <h2 id="how" className="h2">{pick(a.processTitle, 'Listen first')}</h2>
             </div>
-            <Link className="link-arrow" href="/services">Our services <span aria-hidden="true">→</span></Link>
+            <ArrowLink href="/services">Our services</ArrowLink>
           </div>
           <Process steps={s.processSteps} compact />
         </div>
@@ -91,10 +95,10 @@ export default async function AboutPage() {
 
       <section className="section ruled" aria-labelledby="founder">
         <div className="wrap grid-2" style={{ alignItems: 'start' }}>
-          <Still image={founder.portrait} label="Portrait" ratio="ratio-45" cut={false} width={900} />
+          <Still image={founder.portrait} label="Portrait" ratio="ratio-45" width={900} />
           <div className="stack" style={{ gap: 16 }}>
             <Eyebrow>{pick(a.founderEyebrow, 'Founder')}</Eyebrow>
-            <h2 id="founder" className="h1">{founder.name ?? 'Josh Ferguson'}</h2>
+            <h2 id="founder" className="h2">{founder.name ?? 'Josh Ferguson'}</h2>
             <span className="caption">{founder.role ?? 'Owner & creative director'}</span>
             <RichText value={founder.bio} fallback={['[Founder bio: background, the North, why this work. Three short paragraphs.]']} />
             <Still image={founder.onLocationPhoto} label="On location" ratio="ratio-169" />
@@ -107,11 +111,11 @@ export default async function AboutPage() {
         <div className="wrap">
           <div className="sec-head">
             <Eyebrow>{pick(a.beliefsEyebrow, 'What we believe')}</Eyebrow>
-            <h2 id="believe" className="quote" style={{ fontSize: 'clamp(30px, 3.4vw, 44px)', lineHeight: 1.2, margin: 0 }}>{pick(a.beliefsTitle, s.tagline)}</h2>
+            <h2 id="believe" className="quote quote-lg">{pick(a.beliefsTitle, s.tagline)}</h2>
           </div>
           <div className="grid-3">
             {beliefs.map((b, i) => (
-              <div key={b._key ?? i} className="panel cut-lg stack" style={{ gap: 12 }}>
+              <div key={b._key ?? i} className="panel stack" style={{ gap: 12 }}>
                 <span className="step-num">0{i + 1}</span>
                 <h3 className={`h3 ${b.title.startsWith('[') ? 'placeholder-text' : ''}`}>{b.title}</h3>
                 <p className={`muted ${b.body.startsWith('[') ? 'placeholder-text' : ''}`} style={{ margin: 0 }}>{b.body}</p>

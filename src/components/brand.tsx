@@ -50,7 +50,7 @@ export function Lockup({ variant = 'vertical', tone = 'auto', height = 200, clas
 }
 
 export function Eyebrow({ children, as: As = 'span' }: { children: ReactNode; as?: 'span' | 'p' | 'h2' }) {
-  return <As className="eyebrow" style={{ margin: 0 }}>{children}</As>
+  return <As className="eyebrow">{children}</As>
 }
 
 export function Btn({ href, children, variant = 'primary', external }: { href: string; children: ReactNode; variant?: 'primary' | 'secondary'; external?: boolean }) {
@@ -98,7 +98,6 @@ export function Still({
   image,
   label = 'Still from the film',
   ratio = 'ratio-43',
-  cut = true,
   width = 1200,
   onDark,
   priority,
@@ -107,7 +106,6 @@ export function Still({
   image?: Img
   label?: string
   ratio?: string
-  cut?: boolean
   width?: number
   onDark?: boolean
   priority?: boolean
@@ -116,7 +114,7 @@ export function Still({
   const has = Boolean(image?.asset)
   const h = ratio === 'ratio-169' ? Math.round(width * 0.5625) : ratio === 'ratio-45' ? Math.round(width * 1.25) : Math.round(width * 0.75)
   return (
-    <div className={`media ${ratio} ${cut ? 'cut-lg' : ''} ${onDark ? 'on-dark' : ''}`}>
+    <div className={`media ${ratio} ${onDark ? 'on-dark' : ''}`}>
       {has ? (
         <Image
           src={urlFor(image).width(width).height(h).fit('crop').url()}

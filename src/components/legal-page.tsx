@@ -19,7 +19,7 @@ export async function LegalPage({ slug, title }: { slug: string; title: string }
 
   return (
     <>
-      <section className="page-head" style={{ paddingBottom: 'var(--space-12)' }}>
+      <section className="page-head tight">
         <div className="wrap">
           <Eyebrow>Legal</Eyebrow>
           <h1 className="h1">{doc?.title ?? title}</h1>
@@ -28,10 +28,10 @@ export async function LegalPage({ slug, title }: { slug: string; title: string }
           </p>
         </div>
       </section>
-      <section className="section" style={{ paddingTop: 0 }}>
+      <section className="section flush-top">
         <div className="wrap legal-grid">
           <nav aria-label="On this page" className="legal-toc" style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
-            <span className="caption" style={{ letterSpacing: '.18em', textTransform: 'uppercase', fontSize: 12 }}>On this page</span>
+            <span className="label">On this page</span>
             <ul className="shard-list" style={{ marginTop: 16, fontSize: 15 }}>
               {headings.length
                 ? headings.map((h) => (

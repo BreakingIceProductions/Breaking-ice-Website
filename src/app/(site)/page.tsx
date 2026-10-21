@@ -1,5 +1,4 @@
 import Image from 'next/image'
-import Link from 'next/link'
 import { ArrowLink, Btn, Eyebrow, Lockup, Still } from '@/components/brand'
 import { LocationCard, ServiceCard, StoryCard } from '@/components/cards'
 import { Checklist, Testimonials } from '@/components/interactive'
@@ -70,11 +69,11 @@ export default async function HomePage() {
             <Eyebrow>{h.introEyebrow}</Eyebrow>
             <p className="intro-copy">{h.introBody}</p>
           </div>
-          <dl className="stats" style={{ margin: 'var(--space-16) 0 0' }}>
+          <dl className="stats">
             {h.stats.map((st, i) => (
               <div className="stat" key={st._key ?? i}>
-                <dt className="caption" style={{ order: 2 }}>{st.label}</dt>
-                <dd className="stat-value" style={{ margin: 0, order: 1 }}>{st.value}</dd>
+                <dt className="caption">{st.label}</dt>
+                <dd className="stat-value">{st.value}</dd>
               </div>
             ))}
           </dl>
@@ -82,11 +81,11 @@ export default async function HomePage() {
       </section>
 
       {/* Client logos */}
-      <section className="section" aria-labelledby="logos-title" style={{ paddingTop: 0 }}>
+      <section className="section flush-top" aria-labelledby="logos-title">
         <div className="wrap">
           <h2 id="logos-title" className="sr-only">{h.logoStripTitle}</h2>
           <div className="divider" style={{ marginBottom: 'var(--space-8)' }}>
-            <span className="caption" style={{ letterSpacing: '.18em', textTransform: 'uppercase', fontSize: 12 }}>{h.logoStripEyebrow}</span>
+            <span className="label">{h.logoStripEyebrow}</span>
           </div>
           <div className="logo-strip">
             <div className="logo-track">
@@ -148,10 +147,10 @@ export default async function HomePage() {
 
       {/* What a film could be worth */}
       <section className="section dark" aria-labelledby="calc-title">
-        <div className="wrap" style={{ maxWidth: 1040 }}>
-          <div className="sec-head" style={{ marginInline: 'auto', textAlign: 'center', alignItems: 'center' }}>
+        <div className="wrap wrap-narrow">
+          <div className="sec-head center">
             <Eyebrow>The return</Eyebrow>
-            <SplitHeading as="h2" className="h1" text="A film that earns its keep. See what that could be worth over a year." />
+            <SplitHeading as="h2" className="h2" text="A film that earns its keep. See what that could be worth over a year." />
             <p className="hero-sub" style={{ margin: 0 }}>Move the sliders to your own numbers. It is the same maths we walk through together when we talk.</p>
           </div>
           <ReturnCalculator cta={s.primaryCta} />
@@ -163,7 +162,7 @@ export default async function HomePage() {
         <div className="wrap grid-2" style={{ alignItems: 'start' }}>
           <div className="sec-head" style={{ marginBottom: 0 }}>
             <Eyebrow>{h.checklistEyebrow}</Eyebrow>
-            <h2 id="check-title" className="h1">{h.checklistTitle}</h2>
+            <h2 id="check-title" className="h2">{h.checklistTitle}</h2>
           </div>
           <Checklist situations={h.situations} closing={h.checklistClosing} cta={s.primaryCta} />
         </div>
@@ -189,12 +188,12 @@ export default async function HomePage() {
       <section className="section ruled" aria-labelledby="founder-title">
         <div className="wrap grid-2" style={{ alignItems: 'center' }}>
           <div className="founder-pics">
-            <Still image={h.founder?.portrait} label="Portrait" ratio="ratio-45" cut={false} width={700} />
+            <Still image={h.founder?.portrait} label="Portrait" ratio="ratio-45" width={700} />
             <Still image={h.founder?.onLocationPhoto} label="On location" ratio="ratio-45" width={700} />
           </div>
-          <div className="stack" style={{ gap: 20 }}>
+          <div className="stack" style={{ gap: 'var(--space-5)' }}>
             <Eyebrow>{h.founderEyebrow}</Eyebrow>
-            <h2 id="founder-title" className="h1">{h.founderTitle}</h2>
+            <h2 id="founder-title" className="h2">{h.founderTitle}</h2>
             <RichText
               value={h.founder?.founderNote}
               fallback={['[A short first-person note from Josh: why this work, why the North, why Alberta now. Two short paragraphs.]']}
@@ -205,7 +204,7 @@ export default async function HomePage() {
             </div>
             <div className="btn-row">
               <Btn href="/contact">{s.primaryCta}</Btn>
-              <Link href="/about" className="link-arrow">About us <span aria-hidden="true">→</span></Link>
+              <ArrowLink href="/about">About us</ArrowLink>
             </div>
           </div>
         </div>

@@ -13,10 +13,10 @@ export function Footer({ s }: { s: Settings }) {
     <footer className="site-footer dark">
       <div className="wrap">
         <div className="footer-grid">
-          <div className="stack" style={{ gap: 20 }}>
+          <div className="stack" style={{ gap: 'var(--space-5)' }}>
             <Link href="/" aria-label="Breaking Ice Productions, home"><Lockup variant="stacked" tone="dark" height={96} /></Link>
             <p className="muted" style={{ margin: 0, maxWidth: '36ch', fontSize: 15, lineHeight: '24px' }}>{s.footerDescription}</p>
-            <p className="quote" style={{ margin: 0, fontSize: 22, lineHeight: '30px' }}>{s.tagline}</p>
+            <p className="quote quote-sm">{s.tagline}</p>
           </div>
           <div>
             <h2>Explore</h2>

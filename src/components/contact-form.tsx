@@ -1,5 +1,7 @@
 'use client'
 
+import { ArrowLink } from './brand'
+
 import Link from 'next/link'
 import { track } from '@vercel/analytics'
 import { useEffect, useRef, useState } from 'react'
@@ -127,7 +129,7 @@ export function ContactForm({
 
   if (state === 'sent') {
     return (
-      <div ref={doneRef} tabIndex={-1} role="status" className="success cut-lg">
+      <div ref={doneRef} tabIndex={-1} role="status" className="success">
         <span className="eyebrow">Message sent</span>
         <h2 className="h2">{successHeadline}</h2>
         <p className="muted" style={{ margin: 0 }}>{successMessage.replace('[first name]', name || 'there')}</p>
@@ -142,7 +144,7 @@ export function ContactForm({
         )}
         <div className="btn-row">
           <Link className="btn btn-secondary" href="/stories">See the stories</Link>
-          <Link className="link-arrow" href="/">Back to home <span aria-hidden="true">→</span></Link>
+          <ArrowLink href="/">Back to home</ArrowLink>
         </div>
       </div>
     )
@@ -152,7 +154,7 @@ export function ContactForm({
   const inv = (k: string) => (errors[k] ? { 'aria-invalid': true, 'aria-describedby': `e-${k}` } : {})
 
   return (
-    <form ref={formRef} className="stack" style={{ gap: 28 }} onSubmit={onSubmit} noValidate aria-label="Contact form">
+    <form ref={formRef} className="stack" style={{ gap: 'var(--space-6)' }} onSubmit={onSubmit} noValidate aria-label="Contact form">
       {state === 'invalid' && (
         <div ref={alertRef} tabIndex={-1} role="alert" className="alert">
           <strong>{errorHeadline}</strong>

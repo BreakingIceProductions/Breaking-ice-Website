@@ -82,11 +82,11 @@ export async function Process({ steps, compact }: { steps: ProcessStep[]; compac
   // A still per clip, so each box shows a picture while its player loads.
   const posters = compact ? [] : await Promise.all(steps.map((st) => vimeoPoster(st.clip)))
   return (
-    <ol className="process" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+    <ol className="process">
       {steps.map((st, i) => (
         <li key={st._key} className="step">
           <span className="step-num">0{i + 1}</span>
-          {!compact && <VideoLoop url={st.clip} posterUrl={posters[i]} label="Short clip" className="ratio-43 cut-lg" />}
+          {!compact && <VideoLoop url={st.clip} posterUrl={posters[i]} label="Short clip" className="ratio-43" />}
           <h3 className="h3">{st.title}</h3>
           {st.line && <p className="muted" style={{ margin: 0 }}>{st.line}</p>}
           {!compact && (

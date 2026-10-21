@@ -11,14 +11,14 @@ export function StoryCard({ p, priority }: { p: ProjectCard; priority?: boolean 
   return (
     <Link href={`/stories/${p.slug}`} className="card">
       <div className="card-frame">
-        {p.category && <span className="tag cut-sm">{CATEGORY_LABELS[p.category] ?? p.category}</span>}
+        {p.category && <span className="tag">{CATEGORY_LABELS[p.category] ?? p.category}</span>}
         {isPhoto ? (
           <Still image={p.thumbnail} label="Photo story" />
         ) : (
-          <VideoLoop url={p.cardVideo} posterUrl={poster} posterAlt={p.thumbnail?.alt} label="Preview loop" className="ratio-43 cut-lg" priority={priority} hoverOnly />
+          <VideoLoop url={p.cardVideo} posterUrl={poster} posterAlt={p.thumbnail?.alt} label="Preview loop" className="ratio-43" priority={priority} hoverOnly />
         )}
       </div>
-      <div className="stack" style={{ gap: 6 }}>
+      <div className="stack" style={{ gap: 'var(--space-2)' }}>
         <span className="card-meta">
           {[p.client, p.location].filter(Boolean).join(' · ')}
           {isPhoto && <span aria-hidden="true">· Photo story</span>}
@@ -44,7 +44,7 @@ export function ServiceCard({ s }: { s: Service }) {
   }
   return (
     <Link href={`/services/${s.slug}`} className="svc-card">
-      <Still image={s.cardImage} label={s.title} ratio="ratio-169" cut={false} width={900} />
+      <Still image={s.cardImage} label={s.title} ratio="ratio-169" width={900} />
       <div className="body">
         <h3 className="h3">{s.title}</h3>
         {s.summary && <p className="muted" style={{ margin: 0 }}>{s.summary}</p>}

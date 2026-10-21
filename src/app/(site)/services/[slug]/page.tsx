@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
 import { SITE_URL } from '@/lib/site'
 import { notFound } from 'next/navigation'
-import { Btn, Eyebrow, Mark } from '@/components/brand'
+import { Btn, Eyebrow, Mark, ArrowLink } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
 import { ProcessCompact } from '@/components/process-compact'
 import { ClosingBand, RichText } from '@/components/sections'
@@ -74,7 +74,7 @@ export default async function ServicePage({ params }: Props) {
           ...(faqLd ? [faqLd] : []),
         ]}
       />
-      <section className="page-head" style={{ paddingTop: 'var(--space-12)' }}>
+      <section className="page-head after-film">
         <div className="wrap">
           <nav className="breadcrumb" aria-label="Breadcrumb">
             <Link href="/">Home</Link> / <Link href="/services">Services</Link> / <span aria-current="page">{sv.title}</span>
@@ -98,7 +98,7 @@ export default async function ServicePage({ params }: Props) {
               posterUrl={sv.cardImage?.asset ? urlFor(sv.cardImage).width(1200).height(900).fit('crop').url() : null}
               posterAlt={sv.cardImage?.alt}
               label={`${sv.title} clip`}
-              className="ratio-43 cut-lg"
+              className="ratio-43"
               priority
             />
           </div>
@@ -107,7 +107,7 @@ export default async function ServicePage({ params }: Props) {
 
       <section className="section ruled" aria-labelledby="about-service">
         <div className="wrap split">
-          <h2 id="about-service" className="eyebrow" style={{ margin: 0 }}>About this service</h2>
+          <h2 id="about-service" className="eyebrow">About this service</h2>
           <div className="body-lg">
             <RichText
               value={descriptionSample ? null : sv.description}
@@ -119,7 +119,7 @@ export default async function ServicePage({ params }: Props) {
 
       <section className="section ruled" aria-labelledby="who">
         <div className="wrap split">
-          <h2 id="who" className="eyebrow" style={{ margin: 0 }}>Who it’s for</h2>
+          <h2 id="who" className="eyebrow">Who it’s for</h2>
           <div className="body-lg">
             <RichText value={sv.whoItsFor} fallback="[Who this is for, in plain words: the organizations, the situations, the goals. Written for the people searching for it.]" />
             {industries.length > 0 && (
@@ -137,15 +137,15 @@ export default async function ServicePage({ params }: Props) {
 
       <section className="section ruled" aria-labelledby="inc">
         <div className="wrap grid-2" style={{ alignItems: 'start' }}>
-          <div className="stack" style={{ gap: 20 }}>
-            <h2 id="inc" className="eyebrow" style={{ margin: 0 }}>What’s included</h2>
+          <div className="stack" style={{ gap: 'var(--space-5)' }}>
+            <h2 id="inc" className="eyebrow">What’s included</h2>
             <ul className="included">
               {(sv.included ?? []).map((item, i) => (
                 <li key={i} className={item.startsWith('[') ? 'placeholder-text' : undefined}>{item}</li>
               ))}
             </ul>
           </div>
-          <div className="panel cut-lg stack" style={{ gap: 12 }}>
+          <div className="panel stack" style={{ gap: 12 }}>
             <span className="eyebrow">Typical timeline</span>
             <p className="h2" style={{ margin: 0 }}>{sv.timeline ?? '[Timeline]'}</p>
             {sv.timelineNote && <p className="muted" style={{ margin: 0 }}>{sv.timelineNote}</p>}
@@ -168,7 +168,7 @@ export default async function ServicePage({ params }: Props) {
               <Eyebrow>{sv.title} work</Eyebrow>
               <h2 id="work" className="h2">Stories like this</h2>
             </div>
-            <Link className="link-arrow" href="/stories">All stories <span aria-hidden="true">→</span></Link>
+            <ArrowLink href="/stories">All stories</ArrowLink>
           </div>
           <div className="grid-3">{related.map((p) => <StoryCard key={p._id} p={p} />)}</div>
         </div>
