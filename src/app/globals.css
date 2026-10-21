@@ -199,7 +199,8 @@ button { font: inherit; color: inherit; }
 .dark .text-link { color: var(--accent-on-dark); }
 
 /* ── Brand shapes ───────────────────────────────────── */
-.tag { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: var(--radius-pill); background: var(--solid); color: var(--on-solid); font-stretch: 125%; font-size: 12px; line-height: 14px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+/* Corner cut to the bottom right, like the brand mark. */
+.tag { display: inline-flex; align-items: center; padding: 8px 34px 8px 14px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 17px), calc(100% - 24px) 100%, 0 100%); background: var(--solid); color: var(--on-solid); font-stretch: 125%; font-size: 12px; line-height: 14px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
 .dark .tag { background: var(--warm-white); color: var(--navy); }
 .divider { display: flex; align-items: center; gap: var(--space-4); width: 100%; }
 .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
