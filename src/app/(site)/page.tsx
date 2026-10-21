@@ -1,6 +1,5 @@
 import Image from 'next/image'
 import { ArrowLink, Btn, Eyebrow, Lockup, Still } from '@/components/brand'
-import { MarqueePause } from '@/components/marquee-pause'
 import { LocationCard, ServiceCard, StoryCard } from '@/components/cards'
 import { Checklist, Testimonials } from '@/components/interactive'
 import { ClosingBand, Process, RichText } from '@/components/sections'
@@ -17,17 +16,27 @@ export async function generateMetadata() {
   return seoMeta(h.seo, 'Breaking Ice Productions · Video in Alberta & the NWT', h.heroSubline, { path: '/', eyebrow: 'Video production · Alberta & the NWT' })
 }
 
+/**
+ * Logos read as the same size when they cover about the same area, not when they share a height:
+ * a 16:1 wordmark and a square crest need different boxes. Height follows the aspect ratio, within limits.
+ */
+function logoBox(ar = 3) {
+  // Steeper than equal-area so long, heavy wordmarks don't dominate; crests get the most height.
+  const h = Math.min(58, Math.max(14, 62 * ar ** -0.55))
+  return { w: Math.round(h * ar), h: Math.round(h) }
+}
+
 export default async function HomePage() {
   const [h, s, services, ab, nt] = await Promise.all([getHome(), getSettings(), getServices(), getLocation('alberta'), getLocation('northwest-territories')])
   const poster = h.heroPoster?.asset ? urlFor(h.heroPoster).width(2000).height(1125).fit('crop').url() : null
   const locations = [ab.loc, nt.loc].filter(Boolean)
-  const logos = h.logos.length ? h.logos : Array.from({ length: 7 }, (_, i) => ({ _id: `l${i}`, name: '', logo: null }))
+  const logos = h.logos.length ? h.logos : Array.from({ length: 7 }, (_, i) => ({ _id: `l${i}`, name: '', logo: null, ar: undefined as number | undefined }))
 
   return (
     <>
       {/* Calm first screen: just the name, then the film */}
-      <section className="splash dark" aria-label="Breaking Ice Productions">
-        <Lockup variant="vertical" tone="dark" height={300} className="splash-logo" />
+      <section className="splash" aria-label="Breaking Ice Productions">
+        <Lockup variant="vertical" height={300} className="splash-logo" />
         <p className="splash-line">{h.heroEyebrow}</p>
         {/* Phones only: one quiet way in, without scrolling. */}
         <ArrowLink href="/contact" className="splash-cta">{s.primaryCta}</ArrowLink>
@@ -35,7 +44,7 @@ export default async function HomePage() {
       </section>
 
       {/* Hero: the reel, contained in a soft frame */}
-      <section id="film" className="hero hero-contained dark" aria-label="Introduction">
+      <section id="film" className="hero-contained" aria-label="Introduction">
         <div className="wrap">
           <div className="hero-head">
             <SplitHeading as="h1" className="display-xl" text={h.heroHeadline} />
@@ -86,14 +95,16 @@ export default async function HomePage() {
           <h2 id="logos-title" className="sr-only">{h.logoStripTitle}</h2>
           <div className="divider" style={{ marginBottom: 'var(--space-8)' }}>
             <span className="label">{h.logoStripEyebrow}</span>
-            <MarqueePause target="logo-strip" />
           </div>
-          <div className="logo-strip" id="logo-strip">
+          <div className="logo-strip">
             <div className="logo-track">
               {[...logos, ...logos].map((l, i) => (
                 <div className={`logo-item${i >= logos.length ? ' logo-dup' : ''}`} key={`${l._id}-${i}`} aria-hidden={i >= logos.length}>
                   {l.logo?.asset ? (
-                    <Image src={urlFor(l.logo).height(80).url()} alt={l.name} width={160} height={40} />
+                    (() => {
+                      const { w, h } = logoBox(l.ar)
+                      return <Image src={urlFor(l.logo).height(Math.round(h * 2)).url()} alt={l.name} width={w} height={h} style={{ width: w, height: h }} />
+                    })()
                   ) : (
                     l.name || '[Client logo]'
                   )}
@@ -147,7 +158,7 @@ export default async function HomePage() {
       </section>
 
       {/* What a film could be worth */}
-      <section className="section dark" aria-labelledby="calc-title">
+      <section className="section calc-band" aria-labelledby="calc-title">
         <div className="wrap wrap-narrow">
           <div className="sec-head center">
             <Eyebrow>The return</Eyebrow>
@@ -192,8 +203,12 @@ export default async function HomePage() {
       <section className="section ruled" aria-labelledby="founder-title">
         <div className="wrap grid-2" style={{ alignItems: 'center' }}>
           <div className="founder-pics">
-            <Still image={h.founder?.portrait} label="Portrait" ratio="ratio-45" width={700} />
-            <Still image={h.founder?.onLocationPhoto} label="On location" ratio="ratio-45" width={700} />
+            <div className="founder-portrait">
+              <Still image={h.founder?.portrait} label="Portrait" ratio="ratio-45" width={900} />
+            </div>
+            <div className="founder-location">
+              <Still image={h.founder?.onLocationPhoto} label="On location" ratio="ratio-169" width={900} />
+            </div>
           </div>
           <div className="stack" style={{ gap: 'var(--space-5)' }}>
             <Eyebrow>{h.founderEyebrow}</Eyebrow>

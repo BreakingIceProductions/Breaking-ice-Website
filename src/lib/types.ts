@@ -77,6 +77,7 @@ export type ProcessStep = {
   title: string
   line?: string
   clip?: string
+  poster?: Img
   youBring?: string
   youGet?: string
   inside?: PT

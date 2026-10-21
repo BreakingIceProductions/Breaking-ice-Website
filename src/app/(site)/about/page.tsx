@@ -5,6 +5,8 @@ import { VideoLoop } from '@/components/video'
 import { getAbout, getSettings, pick } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
 import { vimeoPoster } from '@/lib/vimeo'
+import { urlFor } from '@/sanity/client'
+import { ALBERTA_PLACEHOLDER } from '@/lib/placeholders'
 
 export async function generateMetadata() {
   const a = await getAbout()
@@ -13,7 +15,7 @@ export async function generateMetadata() {
 
 export default async function AboutPage() {
   const [a, s] = await Promise.all([getAbout(), getSettings()])
-  const heroPoster = await vimeoPoster(a.heroVideo, 1600)
+  const heroPoster = a.heroPoster?.asset ? urlFor(a.heroPoster).width(1600).height(900).fit('crop').url() : await vimeoPoster(a.heroVideo, 1600)
   const milestones: { _key?: string; year: string; text: string }[] = pick(a.milestones, [1, 2, 3, 4].map((n) => ({ year: '[Year]', text: `[Milestone ${n}]` })))
   const beliefs: { _key?: string; title: string; body: string }[] = pick(a.beliefs, [1, 2, 3].map((n) => ({ title: `[Belief ${n}]`, body: '[Two or three sentences.]' })))
   const founder = a.founder ?? {}
@@ -62,7 +64,7 @@ export default async function AboutPage() {
               </span>
             </Link>
             <Link href="/alberta" className="loc-card">
-              <Still image={a.journeyAlbertaImage} label="Stony Plain" ratio="ratio-169" width={1000} />
+              <Still image={a.journeyAlbertaImage} label="Stony Plain" ratio="ratio-169" width={1000} fallback={ALBERTA_PLACEHOLDER} />
               <span className="stack" style={{ gap: 'var(--space-2)' }}>
                 <span className="eyebrow">{pick(a.journeyAlbertaText, 'Where we are now')}</span>
                 <span className="h2">Stony Plain · Edmonton region</span>

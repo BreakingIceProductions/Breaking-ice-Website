@@ -102,8 +102,11 @@ export function Still({
   onDark,
   priority,
   sizes = '(max-width: 820px) 100vw, 50vw',
+  fallback,
 }: {
   image?: Img
+  /** A local stand-in picture for when the Studio has none yet (see lib/placeholders.ts). */
+  fallback?: { src: string; alt: string }
   label?: string
   ratio?: string
   width?: number
@@ -124,6 +127,8 @@ export function Still({
           priority={priority}
           style={{ objectFit: 'cover' }}
         />
+      ) : fallback ? (
+        <Image src={fallback.src} alt={fallback.alt} fill sizes={sizes} priority={priority} style={{ objectFit: 'cover' }} />
       ) : (
         // No picture yet: a quiet brand pattern, never a labelled grey box on a live page.
         <div className="media-pattern" aria-hidden="true" data-label={label} />

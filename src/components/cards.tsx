@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { urlFor } from '@/sanity/client'
 import { CATEGORY_LABELS } from '@/lib/video'
+import { ALBERTA_PLACEHOLDER } from '@/lib/placeholders'
 import type { Location, ProjectCard, Service } from '@/lib/types'
 import { Still } from './brand'
 import { VideoLoop } from './video'
@@ -57,7 +58,7 @@ export function ServiceCard({ s }: { s: Service }) {
 export function LocationCard({ l }: { l: Location }) {
   return (
     <Link href={`/${l.slug}`} className="loc-card">
-      <Still image={l.cardImage} label={l.title} ratio="ratio-169" />
+      <Still image={l.cardImage} label={l.title} ratio="ratio-169" fallback={l.slug === 'alberta' ? ALBERTA_PLACEHOLDER : undefined} />
       <div className="stack" style={{ gap: 8 }}>
         <span className="eyebrow">{l.baseLine}</span>
         <h3 className="h2">{l.title}</h3>

@@ -18,7 +18,7 @@ export async function getSettings(): Promise<Settings> {
   const data = await sanityFetch<any>(`{
     "s": *[_id == "siteSettings"][0]{ tagline, footerDescription, email, phone, bookingLink, social, primaryCta, secondaryCta,
       closingEyebrow, closingHeadline, copyrightName, defaultSeo, notFoundEyebrow, notFoundHeadline, notFoundMessage,
-      processSteps[]{ _key, title, line, clip, youBring, youGet, inside } },
+      processSteps[]{ _key, title, line, clip, poster, youBring, youGet, inside } },
     "locations": *[_type == "location" && defined(slug.current)] | order(title asc){ _id, title, "slug": slug.current, baseLine }
   }`)
   const s = data?.s ?? {}
@@ -56,7 +56,7 @@ export async function getHome() {
     "page": *[_id == "homePage"][0]{ ..., testimonials[]->{ ${TESTIMONIAL} }, founder->{ name, role, portrait, onLocationPhoto, founderNote } },
     "featured": *[_type == "project" && featuredOnHome == true && defined(slug.current)] | order(coalesce(order, 999) asc)[0...6]{ ${CARD} },
     "latest": *[_type == "project" && defined(slug.current)] | order(coalesce(order, 999) asc, _createdAt desc)[0...6]{ ${CARD} },
-    "logos": *[_type == "clientLogo" && showInStrip != false] | order(coalesce(order, 999) asc){ _id, name, logo }
+    "logos": *[_type == "clientLogo" && showInStrip != false] | order(coalesce(order, 999) asc){ _id, name, logo, "ar": logo.asset->metadata.dimensions.aspectRatio }
   }`)
   const page = data?.page ?? {}
   const projects: ProjectCard[] = pick(data?.featured, pick(data?.latest, SAMPLE_PROJECTS))
@@ -101,7 +101,7 @@ export async function getHome() {
     locationsTitle: pick(page.locationsTitle, 'Where we work'),
     seo: page.seo ?? null,
     projects,
-    logos: (data?.logos ?? []) as { _id: string; name: string; logo?: any }[],
+    logos: (data?.logos ?? []) as { _id: string; name: string; logo?: any; ar?: number }[],
   }
 }
 

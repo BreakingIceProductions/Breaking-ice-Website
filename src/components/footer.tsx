@@ -28,19 +28,6 @@ export function Footer({ s }: { s: Settings }) {
               <li><Link href="/contact">Contact</Link></li>
             </ul>
           </div>
-          <div>
-            <h2>Where we work</h2>
-            <ul>
-              {s.locations.map((l) => (
-                <li key={l._id}>
-                  <Link href={`/${l.slug}`}>{l.title}</Link>
-                  {l.baseLine && <div className="muted" style={{ fontSize: 13 }}>{l.baseLine}</div>}
-                </li>
-              ))}
-              <li><a href={`mailto:${s.email}`}>{s.email}</a></li>
-              <li><a href={`tel:${s.phone.replace(/[^\d+]/g, '')}`}>{s.phone}</a></li>
-            </ul>
-          </div>
           {social.some(([, href]) => href) && (
             <div>
               <h2>Follow</h2>
@@ -53,6 +40,19 @@ export function Footer({ s }: { s: Settings }) {
               </ul>
             </div>
           )}
+          <div className="footer-where">
+            <h2>Where we work</h2>
+            <ul>
+              {s.locations.map((l) => (
+                <li key={l._id}>
+                  <Link href={`/${l.slug}`}>{l.title}</Link>
+                  {l.baseLine && <div className="muted" style={{ fontSize: 13 }}>{l.baseLine}</div>}
+                </li>
+              ))}
+              <li><a href={`mailto:${s.email}`}>{s.email}</a></li>
+              <li><a href={`tel:${s.phone.replace(/[^\d+]/g, '')}`}>{s.phone}</a></li>
+            </ul>
+          </div>
         </div>
         <div className="footer-legal">
           <span>© {new Date().getFullYear()} {s.copyrightName}</span>
