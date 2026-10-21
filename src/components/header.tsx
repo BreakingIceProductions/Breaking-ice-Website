@@ -9,6 +9,13 @@ import { ThemeToggle } from './theme-toggle'
 
 type NavLoc = Settings['locations'][number]
 
+const Lock = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+  </svg>
+)
+
 const SOCIAL_LABELS = { instagram: 'Instagram', linkedin: 'LinkedIn', youtube: 'YouTube', vimeo: 'Vimeo' } as const
 
 export function Header({ locations, cta, social = {} }: { locations: NavLoc[]; cta: string; social?: Settings['social'] }) {
@@ -63,6 +70,26 @@ export function Header({ locations, cta, social = {} }: { locations: NavLoc[]; c
 
   return (
     <header className="site-header">
+      {/* Utility strip: where we work, client login and (on wide screens) the theme switch. Follows the theme. */}
+      <div className="header-strip">
+        <div className="wrap">
+          <span className="strip-places">
+            {locations.map((l, i) => (
+              <span key={l._id}>
+                {i > 0 && <span aria-hidden="true"> · </span>}
+                <Link href={`/${l.slug}`}>
+                  <span className="strip-full">{l.base ?? l.title}</span>
+                  <span className="strip-short">{l.slug === 'northwest-territories' ? 'NWT' : l.title}</span>
+                </Link>
+              </span>
+            ))}
+          </span>
+          <span className="strip-tools">
+            <Link href="/portal/sign-in" className="strip-login"><Lock /> Client login</Link>
+            <span className="strip-theme"><ThemeToggle /></span>
+          </span>
+        </div>
+      </div>
       <div className="wrap">
         <Link href="/" className="logo-link" aria-label="Breaking Ice Productions, home">
           <Logo className="logo-for-light" />
@@ -73,19 +100,12 @@ export function Header({ locations, cta, social = {} }: { locations: NavLoc[]; c
           <Link href="/stories" aria-current={cur('/stories')}>Stories</Link>
           <Link href="/services" aria-current={cur('/services')}>Services</Link>
           <Link href="/about" aria-current={cur('/about')}>About</Link>
-          <span className="nav-group">
-            {locations.map((l, i) => (
-              <span key={l._id} className="nav-group">
-                {i > 0 && <span className="nav-sep" aria-hidden="true">·</span>}
-                <Link href={`/${l.slug}`} aria-current={cur(`/${l.slug}`)}>{l.title}</Link>
-              </span>
-            ))}
-          </span>
+          <Link href="/#locations" aria-current={locations.some((l) => cur(`/${l.slug}`)) ? 'page' : undefined}>Locations</Link>
           <Link href="/contact" aria-current={cur('/contact')}>Contact</Link>
         </nav>
         <div className="header-tools">
           <Link href="/contact" className="btn btn-primary header-cta">{cta}</Link>
-          <ThemeToggle />
+          <span className="bar-theme"><ThemeToggle /></span>
           <button ref={btnRef} type="button" className="menu-btn" aria-label="Open menu" aria-expanded={open} onClick={() => setOpen(true)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 8h16M4 16h16" /></svg>
           </button>

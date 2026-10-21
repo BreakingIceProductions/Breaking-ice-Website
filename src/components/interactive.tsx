@@ -6,38 +6,51 @@ import type { ProjectCard, Testimonial } from '@/lib/types'
 import { CATEGORY_LABELS } from '@/lib/video'
 import { Mark } from './brand'
 
-export function Testimonials({ items }: { items: Testimonial[] }) {
+/**
+ * Title and controls on the left, quotes on the right. Every quote sits in the same grid cell and only the
+ * current one is shown, so the card is always as tall as the longest quote: nothing resizes or jumps.
+ */
+export function Testimonials({ items, eyebrow, title }: { items: Testimonial[]; eyebrow?: string; title?: string }) {
   const [i, setI] = useState(0)
-  const t = items[i]
-  if (!t) return null
+  if (!items.length) return null
   const n = items.length
   return (
-    <figure className="testimonial" style={{ margin: 0 }}>
-      <Mark size={52} right="var(--ink)" />
-      <blockquote style={{ marginTop: 24 }} aria-live="polite">
-        <span className={t.quote.startsWith('[') ? 'placeholder-text' : undefined}>{t.quote}</span>
-      </blockquote>
-      <figcaption>
-        {/* Never a person's name on the site: role and organization only. */}
-        <span className="by">{t.role ?? t.organization}</span>
-        {t.role && t.organization && <span className="muted">{t.organization}</span>}
-        {t.projectSlug && (
-          <Link className="link-arrow" href={`/stories/${t.projectSlug}`} style={{ marginTop: 12, alignSelf: 'flex-start' }}>
-            See the story <span aria-hidden="true">→</span>
-          </Link>
+    <div className="tst">
+      <div className="tst-head">
+        {eyebrow && <span className="eyebrow">{eyebrow}</span>}
+        {title && <h2 id="t-title" className="h2">{title}</h2>}
+        {n > 1 && (
+          <div className="testimonial-nav">
+            <button type="button" className="round-btn" aria-label="Previous testimonial" onClick={() => setI((i + n - 1) % n)}>←</button>
+            <button type="button" className="round-btn" aria-label="Next testimonial" onClick={() => setI((i + 1) % n)}>→</button>
+            <span className="tst-count" aria-hidden="true">{String(i + 1).padStart(2, '0')} / {String(n).padStart(2, '0')}</span>
+            <span className="sr-only" aria-live="polite">Testimonial {i + 1} of {n}</span>
+          </div>
         )}
-      </figcaption>
-      {n > 1 && (
-        <div className="testimonial-nav">
-          <button type="button" className="round-btn" aria-label="Previous testimonial" onClick={() => setI((i + n - 1) % n)}>←</button>
-          <button type="button" className="round-btn" aria-label="Next testimonial" onClick={() => setI((i + 1) % n)}>→</button>
-          <span className="dots" aria-hidden="true">
-            {items.map((x, k) => <span key={x._id} className={k === i ? 'on' : ''} />)}
-          </span>
-          <span className="sr-only">Testimonial {i + 1} of {n}</span>
+      </div>
+      <figure className="testimonial" style={{ margin: 0 }}>
+        <Mark size={52} right="var(--ink)" />
+        <div className="tst-stack">
+          {items.map((t, k) => (
+            <div key={t._id} className={`tst-slide ${k === i ? 'on' : ''}`} aria-hidden={k !== i}>
+              <blockquote style={{ marginTop: 24 }}>
+                <span className={t.quote.startsWith('[') ? 'placeholder-text' : undefined}>{t.quote}</span>
+              </blockquote>
+              <figcaption>
+                {/* Never a person's name on the site: role and organization only. */}
+                <span className="by">{t.role ?? t.organization}</span>
+                {t.role && t.organization && <span className="muted">{t.organization}</span>}
+                {t.projectSlug && (
+                  <Link className="link-arrow" href={`/stories/${t.projectSlug}`} style={{ marginTop: 12, alignSelf: 'flex-start' }} tabIndex={k === i ? undefined : -1}>
+                    See the story <span aria-hidden="true">→</span>
+                  </Link>
+                )}
+              </figcaption>
+            </div>
+          ))}
         </div>
-      )}
-    </figure>
+      </figure>
+    </div>
   )
 }
 

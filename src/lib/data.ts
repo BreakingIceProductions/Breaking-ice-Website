@@ -19,7 +19,7 @@ export async function getSettings(): Promise<Settings> {
     "s": *[_id == "siteSettings"][0]{ tagline, footerDescription, email, phone, bookingLink, social, primaryCta, secondaryCta,
       closingEyebrow, closingHeadline, copyrightName, defaultSeo, notFoundEyebrow, notFoundHeadline, notFoundMessage,
       processSteps[]{ _key, title, line, clip, poster, youBring, youGet, inside } },
-    "locations": *[_type == "location" && defined(slug.current)] | order(title asc){ _id, title, "slug": slug.current, baseLine }
+    "locations": *[_type == "location" && defined(slug.current)] | order(title asc){ _id, title, "slug": slug.current, baseLine, base }
   }`)
   const s = data?.s ?? {}
   const d = DEFAULT_SETTINGS

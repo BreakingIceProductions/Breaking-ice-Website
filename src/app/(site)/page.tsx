@@ -149,11 +149,7 @@ export default async function HomePage() {
       {/* Testimonials */}
       <section className="section ruled" aria-labelledby="t-title">
         <div className="wrap">
-          <div className="sec-head">
-            <Eyebrow>{h.testimonialsEyebrow}</Eyebrow>
-            <h2 id="t-title" className="h2">{h.testimonialsTitle}</h2>
-          </div>
-          <Testimonials items={h.testimonials} />
+          <Testimonials items={h.testimonials} eyebrow={h.testimonialsEyebrow} title={h.testimonialsTitle} />
         </div>
       </section>
 
@@ -230,7 +226,7 @@ export default async function HomePage() {
       </section>
 
       {/* Locations */}
-      <section className="section ruled" aria-labelledby="loc-title">
+      <section id="locations" className="section ruled" aria-labelledby="loc-title">
         <div className="wrap">
           <div className="sec-head">
             <Eyebrow>{h.locationsEyebrow}</Eyebrow>

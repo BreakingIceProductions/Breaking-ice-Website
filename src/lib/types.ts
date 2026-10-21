@@ -101,5 +101,5 @@ export type Settings = {
   notFoundHeadline: string
   notFoundMessage: string
   defaultSeo?: Seo
-  locations: Pick<Location, '_id' | 'title' | 'slug' | 'baseLine'>[]
+  locations: Pick<Location, '_id' | 'title' | 'slug' | 'baseLine' | 'base'>[]
 }
