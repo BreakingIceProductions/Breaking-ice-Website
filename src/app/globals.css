@@ -832,3 +832,30 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
   from { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
   to { -webkit-mask-position: 0 0; mask-position: 0 0; }
 }
+
+/* Story page: one article with a facts sidebar that stays in view */
+.story-body { padding: 0 0 var(--section); }
+.story-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-16); align-items: start; border-top: 1px solid var(--ink); padding-top: var(--space-12); }
+.story-article { display: flex; flex-direction: column; gap: var(--space-12); min-width: 0; max-width: 760px; }
+.story-part { display: flex; flex-direction: column; gap: var(--space-4); }
+.story-h { font-family: var(--font-display); font-stretch: 125%; font-size: 24px; line-height: 1.25; margin: 0; }
+.story-article .prose { font-size: 18px; line-height: 1.65; }
+.story-callout { background: var(--surface-raised); border-left: 3px solid var(--accent-fill); padding: var(--space-6) var(--space-8); display: flex; flex-direction: column; gap: var(--space-2); }
+.story-callout p { margin: 0; }
+.story-callout-title { font-weight: 600; font-size: 18px; }
+.story-pull { gap: var(--space-4); padding: var(--space-4) 0; }
+.story-pull blockquote { font-size: clamp(24px, 2.4vw, 32px); }
+.story-results { margin: var(--space-4) 0 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--space-2); }
+.story-facts { position: sticky; top: calc(var(--header-h) + 40px + var(--space-6)); display: flex; flex-direction: column; gap: var(--space-6); background: var(--surface-raised); border-radius: var(--radius-lg); padding: var(--space-8); }
+.story-facts dl { margin: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+.story-facts dt { font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 2px; }
+.story-facts dd { margin: 0; font-size: 16px; }
+.story-facts .btn { align-self: stretch; justify-content: center; }
+@media (max-width: 960px) {
+  .story-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-8); padding-top: var(--space-8); }
+  .story-facts { position: static; order: -1; padding: var(--space-6); }
+  .story-facts .btn { display: none; }
+  .story-facts dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-6); }
+  .story-article { gap: var(--space-8); }
+  .story-article .prose { font-size: 17px; }
+}

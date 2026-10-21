@@ -110,7 +110,7 @@ export async function getProjectBySlug(slug: string) {
     `*[_type == "project" && slug.current == $slug][0]{
       ${CARD}, year, heroVideo, heroImage, transcript, seo, "captionsUrl": captionsFile.asset->url,
       "services": services[]->{ title, "slug": slug.current },
-      caseStudy->{ summary, challenge, peopleHeadline, people, peopleImage, whatMattered, gallery, resultsIntro, results,
+      caseStudy->{ summary, brief, onTheGround, behindTheScenes, whatItDid, facts, challenge, peopleHeadline, people, peopleImage, whatMattered, gallery, resultsIntro, results,
         pullQuote->{ ${TESTIMONIAL} }, nextProject->{ ${CARD} }, seo }
     }`,
     { slug },
