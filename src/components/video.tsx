@@ -48,6 +48,8 @@ export function VideoLoop({
   const [hot, setHot] = useState(false)
   const src = embedUrl(url, 'loop')
   const isVimeo = !!src && src.startsWith('https://player.vimeo.com/')
+  // A Vimeo link can pin its own clip: vimeo.com/123#t=95 (or #t=1m35s) loops from that moment instead of startAt.
+  const pinnedAt = startSeconds(url)
 
   // hoverOnly: load and play while the pointer is over the card; pause and return to the still when it leaves
   useEffect(() => {
@@ -101,7 +103,7 @@ export function VideoLoop({
       if ((d.event !== 'timeupdate' && d.event !== 'playProgress') || !d.data) return
       const { seconds = 0, duration = 0 } = d.data
       if (start < 0) {
-        if (duration > 0) { start = duration * startAt; post({ method: 'setCurrentTime', value: start }) }
+        if (duration > 0) { start = pinnedAt ?? duration * startAt; post({ method: 'setCurrentTime', value: start }) }
         return
       }
       if (seconds >= start - 0.3 && isActive()) setShown(true)
@@ -120,7 +122,7 @@ export function VideoLoop({
     }
     syncRef.current = sync
     return () => { syncRef.current = null; f.removeEventListener('load', onLoad); window.removeEventListener('message', onMsg); window.clearTimeout(fallback) }
-  }, [live, isVimeo, startAt, segment, hoverOnly])
+  }, [live, isVimeo, startAt, pinnedAt, segment, hoverOnly])
 
   useEffect(() => {
     hotRef.current = hot
@@ -206,4 +208,11 @@ export function PlayerButton({
         )}
     </>
   )
+}
+
+/** Seconds from a `#t=95`, `#t=95s` or `#t=1m35s` fragment, or null when the link has none. */
+function startSeconds(url?: string): number | null {
+  const m = url?.match(/#t=(?:(\d+)m)?(\d+(?:\.\d+)?)s?$/)
+  if (!m) return null
+  return Number(m[1] ?? 0) * 60 + Number(m[2])
 }
