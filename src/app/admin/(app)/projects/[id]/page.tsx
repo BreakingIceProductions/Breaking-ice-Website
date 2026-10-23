@@ -64,7 +64,7 @@ export default async function ProjectPage({ params }: Props) {
       <header className="a-head">
         <div className="stack" style={{ gap: 'var(--space-3)', minWidth: 0 }}>
           <span className="eyebrow">
-            {p.client.organizationName}
+            {p.client._id ? <Link className="text-link-plain" href={`/admin/clients/${p.client._id}`}>{p.client.organizationName}</Link> : p.client.organizationName}
             {p.region && ` · ${REGIONS.find((r) => r.value === p.region)?.title}`}
           </span>
           <h1 className="a-h1">{p.title}</h1>

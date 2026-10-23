@@ -52,7 +52,7 @@ export default async function Projects() {
                     return (
                       <tr key={p._id}>
                         <td><Link className="a-strong-link" href={`/admin/projects/${p._id}`}>{p.title}</Link></td>
-                        <td>{p.client.organizationName}</td>
+                        <td>{p.client._id ? <Link className="text-link-plain" href={`/admin/clients/${p.client._id}`}>{p.client.organizationName}</Link> : p.client.organizationName}</td>
                         <td>{REGIONS.find((r) => r.value === p.region)?.title ?? '—'}</td>
                         <td>{next ? `${next.label} · ${fmtDay(next.date)}` : '—'}</td>
                         <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>

@@ -6,7 +6,7 @@ import type { Deliverable } from '@/portal/types'
 import type { PipelineStage } from '@/sanity/portal/office-constants'
 import { adminSampleMode } from './config'
 import { sampleOfficeProjects } from './samples'
-import type { InvoiceRecord, OfficeProject, OfficeState, TaskRecord } from './types'
+import type { InvoiceRecord, OfficeClient, OfficeProject, OfficeState, TaskRecord } from './types'
 
 /**
  * Back-office reads and writes, all in the private "portal" dataset.
@@ -73,6 +73,41 @@ export async function getProject(id: string): Promise<OfficeProject | null> {
   if (adminSampleMode()) return sampleOfficeProjects().find((p) => p._id === id) ?? null
   const row = await q<Raw>(`*[_type == "clientProject" && _id == $id][0]{${FIELDS}}`, { id })
   return row ? normalize(row) : null
+}
+
+/** A client with everything we've done for them. */
+export type ClientSummary = OfficeClient & {
+  projects: OfficeProject[]
+  /** Invoiced through Xero, and what's been paid of it. */
+  billed: number
+  paid: number
+  lastActivity?: string
+}
+
+const summarize = (c: OfficeClient, all: OfficeProject[]): ClientSummary => {
+  const projects = all.filter((p) => p.client._id === c._id)
+  const invoices = projects.flatMap((p) => p.office.invoices ?? []).filter((i) => i.status !== 'voided' && i.status !== 'deleted')
+  const stamps = projects.flatMap((p) => [p._updatedAt, ...p.activity.map((a) => a.at), ...(p.office.log ?? []).map((l) => l.at)]).filter(Boolean) as string[]
+  return {
+    ...c,
+    projects,
+    billed: invoices.reduce((n, i) => n + (i.amount || 0), 0),
+    paid: invoices.reduce((n, i) => n + (i.status === 'paid' ? i.amount || 0 : Math.max(0, (i.amount || 0) - (i.outstanding ?? i.amount ?? 0))), 0),
+    lastActivity: stamps.sort().at(-1),
+  }
+}
+
+/** Every client, including ones with no projects yet, newest work first. */
+export async function listClients(): Promise<ClientSummary[]> {
+  const projects = await listProjects()
+  const clients = adminSampleMode()
+    ? [...new Map(projects.map((p) => [p.client._id, p.client])).values()]
+    : ((await q<OfficeClient[]>(`*[_type == "client"] | order(organizationName asc){_id, organizationName, contacts[]{_key, name, email, role}, billingEmail, driveFolderId}`)) ?? [])
+  return clients.map((c) => summarize(c, projects)).sort((a, b) => (b.lastActivity ?? '').localeCompare(a.lastActivity ?? ''))
+}
+
+export async function getClient(id: string): Promise<ClientSummary | null> {
+  return (await listClients()).find((c) => c._id === id) ?? null
 }
 
 /* ── Writes ─────────────────────────────────────────────────────────── */
