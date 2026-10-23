@@ -4,6 +4,7 @@ import { getSettings } from '@/lib/data'
 import { requireAccess } from '@/portal/current'
 import { getPortalSettings, producerFor } from '@/portal/data'
 import { ProjectFiles } from '@/portal/files-panel'
+import { isReviewLink } from '@/portal/vimeo'
 import { daysUntil, EmptyMark, fmtDate, ProducerCard, StageBar, StatusPill, timeAgo } from '@/portal/ui'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -70,6 +71,11 @@ export default async function PortalProject({ params }: Props) {
                   ].filter(Boolean)
                   return (
                     <li key={d._key} className={`deliv deliv-${d.status}`}>
+                      {d.vimeoEmbed ? (
+                        <div className="thumb media ratio-169 deliv-player">
+                          <iframe src={d.vimeoEmbed} title={`${d.title} v${d.version}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen loading="lazy" />
+                        </div>
+                      ) : (
                       <div className="thumb media ratio-169" aria-hidden="true">
                         {d.thumbUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -78,6 +84,7 @@ export default async function PortalProject({ params }: Props) {
                           <span className="play-dot" />
                         )}
                       </div>
+                      )}
                       <div className="stack" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
                         <div className="row-wrap">
                           <strong className="review-title">{d.title} <span className="ver">v{d.version}</span></strong>
@@ -95,8 +102,8 @@ export default async function PortalProject({ params }: Props) {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              {d.status === 'awaiting-feedback' ? 'Review & leave feedback' : 'Watch'} <span aria-hidden="true">↗</span>
-                              <span className="sr-only">(opens Frame.io in a new tab)</span>
+                              {d.status === 'awaiting-feedback' && isReviewLink(d.shareUrl) ? 'Leave time-coded notes' : 'Open on Vimeo'} <span aria-hidden="true">↗</span>
+                              <span className="sr-only">(opens Vimeo in a new tab)</span>
                             </a>
                           </div>
                         )}
@@ -113,7 +120,7 @@ export default async function PortalProject({ params }: Props) {
             )}
 
             <details className="howto">
-              <summary>How to leave feedback in Frame.io</summary>
+              <summary>How to leave feedback</summary>
               <ol className="steps-list">
                 {ps.feedbackSteps.map((s, i) => <li key={i}><span>{s}</span></li>)}
               </ol>

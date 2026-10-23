@@ -112,11 +112,11 @@ ${para(esc(m.intro))}
 ${m.notes && m.kind === 'new' ? para(esc(m.notes), `border-left:3px solid ${COPPER};padding-left:14px;margin-left:32px`) : ''}
 ${meta ? para(meta, `font-size:13px;color:${MUTED}`) : ''}
 <tr><td style="padding:22px 32px 0">${button(m.portalUrl, 'Review & leave feedback')}</td></tr>
-${m.shareUrl ? para(`<a href="${m.shareUrl}" style="color:${COPPER_DEEP}">Or open it directly in Frame.io</a>`, 'font-size:14px') : ''}
+${m.shareUrl ? para(`<a href="${m.shareUrl}" style="color:${COPPER_DEEP}">Or open it directly on Vimeo</a>`, 'font-size:14px') : ''}
 ${m.kind === 'reminder' ? para('Need more time? Just reply to this email.', `color:${MUTED};font-size:14px`) : ''}
 ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}`, 'padding-top:20px;padding-bottom:24px')}`,
   })
-  const text = `${headline.replace(/&amp;/g, '&')}\n\n${m.intro}\n\n${m.notes && m.kind === 'new' ? m.notes + '\n\n' : ''}Review & leave feedback: ${m.portalUrl}${m.shareUrl ? `\nOr open it in Frame.io: ${m.shareUrl}` : ''}\n\n${m.signOff}`
+  const text = `${headline.replace(/&amp;/g, '&')}\n\n${m.intro}\n\n${m.notes && m.kind === 'new' ? m.notes + '\n\n' : ''}Review & leave feedback: ${m.portalUrl}${m.shareUrl ? `\nOr open it on Vimeo: ${m.shareUrl}` : ''}\n\n${m.signOff}`
   return { subject: m.subject, html, text }
 }
 

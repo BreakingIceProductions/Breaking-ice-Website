@@ -85,7 +85,7 @@ export const clientProject = defineType({
   groups: [
     { name: 'overview', title: 'Overview', default: true },
     { name: 'review', title: 'For review' },
-    { name: 'links', title: 'Frame.io & Drive' },
+    { name: 'links', title: 'Google Drive' },
   ],
   fields: [
     defineField({ name: 'title', type: 'string', group: 'overview', validation: (r) => r.required() }),
@@ -161,15 +161,10 @@ export const clientProject = defineType({
             }),
             defineField({
               name: 'shareUrl',
-              title: 'Frame.io review link',
-              description: 'The share link clients open (next.frame.io/share/…). No Frame.io account needed for them.',
+              title: 'Vimeo review link',
+              description: 'In Vimeo: the video’s Share → Review page link (vimeo.com/reviews/…). The video’s own link also works. To send a new version, use Replace video in Vimeo: the link stays the same and the version here goes up by itself.',
               type: 'url',
-            }),
-            defineField({
-              name: 'frameioFileUrl',
-              title: 'Frame.io file link (optional)',
-              description: 'Paste the file’s own address from your browser (…/view/…). Lets new versions uploaded in Frame.io bump the version here automatically.',
-              type: 'url',
+              validation: (r) => r.custom((v?: string) => !v || /vimeo\.com/i.test(v) || 'Paste a Vimeo link.'),
             }),
             defineField({ name: 'thumbnail', type: 'image', options: { hotspot: true } }),
             defineField({ name: 'feedbackDue', title: 'Feedback due', type: 'date' }),
@@ -187,13 +182,6 @@ export const clientProject = defineType({
           },
         }),
       ],
-    }),
-    defineField({
-      name: 'frameioProjectUrl',
-      title: 'Frame.io project link',
-      description: 'Any link inside the Frame.io project (…/project/…). Lets comments and views show up as activity.',
-      type: 'url',
-      group: 'links',
     }),
     defineField({ name: 'driveFolderId', title: 'Google Drive folder ID', type: 'string', group: 'links', ...auto }),
   ],

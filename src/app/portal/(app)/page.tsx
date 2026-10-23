@@ -102,7 +102,7 @@ export default async function Dashboard() {
                       <div className="review-actions">
                         {d.shareUrl && (
                           <a className="btn btn-primary btn-sm" href={d.shareUrl} target="_blank" rel="noopener noreferrer">
-                            Review in Frame.io <span aria-hidden="true">↗</span>
+                            Review <span aria-hidden="true">↗</span>
                             <span className="sr-only">(opens in a new tab)</span>
                           </a>
                         )}
