@@ -1,6 +1,7 @@
 import 'server-only'
 import { importPKCS8, SignJWT } from 'jose'
-import { driveReady, portalEnv } from './config'
+import { getVercelOidcToken } from '@vercel/oidc'
+import { driveReady, googleKeyless, portalEnv } from './config'
 import { setDriveFolder } from './data'
 import type { ClientProject, DriveFile } from './types'
 
@@ -27,8 +28,38 @@ function serviceAccount(): { client_email: string; private_key: string } {
   return JSON.parse(raw.startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8'))
 }
 
-async function accessToken() {
+/** Keyless: Vercel's OIDC token → Google STS → a short-lived token for the portal service account. */
+async function keylessToken() {
+  const sts = await fetch('https://sts.googleapis.com/v1/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grantType: 'urn:ietf:params:oauth:grant-type:token-exchange',
+      audience: `//iam.googleapis.com/${portalEnv.googleWifProvider}`,
+      scope: 'https://www.googleapis.com/auth/cloud-platform',
+      requestedTokenType: 'urn:ietf:params:oauth:token-type:access_token',
+      subjectTokenType: 'urn:ietf:params:oauth:token-type:jwt',
+      subjectToken: await getVercelOidcToken(),
+    }),
+  })
+  if (!sts.ok) throw new Error(`google sts ${sts.status}: ${(await sts.text()).slice(0, 300)}`)
+  const federated = ((await sts.json()) as { access_token: string }).access_token
+  const res = await fetch(`https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${portalEnv.googleServiceAccountEmail}:generateAccessToken`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${federated}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scope: ['https://www.googleapis.com/auth/drive'], lifetime: '3600s' }),
+  })
+  if (!res.ok) throw new Error(`google impersonation ${res.status}: ${(await res.text()).slice(0, 300)}`)
+  const j = (await res.json()) as { accessToken: string; expireTime: string }
+  return { value: j.accessToken, exp: Date.parse(j.expireTime) }
+}
+
+export async function accessToken() {
   if (token && token.exp > Date.now() + 60_000) return token.value
+  if (googleKeyless()) {
+    token = await keylessToken()
+    return token.value
+  }
   const sa = serviceAccount()
   const now = Math.floor(Date.now() / 1000)
   const assertion = await new SignJWT({ scope: 'https://www.googleapis.com/auth/drive' })

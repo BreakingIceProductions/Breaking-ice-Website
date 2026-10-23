@@ -10,10 +10,19 @@ const driveId = (url: string) =>
   url.match(/drive\.google\.com\/file\/d\/([\w-]{10,})/)?.[1] ??
   url.match(/drive\.google\.com\/(?:open|uc)\?(?:.*&)?id=([\w-]{10,})/)?.[1]
 
-const DOC_EXPORT: Record<string, { format: string; ext: string; kind: string }> = {
-  document: { format: 'pdf', ext: 'pdf', kind: 'Google Doc' },
-  spreadsheets: { format: 'xlsx', ext: 'xlsx', kind: 'Google Sheet' },
-  presentation: { format: 'pdf', ext: 'pdf', kind: 'Google Slides' },
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+const DOC_EXPORT: Record<string, { format: string; ext: string; kind: string; mime: string }> = {
+  document: { format: 'pdf', ext: 'pdf', kind: 'Google Doc', mime: 'application/pdf' },
+  spreadsheets: { format: 'xlsx', ext: 'xlsx', kind: 'Google Sheet', mime: XLSX },
+  presentation: { format: 'pdf', ext: 'pdf', kind: 'Google Slides', mime: 'application/pdf' },
+}
+
+/** The Drive file behind a link, for fetching it privately with the portal's own Google access. */
+export function googleFile(url: string): { id: string; exportMime?: string; ext?: string } | null {
+  const id = driveId(url)
+  if (id) return { id }
+  const doc = url.match(/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([\w-]{10,})/)
+  return doc ? { id: doc[2], exportMime: DOC_EXPORT[doc[1]].mime, ext: DOC_EXPORT[doc[1]].ext } : null
 }
 
 /** Where the server can fetch the file itself, or null if it can only be opened. */

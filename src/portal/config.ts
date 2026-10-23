@@ -11,6 +11,13 @@ export const portalEnv = {
   sanityToken: process.env.SANITY_PORTAL_TOKEN || '',
   /** Google service account JSON (raw or base64) with access to the Shared Drive. */
   googleServiceAccount: process.env.GOOGLE_SERVICE_ACCOUNT || '',
+  /**
+   * Keyless alternative (preferred): Vercel's OIDC token is swapped for Google access through
+   * Workload Identity Federation, acting as this service account. No key file anywhere.
+   * Provider: projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
+   */
+  googleWifProvider: process.env.GOOGLE_WIF_PROVIDER || '',
+  googleServiceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
   /** The Shared Drive's ID (from its address in Google Drive). */
   sharedDriveId: process.env.GOOGLE_SHARED_DRIVE_ID || '',
   /** Vimeo personal access token (scopes: public, private). Fills in thumbnails and spots new versions. */
@@ -27,7 +34,8 @@ export const portalEnv = {
 }
 
 export const portalReady = () => Boolean(portalEnv.secret && portalEnv.sanityToken)
-export const driveReady = () => Boolean(portalEnv.googleServiceAccount && portalEnv.sharedDriveId)
+export const googleKeyless = () => Boolean(portalEnv.googleWifProvider && portalEnv.googleServiceAccountEmail)
+export const driveReady = () => Boolean((portalEnv.googleServiceAccount || googleKeyless()) && portalEnv.sharedDriveId)
 export const emailReady = () => Boolean(portalEnv.resendKey)
 export const vimeoReady = () => Boolean(portalEnv.vimeoToken)
 

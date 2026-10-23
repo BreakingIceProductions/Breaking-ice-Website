@@ -63,7 +63,7 @@ export function LinksEditor({ projectId, links }: { projectId: string; links: Pr
         <input id="doc-url" className="input" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://drive.google.com/file/d/…" required />
         <label htmlFor="doc-note" className="small muted">Note (optional)</label>
         <input id="doc-note" className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Print-ready" maxLength={200} />
-        <p className="small muted" style={{ margin: 0 }}>In Google, share it as “Anyone with the link can view” so it downloads straight from the portal.</p>
+        <p className="small muted" style={{ margin: 0 }}>Keep it in the BI Clients shared drive (stays private) or share it as “Anyone with the link”, and it downloads straight from the portal.</p>
         <div className="row-wrap">
           <button type="submit" className="btn btn-primary btn-sm" disabled={busy || !title.trim() || !url.trim()}>{busy ? 'Saving…' : 'Add to their portal'}</button>
           <span className="small muted" role="status">{msg}</span>

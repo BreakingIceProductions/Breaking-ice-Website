@@ -13,6 +13,7 @@
     "@sanity/image-url": "^2.1.1",
     "@sanity/vision": "^6.19.0",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/oidc": "^4.0.3",
     "jose": "^6.2.12",
     "next": "^16.4.1",
     "next-sanity": "^13.3.4",
