@@ -123,7 +123,7 @@ export default async function ProjectPage({ params }: Props) {
                         <td><strong>{d.title}</strong>{d.feedbackDue && d.status === 'awaiting-feedback' && <span className="muted small"> · feedback {fmtDay(d.feedbackDue)}</span>}</td>
                         <td><span className={`pill pill-${d.status}`}>{DELIVERABLE_LABEL[d.status] === 'Awaiting your feedback' ? 'With the client' : DELIVERABLE_LABEL[d.status]}</span></td>
                         <td>v{d.version}{d.viewedVersion === d.version && d.status === 'awaiting-feedback' ? ' · opened' : ''}</td>
-                        <td className="num">{d.shareUrl ? <a className="text-link" href={d.shareUrl} target="_blank" rel="noopener noreferrer">Frame.io<span className="sr-only"> (opens in a new tab)</span></a> : <span className="muted">—</span>}</td>
+                        <td className="num">{d.shareUrl ? <a className="text-link" href={d.shareUrl} target="_blank" rel="noopener noreferrer">Vimeo<span className="sr-only"> (opens in a new tab)</span></a> : <span className="muted">—</span>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -236,7 +236,6 @@ export default async function ProjectPage({ params }: Props) {
             <h2 id="h-links" className="a-h2">Links</h2>
             <ul className="a-links">
               {[
-                p.frameioProjectUrl && { name: 'Frame.io project', detail: `${p.deliverables.length} deliverable${p.deliverables.length === 1 ? '' : 's'}`, href: p.frameioProjectUrl },
                 p.driveFolderId && { name: 'Drive folder', detail: `${p.client.organizationName} / ${p.title}`, href: `https://drive.google.com/drive/folders/${p.driveFolderId}` },
                 p.office.ticktickProjectId && { name: 'TickTick list', detail: `${(p.office.tasks ?? []).length} tasks added`, href: `https://ticktick.com/webapp/#p/${p.office.ticktickProjectId}/tasks` },
                 p.quoteUrl && { name: 'Quote', detail: 'The quote file', href: p.quoteUrl },

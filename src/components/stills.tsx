@@ -61,7 +61,6 @@ export function Stills({ images, variant = 'film' }: { images: (Img | undefined)
               image={img}
               label={`Still ${i + 1}`}
               ratio={isPhoto ? 'ratio-43' : big ? 'ratio-169' : 'ratio-43'}
-              cut={big}
               width={isPhoto || big ? 1400 : 800}
               sizes={isPhoto || big ? '(max-width: 820px) 85vw, 66vw' : '(max-width: 820px) 85vw, 33vw'}
             />

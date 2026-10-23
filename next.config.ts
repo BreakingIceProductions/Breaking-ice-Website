@@ -6,7 +6,11 @@ const nextConfig: NextConfig = {
     '/og': ['./src/assets/og/**', './public/brand/bi-horizontal-dark.svg'],
   },
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: 'cdn.sanity.io' }],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'cdn.sanity.io' },
+      // Vimeo thumbnails used as clip posters (src/lib/vimeo.ts).
+      { protocol: 'https', hostname: 'i.vimeocdn.com' },
+    ],
   },
   // Keep the whole site out of search engines until launch day.
   // Remove this header (and robots.ts) when going live.

@@ -20,8 +20,8 @@ export type Deliverable = {
   title: string
   version: number
   status: DeliverableStatus
+  /** Vimeo review link (or the video's own link). */
   shareUrl?: string
-  frameioFileUrl?: string
   thumbnail?: SanityImage
   thumbUrl?: string
   feedbackDue?: string
@@ -35,6 +35,10 @@ export type Deliverable = {
   notifiedAt?: string
   remindedVersion?: number
   viewedVersion?: number
+  vimeoThumb?: string
+  vimeoEmbed?: string
+  vimeoLength?: string
+  vimeoVersions?: number
 }
 
 export type ActivityItem = { _key: string; at: string; text: string; kind?: string }
@@ -52,7 +56,6 @@ export type ClientProject = {
   coverUrl?: string
   keyDates?: { _key: string; label?: string; date?: string }[]
   deliverables?: Deliverable[]
-  frameioProjectUrl?: string
   driveFolderId?: string
   activity?: ActivityItem[]
   client: PortalClient

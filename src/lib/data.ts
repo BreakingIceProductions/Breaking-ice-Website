@@ -11,15 +11,15 @@ const pick = <T,>(value: T | null | undefined, fallback: T): T => {
   return value
 }
 
-const CARD = `_id, title, "slug": slug.current, storyType, client, location, category, cardVideo, thumbnail`
+const CARD = `_id, _updatedAt, title, "slug": slug.current, storyType, client, location, category, cardVideo, thumbnail`
 const TESTIMONIAL = `_id, quote, name, role, organization, "projectSlug": project->slug.current`
 
 export async function getSettings(): Promise<Settings> {
   const data = await sanityFetch<any>(`{
     "s": *[_id == "siteSettings"][0]{ tagline, footerDescription, email, phone, bookingLink, social, primaryCta, secondaryCta,
       closingEyebrow, closingHeadline, copyrightName, defaultSeo, notFoundEyebrow, notFoundHeadline, notFoundMessage,
-      processSteps[]{ _key, title, line, clip, youBring, youGet, inside } },
-    "locations": *[_type == "location" && defined(slug.current)] | order(title asc){ _id, title, "slug": slug.current, baseLine }
+      processSteps[]{ _key, title, line, clip, poster, youBring, youGet, inside } },
+    "locations": *[_type == "location" && defined(slug.current)] | order(title asc){ _id, title, "slug": slug.current, baseLine, base }
   }`)
   const s = data?.s ?? {}
   const d = DEFAULT_SETTINGS
@@ -56,7 +56,7 @@ export async function getHome() {
     "page": *[_id == "homePage"][0]{ ..., testimonials[]->{ ${TESTIMONIAL} }, founder->{ name, role, portrait, onLocationPhoto, founderNote } },
     "featured": *[_type == "project" && featuredOnHome == true && defined(slug.current)] | order(coalesce(order, 999) asc)[0...6]{ ${CARD} },
     "latest": *[_type == "project" && defined(slug.current)] | order(coalesce(order, 999) asc, _createdAt desc)[0...6]{ ${CARD} },
-    "logos": *[_type == "clientLogo" && showInStrip != false] | order(coalesce(order, 999) asc){ _id, name, logo }
+    "logos": *[_type == "clientLogo" && showInStrip != false] | order(coalesce(order, 999) asc){ _id, name, logo, "ar": logo.asset->metadata.dimensions.aspectRatio }
   }`)
   const page = data?.page ?? {}
   const projects: ProjectCard[] = pick(data?.featured, pick(data?.latest, SAMPLE_PROJECTS))
@@ -101,7 +101,7 @@ export async function getHome() {
     locationsTitle: pick(page.locationsTitle, 'Where we work'),
     seo: page.seo ?? null,
     projects,
-    logos: (data?.logos ?? []) as { _id: string; name: string; logo?: any }[],
+    logos: (data?.logos ?? []) as { _id: string; name: string; logo?: any; ar?: number }[],
   }
 }
 
@@ -110,7 +110,7 @@ export async function getProjectBySlug(slug: string) {
     `*[_type == "project" && slug.current == $slug][0]{
       ${CARD}, year, heroVideo, heroImage, transcript, seo, "captionsUrl": captionsFile.asset->url,
       "services": services[]->{ title, "slug": slug.current },
-      caseStudy->{ summary, challenge, peopleHeadline, people, peopleImage, whatMattered, gallery, resultsIntro, results,
+      caseStudy->{ summary, brief, onTheGround, behindTheScenes, whatItDid, facts, challenge, peopleHeadline, people, peopleImage, whatMattered, gallery, resultsIntro, results,
         pullQuote->{ ${TESTIMONIAL} }, nextProject->{ ${CARD} }, seo }
     }`,
     { slug },
@@ -128,7 +128,7 @@ export async function getNextProject(currentSlug: string): Promise<ProjectCard |
 
 export async function getServices(): Promise<Service[]> {
   const rows = await sanityFetch<Service[]>(
-    `*[_type == "service" && defined(slug.current)] | order(coalesce(order, 999) asc){ _id, title, "slug": slug.current, summary, cardImage, showAsFullCard }`,
+    `*[_type == "service" && defined(slug.current)] | order(coalesce(order, 999) asc){ _id, _updatedAt, title, "slug": slug.current, summary, cardImage, showAsFullCard }`,
   )
   return pick(rows, SAMPLE_SERVICES)
 }
@@ -136,7 +136,7 @@ export async function getServices(): Promise<Service[]> {
 export async function getServiceBySlug(slug: string): Promise<Service | null> {
   const data = await sanityFetch<Service>(
     `*[_type == "service" && slug.current == $slug][0]{
-      _id, title, "slug": slug.current, summary, heroHeadline, clip, description, whoItsFor, included, timeline, timelineNote, faq, seo,
+      _id, title, "slug": slug.current, summary, cardImage, heroHeadline, clip, description, whoItsFor, included, timeline, timelineNote, faq, seo,
       relatedProjects[]->{ ${CARD} },
       testimonial->{ ${TESTIMONIAL} },
       "fallbackProjects": *[_type == "project" && references(^._id)][0...3]{ ${CARD} }
@@ -159,16 +159,19 @@ export async function getLocation(slug: string) {
   const data = await sanityFetch<any>(
     `{
       "loc": *[_type == "location" && slug.current == $slug][0]{ ..., "slug": slug.current },
-      "projects": *[_type == "project" && region->slug.current == $slug] | order(_createdAt desc)[0...6]{ ${CARD} }
+      "projects": *[_type == "project" && region->slug.current == $slug] | order(coalesce(order, 999) asc, _createdAt desc)[0...6]{ ${CARD} }
     }`,
     { slug },
   )
   const sample = SAMPLE_LOCATIONS.find((l) => l.slug === slug) ?? null
   const loc: Location | null = data?.loc ? { ...sample, ...data.loc } : sample
-  const projects: ProjectCard[] = pick(
-    data?.projects,
-    SAMPLE_PROJECTS.filter((p) => (slug === 'alberta' ? p.location?.endsWith('AB') : p.location?.endsWith('NT'))),
-  )
+  // Samples only stand in while the location itself is unpublished; a real location with no projects shows none.
+  const projects: ProjectCard[] = data?.loc
+    ? (data.projects ?? [])
+    : pick(
+        data?.projects,
+        SAMPLE_PROJECTS.filter((p) => (slug === 'alberta' ? p.location?.endsWith('AB') : p.location?.endsWith('NT'))),
+      )
   return { loc, projects }
 }
 

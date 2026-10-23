@@ -76,7 +76,6 @@ export type OfficeProject = {
   stage?: number
   nextStep?: string
   deliverables: Deliverable[]
-  frameioProjectUrl?: string
   driveFolderId?: string
   pipelineStage: PipelineStage
   projectType?: string

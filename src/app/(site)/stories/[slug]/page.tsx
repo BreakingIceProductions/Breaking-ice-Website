@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Btn, Eyebrow, Mark, Still } from '@/components/brand'
+import { Btn, Eyebrow, Mark, Still, ArrowLink } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
 import { ClosingBand, RichText } from '@/components/sections'
 import { SingleStill, Stills } from '@/components/stills'
@@ -47,9 +47,6 @@ export default async function ProjectPage({ params }: Props) {
   const poster = p.thumbnail?.asset ? urlFor(p.thumbnail).width(2000).height(1125).fit('crop').url() : null
   const heroImg = p.heroImage?.asset ? urlFor(p.heroImage).width(2000).height(1125).fit('crop').url() : null
   const gallery: Img[] = cs.gallery?.length ? cs.gallery : Array.from({ length: isPhoto ? 4 : 5 }, () => null)
-  const results: { _key?: string; headline?: string; detail?: string }[] = cs.results?.length
-    ? cs.results
-    : [1, 2, 3].map((n) => ({ headline: `[Result ${n}]`, detail: '[What changed, in one sentence]' }))
 
   // Video details for Google (needs a real film, a poster and a year).
   const playUrl = embedUrl(p.heroVideo, 'play', { captions: Boolean(captionsUrl) })
@@ -71,30 +68,34 @@ export default async function ProjectPage({ params }: Props) {
       }
     : null
 
-  const stillsSection = (
-    <section className="section ruled" aria-labelledby="stills">
-      <div className="wrap">
-        <h2 id="stills" className="eyebrow" style={{ margin: '0 0 var(--space-8)' }}>Stills</h2>
-        <Stills images={gallery} variant={isPhoto ? 'photo' : 'film'} />
-      </div>
-    </section>
-  )
+  // Old-layout case studies still read: the challenge becomes the brief, people and what mattered become on the ground.
+  const brief = cs.brief?.length ? cs.brief : cs.challenge
+  const onTheGround = cs.onTheGround?.length ? cs.onTheGround : [...(cs.people ?? []), ...(cs.whatMattered ?? [])]
+  const whatItDid = cs.whatItDid?.length ? cs.whatItDid : null
+  const oldResults = !whatItDid && cs.results?.length ? (cs.results as { _key?: string; headline?: string; detail?: string }[]) : []
+  const shots = (cs.gallery ?? []).filter((g: Img) => g?.asset)
+  const lead: Img | undefined = cs.peopleImage?.asset ? cs.peopleImage : shots[0]
+  const moreShots: Img[] = cs.peopleImage?.asset ? shots : shots.slice(1)
+  const facts: { _key?: string; label?: string; value?: string }[] = (cs.facts ?? []).filter((f: { value?: string }) => f?.value)
+  const bts: { title?: string; body?: string } | undefined = cs.behindTheScenes?.body ? cs.behindTheScenes : undefined
 
   return (
     <>
       <JsonLd data={[breadcrumbLd([['Stories', '/stories'], [p.title, `/stories/${p.slug}`]]), ...(videoLd ? [videoLd] : [])]} />
       {/* Hero film */}
-      <section className="dark" aria-label="Film">
-        {isPhoto ? (
-          <Still image={p.heroImage} label="Hero photograph" ratio="ratio-169" cut={false} width={2000} onDark priority sizes="100vw" />
-        ) : (
-          <div style={{ position: 'relative' }}>
-            <VideoLoop url={p.heroVideo} posterUrl={poster ?? heroImg} label="The film" className="ratio-169" onDark priority />
-          </div>
-        )}
+      <section className="dark film-section" aria-label="Film">
+        <div className="wrap">
+          {isPhoto ? (
+            <Still image={p.heroImage} label="Hero photograph" ratio="ratio-169" width={2000} onDark priority sizes="100vw" />
+          ) : (
+            <div style={{ position: 'relative' }}>
+              <VideoLoop url={p.heroVideo} posterUrl={poster ?? heroImg} posterAlt={p.thumbnail?.alt ?? ""} label="The film" className="ratio-169" onDark priority />
+            </div>
+          )}
+        </div>
       </section>
 
-      <section className="page-head" style={{ paddingTop: 'var(--space-16)' }}>
+      <section className="page-head after-film">
         <div className="wrap">
           <nav className="breadcrumb" aria-label="Breadcrumb">
             <Link href="/stories">← All stories</Link>
@@ -103,7 +104,7 @@ export default async function ProjectPage({ params }: Props) {
           <Eyebrow>{CATEGORY_LABELS[p.category ?? ''] ?? 'Story'}</Eyebrow>
           <h1 className="h1">{p.title}</h1>
           {(summary || p.sample) && (
-            <p className="body-lg muted" style={{ margin: '0 0 var(--space-8)', maxWidth: '58ch' }}>
+            <p className="body-lg muted lede" style={{ marginBottom: 'var(--space-8)' }}>
               {summary ?? '[Summary: what this story is, in one or two sentences.]'}
             </p>
           )}
@@ -116,121 +117,122 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       </section>
 
-      <section style={{ paddingBottom: 'var(--space-16)' }}>
-        <div className="wrap">
-          <dl className="meta-row">
-            <div><dt>Client</dt><dd>{p.client ?? '[Client]'}</dd></div>
-            <div><dt>Place</dt><dd>{p.location ?? '[Place]'}</dd></div>
-            <div>
-              <dt>Services</dt>
-              <dd>
-                {p.services?.length
-                  ? p.services.map((sv: { slug: string; title: string }, i: number) => (
+      {/* One article, with the facts beside it */}
+      <section className="story-body" aria-label="The story">
+        <div className="wrap story-grid">
+          <article className="story-article">
+            {full && isPhoto && <Stills images={gallery} variant="photo" />}
+
+            {full && (
+              <>
+                <div className="story-part">
+                  <h2 className="story-h">The brief</h2>
+                  <RichText value={brief} fallback="[Who the client is, what they needed and why.]" />
+                </div>
+
+                {lead && !isPhoto && <SingleStill image={lead} label="Still from the film" ratio="ratio-169" width={1400} />}
+
+                <div className="story-part">
+                  <h2 className="story-h">On the ground</h2>
+                  <RichText value={onTheGround.length ? onTheGround : null} fallback="[How it was made: the shoot, the people, what was hard.]" />
+                </div>
+
+                {bts && (
+                  <aside className="story-callout" aria-label="Behind the scenes">
+                    <span className="label">Behind the scenes</span>
+                    {bts.title && <p className="story-callout-title">{bts.title}</p>}
+                    <p>{bts.body}</p>
+                  </aside>
+                )}
+
+                {cs.pullQuote && (
+                  <figure className="pull story-pull">
+                    <Mark size={40} right="var(--ink)" />
+                    <blockquote>{cs.pullQuote.quote}</blockquote>
+                    {/* Never a person's name on the site: role and organization only. */}
+                    <figcaption className="stack" style={{ gap: 2 }}>
+                      <span className="eyebrow">{cs.pullQuote.role ?? cs.pullQuote.organization}</span>
+                      {cs.pullQuote.role && cs.pullQuote.organization && <span className="muted">{cs.pullQuote.organization}</span>}
+                    </figcaption>
+                  </figure>
+                )}
+
+                {(whatItDid || oldResults.length > 0 || cs.resultsIntro || p.sample) && (
+                  <div className="story-part">
+                    <h2 className="story-h">What it did</h2>
+                    {whatItDid ? (
+                      <RichText value={whatItDid} />
+                    ) : (
+                      <>
+                        <RichText value={null} fallback={cs.resultsIntro ?? '[How the film was used and how people reacted.]'} />
+                        {oldResults.length > 0 && (
+                          <ul className="story-results">
+                            {oldResults.map((r, i) => (
+                              <li key={r._key ?? i}><strong>{r.headline}</strong> {r.detail}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {!isPhoto && moreShots.length > 0 && (
+                  <div className="story-part">
+                    <h2 className="story-h">Stills</h2>
+                    <Stills images={moreShots} variant="film" />
+                  </div>
+                )}
+              </>
+            )}
+
+            {!isPhoto && (hasTranscript || captionsUrl) && (
+              <div className="story-part">
+                <details className="transcript">
+                  <summary>Read the transcript</summary>
+                  <div style={{ marginTop: 16 }}>
+                    <RichText value={p.transcript} />
+                  </div>
+                </details>
+                {captionsUrl && (
+                  <a className="captions-download text-link" href={`${captionsUrl}?dl=`} download>
+                    Download captions (.vtt)
+                  </a>
+                )}
+              </div>
+            )}
+          </article>
+
+          <aside className="story-facts" aria-label="Project facts">
+            <dl>
+              {(p.client || p.sample) && <div><dt>Client</dt><dd>{p.client ?? '[Client]'}</dd></div>}
+              {(p.location || p.sample) && <div><dt>Place</dt><dd>{p.location ?? '[Place]'}</dd></div>}
+              {(p.year || p.sample) && <div><dt>Year</dt><dd>{p.year ?? '[Year]'}</dd></div>}
+              {facts.map((f, i) => (
+                <div key={f._key ?? i}><dt>{f.label}</dt><dd>{f.value}</dd></div>
+              ))}
+              {p.services?.length > 0 && (
+                <div>
+                  <dt>Services</dt>
+                  <dd>
+                    {p.services.map((sv: { slug: string; title: string }, i: number) => (
                       <span key={sv.slug}>{i > 0 && ' · '}<Link className="text-link" href={`/services/${sv.slug}`}>{sv.title}</Link></span>
-                    ))
-                  : '[Services]'}
-              </dd>
-            </div>
-            <div><dt>Year</dt><dd>{p.year ?? '[Year]'}</dd></div>
-          </dl>
+                    ))}
+                  </dd>
+                </div>
+              )}
+            </dl>
+            <Btn href="/contact">{s.primaryCta}</Btn>
+          </aside>
         </div>
       </section>
-
-      {full && isPhoto && stillsSection}
-
-      {full && (
-        <>
-          <section className="section ruled" aria-labelledby="challenge">
-            <div className="wrap split">
-              <h2 id="challenge" className="eyebrow" style={{ margin: 0 }}>The challenge</h2>
-              <div className="body-lg"><RichText value={cs.challenge} fallback="[What the organization needed, and what made it hard.]" /></div>
-            </div>
-          </section>
-
-          <section className="section ruled" aria-labelledby="people">
-            <div className="wrap grid-2" style={{ alignItems: 'center' }}>
-              <SingleStill image={cs.peopleImage} label="The people" ratio="ratio-45" width={900} />
-              <div className="stack" style={{ gap: 16 }}>
-                <h2 id="people" className="eyebrow" style={{ margin: 0 }}>The people</h2>
-                <p className="h2" style={{ margin: 0 }}>{cs.peopleHeadline ?? '[Whose story this is]'}</p>
-                <RichText value={cs.people} fallback="[Who we met, and how trust was built.]" />
-              </div>
-            </div>
-          </section>
-
-          <section className="section ruled" aria-labelledby="mattered">
-            <div className="wrap split">
-              <h2 id="mattered" className="eyebrow" style={{ margin: 0 }}>What mattered</h2>
-              <div className="body-lg"><RichText value={cs.whatMattered} fallback="[The moments and truths the film was built around.]" /></div>
-            </div>
-          </section>
-        </>
-      )}
-
-      {!isPhoto && (full || hasTranscript || captionsUrl) && (
-        <section className="section" aria-labelledby="transcript-h">
-          <div className="wrap split">
-            <h2 id="transcript-h" className="eyebrow" style={{ margin: 0 }}>Transcript</h2>
-            <div>
-              <details className="transcript">
-                <summary>Read the transcript</summary>
-                <div style={{ marginTop: 16 }}>
-                  <RichText value={p.transcript} fallback="[Speaker]: [Transcript text. Added in the Studio, readable by Google.]" />
-                </div>
-              </details>
-              {captionsUrl && (
-                <a className="captions-download text-link" href={`${captionsUrl}?dl=`} download>
-                  Download captions (.vtt)
-                </a>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {full && (
-        <>
-          {!isPhoto && stillsSection}
-
-          <section className="section ruled" aria-label="Quote">
-            <div className="wrap">
-              <figure className="pull" style={{ margin: 0 }}>
-                <Mark size={56} right="var(--ink)" />
-                <blockquote className={cs.pullQuote ? '' : 'placeholder-text'}>{cs.pullQuote?.quote ?? '[A true line from someone on camera, or from the client.]'}</blockquote>
-                <figcaption className="stack" style={{ gap: 2 }}>
-                  <span className="eyebrow">{cs.pullQuote?.name ?? '[Name]'}</span>
-                  <span className="muted">{[cs.pullQuote?.role ?? '[Role]', cs.pullQuote?.organization ?? '[Organization]'].join(', ')}</span>
-                </figcaption>
-              </figure>
-            </div>
-          </section>
-
-          <section className="section ruled" aria-labelledby="results">
-            <div className="wrap split">
-              <div className="stack" style={{ gap: 12 }}>
-                <h2 id="results" className="eyebrow" style={{ margin: 0 }}>Results</h2>
-                {cs.resultsIntro && <p className="muted" style={{ margin: 0 }}>{cs.resultsIntro}</p>}
-              </div>
-              <div className="results">
-                {results.map((r, i) => (
-                  <div key={r._key ?? i} className="result">
-                    <h3 className={`h3 ${r.headline?.startsWith('[') ? 'placeholder-text' : ''}`}>{r.headline}</h3>
-                    <p className={`muted ${r.detail?.startsWith('[') ? 'placeholder-text' : ''}`} style={{ margin: 0 }}>{r.detail}</p>
-                  </div>
-                ))}
-                <div style={{ marginTop: 'var(--space-8)' }}><Btn href="/contact">{s.primaryCta}</Btn></div>
-              </div>
-            </div>
-          </section>
-        </>
-      )}
 
       {next && (
         <section className="section ruled" aria-labelledby="next">
           <div className="wrap">
             <div className="sec-head-row">
-              <h2 id="next" className="eyebrow" style={{ margin: 0 }}>Next story</h2>
-              <Link href="/stories" className="link-arrow">All stories <span aria-hidden="true">→</span></Link>
+              <h2 id="next" className="eyebrow">Next story</h2>
+              <ArrowLink href="/stories">All stories</ArrowLink>
             </div>
             <div style={{ maxWidth: 640 }}><StoryCard p={next} /></div>
           </div>

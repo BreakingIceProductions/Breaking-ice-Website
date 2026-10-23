@@ -4,6 +4,7 @@ export type PT = any[] | null
 
 export type ProjectCard = {
   _id: string
+  _updatedAt?: string
   title: string
   slug: string
   storyType?: 'film' | 'photo'
@@ -17,6 +18,7 @@ export type ProjectCard = {
 
 export type Service = {
   _id: string
+  _updatedAt?: string
   title: string
   slug: string
   summary?: string
@@ -75,6 +77,7 @@ export type ProcessStep = {
   title: string
   line?: string
   clip?: string
+  poster?: Img
   youBring?: string
   youGet?: string
   inside?: PT
@@ -98,5 +101,5 @@ export type Settings = {
   notFoundHeadline: string
   notFoundMessage: string
   defaultSeo?: Seo
-  locations: Pick<Location, '_id' | 'title' | 'slug' | 'baseLine'>[]
+  locations: Pick<Location, '_id' | 'title' | 'slug' | 'baseLine' | 'base'>[]
 }

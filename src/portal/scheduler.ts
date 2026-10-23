@@ -7,6 +7,7 @@ import { addActivity, allProjects, claimDeliverable, cleanSignInGuards, freshSta
 import { ensureProjectFolders } from './drive'
 import { fill, sendEmail, versionEmail } from './email'
 import type { ClientProject, Deliverable } from './types'
+import { syncVimeo } from './vimeo'
 
 /**
  * Runs every 10 minutes (GitHub Actions now; Vercel Cron once on Pro).
@@ -85,10 +86,11 @@ export async function runScheduler(now = Date.now()) {
   const projects = await allProjects()
   const log: string[] = []
 
-  // 1. Emails first, so slow folder work can't push them past the time limit.
+  // 1. Vimeo, then emails, so slow folder work can't push them past the time limit.
   for (const p of projects) {
     if (p.status === 'delivered') continue
     try {
+      await syncVimeo(p, log).catch((e) => log.push(`vimeo failed for ${p.title}: ${String(e).slice(0, 120)}`))
       await projectEmails(p, now, settings, log)
     } catch (e) {
       log.push(`project failed: ${p.title}: ${String(e).slice(0, 160)}`)

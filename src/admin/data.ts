@@ -21,7 +21,7 @@ import type { InvoiceRecord, OfficeProject, OfficeState, TaskRecord } from './ty
 const officeId = (projectId: string) => `bo-state-${projectId}`
 const key = () => randomBytes(6).toString('hex')
 
-const FIELDS = `_id, _updatedAt, title, "slug": slug.current, status, stage, nextStep, deliverables, frameioProjectUrl, driveFolderId,
+const FIELDS = `_id, _updatedAt, title, "slug": slug.current, status, stage, nextStep, deliverables, driveFolderId,
   pipelineStage, projectType, region, quoteAmount, depositAmount, quoteUrl, milestones, schedule, crew, retainer,
   "client": client->{_id, organizationName, contacts[]{_key, name, email, role}, billingEmail, driveFolderId},
   "portalState": *[_id == "portal-state-" + ^._id][0]{ deliverables, "activity": activity[0...20] },

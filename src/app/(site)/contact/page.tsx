@@ -6,7 +6,7 @@ import { seoMeta } from '@/lib/seo'
 
 export async function generateMetadata() {
   const c = await getContact()
-  return seoMeta(c.seo, 'Start a conversation', 'Tell us about the story. We’ll get back to you, usually within a day or two.', { path: '/contact', eyebrow: 'Contact' })
+  return seoMeta(c.seo, 'Start a conversation', 'Tell us about the story and the people in it. Josh reads every message and replies within two business days. No pitch, no pressure.', { path: '/contact', eyebrow: 'Contact' })
 }
 
 export default async function ContactPage() {
@@ -19,16 +19,16 @@ export default async function ContactPage() {
 
   return (
     <>
-      <section className="page-head" style={{ paddingBottom: 'var(--space-12)' }}>
+      <section className="page-head tight">
         <div className="wrap">
           <Eyebrow>{pick(c.eyebrow, 'Contact')}</Eyebrow>
           <h1 className="display-xl">{pick(c.headline, 'Start a conversation')}</h1>
-          <p className="body-lg muted" style={{ margin: 0, maxWidth: '52ch' }}>
+          <p className="body-lg muted lede">
             {pick(c.intro, 'No pitch, no pressure. Tell us a little about the story and we’ll take it from there.')}
           </p>
         </div>
       </section>
-      <section className="section" style={{ paddingTop: 0 }}>
+      <section className="section flush-top">
         <div className="wrap contact-grid">
           <ContactForm
             services={services.map((sv) => ({ value: sv.slug, label: sv.title }))}
@@ -46,21 +46,20 @@ export default async function ContactPage() {
             deliveryErrorHeadline={c.deliveryErrorHeadline?.trim() || undefined}
             deliveryErrorMessage={pick(c.deliveryErrorMessage, 'Nothing you typed is lost.')}
           />
-          <aside className="stack" style={{ gap: 24 }}>
-            <div id="book" className="book-card dark cut-lg">
-              <span className="eyebrow">Rather talk first?</span>
-              <span className="h3">Book a 20-minute call</span>
-              <p className="muted" style={{ margin: 0 }}>Pick a time that suits you. No prep needed.</p>
-              {s.bookingLink ? (
+          <aside className="stack" style={{ gap: 24 }} aria-labelledby="other-ways">
+            <h2 id="other-ways" className="sr-only">Other ways to reach us</h2>
+            {s.bookingLink && (
+              <div id="book" className="book-card dark">
+                <span className="eyebrow">Rather talk first?</span>
+                <span className="h3">Book a 20-minute call</span>
+                <p className="muted" style={{ margin: 0 }}>Pick a time that suits you. No prep needed.</p>
                 <a className="btn btn-primary" href={s.bookingLink} target="_blank" rel="noopener noreferrer">Pick a time ↗</a>
-              ) : (
-                <span className="caption" style={{ color: 'var(--ink-inverse-muted)' }}>[Booking link: add your Google appointment schedule in Site settings]</span>
-              )}
-            </div>
-            <div className="panel stack" style={{ gap: 8 }}>
+              </div>
+            )}
+            <div className="panel stack contact-direct" style={{ gap: 8 }}>
               <span className="eyebrow">Talk directly</span>
-              <a className="h3" style={{ textDecoration: 'none' }} href={`mailto:${s.email}`}>{s.email}</a>
-              <PhoneLink className="h3" style={{ textDecoration: 'none' }} phone={s.phone} />
+              <a className="h3" href={`mailto:${s.email}`}>{s.email}</a>
+              <PhoneLink className="h3" phone={s.phone} />
             </div>
             <div className="stack" style={{ gap: 8 }}>
               <span className="eyebrow">What happens next</span>

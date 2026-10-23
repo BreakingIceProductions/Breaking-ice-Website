@@ -34,4 +34,5 @@ export const CATEGORY_LABELS: Record<string, string> = {
   aviation: 'Aviation',
   'indigenous-governments': 'Indigenous governments',
   'nonprofits-communities': 'Nonprofits & communities',
+  'adventure-tourism': 'Adventure & tourism',
 }

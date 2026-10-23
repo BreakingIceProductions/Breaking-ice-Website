@@ -1,5 +1,8 @@
 'use client'
 
+import { ArrowLink } from './brand'
+import { PREFILL_KEY } from './prefill-contact-link'
+
 import Link from 'next/link'
 import { track } from '@vercel/analytics'
 import { useEffect, useRef, useState } from 'react'
@@ -40,7 +43,8 @@ export function ContactForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null)
   // Prefill from the URL after load, so the form itself is in the server HTML.
-  // ?type=<service-slug> comes from service pages; ?name=, ?email=, ?organization= from the client portal.
+  // ?type=<service-slug> comes from service pages; name, email and organization from the client portal
+  // (through sessionStorage, so they never sit in the URL).
   const [type, setType] = useState('')
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
@@ -49,9 +53,14 @@ export function ContactForm({
       const el = form?.elements.namedItem(field) as HTMLInputElement | HTMLTextAreaElement | null
       if (el && value && !el.value.trim()) el.value = value.slice(0, 500)
     }
-    fill('name', q.get('name'))
-    fill('email', q.get('email'))
-    fill('organization', q.get('organization'))
+    let handoff: Record<string, string> = {}
+    try {
+      handoff = JSON.parse(sessionStorage.getItem(PREFILL_KEY) ?? '{}')
+      sessionStorage.removeItem(PREFILL_KEY)
+    } catch {}
+    fill('name', handoff.name ?? null)
+    fill('email', handoff.email ?? null)
+    fill('organization', handoff.organization ?? null)
     const t = q.get('type')
     if (t) {
       setType(t)
@@ -113,6 +122,8 @@ export function ContactForm({
       setFailNote(
         data.error === 'not-configured'
           ? 'This form isn’t switched on yet, so your message wasn’t sent.'
+          : data.error === 'invalid' || data.error === 'bad-request'
+            ? 'Something in the form didn’t come through right, so your message wasn’t sent. Check your email address and try again.'
           : data.error === 'too-many'
             ? 'That’s a lot of messages in a short time, so we paused this one.'
             : 'Something went wrong on our end and your message didn’t send.',
@@ -127,7 +138,7 @@ export function ContactForm({
 
   if (state === 'sent') {
     return (
-      <div ref={doneRef} tabIndex={-1} role="status" className="success cut-lg">
+      <div ref={doneRef} tabIndex={-1} role="status" className="success">
         <span className="eyebrow">Message sent</span>
         <h2 className="h2">{successHeadline}</h2>
         <p className="muted" style={{ margin: 0 }}>{successMessage.replace('[first name]', name || 'there')}</p>
@@ -142,7 +153,7 @@ export function ContactForm({
         )}
         <div className="btn-row">
           <Link className="btn btn-secondary" href="/stories">See the stories</Link>
-          <Link className="link-arrow" href="/">Back to home <span aria-hidden="true">→</span></Link>
+          <ArrowLink href="/">Back to home</ArrowLink>
         </div>
       </div>
     )
@@ -152,7 +163,7 @@ export function ContactForm({
   const inv = (k: string) => (errors[k] ? { 'aria-invalid': true, 'aria-describedby': `e-${k}` } : {})
 
   return (
-    <form ref={formRef} className="stack" style={{ gap: 28 }} onSubmit={onSubmit} noValidate aria-label="Contact form">
+    <form ref={formRef} className="stack" style={{ gap: 'var(--space-6)' }} onSubmit={onSubmit} noValidate aria-label="Contact form">
       {state === 'invalid' && (
         <div ref={alertRef} tabIndex={-1} role="alert" className="alert">
           <strong>{errorHeadline}</strong>
@@ -181,12 +192,12 @@ export function ContactForm({
       <div className="form">
         <div className="field">
           <label htmlFor="c-name">Name</label>
-          <input className="input" id="c-name" name="name" autoComplete="name" {...inv('name')} />
+          <input className="input" id="c-name" name="name" autoComplete="name" aria-required="true" maxLength={120} {...inv('name')} />
           {err('name')}
         </div>
         <div className="field">
           <label htmlFor="c-email">Email</label>
-          <input className="input" id="c-email" name="email" type="email" autoComplete="email" {...inv('email')} />
+          <input className="input" id="c-email" name="email" type="email" autoComplete="email" aria-required="true" maxLength={200} {...inv('email')} />
           {err('email')}
         </div>
         <div className="field full">
@@ -204,7 +215,7 @@ export function ContactForm({
         </div>
         <div className="field full">
           <label htmlFor="c-story">What’s the story?</label>
-          <textarea className="input" id="c-story" name="story" {...inv('story')} />
+          <textarea className="input" id="c-story" name="story" aria-required="true" maxLength={5000} {...inv('story')} />
           {err('story')}
         </div>
         <div className="field">

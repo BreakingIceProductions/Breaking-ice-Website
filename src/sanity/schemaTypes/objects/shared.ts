@@ -6,6 +6,7 @@ export const CATEGORIES = [
   { title: 'Aviation', value: 'aviation' },
   { title: 'Indigenous governments & development corporations', value: 'indigenous-governments' },
   { title: 'Nonprofits & communities', value: 'nonprofits-communities' },
+  { title: 'Adventure & tourism', value: 'adventure-tourism' },
 ]
 
 const VIDEO_URL = /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)\//

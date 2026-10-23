@@ -1,6 +1,8 @@
 import { PortableText, type PortableTextComponents } from '@portabletext/react'
 import type { ProcessStep, Settings } from '@/lib/types'
 import { Btn, Mark } from './brand'
+import { vimeoPoster } from '@/lib/vimeo'
+import { urlFor } from '@/sanity/client'
 import { VideoLoop } from './video'
 
 const ptComponents: PortableTextComponents = {
@@ -61,9 +63,9 @@ export function PhoneLink({ phone, className, style }: { phone: string; classNam
 /** Navy closing band over the shard field, with exactly one copper quote. */
 export function ClosingBand({ s, headline, secondary = true }: { s: Settings; headline?: string; secondary?: boolean }) {
   return (
-    <section className="closing dark shard-field" aria-label="Start a conversation">
+    <section className="closing shard-field band" aria-label="Start a conversation">
       <span className="shard-highlight" style={{ right: '12%', top: 'calc(50% - 30px)' }} aria-hidden="true">
-        <Mark size={64} right="var(--warm-white)" />
+        <Mark size={64} right="var(--ink)" />
       </span>
       <div className="wrap">
         <span className="eyebrow">{s.closingEyebrow}</span>
@@ -77,13 +79,17 @@ export function ClosingBand({ s, headline, secondary = true }: { s: Settings; he
   )
 }
 
-export function Process({ steps, compact }: { steps: ProcessStep[]; compact?: boolean }) {
+export async function Process({ steps, compact }: { steps: ProcessStep[]; compact?: boolean }) {
+  // A still per clip, so each box shows a picture while its player loads.
+  const posters = compact
+    ? []
+    : await Promise.all(steps.map((st) => (st.poster?.asset ? urlFor(st.poster).width(1000).height(750).fit('crop').url() : vimeoPoster(st.clip))))
   return (
-    <ol className="process" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+    <ol className={`process ${compact ? '' : 'process-full'}`}>
       {steps.map((st, i) => (
         <li key={st._key} className="step">
           <span className="step-num">0{i + 1}</span>
-          {!compact && <VideoLoop url={st.clip} label="Short clip" className="ratio-43 cut-lg" />}
+          {!compact && <VideoLoop url={st.clip} posterUrl={posters[i]} posterAlt={st.poster?.alt} label="Short clip" className="ratio-43 framed" />}
           <h3 className="h3">{st.title}</h3>
           {st.line && <p className="muted" style={{ margin: 0 }}>{st.line}</p>}
           {!compact && (

@@ -113,5 +113,5 @@ export const DEFAULT_SETTINGS: Settings = {
   notFoundEyebrow: '404 · Page not found',
   notFoundHeadline: 'This page isn’t here.',
   notFoundMessage: 'But the stories are.',
-  locations: SAMPLE_LOCATIONS.map(({ _id, title, slug, baseLine }) => ({ _id, title, slug, baseLine })),
+  locations: SAMPLE_LOCATIONS.map(({ _id, title, slug, baseLine, base }) => ({ _id, title, slug, baseLine, base })),
 }

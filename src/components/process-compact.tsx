@@ -6,7 +6,7 @@ export function ProcessCompact({ steps, headingId = 'how' }: { steps: ProcessSte
   return (
     <div className="split">
       <div className="stack" style={{ gap: 'var(--space-4)' }}>
-        <h2 id={headingId} className="eyebrow" style={{ margin: 0 }}>How it works</h2>
+        <h2 id={headingId} className="eyebrow">How it works</h2>
         <Link className="link-arrow" href="/about" style={{ alignSelf: 'flex-start' }}>
           How we work <span aria-hidden="true">→</span>
         </Link>

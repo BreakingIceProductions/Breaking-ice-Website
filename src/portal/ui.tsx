@@ -130,7 +130,7 @@ export function PortalFooter() {
           <a href="/privacy">Privacy</a>
           <a href="/accessibility">Accessibility</a>
         </nav>
-        <span className="muted">Reviews are hosted on Frame.io</span>
+        <span className="muted">Reviews are hosted on Vimeo</span>
       </div>
     </footer>
   )

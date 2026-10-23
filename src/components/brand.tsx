@@ -28,8 +28,29 @@ export function Logo({ tone = 'light', height = 40, className }: { tone?: 'light
   )
 }
 
+/**
+ * Vertical and stacked lockups. tone="auto" renders the light-background and dark-background versions and lets the
+ * theme pick one (see .logo-for-light / .logo-for-dark); tone="dark" is for bands that are always dark (splash, footer).
+ */
+export function Lockup({ variant = 'vertical', tone = 'auto', height = 200, className }: { variant?: 'vertical' | 'stacked'; tone?: 'auto' | 'dark'; height?: number; className?: string }) {
+  const ratio = variant === 'vertical' ? 812.52 / 878.71 : 1 // padded viewBoxes; width follows the file
+  const style = { height: `var(--lh, ${height}px)`, width: 'auto' } as const
+  const dim = { height, width: Math.round(height * (variant === 'vertical' ? ratio : 1.48)) }
+  const img = (src: string, cls?: string) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className={cls} src={src} alt={cls === 'logo-for-dark' ? '' : 'Breaking Ice Productions'} aria-hidden={cls === 'logo-for-dark' ? true : undefined} style={style} {...dim} />
+  )
+  if (tone === 'dark') return <span className={`lockup ${className ?? ''}`}>{img(`/brand/bi-${variant}-ondark.svg`)}</span>
+  return (
+    <span className={`lockup ${className ?? ''}`}>
+      {img(`/brand/bi-${variant}-onlight.svg`, 'logo-for-light')}
+      {img(`/brand/bi-${variant}-ondark.svg`, 'logo-for-dark')}
+    </span>
+  )
+}
+
 export function Eyebrow({ children, as: As = 'span' }: { children: ReactNode; as?: 'span' | 'p' | 'h2' }) {
-  return <As className="eyebrow" style={{ margin: 0 }}>{children}</As>
+  return <As className="eyebrow">{children}</As>
 }
 
 export function Btn({ href, children, variant = 'primary', external }: { href: string; children: ReactNode; variant?: 'primary' | 'secondary'; external?: boolean }) {
@@ -38,9 +59,9 @@ export function Btn({ href, children, variant = 'primary', external }: { href: s
   return <Link className={cls} href={href}>{children}</Link>
 }
 
-export function ArrowLink({ href, children }: { href: string; children: ReactNode }) {
+export function ArrowLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
   return (
-    <Link className="link-arrow" href={href}>
+    <Link className={`link-arrow ${className ?? ''}`} href={href}>
       {children} <span aria-hidden="true">→</span>
     </Link>
   )
@@ -77,16 +98,17 @@ export function Still({
   image,
   label = 'Still from the film',
   ratio = 'ratio-43',
-  cut = true,
   width = 1200,
   onDark,
   priority,
   sizes = '(max-width: 820px) 100vw, 50vw',
+  fallback,
 }: {
   image?: Img
+  /** A local stand-in picture for when the Studio has none yet (see lib/placeholders.ts). */
+  fallback?: { src: string; alt: string }
   label?: string
   ratio?: string
-  cut?: boolean
   width?: number
   onDark?: boolean
   priority?: boolean
@@ -95,7 +117,7 @@ export function Still({
   const has = Boolean(image?.asset)
   const h = ratio === 'ratio-169' ? Math.round(width * 0.5625) : ratio === 'ratio-45' ? Math.round(width * 1.25) : Math.round(width * 0.75)
   return (
-    <div className={`media ${ratio} ${cut ? 'cut-lg' : ''} ${onDark ? 'on-dark' : ''}`}>
+    <div className={`media ${ratio} ${onDark ? 'on-dark' : ''}`}>
       {has ? (
         <Image
           src={urlFor(image).width(width).height(h).fit('crop').url()}
@@ -105,8 +127,11 @@ export function Still({
           priority={priority}
           style={{ objectFit: 'cover' }}
         />
+      ) : fallback ? (
+        <Image src={fallback.src} alt={fallback.alt} fill sizes={sizes} priority={priority} style={{ objectFit: 'cover' }} />
       ) : (
-        <Placeholder label={label} />
+        // No picture yet: a quiet brand pattern, never a labelled grey box on a live page.
+        <div className="media-pattern" aria-hidden="true" data-label={label} />
       )}
     </div>
   )

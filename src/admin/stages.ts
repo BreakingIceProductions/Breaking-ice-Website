@@ -24,7 +24,7 @@ export const STAGE_TASKS: Record<PipelineStage, TaskTpl[]> = {
   booked: [
     { title: 'Send the contract', offset: 1 },
     { title: 'Lock shoot dates and add them to the project', offset: 3 },
-    { title: 'Create the Frame.io project and paste its link', offset: 3 },
+    { title: 'Make a Vimeo folder for the project', offset: 3 },
   ],
   preproduction: [
     { title: 'Shot list and interview questions', offset: 4 },
@@ -37,11 +37,11 @@ export const STAGE_TASKS: Record<PipelineStage, TaskTpl[]> = {
     { title: 'Log selects and best moments', offset: 3 },
   ],
   roughcut: [
-    { title: 'Post the rough cut to Frame.io and set it to “Awaiting feedback”', offset: 0 },
+    { title: 'Post the rough cut to Vimeo, paste its review link and set it to “Awaiting feedback”', offset: 0 },
     { title: 'Chase round 1 feedback', offset: 1, anchor: 'round1Due' },
   ],
   finalcut: [
-    { title: 'Post the final cut to Frame.io', offset: 0 },
+    { title: 'Replace the video in Vimeo with the final cut', offset: 0 },
     { title: 'Chase round 2 feedback (minor changes only)', offset: 1, anchor: 'round2Due' },
   ],
   delivered: [

@@ -1,5 +1,6 @@
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
+import { Motion } from '@/components/motion'
 import { JsonLd, organizationLd } from '@/components/json-ld'
 import { Tracking } from '@/components/tracking'
 import { getSettings } from '@/lib/data'
@@ -9,10 +10,11 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <>
       <a href="#main" className="skip">Skip to content</a>
-      <div className="preview-ribbon">Private preview · sample content · not yet public</div>
+      <div className="preview-ribbon">Private preview · not yet public</div>
       <Header locations={s.locations} cta={s.primaryCta} social={s.social} />
       <main id="main">{children}</main>
       <Footer s={s} />
+      <Motion />
       <Tracking bookingLink={s.bookingLink} />
       <JsonLd data={organizationLd(s)} />
     </>

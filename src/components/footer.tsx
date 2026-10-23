@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Settings } from '@/lib/types'
-import { Logo } from './brand'
+import { Lockup } from './brand'
 
 export function Footer({ s }: { s: Settings }) {
   const social = [
@@ -13,10 +13,10 @@ export function Footer({ s }: { s: Settings }) {
     <footer className="site-footer dark">
       <div className="wrap">
         <div className="footer-grid">
-          <div className="stack" style={{ gap: 20 }}>
-            <Link href="/" aria-label="Breaking Ice Productions, home"><Logo tone="dark" height={36} /></Link>
+          <div className="stack" style={{ gap: 'var(--space-5)' }}>
+            <Link href="/" aria-label="Breaking Ice Productions, home"><Lockup variant="stacked" tone="dark" height={96} /></Link>
             <p className="muted" style={{ margin: 0, maxWidth: '36ch', fontSize: 15, lineHeight: '24px' }}>{s.footerDescription}</p>
-            <p className="quote" style={{ margin: 0, fontSize: 22, lineHeight: '30px' }}>{s.tagline}</p>
+            <p className="quote quote-sm">{s.tagline}</p>
           </div>
           <div>
             <h2>Explore</h2>
@@ -28,7 +28,19 @@ export function Footer({ s }: { s: Settings }) {
               <li><Link href="/contact">Contact</Link></li>
             </ul>
           </div>
-          <div>
+          {social.some(([, href]) => href) && (
+            <div>
+              <h2>Follow</h2>
+              <ul>
+                {social.filter(([, href]) => href).map(([label, href]) => (
+                  <li key={label}>
+                    <a href={href} target="_blank" rel="noopener noreferrer">{label}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="footer-where">
             <h2>Where we work</h2>
             <ul>
               {s.locations.map((l) => (
@@ -39,16 +51,6 @@ export function Footer({ s }: { s: Settings }) {
               ))}
               <li><a href={`mailto:${s.email}`}>{s.email}</a></li>
               <li><a href={`tel:${s.phone.replace(/[^\d+]/g, '')}`}>{s.phone}</a></li>
-            </ul>
-          </div>
-          <div>
-            <h2>Follow</h2>
-            <ul>
-              {social.map(([label, href]) => (
-                <li key={label}>
-                  {href ? <a href={href} target="_blank" rel="noopener noreferrer">{label}</a> : <span className="muted">{label}</span>}
-                </li>
-              ))}
             </ul>
           </div>
         </div>

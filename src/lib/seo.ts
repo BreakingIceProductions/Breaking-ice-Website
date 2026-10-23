@@ -15,15 +15,21 @@ type Opts = {
  * Page metadata from a document's SEO tab, with fallbacks.
  * Share image priority: SEO tab image → opts.image → a branded card generated at /og.
  */
+/** The layout template appends " · Breaking Ice Productions" (27 characters). */
+const SUFFIX_LENGTH = 27
+const TITLE_MAX = 60
+
 export function seoMeta(seo: Seo | undefined, fallbackTitle: string, fallbackDescription?: string, opts: Opts = {}): Metadata {
-  const title = seo?.title || fallbackTitle
+  // Studio titles sometimes end in "| Breaking Ice": the template adds the brand, so drop it here.
+  const title = (seo?.title || fallbackTitle).replace(/\s*[|·–-]\s*Breaking Ice.*$/i, '').trim()
   const description = seo?.description || fallbackDescription
   const picked = seo?.image?.asset ? seo.image : opts.image?.asset ? opts.image : undefined
   const image = picked
     ? urlFor(picked).width(1200).height(630).fit('crop').url()
     : `/og?${new URLSearchParams({ title, ...(opts.eyebrow ? { eyebrow: opts.eyebrow } : {}) })}`
   return {
-    title,
+    // Skip the brand suffix when it would push the title past what Google shows.
+    title: title.length + SUFFIX_LENGTH > TITLE_MAX ? { absolute: title } : title,
     description,
     alternates: opts.path ? { canonical: opts.path } : undefined,
     openGraph: {

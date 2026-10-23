@@ -27,11 +27,23 @@ export function ThemeToggle() {
   }, [])
 
   function toggle() {
-    const next: Theme = (document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark')
-    document.documentElement.dataset.theme = next
-    try { localStorage.setItem(KEY, next) } catch {}
-    setTheme(next)
+    const root = document.documentElement
+    const next: Theme = (root.dataset.theme === 'dark' ? 'light' : 'dark')
+    const apply = () => {
+      root.dataset.theme = next
+      try { localStorage.setItem(KEY, next) } catch {}
+      setTheme(next)
+    }
     track('Theme switch', { theme: next })
+    // A soft gradient wipe across the page (see .theme-wipe in globals.css). Instant for reduced motion
+    // or browsers without View Transitions.
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => { finished: Promise<void> } }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !doc.startViewTransition) {
+      apply()
+      return
+    }
+    root.classList.add('theme-wipe')
+    doc.startViewTransition(apply).finished.finally(() => root.classList.remove('theme-wipe'))
   }
 
   return (

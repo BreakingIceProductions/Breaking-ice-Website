@@ -13,8 +13,8 @@ export const portalEnv = {
   googleServiceAccount: process.env.GOOGLE_SERVICE_ACCOUNT || '',
   /** The Shared Drive's ID (from its address in Google Drive). */
   sharedDriveId: process.env.GOOGLE_SHARED_DRIVE_ID || '',
-  /** Signing secret shown when the Frame.io webhook is created. */
-  frameioSecret: process.env.FRAMEIO_WEBHOOK_SECRET || '',
+  /** Vimeo personal access token (scopes: public, private). Fills in thumbnails and spots new versions. */
+  vimeoToken: process.env.VIMEO_ACCESS_TOKEN || '',
   /** Shared with the scheduler (Vercel Cron sends it automatically). */
   cronSecret: process.env.CRON_SECRET || '',
   resendKey: process.env.RESEND_API_KEY || '',
@@ -29,6 +29,7 @@ export const portalEnv = {
 export const portalReady = () => Boolean(portalEnv.secret && portalEnv.sanityToken)
 export const driveReady = () => Boolean(portalEnv.googleServiceAccount && portalEnv.sharedDriveId)
 export const emailReady = () => Boolean(portalEnv.resendKey)
+export const vimeoReady = () => Boolean(portalEnv.vimeoToken)
 
 /** Development fallback so the demo works locally without settings. */
 export const sessionSecret = () =>

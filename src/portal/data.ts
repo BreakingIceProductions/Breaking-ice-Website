@@ -29,7 +29,7 @@ export const portalImage = (img: SanityImage, w: number, h?: number) => {
 
 const CLIENT_FIELDS = `_id, organizationName, logo, contacts[]{_key, name, email, role, getsEmails}, producer, driveFolderId`
 const PROJECT_FIELDS = `_id, _updatedAt, title, "slug": slug.current, status, stage, stageDates, nextStep, summary, coverImage,
-  keyDates, deliverables, frameioProjectUrl, driveFolderId, "client": client->{${CLIENT_FIELDS}},
+  keyDates, deliverables, driveFolderId, "client": client->{${CLIENT_FIELDS}},
   "state": *[_id == "portal-state-" + ^._id][0]{ deliverables, "activity": activity[0...30] }`
 
 /**
@@ -37,7 +37,10 @@ const PROJECT_FIELDS = `_id, _updatedAt, title, "slug": slug.current, status, st
  * separate "portal-state-<project id>" record that nobody edits in the Studio. Publishing an
  * older draft of the project can then never wipe it and cause a repeat email.
  */
-export const STATE_FIELDS = ['readyVersion', 'readyAt', 'notifiedVersion', 'notifiedAt', 'remindedVersion', 'viewedVersion', 'versionedAt'] as const
+export const STATE_FIELDS = [
+  'readyVersion', 'readyAt', 'notifiedVersion', 'notifiedAt', 'remindedVersion', 'viewedVersion', 'versionedAt',
+  'vimeoThumb', 'vimeoEmbed', 'vimeoLength', 'vimeoVersions',
+] as const
 type StateFields = Pick<Deliverable, (typeof STATE_FIELDS)[number]>
 type StateDoc = { _rev: string; deliverables?: (StateFields & { _key: string })[]; activity?: ClientProject['activity'] }
 const stateId = (projectId: string) => `portal-state-${projectId}`
@@ -62,7 +65,8 @@ const decorate = (p: ClientProject & { state?: Partial<StateDoc> | null }): Clie
     deliverables: (p.deliverables ?? []).map((d) => {
       const st = state?.deliverables?.find((x) => x._key === d._key)
       const auto = Object.fromEntries(STATE_FIELDS.map((f) => [f, st?.[f]]))
-      return { ...d, ...auto, version: d.version || 1, thumbUrl: portalImage(d.thumbnail, 480, 270) }
+      // Your own thumbnail and length win; Vimeo's fill the gaps.
+      return { ...d, ...auto, version: d.version || 1, length: d.length || st?.vimeoLength, thumbUrl: portalImage(d.thumbnail, 480, 270) ?? st?.vimeoThumb }
     }),
   }
 }
