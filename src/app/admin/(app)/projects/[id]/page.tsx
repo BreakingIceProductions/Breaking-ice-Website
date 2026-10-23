@@ -6,6 +6,7 @@ import { fmtDay, fmtRange, today } from '@/admin/dates'
 import { ago, cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
+import { LinksEditor } from '@/admin/ui/links-editor'
 import { NoteForm } from '@/admin/ui/note-form'
 import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
@@ -151,6 +152,14 @@ export default async function ProjectPage({ params }: Props) {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="p-card" aria-labelledby="h-docs">
+            <div className="a-card-head">
+              <h2 id="h-docs" className="a-h2">Documents for the client</h2>
+              <span className="muted small">Posters, scripts, anything they should have</span>
+            </div>
+            <LinksEditor projectId={p._id} links={p.links ?? []} />
           </section>
 
           <section className="p-card" aria-labelledby="h-notes">

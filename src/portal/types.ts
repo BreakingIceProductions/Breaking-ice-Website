@@ -56,7 +56,7 @@ export type ClientProject = {
   coverUrl?: string
   keyDates?: { _key: string; label?: string; date?: string }[]
   deliverables?: Deliverable[]
-  links?: { _key: string; title?: string; url?: string; note?: string }[]
+  links?: import('./links').ProjectLink[]
   driveFolderId?: string
   activity?: ActivityItem[]
   client: PortalClient

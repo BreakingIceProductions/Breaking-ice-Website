@@ -159,3 +159,7 @@
   .a-main { padding: var(--space-6) var(--space-4) var(--space-12); }
   .a-row-side { align-items: flex-end; }
 }
+
+/* Documents for the client */
+.a-doc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.a-doc-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }

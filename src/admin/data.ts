@@ -21,7 +21,7 @@ import type { InvoiceRecord, OfficeClient, OfficeProject, OfficeState, TaskRecor
 const officeId = (projectId: string) => `bo-state-${projectId}`
 const key = () => randomBytes(6).toString('hex')
 
-const FIELDS = `_id, _updatedAt, title, "slug": slug.current, status, stage, nextStep, deliverables, driveFolderId,
+const FIELDS = `_id, _updatedAt, title, "slug": slug.current, status, stage, nextStep, deliverables, links, driveFolderId,
   pipelineStage, projectType, region, quoteAmount, depositAmount, quoteUrl, milestones, schedule, crew, retainer,
   "client": client->{_id, organizationName, contacts[]{_key, name, email, role}, billingEmail, driveFolderId},
   "portalState": *[_id == "portal-state-" + ^._id][0]{ deliverables, "activity": activity[0...20] },
@@ -216,6 +216,23 @@ export async function addNote(projectId: string, text: string) {
     .setIfMissing({ notes: [] })
     .insert('before', 'notes[0]', [{ _key: key(), at: new Date().toISOString(), text: text.slice(0, 4000) }])
     .commit({ autoGenerateArrayKeys: false })
+}
+
+/* ── Documents & links the client sees on their project ─────────────── */
+// Written on the project itself (like versions), so they also show in the Studio.
+
+export async function addLink(projectId: string, link: { title: string; url: string; note?: string }) {
+  if (sample()) return
+  await portalClient
+    .patch(projectId)
+    .setIfMissing({ links: [] })
+    .append('links', [{ _key: key(), _type: 'projectLink', ...link }])
+    .commit({ autoGenerateArrayKeys: false })
+}
+
+export async function removeLink(projectId: string, linkKey: string) {
+  if (sample()) return
+  await portalClient.patch(projectId).unset([`links[_key=="${linkKey}"]`]).commit()
 }
 
 /* ── Xero contact IDs, one record per client ─────────────────────────── */

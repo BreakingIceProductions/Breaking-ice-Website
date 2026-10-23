@@ -76,6 +76,7 @@ export type OfficeProject = {
   stage?: number
   nextStep?: string
   deliverables: Deliverable[]
+  links?: import('@/portal/links').ProjectLink[]
   driveFolderId?: string
   pipelineStage: PipelineStage
   projectType?: string

@@ -4,22 +4,11 @@ import { getSettings } from '@/lib/data'
 import { requireAccess } from '@/portal/current'
 import { getPortalSettings, producerFor } from '@/portal/data'
 import { ProjectFiles } from '@/portal/files-panel'
+import { downloadSource, linkKind } from '@/portal/links'
 import { isReviewLink } from '@/portal/vimeo'
 import { daysUntil, EmptyMark, fmtDate, ProducerCard, StageBar, StatusPill, timeAgo } from '@/portal/ui'
 
 type Props = { params: Promise<{ slug: string }> }
-
-/** A plain word for where a link goes, so the client knows what will open. */
-function linkKind(url: string) {
-  if (/docs\.google\.com\/document/.test(url)) return 'Google Doc'
-  if (/docs\.google\.com\/spreadsheets/.test(url)) return 'Google Sheet'
-  if (/docs\.google\.com\/presentation/.test(url)) return 'Google Slides'
-  if (/drive\.google\.com\/drive\/folders/.test(url)) return 'Drive folder'
-  if (/drive\.google\.com/.test(url)) return 'Google Drive'
-  if (/\.pdf($|\?)/i.test(url)) return 'PDF'
-  if (/vimeo\.com/.test(url)) return 'Vimeo'
-  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return '' }
-}
 
 const FALLBACK_STAGES = ['Listen', 'Earn trust', 'Find what matters', 'Craft the film']
 
@@ -149,14 +138,24 @@ export default async function PortalProject({ params }: Props) {
               <ul className="p-links">
                 {links.map((l) => (
                   <li key={l._key}>
-                    <a href={l.url} target="_blank" rel="noopener noreferrer">
-                      <span className="stack" style={{ gap: 2, minWidth: 0 }}>
-                        <strong>{l.title}</strong>
-                        <span className="muted small">{[linkKind(l.url!), l.note].filter(Boolean).join(' · ')}</span>
-                      </span>
-                      <span aria-hidden="true">↗</span>
-                      <span className="sr-only">(opens in a new tab)</span>
-                    </a>
+                    {downloadSource(l.url!) ? (
+                      <a href={`/api/portal/link/${l._key}?project=${encodeURIComponent(p.slug)}`} download>
+                        <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                          <strong>{l.title}</strong>
+                          <span className="muted small">{[linkKind(l.url!), l.note].filter(Boolean).join(' · ')}</span>
+                        </span>
+                        <span className="p-link-action">Download <span aria-hidden="true">↓</span></span>
+                      </a>
+                    ) : (
+                      <a href={l.url} target="_blank" rel="noopener noreferrer">
+                        <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                          <strong>{l.title}</strong>
+                          <span className="muted small">{[linkKind(l.url!), l.note].filter(Boolean).join(' · ')}</span>
+                        </span>
+                        <span className="p-link-action">Open <span aria-hidden="true">↗</span></span>
+                        <span className="sr-only">(opens in a new tab)</span>
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
