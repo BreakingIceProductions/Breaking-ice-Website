@@ -194,6 +194,13 @@ export const clientProject = defineType({
               type: 'url',
               validation: (r) => r.custom((v?: string) => !v || /vimeo\.com/i.test(v) || 'Paste a Vimeo link.'),
             }),
+            defineField({
+              name: 'fileUrl',
+              title: 'File for review (designs, PDFs, audio)',
+              description: 'For anything that isn’t a video: a Google Drive file link. Uploading “for review” from the back office fills this in. The client sees a preview, can download it, and approves or asks for changes in the portal.',
+              type: 'url',
+            }),
+            defineField({ name: 'fileName', title: 'File name', type: 'string', hidden: ({ parent }) => !parent?.fileUrl, readOnly: true, description: 'Set automatically when uploaded from the back office.' }),
             defineField({ name: 'thumbnail', type: 'image', options: { hotspot: true } }),
             defineField({ name: 'feedbackDue', title: 'Feedback due', type: 'date' }),
             defineField({ name: 'length', title: 'Length', description: 'e.g. 2:45', type: 'string' }),

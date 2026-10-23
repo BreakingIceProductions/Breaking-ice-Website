@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { IconFor } from '@/portal/file-icon'
 import { downloadSource, linkKind, type ProjectLink } from '@/portal/links'
 
 /** Documents & links for the client: paste a Google Drive or Docs link and it shows (and downloads) in their portal. */
@@ -45,7 +46,8 @@ export function LinksEditor({ projectId, links }: { projectId: string; links: Pr
         <ul className="a-doc-list">
           {links.map((l) => (
             <li key={l._key}>
-              <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+              <IconFor url={l.url} name={l.title} />
+              <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
                 <a className="a-strong-link" href={l.url} target="_blank" rel="noopener noreferrer">{l.title}</a>
                 <span className="muted small">
                   {[linkKind(l.url ?? ''), downloadSource(l.url ?? '') ? 'they download it in the portal' : 'opens in a new tab', l.note].filter(Boolean).join(' · ')}

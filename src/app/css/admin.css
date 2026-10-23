@@ -163,3 +163,8 @@
 /* Documents for the client */
 .a-doc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .a-doc-list li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
+.a-dropzone { padding: var(--space-8) var(--space-6); }
+.a-upload-opts { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-3) var(--space-6); margin-top: var(--space-2); }
+.a-select { width: auto; min-height: 40px; padding: 6px 10px; display: inline-block; margin-left: 6px; }
+.a-check { display: inline-flex; align-items: center; gap: 8px; }
+.a-file-list li { grid-template-columns: 44px minmax(0, 1fr) auto; }

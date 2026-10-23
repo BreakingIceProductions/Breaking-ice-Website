@@ -1,10 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { IconFor } from './file-icon'
+import { fmtEta, fmtSize, sendResumable } from './resumable'
 import type { DriveFile } from './types'
 
 const MAX = 3 * 1024 ** 3
-const CHUNK = 8 * 1024 * 1024 // multiple of 256 KiB, as Google requires
 const BLOCKED = /\.(exe|msi|bat|cmd|com|scr|ps1|vbs|js|jar|sh|app|dmg|pkg|apk|dll|lnk|iso)$/i
 const TABS = [
   ['all', 'All'],
@@ -24,37 +25,10 @@ type Item = {
   xhr?: XMLHttpRequest
 }
 
-const fmtSize = (n?: number) =>
-  n === undefined ? '' : n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e8 ? 0 : 1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`
-const fmtEta = (s: number) => (s < 60 ? `${Math.max(1, Math.round(s))} s left` : s < 3600 ? `${Math.round(s / 60)} min left` : `${(s / 3600).toFixed(1)} h left`)
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 // Read fresh: cancel() can change it while an upload is running.
 const isCancelled = (i: Item) => (i.state as Item['state']) === 'cancelled'
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
-
-/** One PUT to Google's upload address. Resolves with where Google says we are. */
-function put(item: Item, start: number, end: number, onBytes: (n: number) => void): Promise<{ status: number; next?: number }> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    item.xhr = xhr
-    xhr.open('PUT', item.session!)
-    const total = item.file.size
-    if (end > start) {
-      xhr.setRequestHeader('Content-Range', `bytes ${start}-${end - 1}/${total}`)
-      xhr.upload.onprogress = (e) => onBytes(start + e.loaded)
-    } else {
-      xhr.setRequestHeader('Content-Range', `bytes */${total}`) // "how much did you get?"
-    }
-    xhr.onload = () => {
-      const range = xhr.getResponseHeader('Range') // e.g. bytes=0-8388607 (when exposed)
-      const m = range && /bytes=0-(\d+)/.exec(range)
-      resolve({ status: xhr.status, next: m ? Number(m[1]) + 1 : xhr.status === 308 && end > start ? end : undefined })
-    }
-    xhr.onerror = () => reject(new Error('network'))
-    xhr.onabort = () => reject(new Error('aborted'))
-    xhr.send(end > start ? item.file.slice(start, end) : null)
-  })
-}
 
 export function ProjectFiles({ project, intro, demo, uploaderName }: { project: string; intro: string; demo: boolean; uploaderName: string }) {
   const [files, setFiles] = useState<DriveFile[] | null>(null)
@@ -135,71 +109,40 @@ export function ProjectFiles({ project, intro, demo, uploaderName }: { project: 
         }
         item.session = j.sessionUrl
       }
-      const total = item.file.size
-      let start = item.sent
-      let tries = 0
-      const t0 = Date.now()
-      const s0 = start
-      while (start < total) {
-        if (isCancelled(item)) return
-        const end = Math.min(start + CHUNK, total)
-        try {
-          const r = await put(item, start, end, (n) => {
-            item.sent = n
-            const rate = (n - s0) / Math.max(1, (Date.now() - t0) / 1000)
-            if (rate > 0) item.eta = fmtEta((total - n) / rate)
-            sync()
-          })
-          if (r.status === 200 || r.status === 201) {
-            start = total
-            break
-          }
-          if (r.status === 308) {
-            start = r.next ?? end
-            item.sent = start
-            tries = 0
-            continue
-          }
-          if (r.status === 404 || r.status === 410) throw new Error('expired')
-          throw new Error(`status ${r.status}`)
-        } catch (e) {
-          if (isCancelled(item)) return
-          if ((e as Error).message === 'expired') {
-            item.state = 'error'
-            item.error = 'This upload expired. Try again to start it fresh.'
-            item.session = undefined
-            item.sent = 0
-            sync()
-            return
-          }
-          // Connection dropped: wait, ask Google how far it got, and carry on.
-          tries++
-          item.state = 'paused'
-          item.eta = navigator.onLine ? 'Reconnecting…' : 'Waiting for your connection…'
-          sync()
-          await wait(Math.min(30_000, 1000 * 2 ** Math.min(tries, 5)))
-          while (!navigator.onLine) await wait(2000)
+      const r = await sendResumable({
+        file: item.file,
+        session: item.session!,
+        from: item.sent,
+        cancelled: () => isCancelled(item),
+        onXhr: (x) => (item.xhr = x),
+        onProgress: (n, eta) => {
+          item.sent = n
           item.state = 'uploading'
-          try {
-            const s = await put(item, 0, 0, () => {})
-            if (s.status === 200 || s.status === 201) {
-              start = total
-              break
-            }
-            if (s.status === 308) start = s.next ?? 0
-          } catch {
-            /* try again next loop */
-          }
-          if (tries > 40) {
-            item.state = 'error'
-            item.error = 'The connection kept dropping. Try again when it’s steadier; it picks up where it left off.'
-            sync()
-            return
-          }
+          if (eta) item.eta = eta
+          sync()
+        },
+        onPause: (msg) => {
+          item.state = 'paused'
+          item.eta = msg
+          sync()
+        },
+      })
+      if (r.ok) {
+        item.sent = item.file.size
+        item.state = 'done'
+      } else if (r.reason === 'cancelled') {
+        return
+      } else {
+        item.state = 'error'
+        item.error =
+          r.reason === 'expired' ? 'This upload expired. Try again to start it fresh.'
+          : r.reason === 'unsteady' ? 'The connection kept dropping. Try again when it’s steadier; it picks up where it left off.'
+          : 'Something went wrong. Try again.'
+        if (r.reason === 'expired') {
+          item.session = undefined
+          item.sent = 0
         }
       }
-      item.sent = total
-      item.state = 'done'
       sync()
     } catch {
       item.state = 'error'
@@ -375,7 +318,7 @@ export function ProjectFiles({ project, intro, demo, uploaderName }: { project: 
             <ul className="file-list">
               {shown.map((f) => (
                 <li key={f.id}>
-                  <span className="ext" aria-hidden="true">{(f.name.split('.').pop() ?? '').slice(0, 4)}</span>
+                  <IconFor name={f.name} mime={f.mimeType} />
                   <span className="stack" style={{ gap: 0, minWidth: 0 }}>
                     <span className="fname">{f.name}</span>
                     <span className="muted small">

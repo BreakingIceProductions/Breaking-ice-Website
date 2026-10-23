@@ -215,7 +215,7 @@ export async function listProjectFiles(p: ClientProject): Promise<DriveFile[]> {
  * a dropped connection picks up where it left off). Passing the browser's Origin
  * here is what lets Google accept those chunks from the page.
  */
-export async function startUpload(p: ClientProject, file: { name: string; size: number; type: string }, origin: string, uploadedBy: string) {
+export async function startUpload(p: ClientProject, file: { name: string; size: number; type: string }, origin: string, uploadedBy: string, folder: Sub = 'From client') {
   const subs = await ensureProjectFolders(p)
   const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size', {
     method: 'POST',
@@ -226,7 +226,7 @@ export async function startUpload(p: ClientProject, file: { name: string; size: 
       'X-Upload-Content-Length': String(file.size),
       Origin: origin,
     },
-    body: JSON.stringify({ name: safeName(file.name), parents: [subs['From client']], appProperties: { uploadedBy: uploadedBy.slice(0, 100) } }),
+    body: JSON.stringify({ name: safeName(file.name), parents: [subs[folder]], appProperties: { uploadedBy: uploadedBy.slice(0, 100) } }),
   })
   const location = res.headers.get('location')
   if (!res.ok || !location) throw new Error(`drive upload start ${res.status}: ${(await res.text()).slice(0, 300)}`)

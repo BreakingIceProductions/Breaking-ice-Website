@@ -100,12 +100,9 @@ export default async function Dashboard() {
                         </span>
                       </div>
                       <div className="review-actions">
-                        {d.shareUrl && (
-                          <a className="btn btn-primary btn-sm" href={d.shareUrl} target="_blank" rel="noopener noreferrer">
-                            Review <span aria-hidden="true">↗</span>
-                            <span className="sr-only">(opens in a new tab)</span>
-                          </a>
-                        )}
+                        <Link className="btn btn-primary btn-sm" href={`/portal/${p.slug}`}>
+                          Review <span aria-hidden="true">→</span>
+                        </Link>
                       </div>
                     </li>
                   )

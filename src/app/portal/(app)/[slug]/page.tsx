@@ -4,7 +4,9 @@ import { getSettings } from '@/lib/data'
 import { requireAccess } from '@/portal/current'
 import { getPortalSettings, producerFor } from '@/portal/data'
 import { ProjectFiles } from '@/portal/files-panel'
+import { fileKind, IconFor } from '@/portal/file-icon'
 import { downloadSource, linkKind } from '@/portal/links'
+import { FeedbackButtons, ReviewThumb } from '@/portal/review-ui'
 import { isReviewLink } from '@/portal/vimeo'
 import { daysUntil, EmptyMark, fmtDate, ProducerCard, StageBar, StatusPill, timeAgo } from '@/portal/ui'
 
@@ -73,7 +75,11 @@ export default async function PortalProject({ params }: Props) {
                   ].filter(Boolean)
                   return (
                     <li key={d._key} className={`deliv deliv-${d.status}`}>
-                      {d.vimeoEmbed ? (
+                      {!d.vimeoEmbed && d.fileUrl ? (
+                        <div className="thumb media review-thumb">
+                          <ReviewThumb src={`/api/portal/review/${d._key}?project=${encodeURIComponent(p.slug)}&mode=preview`} kind={fileKind({ name: d.fileName })} ext={d.fileName?.split('.').pop()} />
+                        </div>
+                      ) : d.vimeoEmbed ? (
                         <div className="thumb media ratio-169 deliv-player">
                           <iframe src={d.vimeoEmbed} title={`${d.title} v${d.version}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen loading="lazy" />
                         </div>
@@ -96,6 +102,16 @@ export default async function PortalProject({ params }: Props) {
                           <span className={`small ${days !== null && days <= 2 && d.status === 'awaiting-feedback' ? 'due-soon' : 'muted'}`}>{meta.join(' · ')}</span>
                         )}
                         {d.notes && d.status !== 'approved' && <p className="deliv-note">{d.notes}</p>}
+                        {d.fileUrl && (
+                          <div className="btn-row" style={{ marginTop: 4 }}>
+                            <a className="btn btn-sm btn-secondary" href={`/api/portal/review/${d._key}?project=${encodeURIComponent(p.slug)}&mode=view`} target="_blank" rel="noopener noreferrer">
+                              View <span aria-hidden="true">↗</span><span className="sr-only">(opens in a new tab)</span>
+                            </a>
+                            <a className="btn btn-sm btn-secondary" href={`/api/portal/review/${d._key}?project=${encodeURIComponent(p.slug)}&mode=download`} download>
+                              Download <span aria-hidden="true">↓</span>
+                            </a>
+                          </div>
+                        )}
                         {d.shareUrl && (
                           <div className="btn-row" style={{ marginTop: 4 }}>
                             <a
@@ -109,6 +125,7 @@ export default async function PortalProject({ params }: Props) {
                             </a>
                           </div>
                         )}
+                        {d.status === 'awaiting-feedback' && <FeedbackButtons project={p.slug} deliverable={d._key} title={`${d.title} v${d.version}`} />}
                       </div>
                     </li>
                   )
@@ -140,7 +157,8 @@ export default async function PortalProject({ params }: Props) {
                   <li key={l._key}>
                     {downloadSource(l.url!) ? (
                       <a href={`/api/portal/link/${l._key}?project=${encodeURIComponent(p.slug)}`} download>
-                        <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                        <IconFor url={l.url} name={l.title} />
+                        <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
                           <strong>{l.title}</strong>
                           <span className="muted small">{[linkKind(l.url!), l.note].filter(Boolean).join(' · ')}</span>
                         </span>
@@ -148,7 +166,8 @@ export default async function PortalProject({ params }: Props) {
                       </a>
                     ) : (
                       <a href={l.url} target="_blank" rel="noopener noreferrer">
-                        <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                        <IconFor url={l.url} />
+                        <span className="stack" style={{ gap: 2, minWidth: 0, flex: 1 }}>
                           <strong>{l.title}</strong>
                           <span className="muted small">{[linkKind(l.url!), l.note].filter(Boolean).join(' · ')}</span>
                         </span>

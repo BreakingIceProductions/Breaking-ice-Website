@@ -22,6 +22,9 @@ export type Deliverable = {
   status: DeliverableStatus
   /** Vimeo review link (or the video's own link). */
   shareUrl?: string
+  /** Non-video work for review: a Google Drive file link. */
+  fileUrl?: string
+  fileName?: string
   thumbnail?: SanityImage
   thumbUrl?: string
   feedbackDue?: string

@@ -235,6 +235,32 @@ export async function removeLink(projectId: string, linkKey: string) {
   await portalClient.patch(projectId).unset([`links[_key=="${linkKey}"]`]).commit()
 }
 
+/** A file uploaded "for review": a new version of the deliverable with the same title, or a new deliverable. */
+export async function addReviewFile(projectId: string, file: { id: string; name: string }) {
+  if (sample()) return
+  const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || file.name
+  const fileUrl = `https://drive.google.com/file/d/${file.id}/view`
+  const p = await getProject(projectId)
+  const same = p?.deliverables.find((d) => d.title.toLowerCase() === title.toLowerCase())
+  if (same) {
+    await portalClient
+      .patch(projectId)
+      .set({
+        [`deliverables[_key=="${same._key}"].fileUrl`]: fileUrl,
+        [`deliverables[_key=="${same._key}"].fileName`]: file.name,
+        [`deliverables[_key=="${same._key}"].version`]: (same.version || 1) + 1,
+        [`deliverables[_key=="${same._key}"].status`]: 'awaiting-feedback',
+      })
+      .commit()
+    return
+  }
+  await portalClient
+    .patch(projectId)
+    .setIfMissing({ deliverables: [] })
+    .append('deliverables', [{ _key: key(), _type: 'deliverable', title, version: 1, status: 'awaiting-feedback', fileUrl, fileName: file.name }])
+    .commit({ autoGenerateArrayKeys: false })
+}
+
 /* ── Xero contact IDs, one record per client ─────────────────────────── */
 
 export async function getXeroContactId(clientId: string) {

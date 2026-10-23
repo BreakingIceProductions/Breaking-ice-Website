@@ -7,6 +7,7 @@ import { ago, cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
 import { LinksEditor } from '@/admin/ui/links-editor'
+import { ProjectFiles } from '@/admin/ui/project-files'
 import { NoteForm } from '@/admin/ui/note-form'
 import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
@@ -105,7 +106,7 @@ export default async function ProjectPage({ params }: Props) {
           <section className="p-card" aria-labelledby="h-deliv">
             <div className="a-card-head">
               <h2 id="h-deliv" className="a-h2">Deliverables</h2>
-              <span className="muted small">{p.deliverables.length ? `${openDeliverables} still open` : 'Add them in the Studio'}</span>
+              <span className="muted small">{p.deliverables.length ? `${openDeliverables} still open` : 'Upload with “Send for review”, or add in the Studio'}</span>
             </div>
             {p.deliverables.length ? (
               <div className="a-table-scroll">
@@ -124,7 +125,7 @@ export default async function ProjectPage({ params }: Props) {
                         <td><strong>{d.title}</strong>{d.feedbackDue && d.status === 'awaiting-feedback' && <span className="muted small"> · feedback {fmtDay(d.feedbackDue)}</span>}</td>
                         <td><span className={`pill pill-${d.status}`}>{DELIVERABLE_LABEL[d.status] === 'Awaiting your feedback' ? 'With the client' : DELIVERABLE_LABEL[d.status]}</span></td>
                         <td>v{d.version}{d.viewedVersion === d.version && d.status === 'awaiting-feedback' ? ' · opened' : ''}</td>
-                        <td className="num">{d.shareUrl ? <a className="text-link" href={d.shareUrl} target="_blank" rel="noopener noreferrer">Vimeo<span className="sr-only"> (opens in a new tab)</span></a> : <span className="muted">—</span>}</td>
+                        <td className="num">{d.shareUrl ? <a className="text-link" href={d.shareUrl} target="_blank" rel="noopener noreferrer">Vimeo<span className="sr-only"> (opens in a new tab)</span></a> : d.fileUrl ? <a className="text-link" href={d.fileUrl} target="_blank" rel="noopener noreferrer">{d.fileName ?? 'File'}<span className="sr-only"> (opens in a new tab)</span></a> : <span className="muted">—</span>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -152,6 +153,14 @@ export default async function ProjectPage({ params }: Props) {
                 </div>
               ))}
             </div>
+          </section>
+
+          <section className="p-card" aria-labelledby="h-files">
+            <div className="a-card-head">
+              <h2 id="h-files" className="a-h2">Files</h2>
+              <span className="muted small">Exactly what the client sees in their portal</span>
+            </div>
+            <ProjectFiles projectId={p._id} driveFolderId={p.driveFolderId} />
           </section>
 
           <section className="p-card" aria-labelledby="h-docs">

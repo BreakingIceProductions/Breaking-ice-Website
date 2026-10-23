@@ -131,7 +131,7 @@ async function projectEmails(p: ClientProject, now: number, settings: Settings, 
 
     const isNew = d.notifiedVersion !== v
     let due = false
-    if (isNew) due = now - Date.parse(d.readyAt) >= HOLD && Boolean(d.shareUrl)
+    if (isNew) due = now - Date.parse(d.readyAt) >= HOLD && Boolean(d.shareUrl || d.fileUrl)
     else if (d.remindedVersion !== v && d.notifiedAt && !d.dontEmail) {
       const notified = Date.parse(d.notifiedAt)
       const at = d.feedbackDue ? Date.parse(`${d.feedbackDue}T09:00:00-06:00`) - 2 * DAY : notified + (settings.reminderDays || 7) * DAY
