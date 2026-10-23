@@ -29,7 +29,7 @@ export const portalImage = (img: SanityImage, w: number, h?: number) => {
 
 const CLIENT_FIELDS = `_id, organizationName, logo, contacts[]{_key, name, email, role, getsEmails}, producer, driveFolderId`
 const PROJECT_FIELDS = `_id, _updatedAt, title, "slug": slug.current, status, stage, stageDates, nextStep, summary, coverImage,
-  keyDates, deliverables, driveFolderId, "client": client->{${CLIENT_FIELDS}},
+  keyDates, links, deliverables, driveFolderId, "client": client->{${CLIENT_FIELDS}},
   "state": *[_id == "portal-state-" + ^._id][0]{ deliverables, "activity": activity[0...30] }`
 
 /**

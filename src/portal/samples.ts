@@ -27,6 +27,10 @@ export const sampleProjects = (): ClientProject[] => [
     nextStep: 'Your feedback on the main film, then we lock picture.',
     summary:
       'A five-minute film for the annual general assembly: elders, youth and staff on what the last ten years built, and where it goes next. Two cut-downs for social follow.',
+    links: [
+      { _key: 'l1', title: 'Poster: Water management', url: 'https://drive.google.com/file/d/sample/view', note: 'Print-ready PDF' },
+      { _key: 'l2', title: 'Script v3', url: 'https://docs.google.com/document/d/sample/edit', note: 'Draft for your comments' },
+    ],
     keyDates: [
       { _key: 'k1', label: 'Feedback on main film', date: date(4) },
       { _key: 'k2', label: 'Final delivery', date: date(12) },

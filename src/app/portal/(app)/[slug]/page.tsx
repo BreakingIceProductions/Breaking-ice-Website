@@ -9,6 +9,18 @@ import { daysUntil, EmptyMark, fmtDate, ProducerCard, StageBar, StatusPill, time
 
 type Props = { params: Promise<{ slug: string }> }
 
+/** A plain word for where a link goes, so the client knows what will open. */
+function linkKind(url: string) {
+  if (/docs\.google\.com\/document/.test(url)) return 'Google Doc'
+  if (/docs\.google\.com\/spreadsheets/.test(url)) return 'Google Sheet'
+  if (/docs\.google\.com\/presentation/.test(url)) return 'Google Slides'
+  if (/drive\.google\.com\/drive\/folders/.test(url)) return 'Drive folder'
+  if (/drive\.google\.com/.test(url)) return 'Google Drive'
+  if (/\.pdf($|\?)/i.test(url)) return 'PDF'
+  if (/vimeo\.com/.test(url)) return 'Vimeo'
+  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return '' }
+}
+
 const FALLBACK_STAGES = ['Listen', 'Earn trust', 'Find what matters', 'Craft the film']
 
 export async function generateMetadata({ params }: Props) {
@@ -26,6 +38,7 @@ export default async function PortalProject({ params }: Props) {
   const stages = site.processSteps?.length >= 4 ? site.processSteps.map((s) => s.title) : FALLBACK_STAGES
   // Versions still in progress stay hidden until they're ready to watch.
   const deliverables = (p.deliverables ?? []).filter((d) => d.status !== 'in-progress')
+  const links = (p.links ?? []).filter((l) => l.title && l.url)
   const keyDates = (p.keyDates ?? []).filter((k) => k.label).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
   const me = clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === session.email)
 
@@ -129,6 +142,26 @@ export default async function PortalProject({ params }: Props) {
               )}
             </details>
           </section>
+
+          {links.length > 0 && (
+            <section aria-labelledby="links-h">
+              <div className="p-sec-head"><h2 id="links-h" className="h3">Documents &amp; links</h2></div>
+              <ul className="p-links">
+                {links.map((l) => (
+                  <li key={l._key}>
+                    <a href={l.url} target="_blank" rel="noopener noreferrer">
+                      <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                        <strong>{l.title}</strong>
+                        <span className="muted small">{[linkKind(l.url!), l.note].filter(Boolean).join(' · ')}</span>
+                      </span>
+                      <span aria-hidden="true">↗</span>
+                      <span className="sr-only">(opens in a new tab)</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <ProjectFiles
             project={p.slug}

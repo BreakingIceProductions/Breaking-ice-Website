@@ -136,6 +136,25 @@ export const clientProject = defineType({
     defineField({ name: 'summary', type: 'text', rows: 3, group: 'overview' }),
     defineField({ name: 'coverImage', title: 'Cover image', type: 'image', options: { hotspot: true }, group: 'overview' }),
     defineField({
+      name: 'links',
+      title: 'Documents & links',
+      description: 'Posters, scripts, Google Docs, Drive folders: anything you want the client to open. In Google, set sharing to “Anyone with the link” (or share with their email) first.',
+      type: 'array',
+      group: 'overview',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'projectLink',
+          fields: [
+            defineField({ name: 'title', type: 'string', validation: (r) => r.required() }),
+            defineField({ name: 'url', title: 'Link', type: 'url', validation: (r) => r.required() }),
+            defineField({ name: 'note', title: 'Note (optional)', description: 'e.g. “Final, print-ready” or “Draft for your comments”', type: 'string' }),
+          ],
+          preview: { select: { title: 'title', subtitle: 'url' } },
+        }),
+      ],
+    }),
+    defineField({
       name: 'keyDates',
       title: 'Key dates',
       type: 'array',
