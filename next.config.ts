@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
     return [
       // The client portal stays out of search engines for good (keep this one after launch).
       { source: '/portal/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }, { key: 'Referrer-Policy', value: 'same-origin' }] },
+      // The back office too.
+      { source: '/admin/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }, { key: 'Referrer-Policy', value: 'same-origin' }] },
       {
         source: '/:path*',
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],

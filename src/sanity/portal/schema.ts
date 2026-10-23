@@ -2,6 +2,7 @@ import { CaseIcon } from '@sanity/icons/Case'
 import { CogIcon } from '@sanity/icons/Cog'
 import { UsersIcon } from '@sanity/icons/Users'
 import { defineArrayMember, defineField, defineType } from 'sanity'
+import { officeFields, officeGroup } from './office'
 
 /**
  * Client portal content. Lives in the private "portal" dataset, so none of it
@@ -73,6 +74,13 @@ export const client = defineType({
       fields: producerFields,
     }),
     defineField({ name: 'driveFolderId', title: 'Google Drive folder ID', type: 'string', ...auto }),
+    defineField({
+      name: 'billingEmail',
+      title: 'Billing email (private)',
+      description: 'The email on the Xero contact, where invoices go. Leave empty to use the first contact.',
+      type: 'string',
+      validation: (r) => r.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { name: 'email' }),
+    }),
   ],
   preview: { select: { title: 'organizationName', media: 'logo', contacts: 'contacts' }, prepare: ({ title, media, contacts }) => ({ title, media, subtitle: `${contacts?.length ?? 0} contact(s)` }) },
 })
@@ -86,6 +94,7 @@ export const clientProject = defineType({
     { name: 'overview', title: 'Overview', default: true },
     { name: 'review', title: 'For review' },
     { name: 'links', title: 'Google Drive' },
+    officeGroup,
   ],
   fields: [
     defineField({ name: 'title', type: 'string', group: 'overview', validation: (r) => r.required() }),
@@ -184,6 +193,7 @@ export const clientProject = defineType({
       ],
     }),
     defineField({ name: 'driveFolderId', title: 'Google Drive folder ID', type: 'string', group: 'links', ...auto }),
+    ...officeFields,
   ],
   orderings: [{ title: 'Newest', name: 'newest', by: [{ field: '_createdAt', direction: 'desc' }] }],
   preview: {

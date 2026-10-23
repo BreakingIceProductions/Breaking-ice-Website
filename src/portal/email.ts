@@ -79,6 +79,21 @@ ${para('Didn’t ask for this? You can ignore it; nothing changes.', `color:${MU
   return { subject: `Your Breaking Ice sign-in code: ${code}`, html, text: `Sign in: ${link}\n\nOr type this code on the sign-in page: ${code}\n\nBoth work for 15 minutes.` }
 }
 
+export function adminSignInEmail({ link, code }: { link: string; code: string }) {
+  const html = layout({
+    eyebrow: 'Back office',
+    preview: `Your back-office code is ${code}`,
+    body: `
+${para(`<span style="font:bold 24px/30px ${FONT}">Sign in to the back office</span>`, 'padding-top:10px')}
+${para('Tap the button on this device, or type the code on the sign-in page. Both work for 15 minutes.')}
+<tr><td style="padding:22px 32px 0">${button(link, 'Open the back office')}</td></tr>
+<tr><td style="padding:22px 32px 0;font:13px ${FONT};color:${MUTED}">Your code</td></tr>
+<tr><td style="padding:4px 32px 4px;font:bold 34px/40px 'Courier New',monospace;letter-spacing:8px;color:${NAVY}">${code}</td></tr>
+${para('Didn’t ask for this? Someone typed your address on the sign-in page. Nothing happens unless the code is used.', `color:${MUTED};font-size:13px`)}`,
+  })
+  return { subject: `Back office sign-in code: ${code}`, html, text: `Sign in: ${link}\n\nOr type this code: ${code}\n\nBoth work for 15 minutes.` }
+}
+
 type VersionMail = {
   kind: 'new' | 'reminder'
   subject: string
