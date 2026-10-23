@@ -37,6 +37,13 @@ async function vimeo<T>(path: string): Promise<T> {
 
 type VimeoVideo = { duration?: number; player_embed_url?: string; pictures?: { base_link?: string } }
 
+/** Vimeo's base image link can carry a query string; the size goes before it. */
+const thumb = (base?: string) => {
+  if (!base) return undefined
+  const [path, query] = base.split('?')
+  return `${path}_640x360${query ? `?${query}` : ''}`
+}
+
 const clock = (s = 0) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
 
 /** Brings each deliverable's thumbnail, length, player and version in line with Vimeo. */
@@ -51,7 +58,7 @@ export async function syncVimeo(p: ClientProject, log: string[]) {
     ])
     const total = versions.total
     await updateDeliverableState(p._id, d._key, {
-      vimeoThumb: video.pictures?.base_link ? `${video.pictures.base_link}_640x360` : undefined,
+      vimeoThumb: thumb(video.pictures?.base_link),
       vimeoEmbed: video.player_embed_url,
       vimeoLength: video.duration ? clock(video.duration) : undefined,
       ...(total ? { vimeoVersions: total } : {}),
