@@ -41,18 +41,18 @@ export function StatusPill({ status, kind = 'project' }: { status: string; kind?
   return <span className={`pill pill-${status}`}>{label ?? status}</span>
 }
 
-/** The four public process steps, so the portal tells the same story as the website. */
+/** Where a project sits, as a row of steps (stage is 1-based). */
 export function StageBar({ stage, names, dates, compact }: { stage: number; names: string[]; dates?: string[]; compact?: boolean }) {
   return (
-    <ol className={`stagebar${compact ? ' compact' : ''}`} aria-label={`Stage ${stage} of 4: ${names[stage - 1]}`}>
-      {names.slice(0, 4).map((n, i) => {
+    <ol className={`stagebar${compact ? ' compact' : ''}`} style={{ ['--n' as string]: names.length }} aria-label={`Stage ${stage} of ${names.length}: ${names[stage - 1]}`}>
+      {names.map((n, i) => {
         const state = i + 1 < stage ? 'done' : i + 1 === stage ? 'current' : 'next'
         return (
           <li key={n} className={state} aria-current={state === 'current' ? 'step' : undefined}>
             <span className="bar" aria-hidden="true" />
             {!compact && (
               <>
-                <span className="n">0{i + 1} · {state === 'done' ? 'Done' : state === 'current' ? 'Now' : 'Next'}</span>
+                <span className="n">{String(i + 1).padStart(2, '0')} · {state === 'done' ? 'Done' : state === 'current' ? 'Now' : 'Next'}</span>
                 <span className="name">{n}</span>
                 {dates?.[i] && <span className="when">{dates[i]}</span>}
               </>

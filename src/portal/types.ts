@@ -62,6 +62,10 @@ export type ClientProject = {
   title: string
   slug: string
   startDate?: string
+  /** Back-office stage (lead, booked, preproduction, shoot, roughcut, finalcut, delivered, paid). */
+  pipelineStage?: string
+  /** Invoice statuses only (no amounts), for the billing card. */
+  billing?: { kind?: string; status?: string; outstanding?: number }[]
   status: 'in-production' | 'in-review' | 'delivered'
   stage: number
   stageDates?: string[]

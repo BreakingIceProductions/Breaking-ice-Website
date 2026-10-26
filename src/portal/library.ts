@@ -142,3 +142,47 @@ export function resolvePath<P extends ProjectLike>(projects: P[], path: string[]
   const version = group?.versions.find((d) => d._key === path[offset + 3])
   return { project, folder, category, group, version }
 }
+
+/* ── Project page helpers ──────────────────────────────────────────────── */
+
+/** The stages a client sees, in order. Earlier back-office stages count as Booked; Paid counts as Delivered. */
+export const CLIENT_STAGES = [
+  { value: 'booked', title: 'Booked' },
+  { value: 'preproduction', title: 'Pre-production' },
+  { value: 'shoot', title: 'Shoot' },
+  { value: 'roughcut', title: 'Rough cut' },
+  { value: 'finalcut', title: 'Final cut' },
+  { value: 'delivered', title: 'Delivered' },
+] as const
+
+/** 1-based position in CLIENT_STAGES. */
+export function clientStage(pipelineStage?: string, status?: string) {
+  if (pipelineStage === 'paid' || (!pipelineStage && status === 'delivered')) return CLIENT_STAGES.length
+  const i = CLIENT_STAGES.findIndex((s) => s.value === pipelineStage)
+  return i >= 0 ? i + 1 : 1
+}
+
+export type Billing = { label: string; tone: 'ok' | 'due' }
+
+/** A status, never an amount: what the client needs to know about invoices for this project. */
+export function billingStatus(invoices?: { kind?: string; status?: string }[]): Billing | null {
+  // Drafts haven't been sent; voided and deleted ones don't count.
+  const sent = (invoices ?? []).filter((i) => i.status && !['draft', 'voided', 'deleted'].includes(i.status))
+  if (!sent.length) return null
+  const final = sent.find((i) => i.kind === 'final' || i.kind === 'retainer')
+  const deposit = sent.find((i) => i.kind === 'deposit')
+  if (final) return final.status === 'paid' ? { label: 'Balance settled', tone: 'ok' } : { label: 'Balance outstanding', tone: 'due' }
+  if (deposit) return deposit.status === 'paid' ? { label: 'Deposit paid', tone: 'ok' } : { label: 'Deposit due', tone: 'due' }
+  return sent.every((i) => i.status === 'paid') ? { label: 'Paid', tone: 'ok' } : { label: 'Invoice outstanding', tone: 'due' }
+}
+
+/** Card image: the project's cover if one was uploaded, otherwise the newest video's thumbnail. */
+export function projectThumb(p: { coverUrl?: string; deliverables?: Deliverable[] }) {
+  if (p.coverUrl) return p.coverUrl
+  const videos = (p.deliverables ?? []).filter((d) => categoryOf(d) === 'video' && d.status !== 'in-progress' && (d.thumbUrl || d.vimeoThumb))
+  videos.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || (b.version || 1) - (a.version || 1))
+  return videos[0] ? videos[0].thumbUrl ?? videos[0].vimeoThumb : undefined
+}
+
+/** Where a version lives in a project's columns: [folder, deliverable, version]. */
+export const versionPath = (d: Deliverable) => [categoryOf(d) === 'video' ? 'videos' : 'documents', groupId(categoryOf(d), d.title), d._key]

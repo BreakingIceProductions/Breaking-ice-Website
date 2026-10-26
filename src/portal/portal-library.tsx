@@ -3,8 +3,8 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from './file-icon'
-import { Finder, type FinderNode } from './finder'
-import { byStart, categoryOf, clientCanOpen, projectLabel, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
+import { Finder } from './finder'
+import { categoryOf, clientCanOpen, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
 import { fmtSize } from './resumable'
 import { FeedbackButtons, ReviewThumb, VersionHead, WatchTile } from './review-ui'
 import type { ClientProject, Deliverable, DriveFile } from './types'
@@ -16,48 +16,19 @@ const STATUS: Record<Deliverable['status'], string> = {
   'changes-requested': 'Changes in progress',
   approved: 'Approved',
 }
-const PROJECT_STATUS: Record<ClientProject['status'], string> = { 'in-production': 'In production', 'in-review': 'In review', delivered: 'Delivered' }
 const day = (iso?: string) => (iso ? new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' }) : '')
 
-type Client = { _id: string; organizationName: string }
-
 /**
- * The client's library: their projects as Finder-style columns. One client starts at
- * Projects; someone on several clients starts at Clients. The selection lives in the
- * address (?at=…) so emails and the back button land in the right place.
+ * One project's work as Finder-style columns: Videos / Documents / Reference Assets →
+ * title → versions. The selection lives in the address (?at=…) so emails and the back
+ * button land in the right place.
  */
-export function PortalLibrary({ projects, clients, demo, uploaderName }: { projects: ClientProject[]; clients: Client[]; demo: boolean; uploaderName: string }) {
+export function ProjectLibrary({ project, demo, uploaderName }: { project: ClientProject; demo: boolean; uploaderName: string }) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
-  const multi = clients.length > 1
-  const offset = multi ? 1 : 0
-
-  const sorted = [...projects].sort(byStart)
-  const root: FinderNode[] = multi
-    ? clients.map((c) => ({
-        id: c._id,
-        label: c.organizationName,
-        childTitle: 'Projects',
-        children: sorted.filter((p) => p.client._id === c._id).map((p) => projectNode(p, 'client')),
-      }))
-    : sorted.map((p) => projectNode(p, 'client'))
-
+  const root = projectNode(project, 'client').children ?? []
   const [path, setPathState] = useState<string[]>(() => (params.get('at') ?? '').split('/').filter(Boolean).map(decodeURIComponent))
-
-  // "?open=<version key>" from an email: find the version and open it.
-  useEffect(() => {
-    const key = params.get('open')
-    if (!key) return
-    for (const p of projects) {
-      const d = p.deliverables?.find((x) => x._key === key)
-      if (!d) continue
-      const gid = `${categoryOf(d)}:${d.title.trim().toLowerCase()}`
-      setPath([...(multi ? [p.client._id] : []), p.slug, categoryOf(d) === 'video' ? 'videos' : 'documents', gid, d._key])
-      return
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const setPath = useCallback(
     (next: string[]) => {
@@ -69,88 +40,28 @@ export function PortalLibrary({ projects, clients, demo, uploaderName }: { proje
     [pathname, router],
   )
 
-  const at = resolvePath(projects, path, offset)
-  const client = multi ? clients.find((c) => c._id === path[0]) : clients[0]
+  const at = resolvePath([project], [project.slug, ...path])
 
-  let panel: React.ReactNode = null
+  let panel: React.ReactNode
   let panelTitle = 'Details'
-  if (at.version && at.project) {
+  if (at.version) {
     panelTitle = versionLabel(at.version)
-    panel = <VersionPanel project={at.project} d={at.version} />
-  } else if (at.group && at.project) {
+    panel = <VersionPanel project={project} d={at.version} />
+  } else if (at.group) {
     panelTitle = at.group.title
-    const open = [...at.group.versions].reverse().find((v) => clientCanOpen(v, at.project!.deliverables))
-    panel = open ? <VersionPanel project={at.project} d={open} /> : <p className="muted">Nothing to open here yet.</p>
-  } else if (at.project && at.folder === 'assets') {
+    const open = [...at.group.versions].reverse().find((v) => clientCanOpen(v, project.deliverables))
+    panel = open ? <VersionPanel project={project} d={open} /> : <p className="muted">Nothing to open here yet.</p>
+  } else if (at.folder === 'assets') {
     panelTitle = REFERENCE
-    panel = <AssetsPanel project={at.project} demo={demo} uploaderName={uploaderName} />
-  } else if (at.project && at.folder) {
+    panel = <AssetsPanel project={project} demo={demo} uploaderName={uploaderName} />
+  } else if (at.folder) {
     panelTitle = at.folder === 'videos' ? 'Videos' : 'Documents'
     panel = <p className="muted">Pick a {at.folder === 'videos' ? 'video' : 'document'} to see its versions.</p>
-  } else if (at.project) {
-    panelTitle = 'Project'
-    panel = <ProjectPanel p={at.project} />
-  } else if (client && multi) {
-    panelTitle = client.organizationName
-    panel = <p className="muted">Pick a project.</p>
   } else {
-    panel = <Waiting projects={projects} onOpen={(p) => setPath(p)} multi={multi} />
-    panelTitle = 'Waiting for you'
+    panel = <p className="muted">Open Videos, Documents or Reference Assets to see everything for this project. The newest version of each is always at the top.</p>
   }
 
-  return <Finder rootTitle={multi ? 'Clients' : 'Projects'} root={root} path={path} onPath={setPath} panel={panel} panelTitle={panelTitle} />
-}
-
-/** Everything waiting for feedback, so nothing gets missed. */
-function Waiting({ projects, onOpen, multi }: { projects: ClientProject[]; onOpen: (path: string[]) => void; multi: boolean }) {
-  const waiting = projects.flatMap((p) => (p.deliverables ?? []).filter((d) => d.status === 'awaiting-feedback' && clientCanOpen(d, p.deliverables)).map((d) => ({ p, d })))
-  if (!waiting.length) return <p className="muted">You’re all caught up. Open a project to see everything we’ve made together.</p>
-  return (
-    <div className="stack" style={{ gap: 'var(--space-3)' }}>
-      <p className="muted" style={{ margin: 0 }}>{waiting.length === 1 ? 'One thing is' : `${waiting.length} things are`} waiting for your feedback:</p>
-      <ul className="lib-list">
-        {waiting.map(({ p, d }) => (
-          <li key={d._key}>
-            <button
-              type="button"
-              className="lib-row"
-              onClick={() => onOpen([...(multi ? [p.client._id] : []), p.slug, categoryOf(d) === 'video' ? 'videos' : 'documents', `${categoryOf(d)}:${d.title.trim().toLowerCase()}`, d._key])}
-            >
-              <span className="fd-dot fd-dot-awaiting" aria-hidden="true" />
-              <span className="stack" style={{ gap: 0, minWidth: 0 }}>
-                <strong>{d.title} · {versionLabel(d)}</strong>
-                <span className="muted small">{projectLabel(p)}</span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function ProjectPanel({ p }: { p: ClientProject }) {
-  const dates = (p.keyDates ?? []).filter((k) => k.label).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-  return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
-      <div className="stack" style={{ gap: 'var(--space-2)' }}>
-        <span className={`pill pill-${p.status}`}>{PROJECT_STATUS[p.status]}</span>
-        <h4 className="lib-title">{projectLabel(p)}</h4>
-        {p.summary && <p className="muted" style={{ margin: 0 }}>{p.summary}</p>}
-      </div>
-      {p.nextStep && (
-        <p className="lib-next"><span className="label">Next</span> {p.nextStep}</p>
-      )}
-      {dates.length > 0 && (
-        <dl className="key-dates">
-          {dates.map((k) => (
-            <div key={k._key}><dt>{k.label}</dt><dd>{k.date ? day(k.date) : 'To be set'}</dd></div>
-          ))}
-        </dl>
-      )}
-      <p className="muted small" style={{ margin: 0 }}>Open Videos, Documents or Reference Assets to see everything for this project.</p>
-    </div>
-  )
+  return <Finder rootTitle="Folders" root={root} path={path} onPath={setPath} panel={panel} panelTitle={panelTitle} />
 }
 
 function VersionPanel({ project, d }: { project: ClientProject; d: Deliverable }) {
