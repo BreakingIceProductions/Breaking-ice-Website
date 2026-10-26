@@ -7,7 +7,7 @@ import { IconFor, fileKind } from '@/portal/file-icon'
 import { Finder, type FinderNode } from '@/portal/finder'
 import { byStart, categoryOf, clientCanOpen, isLatest, projectLabel, projectNode, REFERENCE, resolvePath, versionLabel, type Category, type DeliverableGroup } from '@/portal/library'
 import { fmtSize } from '@/portal/resumable'
-import { ReviewThumb, VersionHead, WatchTile } from '@/portal/review-ui'
+import { FeedbackList, ReviewThumb, VersionHead, WatchTile } from '@/portal/review-ui'
 import type { Deliverable, DriveFile } from '@/portal/types'
 import { Uploader } from '@/portal/uploader'
 
@@ -252,6 +252,7 @@ function VersionPanel({ project, d, onChange }: { project: LibProject; d: Delive
 
       {d.fileName && <p className="muted small" style={{ margin: 0 }}>{d.fileName}</p>}
       {d.notes && <p className="deliv-note">{d.notes}</p>}
+      <FeedbackList items={d.feedback} title="Client feedback" />
 
       <label className="small muted" htmlFor={`st-${d._key}`}>Status</label>
       <select id={`st-${d._key}`} className="input a-select" value={d.status} disabled={busy} onChange={(e) => set({ status: e.target.value })}>

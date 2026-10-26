@@ -63,7 +63,7 @@ export const sampleProjects = (): ClientProject[] => [
         length: '0:30',
         notes: 'First pass at the cut-down. Captions are burned in for sound-off viewing.',
       },
-      { _key: 'd5', title: 'Event poster', category: 'document', version: 1, date: date(-6), status: 'changes-requested', fileUrl: 'https://drive.google.com/file/d/sample-poster-1/view', fileName: 'Event poster.pdf' },
+      { _key: 'd5', title: 'Event poster', category: 'document', version: 1, date: date(-6), status: 'changes-requested', fileUrl: 'https://drive.google.com/file/d/sample-poster-1/view', fileName: 'Event poster.pdf', feedback: [{ _key: 'f1', at: iso(-4), who: 'Alex Sample', action: 'changes', note: 'Can the date be bigger? And move our logo to the bottom.' }] },
       { _key: 'd4', title: 'Event poster', category: 'document', version: 2, date: date(-1), status: 'awaiting-feedback', fileUrl: 'https://drive.google.com/file/d/sample-poster/view', fileName: 'Event poster.pdf', notes: 'Bigger date, logo moved to the bottom.' },
       { _key: 'd3', title: 'Interview selects', category: 'video', version: 1, date: date(-12), status: 'approved', final: true, shareUrl: 'https://vimeo.com/reviews/sample/videos/1', length: '18:10' },
     ],

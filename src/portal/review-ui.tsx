@@ -149,3 +149,24 @@ export function DocLightbox({
     </dialog>
   )
 }
+
+/** Notes and approvals left on a version, oldest first. */
+export function FeedbackList({ items, title = 'Feedback', you }: { items?: { _key: string; at: string; who?: string; action: 'approve' | 'changes'; note?: string }[]; title?: string; you?: string }) {
+  if (!items?.length) return null
+  return (
+    <section className="fb-list" aria-label={title}>
+      <h3 className="p-label">{title}</h3>
+      <ul>
+        {items.map((f) => (
+          <li key={f._key} className={`fb-${f.action}`}>
+            <p className="fb-meta">
+              <strong>{f.who && f.who === you ? 'You' : f.who ?? 'Client'}</strong> {f.action === 'approve' ? 'approved this version' : 'asked for changes'} ·{' '}
+              {new Date(f.at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+            {f.note && <p className="fb-note">{f.note}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}

@@ -151,6 +151,15 @@ export async function updateDeliverable(projectId: string, deliverableKey: strin
   await portalClient.patch(projectId).set(set).commit()
 }
 
+/** Keeps the client's note or approval on the version itself. */
+export async function addFeedback(projectId: string, deliverableKey: string, item: { who: string; action: 'approve' | 'changes'; note?: string }) {
+  await portalClient
+    .patch(projectId)
+    .setIfMissing({ [`deliverables[_key=="${deliverableKey}"].feedback`]: [] })
+    .append(`deliverables[_key=="${deliverableKey}"].feedback`, [{ _key: key(), _type: 'feedbackItem', at: new Date().toISOString(), ...item }])
+    .commit({ autoGenerateArrayKeys: false })
+}
+
 export async function setDriveFolder(docId: string, folderId: string) {
   await portalClient.patch(docId).set({ driveFolderId: folderId }).commit()
 }

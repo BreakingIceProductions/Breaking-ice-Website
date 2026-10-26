@@ -1,6 +1,6 @@
 import { SITE_URL } from '@/lib/site'
 import { portalEnv } from '@/portal/config'
-import { addActivity, updateDeliverable } from '@/portal/data'
+import { addActivity, addFeedback, updateDeliverable } from '@/portal/data'
 import { notifyJosh, sendEmail } from '@/portal/email'
 import { json, limited, projectAccess, sameOrigin } from '@/portal/http'
 import { clientCanOpen, versionLabel } from '@/portal/library'
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
 
   const who = a.clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === a.session.email)?.name || a.session.email
   await updateDeliverable(a.project._id, d._key, { status: approve ? 'approved' : 'changes-requested' })
+  await addFeedback(a.project._id, d._key, { who, action: approve ? 'approve' : 'changes', ...(note ? { note } : {}) })
   await addActivity(a.project._id, approve ? `${who} approved ${d.title} (${versionLabel(d)})` : `${who} asked for changes to ${d.title} (${versionLabel(d)})`, approve ? 'approved' : 'comment')
 
   const line = approve ? `${who} approved ${d.title} (${versionLabel(d)}) (${a.project.title}).` : `${who} asked for changes to ${d.title} (${versionLabel(d)}) (${a.project.title}).`

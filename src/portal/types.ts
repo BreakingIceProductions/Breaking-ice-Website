@@ -32,6 +32,8 @@ export type Deliverable = {
   /** Non-video work for review: a Google Drive file link. */
   fileUrl?: string
   fileName?: string
+  /** Notes and approvals from the portal, newest last. */
+  feedback?: { _key: string; at: string; who?: string; action: 'approve' | 'changes'; note?: string }[]
   thumbnail?: SanityImage
   thumbUrl?: string
   feedbackDue?: string

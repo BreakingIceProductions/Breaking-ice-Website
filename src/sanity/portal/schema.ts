@@ -229,6 +229,26 @@ export const clientProject = defineType({
             defineField({ name: 'length', title: 'Length', description: 'e.g. 2:45', type: 'string' }),
             defineField({ name: 'notes', title: 'Note to the client', description: 'What changed and what to look for. Shown in the portal and the email.', type: 'text', rows: 3 }),
             defineField({ name: 'dontEmail', title: 'Don’t send the email for this version', type: 'boolean', initialValue: false }),
+            defineField({
+              name: 'feedback',
+              title: 'Client feedback',
+              description: 'Notes and approvals from the portal, saved automatically.',
+              type: 'array',
+              readOnly: true,
+              of: [
+                defineArrayMember({
+                  type: 'object',
+                  name: 'feedbackItem',
+                  fields: [
+                    defineField({ name: 'at', type: 'datetime' }),
+                    defineField({ name: 'who', type: 'string' }),
+                    defineField({ name: 'action', type: 'string' }),
+                    defineField({ name: 'note', type: 'text' }),
+                  ],
+                  preview: { select: { title: 'note', subtitle: 'who' } },
+                }),
+              ],
+            }),
           ],
           preview: {
             select: { title: 'title', version: 'version', status: 'status', media: 'thumbnail' },

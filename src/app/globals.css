@@ -1017,3 +1017,12 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 
 .fd-text-only { cursor: default; color: var(--ink-muted); opacity: .6; }
 .fd-text-only:hover { background: transparent; }
+
+/* Feedback left on a version */
+.fb-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.fb-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.fb-list li { padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--surface-raised); border-left: 3px solid var(--accent-fill); }
+.fb-list li.fb-approve { border-left-color: var(--ok, #2e9e6a); }
+.fb-meta { margin: 0; font-size: 13px; color: var(--ink-muted); }
+.fb-meta strong { color: var(--ink); }
+.fb-note { margin: 6px 0 0; white-space: pre-wrap; font-size: 15px; }

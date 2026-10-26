@@ -6,7 +6,7 @@ import { IconFor, fileKind } from './file-icon'
 import { Finder } from './finder'
 import { categoryOf, clientCanOpen, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
 import { fmtSize } from './resumable'
-import { DocLightbox, FeedbackButtons, ReviewThumb, VersionHead, WatchTile } from './review-ui'
+import { DocLightbox, FeedbackButtons, FeedbackList, ReviewThumb, VersionHead, WatchTile } from './review-ui'
 import type { ClientProject, Deliverable, DriveFile } from './types'
 import { Uploader } from './uploader'
 
@@ -50,11 +50,11 @@ export function ProjectLibrary({ project, demo, uploaderName }: { project: Clien
     panel = <p className="muted">This is an older version. Ask Breaking Ice if you need it.</p>
   } else if (at.version) {
     panelTitle = versionLabel(at.version)
-    panel = <VersionPanel project={project} d={at.version} />
+    panel = <VersionPanel project={project} d={at.version} uploaderName={uploaderName} />
   } else if (at.group) {
     panelTitle = at.group.title
     const open = [...at.group.versions].reverse().find((v) => clientCanOpen(v, project.deliverables))
-    panel = open ? <VersionPanel project={project} d={open} /> : <p className="muted">Nothing to open here yet.</p>
+    panel = open ? <VersionPanel project={project} d={open} uploaderName={uploaderName} /> : <p className="muted">Nothing to open here yet.</p>
   } else if (at.folder === 'assets') {
     panelTitle = REFERENCE
     panel = <AssetsPanel project={project} demo={demo} uploaderName={uploaderName} />
@@ -68,7 +68,7 @@ export function ProjectLibrary({ project, demo, uploaderName }: { project: Clien
   return <Finder rootTitle="Folders" root={root} path={path} onPath={setPath} panel={panel} panelTitle={panelTitle} />
 }
 
-function VersionPanel({ project, d }: { project: ClientProject; d: Deliverable }) {
+function VersionPanel({ project, d, uploaderName = '' }: { project: ClientProject; d: Deliverable; uploaderName?: string }) {
   const video = categoryOf(d) === 'video'
   const base = `/api/portal/review/${d._key}?project=${encodeURIComponent(project.slug)}`
   const comments = d.vimeoReview ?? d.shareUrl
@@ -106,6 +106,7 @@ function VersionPanel({ project, d }: { project: ClientProject; d: Deliverable }
       </div>
 
       {waiting && <FeedbackButtons project={project.slug} deliverable={d._key} title={`${d.title}, ${versionLabel(d)}`} notes={!video} />}
+      <FeedbackList items={d.feedback} title="Notes on this version" you={uploaderName} />
 
       {!video && d.fileUrl && (
         <DocLightbox
@@ -118,6 +119,7 @@ function VersionPanel({ project, d }: { project: ClientProject; d: Deliverable }
           meta={[versionLabel(d), d.date].filter(Boolean).join(' · ')}
         >
           {d.notes && <p className="deliv-note">{d.notes}</p>}
+          <FeedbackList items={d.feedback} title="Notes on this version" you={uploaderName} />
           {waiting ? (
             <FeedbackButtons project={project.slug} deliverable={d._key} title={`${d.title}, ${versionLabel(d)}`} />
           ) : (
