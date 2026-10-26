@@ -120,7 +120,8 @@ export function projectNode(p: ProjectLike, side: 'client' | 'studio'): FinderNo
   })
   return {
     id: p.slug ?? p._id,
-    label: projectLabel(p),
+    label: p.title,
+    kicker: p.startDate,
     meta: p.status === 'delivered' ? 'Delivered' : undefined,
     childTitle: 'Folders',
     children: [category('videos', 'video'), category('documents', 'document'), { id: 'assets', label: REFERENCE }],

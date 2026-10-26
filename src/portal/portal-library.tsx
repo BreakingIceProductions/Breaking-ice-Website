@@ -6,7 +6,7 @@ import { IconFor, fileKind } from './file-icon'
 import { Finder, type FinderNode } from './finder'
 import { byStart, categoryOf, clientCanOpen, projectLabel, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
 import { fmtSize } from './resumable'
-import { FeedbackButtons, ReviewThumb } from './review-ui'
+import { FeedbackButtons, ReviewThumb, VersionHead, WatchTile } from './review-ui'
 import type { ClientProject, Deliverable, DriveFile } from './types'
 import { Uploader } from './uploader'
 
@@ -159,44 +159,33 @@ function VersionPanel({ project, d }: { project: ClientProject; d: Deliverable }
   const comments = d.vimeoReview ?? d.shareUrl
   const watch = d.vimeoEmbed ?? d.shareUrl
   const waiting = d.status === 'awaiting-feedback'
+  const docExt = d.fileName?.split('.').pop()
   return (
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
+      <VersionHead title={d.title} kind={video ? 'video' : fileKind({ name: d.fileName })} ext={video ? undefined : docExt} version={versionLabel(d)} date={d.date} length={d.length} />
+
       {video ? (
-        d.vimeoEmbed ? (
-          <div className="media ratio-169 lib-player">
-            <iframe src={d.vimeoEmbed} title={`${d.title}, ${versionLabel(d)}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
-          </div>
-        ) : d.thumbUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="lib-poster" src={d.thumbUrl} alt="" />
-        ) : null
+        watch && <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={`${d.title}, ${versionLabel(d)}`} />
       ) : d.fileUrl ? (
-        <div className="review-thumb">
-          <ReviewThumb src={`${base}&mode=preview`} kind={fileKind({ name: d.fileName })} ext={d.fileName?.split('.').pop()} />
-        </div>
+        <a className="review-thumb doc-tile" href={`${base}&mode=view`} target="_blank" rel="noopener noreferrer" aria-label={`View ${d.title} (opens in a new tab)`}>
+          <ReviewThumb src={`${base}&mode=preview`} kind={fileKind({ name: d.fileName })} ext={docExt} />
+        </a>
       ) : null}
 
       <div className="stack" style={{ gap: 'var(--space-2)' }}>
-        <h4 className="lib-title">{d.title}</h4>
-        <p className="muted small" style={{ margin: 0 }}>{[versionLabel(d), day(d.date), d.length].filter(Boolean).join(' · ')}</p>
         <span className={`pill pill-${d.status}`}>{d.final ? 'Final' : STATUS[d.status]}</span>
         {d.notes && <p className="deliv-note">{d.notes}</p>}
       </div>
 
       <div className="btn-row">
-        {video ? (
-          <>
-            {watch && <a className="btn btn-secondary btn-sm" href={watch} target="_blank" rel="noopener noreferrer">Watch video <span aria-hidden="true">↗</span><span className="sr-only"> (new tab)</span></a>}
-            {comments && waiting && <a className="btn btn-secondary btn-sm" href={comments} target="_blank" rel="noopener noreferrer">Leave comments on video <span aria-hidden="true">↗</span><span className="sr-only"> (opens Vimeo in a new tab)</span></a>}
-          </>
-        ) : (
-          d.fileUrl && (
-            <>
-              <a className="btn btn-secondary btn-sm" href={`${base}&mode=view`} target="_blank" rel="noopener noreferrer">View <span aria-hidden="true">↗</span><span className="sr-only"> (new tab)</span></a>
-              <a className="btn btn-secondary btn-sm" href={`${base}&mode=download`} download>Download <span aria-hidden="true">↓</span></a>
-            </>
-          )
-        )}
+        {video
+          ? comments && waiting && <a className="btn btn-secondary btn-sm" href={comments} target="_blank" rel="noopener noreferrer">Leave comments on video <span aria-hidden="true">↗</span><span className="sr-only"> (opens Vimeo in a new tab)</span></a>
+          : d.fileUrl && (
+              <>
+                <a className="btn btn-secondary btn-sm" href={`${base}&mode=view`} target="_blank" rel="noopener noreferrer">View <span aria-hidden="true">↗</span><span className="sr-only"> (new tab)</span></a>
+                <a className="btn btn-secondary btn-sm" href={`${base}&mode=download`} download>Download <span aria-hidden="true">↓</span></a>
+              </>
+            )}
       </div>
 
       {waiting && <FeedbackButtons project={project.slug} deliverable={d._key} title={`${d.title}, ${versionLabel(d)}`} notes={!video} />}

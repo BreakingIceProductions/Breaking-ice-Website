@@ -7,7 +7,7 @@ import { IconFor, fileKind } from '@/portal/file-icon'
 import { Finder, type FinderNode } from '@/portal/finder'
 import { byStart, categoryOf, clientCanOpen, isLatest, projectLabel, projectNode, REFERENCE, resolvePath, versionLabel, type Category, type DeliverableGroup } from '@/portal/library'
 import { fmtSize } from '@/portal/resumable'
-import { ReviewThumb } from '@/portal/review-ui'
+import { ReviewThumb, VersionHead, WatchTile } from '@/portal/review-ui'
 import type { Deliverable, DriveFile } from '@/portal/types'
 import { Uploader } from '@/portal/uploader'
 
@@ -69,7 +69,7 @@ export function AdminLibrary({ clients, projects }: { clients: LibClient[]; proj
   let panel: React.ReactNode
   let title = 'Details'
   if (at.version && at.project) {
-    title = `${at.group?.title} · ${versionLabel(at.version)}`
+    title = versionLabel(at.version)
     panel = <VersionPanel project={at.project} d={at.version} onChange={refresh} />
   } else if (at.group && at.project) {
     title = at.group.title
@@ -238,21 +238,19 @@ function VersionPanel({ project, d, onChange }: { project: LibProject; d: Delive
   }
   return (
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
+      <VersionHead title={d.title} kind={video ? 'video' : fileKind({ name: d.fileName })} ext={video ? undefined : d.fileName?.split('.').pop()} version={versionLabel(d)} date={d.date} length={d.length} />
       {video ? (
-        d.vimeoEmbed ? (
-          <div className="media ratio-169 lib-player">
-            <iframe src={d.vimeoEmbed} title={`${d.title}, ${versionLabel(d)}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
-          </div>
-        ) : (
-          <p className="muted small" style={{ margin: 0 }}>The player shows up after the next sync with Vimeo (within 10 minutes).</p>
-        )
+        d.vimeoEmbed || d.shareUrl ? (
+          <WatchTile href={(d.vimeoEmbed ?? d.shareUrl)!} thumb={d.vimeoThumb} title={`${d.title}, ${versionLabel(d)}`} />
+        ) : null
       ) : d.fileUrl ? (
-        <div className="review-thumb lib-doc-thumb">
+        <a className="review-thumb lib-doc-thumb doc-tile" href={d.fileUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${d.title} in Drive (new tab)`}>
           <ReviewThumb src={`/api/admin/preview?projectId=${encodeURIComponent(project._id)}&key=${encodeURIComponent(d._key)}`} kind={fileKind({ name: d.fileName })} ext={d.fileName?.split('.').pop()} />
-        </div>
+        </a>
       ) : null}
+      {video && !d.vimeoThumb && <p className="muted small" style={{ margin: 0 }}>The thumbnail shows up after the next sync with Vimeo.</p>}
 
-      <p className="muted small" style={{ margin: 0 }}>{[d.date, d.length, d.fileName].filter(Boolean).join(' · ')}</p>
+      {d.fileName && <p className="muted small" style={{ margin: 0 }}>{d.fileName}</p>}
       {d.notes && <p className="deliv-note">{d.notes}</p>}
 
       <label className="small muted" htmlFor={`st-${d._key}`}>Status</label>

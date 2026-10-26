@@ -7,6 +7,8 @@ export type Dot = 'awaiting' | 'changes' | 'approved' | 'final' | 'hidden'
 export type FinderNode = {
   id: string
   label: string
+  /** Small orange line above the label (a project's start date). */
+  kicker?: string
   /** Small grey line under the label. */
   meta?: string
   /** Greyed out (an older version the client can't open). Still selectable on Josh's side. */
@@ -112,6 +114,7 @@ export function Finder({
                       >
                         {n.children && <Folder />}
                         <span className="fd-text">
+                          {n.kicker && <span className="fd-kicker">{n.kicker}</span>}
                           <span className="fd-label">{n.label}</span>
                           {n.meta && <span className="fd-meta">{n.meta}</span>}
                         </span>
