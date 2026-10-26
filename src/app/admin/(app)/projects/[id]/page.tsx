@@ -11,6 +11,7 @@ import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
 import { invoiceUrl } from '@/admin/xero'
 import { DELIVERABLE_LABEL } from '@/portal/ui'
+import { categoryOf, versionLabel } from '@/portal/library'
 import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS } from '@/sanity/portal/office-constants'
 
 type Props = { params: Promise<{ id: string }> }
@@ -48,6 +49,23 @@ export default async function ProjectPage({ params }: Props) {
       sort: p.milestones[m.key]!,
     })),
   ].sort((a, b) => a.sort.localeCompare(b.sort))
+
+  const notes = p.deliverables
+    .flatMap((d) =>
+      (d.feedback ?? []).map((f) => ({
+        key: `${d._key}-${f._key}`,
+        at: f.at,
+        who: f.who,
+        action: f.action,
+        note: f.note,
+        title: d.title,
+        label: versionLabel(d),
+        folder: categoryOf(d) === 'video' ? 'videos' : 'documents',
+        group: `${categoryOf(d)}:${d.title.trim().toLowerCase()}`,
+        version: d._key,
+      })),
+    )
+    .sort((a, b) => b.at.localeCompare(a.at))
 
   const feed = [
     ...p.activity.map((a) => ({ at: a.at, text: a.text, source: 'Client portal' })),
@@ -152,6 +170,26 @@ export default async function ProjectPage({ params }: Props) {
               ))}
             </div>
           </section>
+
+          {notes.length > 0 && (
+            <section className="p-card" aria-labelledby="h-client-notes">
+              <div className="a-card-head">
+                <h2 id="h-client-notes" className="a-h2">Client notes</h2>
+                <span className="muted small">{notes.length} from the portal</span>
+              </div>
+              <ul className="a-notes">
+                {notes.map((n) => (
+                  <li key={n.key} className={`fb-${n.action}`}>
+                    <p className="fb-meta">
+                      <strong>{n.who ?? 'Client'}</strong> {n.action === 'approve' ? 'approved' : 'asked for changes to'}{' '}
+                      <Link className="text-link" href={`/admin/clients?at=${encodeURIComponent(p.client._id)}/${encodeURIComponent(p.slug ?? p._id)}/${n.folder}/${encodeURIComponent(n.group)}/${n.version}`}>{n.title} · {n.label}</Link> · {fmtDay(n.at.slice(0, 10))}
+                    </p>
+                    {n.note && <p className="fb-note">{n.note}</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="p-card" aria-labelledby="h-files">
             <div className="a-card-head">
