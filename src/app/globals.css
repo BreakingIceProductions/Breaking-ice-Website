@@ -952,13 +952,13 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .vp-head { display: flex; gap: 12px; align-items: flex-start; }
 .vp-head .ficon { margin-top: 2px; }
 .vp-meta { margin: 2px 0 0; font-size: 14px; color: var(--ink-muted); }
-.watch-tile { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden; background: var(--surface-inverse); color: #fff; text-decoration: none; }
+.watch-tile { position: relative; display: block; width: 50%; min-width: 160px; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden; background: var(--surface-inverse); color: #fff; text-decoration: none; }
 .watch-tile img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
 .watch-tile:hover img { transform: scale(1.03); }
 .watch-tile::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0, 0, 0, .55), transparent 55%); }
-.watch-play { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 50%; background: var(--accent-fill); color: var(--on-accent, #fff); display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); transition: transform .2s; }
+.watch-play { position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border-radius: 50%; background: var(--accent-fill); color: var(--on-accent, #fff); display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); transition: transform .2s; }
 .watch-tile:hover .watch-play { transform: translate(-50%, -50%) scale(1.06); }
-.watch-label { position: absolute; z-index: 1; left: 14px; bottom: 12px; font-weight: 600; font-size: 15px; }
+.watch-label { position: absolute; z-index: 1; left: 10px; bottom: 8px; font-weight: 600; font-size: 12.5px; }
 .watch-tile:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .doc-tile { display: flex; width: 50%; min-width: 140px; padding: 0; border: 1px solid var(--line); cursor: zoom-in; color: inherit; font: inherit; }
 .doc-tile:hover { border-color: var(--accent-fill); }
