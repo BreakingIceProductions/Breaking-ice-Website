@@ -44,7 +44,11 @@ export function ProjectLibrary({ project, demo, uploaderName }: { project: Clien
 
   let panel: React.ReactNode
   let panelTitle = 'Details'
-  if (at.version) {
+  if (at.version && !clientCanOpen(at.version, project.deliverables)) {
+    // An older version you haven't opened up: never shown, even from a saved address.
+    panelTitle = versionLabel(at.version)
+    panel = <p className="muted">This is an older version. Ask Breaking Ice if you need it.</p>
+  } else if (at.version) {
     panelTitle = versionLabel(at.version)
     panel = <VersionPanel project={project} d={at.version} />
   } else if (at.group) {

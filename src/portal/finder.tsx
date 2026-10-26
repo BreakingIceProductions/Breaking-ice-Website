@@ -102,6 +102,18 @@ export function Finder({
               <ul role="list">
                 {col.nodes.map((n) => {
                   const on = n.id === col.selected
+                  // A version the client can't open is just text: no button, nothing to click.
+                  if (n.locked)
+                    return (
+                      <li key={n.id}>
+                        <div className="fd-row fd-text-only" title="An older version. Ask Breaking Ice if you need it.">
+                          <span className="fd-text">
+                            <span className="fd-label">{n.label}</span>
+                            {n.meta && <span className="fd-meta">{n.meta}</span>}
+                          </span>
+                        </div>
+                      </li>
+                    )
                   return (
                     <li key={n.id}>
                       <button

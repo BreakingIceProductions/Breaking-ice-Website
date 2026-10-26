@@ -1014,3 +1014,6 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
   .lb-inner { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 55%) minmax(0, 45%); }
   .lb-side { border-left: 0; border-top: 1px solid var(--line); }
 }
+
+.fd-text-only { cursor: default; color: var(--ink-muted); opacity: .6; }
+.fd-text-only:hover { background: transparent; }
