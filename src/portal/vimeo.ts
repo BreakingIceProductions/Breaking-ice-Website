@@ -1,6 +1,7 @@
 import 'server-only'
 import { portalEnv, vimeoReady } from './config'
 import { addActivity, updateDeliverable, updateDeliverableState } from './data'
+import { clientCanOpen } from './library'
 import type { ClientProject } from './types'
 
 /**
@@ -26,16 +27,17 @@ export function vimeoId(url?: string) {
 /** A review page is where clients leave time-coded notes; a plain video link only plays. */
 export const isReviewLink = (url?: string) => Boolean(url && /vimeo\.com\/reviews\//i.test(url))
 
-async function vimeo<T>(path: string): Promise<T> {
+async function vimeo<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API}${path}`, {
-    headers: { Authorization: `Bearer ${portalEnv.vimeoToken}`, Accept: 'application/vnd.vimeo.*+json;version=3.4' },
+    ...init,
+    headers: { Authorization: `Bearer ${portalEnv.vimeoToken}`, Accept: 'application/vnd.vimeo.*+json;version=3.4', 'Content-Type': 'application/json', ...init.headers },
     cache: 'no-store',
   })
   if (!res.ok) throw new Error(`vimeo ${path.split('?')[0]} ${res.status}: ${(await res.text()).slice(0, 200)}`)
   return (await res.json()) as T
 }
 
-type VimeoVideo = { duration?: number; player_embed_url?: string; pictures?: { base_link?: string } }
+type VimeoVideo = { duration?: number; player_embed_url?: string; pictures?: { base_link?: string }; review_page?: { active?: boolean; link?: string } }
 
 /** Vimeo's base image link can carry a query string; the size goes before it. */
 const thumb = (base?: string) => {
@@ -53,7 +55,7 @@ export async function syncVimeo(p: ClientProject, log: string[]) {
     const id = vimeoId(d.shareUrl)
     if (!id) continue
     const [video, versions] = await Promise.all([
-      vimeo<VimeoVideo>(`/videos/${id}?fields=duration,player_embed_url,pictures.base_link`),
+      vimeo<VimeoVideo>(`/videos/${id}?fields=duration,player_embed_url,pictures.base_link,review_page`),
       vimeo<{ total?: number }>(`/videos/${id}/versions?per_page=1&fields=uri`).catch(() => ({ total: undefined })),
     ])
     const total = versions.total
@@ -61,8 +63,23 @@ export async function syncVimeo(p: ClientProject, log: string[]) {
       vimeoThumb: thumb(video.pictures?.base_link),
       vimeoEmbed: video.player_embed_url,
       vimeoLength: video.duration ? clock(video.duration) : undefined,
+      vimeoReview: video.review_page?.link,
       ...(total ? { vimeoVersions: total } : {}),
     })
+    // Older versions' Vimeo links are switched off unless Josh has let the client see them.
+    const want = clientCanOpen(d, p.deliverables) ? 'on' : 'off'
+    if ((d.vimeoAccess ?? 'on') !== want) {
+      try {
+        await vimeo(`/videos/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ privacy: { view: want === 'on' ? 'unlisted' : 'nobody' }, review_page: { active: want === 'on' } }),
+        })
+        await updateDeliverableState(p._id, d._key, { vimeoAccess: want })
+        log.push(`vimeo: ${d.title} v${d.version} links switched ${want}`)
+      } catch (e) {
+        log.push(`vimeo: couldn't switch ${d.title} v${d.version} ${want} (the Vimeo token needs Edit permission): ${String(e).slice(0, 80)}`)
+      }
+    }
     // The first look only records how many files the video has had; a later replacement bumps the version.
     if (total && d.vimeoVersions && total > d.vimeoVersions) {
       const version = (d.version || 1) + (total - d.vimeoVersions)

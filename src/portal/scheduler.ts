@@ -7,6 +7,7 @@ import { addActivity, allProjects, claimDeliverable, cleanSignInGuards, freshSta
 import { ensureProjectFolders } from './drive'
 import { fill, sendEmail, versionEmail } from './email'
 import type { ClientProject, Deliverable } from './types'
+import { isLatest } from './library'
 import { syncVimeo } from './vimeo'
 
 /**
@@ -43,7 +44,7 @@ async function emailContacts(p: ClientProject, d: Deliverable, kind: 'new' | 're
   const failed: string[] = []
   for (const c of to) {
     const name = c.name.split(' ')[0]
-    const token = await signLinkToken(c.email.toLowerCase(), `/portal/${p.slug}`, 7 * 24 * 60)
+    const token = await signLinkToken(c.email.toLowerCase(), `/portal?open=${encodeURIComponent(d._key)}`, 7 * 24 * 60)
     const intro =
       kind === 'new'
         ? fill(settings.newVersionIntro, { name })
@@ -120,6 +121,8 @@ export async function runScheduler(now = Date.now()) {
 async function projectEmails(p: ClientProject, now: number, settings: Settings, log: string[]) {
   for (const d of p.deliverables ?? []) {
     if (d.status !== 'awaiting-feedback') continue
+    // Only the newest version of each deliverable is emailed about (older ones are greyed out for the client).
+    if (!isLatest(d, p.deliverables)) continue
     const v = d.version || 1
 
     // First time we see this version as ready: start the 10-minute hold.

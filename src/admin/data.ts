@@ -2,6 +2,7 @@ import 'server-only'
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 import { portalEnv } from '@/portal/config'
 import { portalClient, STATE_FIELDS } from '@/portal/data'
+import { nextVersion, today, type Category } from '@/portal/library'
 import type { Deliverable } from '@/portal/types'
 import type { PipelineStage } from '@/sanity/portal/office-constants'
 import { adminSampleMode } from './config'
@@ -21,7 +22,7 @@ import type { InvoiceRecord, OfficeClient, OfficeProject, OfficeState, TaskRecor
 const officeId = (projectId: string) => `bo-state-${projectId}`
 const key = () => randomBytes(6).toString('hex')
 
-const FIELDS = `_id, _updatedAt, title, "slug": slug.current, status, stage, nextStep, deliverables, links, driveFolderId,
+const FIELDS = `_id, _updatedAt, title, "slug": slug.current, startDate, status, stage, nextStep, deliverables, links, driveFolderId,
   pipelineStage, projectType, region, quoteAmount, depositAmount, quoteUrl, milestones, schedule, crew, retainer,
   "client": client->{_id, organizationName, contacts[]{_key, name, email, role}, billingEmail, driveFolderId},
   "portalState": *[_id == "portal-state-" + ^._id][0]{ deliverables, "activity": activity[0...20] },
@@ -235,30 +236,40 @@ export async function removeLink(projectId: string, linkKey: string) {
   await portalClient.patch(projectId).unset([`links[_key=="${linkKey}"]`]).commit()
 }
 
-/** A file uploaded "for review": a new version of the deliverable with the same title, or a new deliverable. */
-export async function addReviewFile(projectId: string, file: { id: string; name: string }) {
+/**
+ * A new version of a deliverable: version 1 of a new title, or the next number for an
+ * existing one. Older versions stay listed and are greyed out for the client automatically.
+ */
+export async function addVersion(
+  projectId: string,
+  v: { category: Category; title: string; shareUrl?: string; fileUrl?: string; fileName?: string; notes?: string; send: boolean },
+) {
   if (sample()) return
-  const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || file.name
-  const fileUrl = `https://drive.google.com/file/d/${file.id}/view`
   const p = await getProject(projectId)
-  const same = p?.deliverables.find((d) => d.title.toLowerCase() === title.toLowerCase())
-  if (same) {
-    await portalClient
-      .patch(projectId)
-      .set({
-        [`deliverables[_key=="${same._key}"].fileUrl`]: fileUrl,
-        [`deliverables[_key=="${same._key}"].fileName`]: file.name,
-        [`deliverables[_key=="${same._key}"].version`]: (same.version || 1) + 1,
-        [`deliverables[_key=="${same._key}"].status`]: 'awaiting-feedback',
-      })
-      .commit()
-    return
+  if (!p) throw new Error('project not found')
+  const next = nextVersion(p.deliverables, v.category, v.title)
+  const entry = {
+    _key: key(),
+    _type: 'deliverable',
+    title: next.title,
+    category: v.category,
+    version: next.version,
+    date: today(),
+    status: v.send ? 'awaiting-feedback' : 'in-progress',
+    ...(v.shareUrl ? { shareUrl: v.shareUrl } : {}),
+    ...(v.fileUrl ? { fileUrl: v.fileUrl, fileName: v.fileName } : {}),
+    ...(v.notes ? { notes: v.notes } : {}),
   }
-  await portalClient
-    .patch(projectId)
-    .setIfMissing({ deliverables: [] })
-    .append('deliverables', [{ _key: key(), _type: 'deliverable', title, version: 1, status: 'awaiting-feedback', fileUrl, fileName: file.name }])
-    .commit({ autoGenerateArrayKeys: false })
+  await portalClient.patch(projectId).setIfMissing({ deliverables: [] }).append('deliverables', [entry]).commit({ autoGenerateArrayKeys: false })
+  return entry
+}
+
+/** Josh's switches on one version. */
+export async function setVersion(projectId: string, versionKey: string, fields: { clientCanView?: boolean; final?: boolean; status?: Deliverable['status'] }) {
+  if (sample()) return
+  const set: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(fields)) if (v !== undefined) set[`deliverables[_key=="${versionKey}"].${k}`] = v
+  if (Object.keys(set).length) await portalClient.patch(projectId).set(set).commit()
 }
 
 /* ── Xero contact IDs, one record per client ─────────────────────────── */

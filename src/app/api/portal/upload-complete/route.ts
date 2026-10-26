@@ -29,8 +29,8 @@ export async function POST(req: Request) {
   await sendEmail({
     to: [portalEnv.replyTo],
     subject: `Upload: ${what} · ${a.project.title}`,
-    text: `${line}\n\n${names.join('\n')}\n\nIt's in Google Drive › BI Clients › ${a.project.client.organizationName} › ${a.project.title} › From client.`,
-    html: `<p>${line.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p><ul>${names.map((n) => `<li>${n.replace(/</g, '&lt;')}</li>`).join('')}</ul><p>It’s in Google Drive › BI Clients › ${a.project.client.organizationName.replace(/</g, '&lt;')} › ${a.project.title.replace(/</g, '&lt;')} › From client.</p>`,
+    text: `${line}\n\n${names.join('\n')}\n\nIt's in Google Drive › BI Clients › ${a.project.client.organizationName} › ${a.project.title} › Reference Assets.`,
+    html: `<p>${line.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p><ul>${names.map((n) => `<li>${n.replace(/</g, '&lt;')}</li>`).join('')}</ul><p>It’s in Google Drive › BI Clients › ${a.project.client.organizationName.replace(/</g, '&lt;')} › ${a.project.title.replace(/</g, '&lt;')} › Reference Assets.</p>`,
   }).catch((e) => console.error('[portal] upload email failed', e))
   return json({ ok: true })
 }

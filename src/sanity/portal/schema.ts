@@ -108,6 +108,13 @@ export const clientProject = defineType({
     }),
     defineField({ name: 'client', type: 'reference', to: [{ type: 'client' }], group: 'overview', validation: (r) => r.required() }),
     defineField({
+      name: 'startDate',
+      title: 'Start date',
+      description: 'Names the project everywhere: “2026-10-19 Management Plan Explainer” in the portal, back office and Google Drive.',
+      type: 'date',
+      group: 'overview',
+    }),
+    defineField({
       name: 'status',
       type: 'string',
       group: 'overview',
@@ -170,8 +177,8 @@ export const clientProject = defineType({
     }),
     defineField({
       name: 'deliverables',
-      title: 'Deliverables',
-      description: 'Newest at the top. Setting a version to “Awaiting feedback” emails the client 10 minutes later.',
+      title: 'Deliverables (one entry per version)',
+      description: 'Each entry is one version. Entries with the same title and type are versions of the same deliverable. The newest version is the one the client sees; setting it to “Awaiting feedback” emails them 10 minutes later. The back office adds versions for you.',
       type: 'array',
       group: 'review',
       of: [
@@ -180,7 +187,23 @@ export const clientProject = defineType({
           name: 'deliverable',
           fields: [
             defineField({ name: 'title', type: 'string', validation: (r) => r.required() }),
+            defineField({
+              name: 'category',
+              title: 'Type',
+              type: 'string',
+              initialValue: 'video',
+              options: { list: [{ title: 'Video', value: 'video' }, { title: 'Document', value: 'document' }], layout: 'radio', direction: 'horizontal' },
+            }),
             defineField({ name: 'version', type: 'number', initialValue: 1, validation: (r) => r.min(1).integer() }),
+            defineField({ name: 'date', title: 'Date', description: 'When this version went to the client.', type: 'date' }),
+            defineField({ name: 'final', title: 'Final', description: 'Shows as “Final” instead of its version number.', type: 'boolean', initialValue: false }),
+            defineField({
+              name: 'clientCanView',
+              title: 'Client can view (older versions)',
+              description: 'The newest version is always open to the client. Older ones are greyed out, and their Vimeo links switched off, unless this is on.',
+              type: 'boolean',
+              initialValue: false,
+            }),
             defineField({
               name: 'status',
               type: 'string',
@@ -189,8 +212,8 @@ export const clientProject = defineType({
             }),
             defineField({
               name: 'shareUrl',
-              title: 'Vimeo review link',
-              description: 'In Vimeo: the video’s Share → Review page link (vimeo.com/reviews/…). The video’s own link also works. To send a new version, use Replace video in Vimeo: the link stays the same and the version here goes up by itself.',
+              title: 'Vimeo link',
+              description: 'The video’s link (or its review page link). Each version is its own Vimeo video. The review page link is found automatically.',
               type: 'url',
               validation: (r) => r.custom((v?: string) => !v || /vimeo\.com/i.test(v) || 'Paste a Vimeo link.'),
             }),

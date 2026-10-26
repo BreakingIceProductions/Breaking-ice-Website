@@ -6,8 +6,6 @@ import { fmtDay, fmtRange, today } from '@/admin/dates'
 import { ago, cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
-import { LinksEditor } from '@/admin/ui/links-editor'
-import { ProjectFiles } from '@/admin/ui/project-files'
 import { NoteForm } from '@/admin/ui/note-form'
 import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
@@ -157,19 +155,13 @@ export default async function ProjectPage({ params }: Props) {
 
           <section className="p-card" aria-labelledby="h-files">
             <div className="a-card-head">
-              <h2 id="h-files" className="a-h2">Files</h2>
+              <h2 id="h-files" className="a-h2">Videos, documents and files</h2>
               <span className="muted small">Exactly what the client sees in their portal</span>
             </div>
-            <ProjectFiles projectId={p._id} driveFolderId={p.driveFolderId} />
+            <p className="muted small a-empty">Add versions, mark finals, share Reference Assets and choose what the client can see in the library.</p>
+            <div><Link className="btn btn-primary btn-sm" href={`/admin/clients?at=${encodeURIComponent(p.client._id)}/${encodeURIComponent(p.slug ?? p._id)}`}>Open in the library</Link></div>
           </section>
 
-          <section className="p-card" aria-labelledby="h-docs">
-            <div className="a-card-head">
-              <h2 id="h-docs" className="a-h2">Documents for the client</h2>
-              <span className="muted small">Posters, scripts, anything they should have</span>
-            </div>
-            <LinksEditor projectId={p._id} links={p.links ?? []} />
-          </section>
 
           <section className="p-card" aria-labelledby="h-notes">
             <h2 id="h-notes" className="a-h2">Notes and activity</h2>

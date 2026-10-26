@@ -3,6 +3,7 @@ import { importPKCS8, SignJWT } from 'jose'
 import { getVercelOidcToken } from '@vercel/oidc'
 import { driveReady, googleKeyless, portalEnv } from './config'
 import { setDriveFolder } from './data'
+import { projectLabel } from './library'
 import type { ClientProject, DriveFile } from './types'
 
 /**
@@ -10,12 +11,14 @@ import type { ClientProject, DriveFile } from './types'
  * Shared Drive "BI Clients". Clients never need a Google account: the server
  * holds the connection and only ever touches the signed-in client's folder.
  *
- *   BI Clients / [Client] / [Project] / From client
- *                                     / From Breaking Ice
- *                                     / Finals
+ *   BI Clients / [Client] / [YYYY-MM-DD Project] / Documents          (versions of designs, PDFs…)
+ *                                                / Reference Assets   (logos, scripts, what the client sends)
+ * Videos live on Vimeo, not here.
  */
 
-export const SUBFOLDERS = ['From client', 'From Breaking Ice', 'Finals'] as const
+export const SUBFOLDERS = ['Documents', 'Reference Assets'] as const
+/** Folders from the first layout, renamed in place the first time a project is opened. */
+const OLD_NAMES: Record<string, string> = { Documents: 'From Breaking Ice', 'Reference Assets': 'From client' }
 type Sub = (typeof SUBFOLDERS)[number]
 const FOLDER = 'application/vnd.google-apps.folder'
 const API = 'https://www.googleapis.com/drive/v3'
@@ -127,8 +130,15 @@ async function createFolder(name: string, parent: string, sanityId?: string) {
 
 /** Subfolders live inside a project's own folder, so finding them by name is safe. */
 async function findOrCreateSub(name: string, parent: string) {
-  const existing = (await children(parent, true)).find((f) => f.name === name)
-  return existing ? existing.id : createFolder(name, parent)
+  const folders = await children(parent, true)
+  const existing = folders.find((f) => f.name === name)
+  if (existing) return existing.id
+  const old = OLD_NAMES[name] && folders.find((f) => f.name === OLD_NAMES[name])
+  if (old) {
+    await drive(`/files/${old.id}?supportsAllDrives=true`, { method: 'PATCH', body: JSON.stringify({ name }) })
+    return old.id
+  }
+  return createFolder(name, parent)
 }
 
 /** A folder we made earlier for this exact Sanity document (tagged with its ID), wherever it is. */
@@ -180,7 +190,7 @@ export function ensureProjectFolders(p: ClientProject): Promise<Record<Sub, stri
     const hit = p.driveFolderId && subCache.get(p.driveFolderId)
     if (hit && Date.now() - hit.at < 10 * 60_000) return hit.subs
     const clientFolder = await ensureClientFolder(p.client)
-    const projectFolder = await ensureFolder(p, safeName(p.title), clientFolder)
+    const projectFolder = await ensureFolder(p, safeName(projectLabel(p)), clientFolder)
     const subs = {} as Record<Sub, string>
     for (const name of SUBFOLDERS) subs[name] = await findOrCreateSub(name, projectFolder)
     subCache.set(projectFolder, { at: Date.now(), subs })
@@ -215,7 +225,7 @@ export async function listProjectFiles(p: ClientProject): Promise<DriveFile[]> {
  * a dropped connection picks up where it left off). Passing the browser's Origin
  * here is what lets Google accept those chunks from the page.
  */
-export async function startUpload(p: ClientProject, file: { name: string; size: number; type: string }, origin: string, uploadedBy: string, folder: Sub = 'From client') {
+export async function startUpload(p: ClientProject, file: { name: string; size: number; type: string }, origin: string, uploadedBy: string, folder: Sub = 'Reference Assets') {
   const subs = await ensureProjectFolders(p)
   const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size', {
     method: 'POST',

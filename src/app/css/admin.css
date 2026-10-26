@@ -168,3 +168,4 @@
 .a-select { width: auto; min-height: 40px; padding: 6px 10px; display: inline-block; margin-left: 6px; }
 .a-check { display: inline-flex; align-items: center; gap: 8px; }
 .a-file-list li { grid-template-columns: 44px minmax(0, 1fr) auto; }
+.a-page-wide { max-width: none; }

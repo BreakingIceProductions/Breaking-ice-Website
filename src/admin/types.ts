@@ -72,6 +72,7 @@ export type OfficeProject = {
   _updatedAt?: string
   title: string
   slug?: string
+  startDate?: string
   status?: 'in-production' | 'in-review' | 'delivered'
   stage?: number
   nextStep?: string

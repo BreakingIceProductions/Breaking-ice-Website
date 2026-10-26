@@ -18,7 +18,14 @@ export type DeliverableStatus = 'in-progress' | 'awaiting-feedback' | 'changes-r
 export type Deliverable = {
   _key: string
   title: string
+  /** video (on Vimeo) or document (a Google Drive file). Old entries without it are worked out from their links. */
+  category?: 'video' | 'document'
   version: number
+  /** When this version went to the client (YYYY-MM-DD). */
+  date?: string
+  final?: boolean
+  /** Older versions are greyed out for the client unless this is on. */
+  clientCanView?: boolean
   status: DeliverableStatus
   /** Vimeo review link (or the video's own link). */
   shareUrl?: string
@@ -42,6 +49,10 @@ export type Deliverable = {
   vimeoEmbed?: string
   vimeoLength?: string
   vimeoVersions?: number
+  /** The video's Vimeo review page, found automatically. */
+  vimeoReview?: string
+  /** Whether the video's Vimeo links are currently switched on ('on' | 'off'). */
+  vimeoAccess?: string
 }
 
 export type ActivityItem = { _key: string; at: string; text: string; kind?: string }
@@ -50,6 +61,7 @@ export type ClientProject = {
   _id: string
   title: string
   slug: string
+  startDate?: string
   status: 'in-production' | 'in-review' | 'delivered'
   stage: number
   stageDates?: string[]
@@ -95,7 +107,7 @@ export type DriveFile = {
   size?: number
   mimeType: string
   modifiedTime: string
-  from: 'From client' | 'From Breaking Ice' | 'Finals'
+  from: 'Documents' | 'Reference Assets'
   uploadedBy?: string
 }
 

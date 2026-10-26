@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { googleThumbnail, streamGoogleFile } from '@/portal/drive-file'
 import { json, projectAccess } from '@/portal/http'
+import { clientCanOpen } from '@/portal/library'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ key: str
   const { key } = await params
   const url = new URL(req.url)
   const a = await projectAccess(url.searchParams.get('project'))
-  const d = a?.project.deliverables?.find((x) => x._key === key && x.status !== 'in-progress')
+  const d = a?.project.deliverables?.find((x) => x._key === key && clientCanOpen(x, a.project.deliverables))
   if (!a || !d?.fileUrl) return json({ ok: false }, 404)
   if (a.session.demo) return json({ ok: false }, 404)
   const mode = url.searchParams.get('mode')

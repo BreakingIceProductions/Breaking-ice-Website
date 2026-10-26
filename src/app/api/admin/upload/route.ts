@@ -7,14 +7,12 @@ import type { ClientProject } from '@/portal/types'
 
 export const runtime = 'nodejs'
 
-const FOLDERS = ['From Breaking Ice', 'Finals'] as const
-
-/** Opens an upload from the back office straight into the project's Drive folder. */
+/** Opens an upload from the back office straight into the project's Documents or Reference Assets folder. */
 export async function POST(req: Request) {
   const admin = await adminFromRequest(req)
   if (!admin) return json({ ok: false, error: 'signed-out' }, 401)
   const body = await req.json().catch(() => ({}))
-  const folder = FOLDERS.find((f) => f === body.folder) ?? 'From Breaking Ice'
+  const folder = body.folder === 'Documents' ? 'Documents' : 'Reference Assets'
   const name = String(body.name ?? '').slice(0, 200)
   const size = Number(body.size)
   if (!name || !Number.isFinite(size) || size <= 0) return json({ ok: false, error: 'invalid' }, 400)
