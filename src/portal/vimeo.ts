@@ -1,7 +1,6 @@
 import 'server-only'
 import { portalEnv, vimeoReady } from './config'
 import { addActivity, updateDeliverable, updateDeliverableState } from './data'
-import { clientCanOpen } from './library'
 import type { ClientProject } from './types'
 
 /**
@@ -66,20 +65,6 @@ export async function syncVimeo(p: ClientProject, log: string[]) {
       vimeoReview: video.review_page?.link,
       ...(total ? { vimeoVersions: total } : {}),
     })
-    // Older versions' Vimeo links are switched off unless Josh has let the client see them.
-    const want = clientCanOpen(d, p.deliverables) ? 'on' : 'off'
-    if ((d.vimeoAccess ?? 'on') !== want) {
-      try {
-        await vimeo(`/videos/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ privacy: { view: want === 'on' ? 'unlisted' : 'nobody' }, review_page: { active: want === 'on' } }),
-        })
-        await updateDeliverableState(p._id, d._key, { vimeoAccess: want })
-        log.push(`vimeo: ${d.title} v${d.version} links switched ${want}`)
-      } catch (e) {
-        log.push(`vimeo: couldn't switch ${d.title} v${d.version} ${want} (the Vimeo token needs Edit permission): ${String(e).slice(0, 80)}`)
-      }
-    }
     // The first look only records how many files the video has had; a later replacement bumps the version.
     if (total && d.vimeoVersions && total > d.vimeoVersions) {
       const version = (d.version || 1) + (total - d.vimeoVersions)

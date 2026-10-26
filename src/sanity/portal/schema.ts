@@ -200,7 +200,7 @@ export const clientProject = defineType({
             defineField({
               name: 'clientCanView',
               title: 'Client can view (older versions)',
-              description: 'The newest version is always open to the client. Older ones are greyed out, and their Vimeo links switched off, unless this is on.',
+              description: 'The newest version is always open to the client. Older ones stay listed but greyed out (they can’t open them in the portal) unless this is on.',
               type: 'boolean',
               initialValue: false,
             }),

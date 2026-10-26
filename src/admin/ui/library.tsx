@@ -266,7 +266,7 @@ function VersionPanel({ project, d, onChange }: { project: LibProject; d: Delive
         <input type="checkbox" role="switch" checked={latest || Boolean(d.clientCanView)} disabled={busy || latest} onChange={(e) => set({ clientCanView: e.target.checked })} />
         <span>
           <strong>Client can view</strong>
-          <span className="muted small">{latest ? 'This is the newest version, so the client always sees it.' : 'Older version: off keeps it greyed out and its Vimeo links switched off.'}</span>
+          <span className="muted small">{latest ? 'This is the newest version, so the client always sees it.' : 'Older version: off keeps it greyed out in the portal, so the client can see it existed but can’t open it.'}</span>
         </span>
       </label>
 
