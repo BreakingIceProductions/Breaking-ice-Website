@@ -6,7 +6,7 @@ import { IconFor, fileKind } from './file-icon'
 import { Finder } from './finder'
 import { categoryOf, clientCanOpen, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
 import { fmtSize } from './resumable'
-import { FeedbackButtons, ReviewThumb, VersionHead, WatchTile } from './review-ui'
+import { DocLightbox, FeedbackButtons, ReviewThumb, VersionHead, WatchTile } from './review-ui'
 import type { ClientProject, Deliverable, DriveFile } from './types'
 import { Uploader } from './uploader'
 
@@ -71,6 +71,8 @@ function VersionPanel({ project, d }: { project: ClientProject; d: Deliverable }
   const watch = d.vimeoEmbed ?? d.shareUrl
   const waiting = d.status === 'awaiting-feedback'
   const docExt = d.fileName?.split('.').pop()
+  const docKind = fileKind({ name: d.fileName })
+  const [viewing, setViewing] = useState(false)
   return (
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
       <VersionHead title={d.title} kind={video ? 'video' : fileKind({ name: d.fileName })} ext={video ? undefined : docExt} version={versionLabel(d)} date={d.date} length={d.length} />
@@ -78,9 +80,9 @@ function VersionPanel({ project, d }: { project: ClientProject; d: Deliverable }
       {video ? (
         watch && <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={`${d.title}, ${versionLabel(d)}`} />
       ) : d.fileUrl ? (
-        <a className="review-thumb doc-tile" href={`${base}&mode=view`} target="_blank" rel="noopener noreferrer" aria-label={`View ${d.title} (opens in a new tab)`}>
-          <ReviewThumb src={`${base}&mode=preview`} kind={fileKind({ name: d.fileName })} ext={docExt} />
-        </a>
+        <button type="button" className="review-thumb doc-tile" onClick={() => setViewing(true)} aria-label={`View ${d.title}`}>
+          <ReviewThumb src={`${base}&mode=preview`} kind={docKind} ext={docExt} />
+        </button>
       ) : null}
 
       <div className="stack" style={{ gap: 'var(--space-2)' }}>
@@ -93,13 +95,32 @@ function VersionPanel({ project, d }: { project: ClientProject; d: Deliverable }
           ? comments && waiting && <a className="btn btn-secondary btn-sm" href={comments} target="_blank" rel="noopener noreferrer">Leave comments on video <span aria-hidden="true">↗</span><span className="sr-only"> (opens Vimeo in a new tab)</span></a>
           : d.fileUrl && (
               <>
-                <a className="btn btn-secondary btn-sm" href={`${base}&mode=view`} target="_blank" rel="noopener noreferrer">View <span aria-hidden="true">↗</span><span className="sr-only"> (new tab)</span></a>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewing(true)}>View</button>
                 <a className="btn btn-secondary btn-sm" href={`${base}&mode=download`} download>Download <span aria-hidden="true">↓</span></a>
               </>
             )}
       </div>
 
       {waiting && <FeedbackButtons project={project.slug} deliverable={d._key} title={`${d.title}, ${versionLabel(d)}`} notes={!video} />}
+
+      {!video && d.fileUrl && (
+        <DocLightbox
+          open={viewing}
+          onClose={() => setViewing(false)}
+          src={`${base}&mode=view`}
+          download={`${base}&mode=download`}
+          kind={docKind}
+          title={d.title}
+          meta={[versionLabel(d), d.date].filter(Boolean).join(' · ')}
+        >
+          {d.notes && <p className="deliv-note">{d.notes}</p>}
+          {waiting ? (
+            <FeedbackButtons project={project.slug} deliverable={d._key} title={`${d.title}, ${versionLabel(d)}`} />
+          ) : (
+            <span className={`pill pill-${d.status}`}>{d.final ? 'Final' : STATUS[d.status]}</span>
+          )}
+        </DocLightbox>
+      )}
       {d.status === 'approved' && <p className="muted small" style={{ margin: 0 }}>You approved this version. Thank you!</p>}
       {d.status === 'changes-requested' && <p className="muted small" style={{ margin: 0 }}>We’re working on your changes. The next version will show up here.</p>}
     </div>

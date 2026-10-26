@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FileIcon, type FileKind } from './file-icon'
 
 /** Preview of a design or document version; falls back to its file icon when Drive has no preview. */
@@ -81,5 +81,71 @@ export function WatchTile({ href, thumb, title }: { href: string; thumb?: string
       </span>
       <span className="watch-label">Watch video<span className="sr-only">: {title} (opens in a new tab)</span></span>
     </a>
+  )
+}
+
+/**
+ * A document shown large over the page, with the notes and approval beside it
+ * (below it on phones). Images show directly; PDFs in the browser's own viewer.
+ */
+export function DocLightbox({
+  open,
+  onClose,
+  src,
+  download,
+  kind,
+  title,
+  meta,
+  children,
+}: {
+  open: boolean
+  onClose: () => void
+  src: string
+  download: string
+  kind: FileKind
+  title: string
+  meta: string
+  children?: React.ReactNode
+}) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const d = ref.current
+    if (!d) return
+    if (open && !d.open) d.showModal()
+    if (!open && d.open) d.close()
+  }, [open])
+  return (
+    <dialog ref={ref} className="doc-lb" aria-label={title} onClose={onClose} onClick={(e) => e.target === ref.current && onClose()}>
+      {open && (
+        <div className="lb-inner">
+          <div className="lb-view">
+            {kind === 'image' ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={src} alt={title} />
+            ) : kind === 'pdf' ? (
+              <iframe src={src} title={title} />
+            ) : (
+              <div className="lb-nopreview">
+                <FileIcon kind={kind} size={72} />
+                <p className="muted">This file can’t be shown in the browser. Download it to open it.</p>
+              </div>
+            )}
+          </div>
+          <aside className="lb-side">
+            <div className="lb-side-head">
+              <div style={{ minWidth: 0 }}>
+                <h2 className="lib-title">{title}</h2>
+                <p className="vp-meta">{meta}</p>
+              </div>
+              <button type="button" className="lb-close" onClick={onClose} aria-label="Close">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+            </div>
+            {children}
+            <a className="text-link small" href={download} download>Download the file</a>
+          </aside>
+        </div>
+      )}
+    </dialog>
   )
 }

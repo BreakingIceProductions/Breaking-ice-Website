@@ -960,7 +960,9 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .watch-tile:hover .watch-play { transform: translate(-50%, -50%) scale(1.06); }
 .watch-label { position: absolute; z-index: 1; left: 14px; bottom: 12px; font-weight: 600; font-size: 15px; }
 .watch-tile:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.doc-tile { display: block; text-decoration: none; }
+.doc-tile { display: flex; width: 50%; min-width: 140px; padding: 0; border: 1px solid var(--line); cursor: zoom-in; color: inherit; font: inherit; }
+.doc-tile:hover { border-color: var(--accent-fill); }
+.doc-tile:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
 /* Portal home: project cards and archive */
 .p-home { display: flex; flex-direction: column; gap: var(--space-12); padding-top: var(--space-12); padding-bottom: var(--space-24); }
@@ -993,3 +995,22 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .p-project { display: flex; flex-direction: column; gap: var(--space-8); padding-bottom: var(--space-24); }
 .p-project .p-project-head, .p-project .p-where { padding-bottom: 0; margin-bottom: 0; }
 .p-project .p-where { padding-bottom: var(--space-8); }
+
+/* Document lightbox: the file large, notes and approval beside it */
+.doc-lb[open] { display: block; }
+.doc-lb { width: min(1280px, 96vw); height: min(90vh, 960px); max-width: none; max-height: none; padding: 0; border: 0; border-radius: var(--radius-lg); background: var(--surface); color: var(--ink); overflow: hidden; }
+.doc-lb::backdrop { background: rgba(8, 12, 20, .78); backdrop-filter: blur(3px); }
+.lb-inner { display: grid; grid-template-columns: minmax(0, 1fr) 360px; width: 100%; height: 100%; }
+.lb-view { display: flex; align-items: center; justify-content: center; background: #0d121c; min-height: 0; }
+.lb-view img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.lb-view iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.lb-nopreview { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-8); text-align: center; color: #fff; }
+.lb-side { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-6); overflow-y: auto; border-left: 1px solid var(--line); background: var(--surface-raised); }
+.lb-side-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.lb-close { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--line); background: transparent; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.lb-close:hover { border-color: var(--ink); }
+@media (max-width: 860px) {
+  .doc-lb { width: 100vw; height: 100dvh; border-radius: 0; }
+  .lb-inner { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 55%) minmax(0, 45%); }
+  .lb-side { border-left: 0; border-top: 1px solid var(--line); }
+}
