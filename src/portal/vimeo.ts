@@ -62,7 +62,8 @@ export async function syncVimeo(p: ClientProject, log: string[]) {
       vimeoThumb: thumb(video.pictures?.base_link),
       vimeoEmbed: video.player_embed_url,
       vimeoLength: video.duration ? clock(video.duration) : undefined,
-      vimeoReview: video.review_page?.link,
+      // A review link Josh made in Vimeo wins; Vimeo's own review page only counts while it's switched on (otherwise it's a 404).
+      vimeoReview: /vimeo\.com\/reviews\//i.test(d.shareUrl ?? '') ? d.shareUrl : video.review_page?.active ? video.review_page.link : undefined,
       ...(total ? { vimeoVersions: total } : {}),
     })
     // The first look only records how many files the video has had; a later replacement bumps the version.
