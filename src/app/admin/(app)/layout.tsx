@@ -2,18 +2,18 @@ import Link from 'next/link'
 import { Logo } from '@/components/brand'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { requireAdmin } from '@/admin/auth'
-import { calendarReady, ticktickReady, xeroReady } from '@/admin/config'
+import { calendarReady, ticktickReady, zohoReady } from '@/admin/config'
 import { ticktickConnection } from '@/admin/ticktick'
 import { AdminNav } from '@/admin/ui/nav'
-import { xeroConnection } from '@/admin/xero'
+import { zohoConnection } from '@/admin/zoho'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminApp({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin()
-  const [tt, xero] = await Promise.all([ticktickConnection().catch(() => null), xeroConnection().catch(() => null)])
+  const [tt, zoho] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null)])
   const links = [
-    { name: 'Xero', on: Boolean(xero), setUp: xeroReady() },
+    { name: 'Zoho Books', on: Boolean(zoho), setUp: zohoReady() },
     { name: 'TickTick', on: Boolean(tt), setUp: ticktickReady() },
     { name: 'Google Calendar', on: calendarReady(), setUp: calendarReady() },
   ]

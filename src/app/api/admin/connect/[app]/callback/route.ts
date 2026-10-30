@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getAdminSession } from '@/admin/auth'
 import { checkOAuth } from '@/admin/oauth'
 import { ticktickExchange } from '@/admin/ticktick'
-import { xeroExchange } from '@/admin/xero'
+import { zohoExchange } from '@/admin/zoho'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: Props) {
   if (!code || !(await checkOAuth(app, url.searchParams.get('state') ?? ''))) return back(`error=denied&app=${encodeURIComponent(app)}`)
   try {
     if (app === 'ticktick') await ticktickExchange(code)
-    else if (app === 'xero') await xeroExchange(code)
+    else if (app === 'zoho') await zohoExchange(code)
     else return back('error=unknown')
     return back(`connected=${app}`)
   } catch (e) {

@@ -9,7 +9,7 @@ import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
 import { NoteForm } from '@/admin/ui/note-form'
 import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
-import { invoiceUrl } from '@/admin/xero'
+import { invoiceUrl, zohoConnection } from '@/admin/zoho'
 import { DELIVERABLE_LABEL } from '@/portal/ui'
 import { categoryOf, versionLabel } from '@/portal/library'
 import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS } from '@/sanity/portal/office-constants'
@@ -23,7 +23,17 @@ export async function generateMetadata({ params }: Props) {
 }
 
 const studioHref = (id: string) => `/studio/portal/structure/clientProject;${encodeURIComponent(id)}`
-const INVOICE_WORD: Record<string, string> = { draft: 'Draft', submitted: 'Awaiting approval', authorised: 'Awaiting payment', paid: 'Paid', voided: 'Voided', deleted: 'Deleted' }
+const INVOICE_WORD: Record<string, string> = {
+  draft: 'Draft',
+  sent: 'Awaiting payment',
+  viewed: 'Viewed, awaiting payment',
+  unpaid: 'Awaiting payment',
+  overdue: 'Overdue',
+  partially_paid: 'Partly paid',
+  paid: 'Paid',
+  void: 'Void',
+  deleted: 'Deleted',
+}
 
 export default async function ProjectPage({ params }: Props) {
   await requireAdmin()
@@ -35,6 +45,7 @@ export default async function ProjectPage({ params }: Props) {
   const next = p.pipelineStage === 'paid' ? undefined : PIPELINE_STAGES.find((s) => s.value === nextStage(p.pipelineStage))
   const history = new Map((p.office.stageHistory ?? []).map((h) => [h.to, h.at]))
   const invoices = p.office.invoices ?? []
+  const zoho = invoices.length ? await zohoConnection().catch(() => null) : null
   const deposit = invoices.find((i) => i.kind === 'deposit')
   const final = invoices.find((i) => i.kind === 'final' || i.kind === 'retainer')
   const openDeliverables = p.deliverables.filter((d) => d.status !== 'approved').length
@@ -245,7 +256,7 @@ export default async function ProjectPage({ params }: Props) {
           <section className="p-card" aria-labelledby="h-money">
             <div className="a-card-head">
               <h2 id="h-money" className="a-h2">Money</h2>
-              <span className="muted small">From Xero</span>
+              <span className="muted small">From Zoho Books</span>
             </div>
             <dl className="key-dates">
               {p.projectType === 'retainer' ? (
@@ -268,10 +279,10 @@ export default async function ProjectPage({ params }: Props) {
               <ul className="a-links">
                 {invoices.map((i) => (
                   <li key={i._key}>
-                    <a href={invoiceUrl(i.id)} target="_blank" rel="noopener noreferrer">
+                    <a href={zoho ? invoiceUrl(zoho.orgId, i.id) : 'https://books.zohocloud.ca'} target="_blank" rel="noopener noreferrer">
                       <span className="stack"><strong>Invoice {i.number ?? i.id}</strong><span className="muted small">{i.kind === 'deposit' ? 'Deposit' : i.kind === 'retainer' ? 'Retainer' : 'Balance'} · {cad(i.amount)}</span></span>
                       <span aria-hidden="true">↗</span>
-                      <span className="sr-only">(opens Xero)</span>
+                      <span className="sr-only">(opens Zoho Books)</span>
                     </a>
                   </li>
                 ))}

@@ -21,7 +21,7 @@ import { syncVimeo } from './vimeo'
  *                or after N days (Portal settings, default 7) when there’s no due date.
  *                Never sooner than a day after the first email.
  *  Folders       every active project gets its Drive folders, and renames follow the Studio.
- *  Back office   calendar events, TickTick due dates and Xero invoice statuses
+ *  Back office   calendar events, TickTick due dates and Zoho Books invoice statuses
  *                catch up with the projects (src/admin/sync.ts).
  *
  *  Each email is claimed before it's sent (a write that only succeeds if nothing changed

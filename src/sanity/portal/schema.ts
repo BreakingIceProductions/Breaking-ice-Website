@@ -77,7 +77,7 @@ export const client = defineType({
     defineField({
       name: 'billingEmail',
       title: 'Billing email (private)',
-      description: 'The email on the Xero contact, where invoices go. Leave empty to use the first contact.',
+      description: 'The email on the Zoho Books customer, where invoices go. Leave empty to use the first contact.',
       type: 'string',
       validation: (r) => r.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { name: 'email' }),
     }),

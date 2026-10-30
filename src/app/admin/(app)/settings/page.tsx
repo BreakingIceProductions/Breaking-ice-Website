@@ -1,20 +1,20 @@
 import { requireAdmin } from '@/admin/auth'
-import { adminEnv, calendarReady, ticktickReady, xeroReady } from '@/admin/config'
+import { adminEnv, calendarReady, ticktickReady, zohoReady } from '@/admin/config'
 import { fmtDay } from '@/admin/dates'
 import { serviceAccountEmail } from '@/admin/google'
 import { ticktickConnection, ticktickRedirect } from '@/admin/ticktick'
-import { xeroConnection, xeroRedirect } from '@/admin/xero'
+import { zohoConnection, zohoRedirect } from '@/admin/zoho'
 
 export const metadata = { title: 'Settings' }
 
 type Props = { searchParams: Promise<Record<string, string | undefined>> }
 
-const NAMES: Record<string, string> = { ticktick: 'TickTick', xero: 'Xero' }
+const NAMES: Record<string, string> = { ticktick: 'TickTick', zoho: 'Zoho Books' }
 
 export default async function Settings({ searchParams }: Props) {
   await requireAdmin()
   const sp = await searchParams
-  const [tt, xero] = await Promise.all([ticktickConnection().catch(() => null), xeroConnection().catch(() => null)])
+  const [tt, zoho] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null)])
   const sa = serviceAccountEmail()
   const notice = sp.connected
     ? `${NAMES[sp.connected] ?? sp.connected} is connected.`
@@ -38,25 +38,25 @@ export default async function Settings({ searchParams }: Props) {
       </header>
       {notice && <p className="notice" role="status">{notice}</p>}
 
-      <section className="p-card" aria-labelledby="h-xero">
+      <section className="p-card" aria-labelledby="h-zoho">
         <div className="a-card-head">
-          <h2 id="h-xero" className="a-h2">Xero</h2>
-          <span className={`a-conn-state ${xero ? 'on' : 'off'}`}>{xero ? 'Connected' : xeroReady() ? 'Not connected' : 'Not set up'}</span>
+          <h2 id="h-zoho" className="a-h2">Zoho Books</h2>
+          <span className={`a-conn-state ${zoho ? 'on' : 'off'}`}>{zoho ? 'Connected' : zohoReady() ? 'Not connected' : 'Not set up'}</span>
         </div>
-        <p className="muted small" style={{ margin: 0 }}>Creates contacts and draft invoices (deposit when booked, balance when delivered). You approve and send every invoice in Xero.</p>
-        {xero ? (
+        <p className="muted small" style={{ margin: 0 }}>Creates customers and draft invoices (deposit when booked, balance when delivered). You send every invoice yourself from Zoho Books.</p>
+        {zoho ? (
           <>
-            <p className="small" style={{ margin: 0 }}>Connected to <strong>{xero.tenantName ?? 'your organisation'}</strong> since {fmtDay(xero.connectedAt.slice(0, 10))}. Invoice lines use account {adminEnv.xeroAccountCode}{adminEnv.xeroTaxType ? ` and tax type ${adminEnv.xeroTaxType}` : ' and its default tax rate'}, due in {adminEnv.xeroDueDays} days.</p>
-            <form action="/api/admin/disconnect" method="post"><input type="hidden" name="app" value="xero" /><button className="btn btn-secondary btn-sm" type="submit">Disconnect</button></form>
+            <p className="small" style={{ margin: 0 }}>Connected to <strong>{zoho.orgName ?? 'your organisation'}</strong> since {fmtDay(zoho.connectedAt.slice(0, 10))}. Invoice lines go to {adminEnv.zohoAccountId ? 'the chosen income account' : 'Sales'}{adminEnv.zohoTaxId ? ' with GST added' : ' with no tax added (set ZOHO_TAX_ID once GST is set up in Zoho)'}, due in {adminEnv.zohoDueDays} days.</p>
+            <form action="/api/admin/disconnect" method="post"><input type="hidden" name="app" value="zoho" /><button className="btn btn-secondary btn-sm" type="submit">Disconnect</button></form>
           </>
-        ) : xeroReady() ? (
-          <a className="btn btn-primary" href="/api/admin/connect/xero">Connect Xero</a>
+        ) : zohoReady() ? (
+          <a className="btn btn-primary" href="/api/admin/connect/zoho">Connect Zoho Books</a>
         ) : (
           <ol className="a-steps small">
-            <li>Go to <a className="text-link" href="https://developer.xero.com/app/manage" target="_blank" rel="noopener noreferrer">developer.xero.com/app/manage</a> and create a <strong>Web app</strong> called “Breaking Ice back office”.</li>
-            <li>Redirect URI: <code>{xeroRedirect()}</code></li>
-            <li>Copy the Client ID and generate a secret. In Vercel, add <code>XERO_CLIENT_ID</code> and <code>XERO_CLIENT_SECRET</code>, then redeploy.</li>
-            <li>Come back here and press Connect Xero. Pick the Breaking Ice organisation when Xero asks.</li>
+            <li>Go to <a className="text-link" href="https://api-console.zohocloud.ca" target="_blank" rel="noopener noreferrer">api-console.zohocloud.ca</a>, press <strong>Add Client</strong> and pick <strong>Server-based Applications</strong>. Call it “Breaking Ice back office”.</li>
+            <li>Homepage: <code>{zohoRedirect().replace(/\/api\/.*/, '')}</code>. Authorized redirect URI: <code>{zohoRedirect()}</code></li>
+            <li>Copy the Client ID and Client Secret. In Vercel, add <code>ZOHO_CLIENT_ID</code> and <code>ZOHO_CLIENT_SECRET</code>, then redeploy.</li>
+            <li>Come back here and press Connect Zoho Books, then Accept.</li>
           </ol>
         )}
       </section>

@@ -17,7 +17,7 @@ export const officeFields = [
   defineField({
     name: 'pipelineStage',
     title: 'Pipeline stage',
-    description: 'Move stages from the back office (/admin) so the TickTick, Calendar and Xero steps run. Leads and quotes stay hidden from the client portal.',
+    description: 'Move stages from the back office (/admin) so the TickTick, Calendar and Zoho Books steps run. Leads and quotes stay hidden from the client portal.',
     type: 'string',
     group: G,
     initialValue: 'lead',
@@ -29,7 +29,7 @@ export const officeFields = [
   defineField({
     name: 'depositAmount',
     title: 'Deposit (CAD, before tax)',
-    description: 'Saved as a draft invoice in Xero when the project is booked. Leave empty for no deposit.',
+    description: 'Saved as a draft invoice in Zoho Books when the project is booked. Leave empty for no deposit.',
     type: 'number',
     group: G,
     validation: (r) => r.min(0),

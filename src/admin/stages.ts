@@ -1,11 +1,11 @@
 import 'server-only'
 import { PIPELINE_STAGES, type PipelineStage } from '@/sanity/portal/office-constants'
-import { calendarReady, ticktickReady, xeroReady } from './config'
+import { adminEnv, calendarReady, ticktickReady, zohoReady } from './config'
 import { syncProjectCalendar, wantedEvents } from './calendar'
 import { addInvoiceRecord, addLog, addTaskRecords, setOffice, setPipelineStage, setPortalStatus } from './data'
 import { addDays, today } from './dates'
 import { createList, createTask, ticktickConnection } from './ticktick'
-import { createDraftInvoice, ensureXeroContact, statusOf, xeroConnection } from './xero'
+import { createDraftInvoice, ensureZohoContact, statusOf, zohoConnection } from './zoho'
 import type { Milestones, OfficeProject, PlannedAction, StagePlan } from './types'
 
 /**
@@ -79,9 +79,10 @@ export async function planStage(p: OfficeProject, to: PipelineStage): Promise<St
   const from = p.pipelineStage
   const warnings: string[] = []
   const actions: PlannedAction[] = []
-  const [tt, xero] = await Promise.all([ticktickConnection().catch(() => null), xeroConnection().catch(() => null)])
+  const [tt, zoho] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null)])
   const ttBlocked = !ticktickReady() ? 'TickTick isn’t set up yet (Settings)' : !tt ? 'Connect TickTick in Settings' : undefined
-  const xeroBlocked = !xeroReady() ? 'Xero isn’t set up yet (Settings)' : !xero ? 'Connect Xero in Settings' : undefined
+  const zohoBlocked = !zohoReady() ? 'Zoho Books isn’t set up yet (Settings)' : !zoho ? 'Connect Zoho Books in Settings' : undefined
+  const plusTax = adminEnv.zohoTaxId ? ' + GST' : ''
 
   const fi = stageIndex(from)
   const ti = stageIndex(to)
@@ -127,15 +128,15 @@ export async function planStage(p: OfficeProject, to: PipelineStage): Promise<St
     warnings.push('No milestones or shoot dates yet, so nothing goes on the calendar. Add them in the project.')
   }
 
-  // Xero: always drafts.
+  // Zoho Books: always drafts.
   const invoices = p.office.invoices ?? []
   if (to === 'booked' && (p.depositAmount ?? 0) > 0 && !invoices.some((i) => i.kind === 'deposit')) {
     actions.push({
       id: 'inv-deposit',
-      app: 'Xero',
+      app: 'Zoho Books',
       kind: 'invoice',
-      label: `Deposit invoice for ${money(p.depositAmount!)} + GST, saved as a draft. Nothing is sent until you approve it in Xero.`,
-      blocked: xeroBlocked,
+      label: `Deposit invoice for ${money(p.depositAmount!)}${plusTax}, saved as a draft. Nothing is sent until you send it from Zoho Books.`,
+      blocked: zohoBlocked,
       data: { kind: 'deposit', amount: p.depositAmount },
     })
   }
@@ -145,10 +146,10 @@ export async function planStage(p: OfficeProject, to: PipelineStage): Promise<St
     if (amount > 0)
       actions.push({
         id: 'inv-final',
-        app: 'Xero',
+        app: 'Zoho Books',
         kind: 'invoice',
-        label: `${isRetainer ? 'Retainer' : 'Final'} invoice for ${money(amount)} + GST, saved as a draft. Nothing is sent until you approve it in Xero.`,
-        blocked: xeroBlocked,
+        label: `${isRetainer ? 'Retainer' : 'Final'} invoice for ${money(amount)}${plusTax}, saved as a draft. Nothing is sent until you send it from Zoho Books.`,
+        blocked: zohoBlocked,
         data: { kind: isRetainer ? 'retainer' : 'final', amount },
       })
     else warnings.push(`No ${isRetainer ? 'monthly fee' : 'quote total'} on this project, so no invoice is drafted. Add it in the project to get one.`)
@@ -220,23 +221,25 @@ export async function runStage(p: OfficeProject, to: PipelineStage, skip: string
         results.push({ id: a.id, ok: true, message: 'skipped' in r ? 'Calendar not connected' : `Calendar: ${r.created} added, ${r.updated} updated, ${r.removed} removed` })
       } else if (a.kind === 'invoice') {
         const d = a.data as { kind: 'deposit' | 'final' | 'retainer'; amount: number }
-        const contact = await ensureXeroContact(p.client)
+        const contact = await ensureZohoContact(p.client)
         const what = d.kind === 'deposit' ? 'Deposit' : d.kind === 'retainer' ? 'Monthly retainer' : 'Balance'
-        const inv = await createDraftInvoice(
-          contact,
-          { description: `${p.title}: ${what.toLowerCase()}`, amount: d.amount, reference: p.title },
-          `bi-${p._id}-${d.kind}${d.kind === 'retainer' ? `-${today().slice(0, 7)}` : ''}`,
-        )
+        // The reference is unique per project and invoice, so a retry finds the same draft.
+        const inv = await createDraftInvoice(contact, {
+          name: what,
+          description: `${p.title}: ${what.toLowerCase()}`,
+          amount: d.amount,
+          reference: `${p.title} · ${what}${d.kind === 'retainer' ? ` ${today().slice(0, 7)}` : ''}`,
+        })
         await addInvoiceRecord(p._id, {
           kind: d.kind,
-          id: inv.InvoiceID,
-          number: inv.InvoiceNumber,
+          id: inv.invoice_id,
+          number: inv.invoice_number,
           amount: d.amount,
           status: statusOf(inv),
-          outstanding: inv.AmountDue ?? d.amount,
+          outstanding: inv.balance ?? d.amount,
           createdAt: new Date().toISOString(),
         })
-        results.push({ id: a.id, ok: true, message: `Draft invoice ${inv.InvoiceNumber ?? ''} saved in Xero`.replace('  ', ' ') })
+        results.push({ id: a.id, ok: true, message: `Draft invoice ${inv.invoice_number ?? ''} saved in Zoho Books`.replace('  ', ' ') })
       } else if (a.kind === 'portal-status') {
         await setPortalStatus(p, a.data as { status: string; stage: number })
         results.push({ id: a.id, ok: true, message: a.label })

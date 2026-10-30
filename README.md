@@ -39,10 +39,10 @@ Sign-in is the same email link + code as the client portal, limited to `ADMIN_EM
 - **Data:** extra fields on each client project in the Studio (Client portal → Client project → “Back office (private)” tab).
   The portal only reads the fields it names, so none of these reach clients. Leads and quotes are hidden from the portal until booked.
 - **Stage changes** (`src/admin/stages.ts`) show a preview of every step, then run only what you confirm:
-  TickTick checklist, Google Calendar dates, Xero draft invoices (deposit when booked, balance when delivered) and the portal status.
+  TickTick checklist, Google Calendar dates, Zoho Books draft invoices (deposit when booked, balance when delivered) and the portal status.
 - **Keeping in sync:** the 10-minute scheduler also moves calendar events and TickTick due dates when dates change,
-  and pulls invoice statuses back from Xero (`src/admin/sync.ts`).
-- **Setup:** `/admin/settings` walks through Xero, TickTick and Google Calendar. Tokens are stored encrypted in the private dataset.
+  and pulls invoice statuses back from Zoho Books (`src/admin/sync.ts`).
+- **Setup:** `/admin/settings` walks through Zoho Books, TickTick and Google Calendar. Tokens are stored encrypted in the private dataset.
 - **Locally** without a Sanity token, `/admin` shows sample projects and saves nothing.
 
 ## Pre-launch switches to flip on launch day

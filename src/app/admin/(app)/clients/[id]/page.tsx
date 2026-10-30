@@ -64,7 +64,7 @@ export default async function ClientPage({ params }: Props) {
 
       <dl className="a-kpis">
         <div className="a-kpi"><dt className="a-kpi-label">Projects</dt><dd className="a-kpi-num" style={{ margin: 0 }}>{c.projects.length}</dd><dd className="a-kpi-note" style={{ margin: 0 }}>{delivered} delivered</dd></div>
-        <div className="a-kpi"><dt className="a-kpi-label">Invoiced</dt><dd className="a-kpi-num" style={{ margin: 0 }}>{cad(c.billed)}</dd><dd className="a-kpi-note" style={{ margin: 0 }}>through Xero</dd></div>
+        <div className="a-kpi"><dt className="a-kpi-label">Invoiced</dt><dd className="a-kpi-num" style={{ margin: 0 }}>{cad(c.billed)}</dd><dd className="a-kpi-note" style={{ margin: 0 }}>through Zoho Books</dd></div>
         <div className="a-kpi"><dt className="a-kpi-label">Outstanding</dt><dd className="a-kpi-num" style={{ margin: 0 }}>{cad(outstanding)}</dd><dd className="a-kpi-note" style={{ margin: 0 }}>{outstanding > 0 ? 'still to be paid' : 'all paid up'}</dd></div>
         <div className="a-kpi"><dt className="a-kpi-label">Last activity</dt><dd className="a-kpi-num" style={{ margin: 0, fontSize: 24 }}>{c.lastActivity ? ago(c.lastActivity) : '—'}</dd></div>
       </dl>

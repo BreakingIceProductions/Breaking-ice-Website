@@ -13,14 +13,20 @@ export const adminEnv = {
     .filter(Boolean),
   ticktickId: process.env.TICKTICK_CLIENT_ID || '',
   ticktickSecret: process.env.TICKTICK_CLIENT_SECRET || '',
-  xeroId: process.env.XERO_CLIENT_ID || '',
-  xeroSecret: process.env.XERO_CLIENT_SECRET || '',
-  /** Revenue account invoice lines are coded to (Xero's default "Sales" is 200). */
-  xeroAccountCode: process.env.XERO_ACCOUNT_CODE || '200',
-  /** Optional Xero tax type for lines; empty uses the account's default tax rate. */
-  xeroTaxType: process.env.XERO_TAX_TYPE || '',
+  zohoId: process.env.ZOHO_CLIENT_ID || '',
+  zohoSecret: process.env.ZOHO_CLIENT_SECRET || '',
+  /** Zoho data centre. Breaking Ice's books are in Canada (zohocloud.ca). */
+  zohoAccounts: process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zohocloud.ca',
+  zohoApi: process.env.ZOHO_API_URL || 'https://www.zohoapis.ca',
+  zohoBooks: process.env.ZOHO_BOOKS_URL || 'https://books.zohocloud.ca',
+  /** Optional: which Zoho Books organisation, if the account has more than one. */
+  zohoOrgId: process.env.ZOHO_ORG_ID || '',
+  /** Optional income account for invoice lines; empty uses Zoho's "Sales". */
+  zohoAccountId: process.env.ZOHO_ACCOUNT_ID || '',
+  /** Optional tax (e.g. GST 5%) added to invoice lines; empty adds no tax. */
+  zohoTaxId: process.env.ZOHO_TAX_ID || '',
   /** Invoice due date, in days after the invoice date. */
-  xeroDueDays: Number(process.env.XERO_DUE_DAYS || 30),
+  zohoDueDays: Number(process.env.ZOHO_DUE_DAYS || 30),
   /** The "Breaking Ice Projects" calendar, shared with the service account ("Make changes to events"). */
   calendarId: process.env.GOOGLE_CALENDAR_ID || '',
   timeZone: 'America/Edmonton',
@@ -35,5 +41,5 @@ export const adminReady = () => portalReady()
 export const adminSampleMode = () => !portalReady() && process.env.NODE_ENV !== 'production'
 
 export const ticktickReady = () => Boolean(adminEnv.ticktickId && adminEnv.ticktickSecret)
-export const xeroReady = () => Boolean(adminEnv.xeroId && adminEnv.xeroSecret)
+export const zohoReady = () => Boolean(adminEnv.zohoId && adminEnv.zohoSecret)
 export const calendarReady = () => Boolean(adminEnv.calendarId && portalEnv.googleServiceAccount)

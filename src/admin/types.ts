@@ -24,11 +24,11 @@ export type InvoiceKind = 'deposit' | 'final' | 'retainer'
 export type InvoiceRecord = {
   _key: string
   kind: InvoiceKind
-  /** Xero InvoiceID */
+  /** Zoho Books invoice_id */
   id: string
   number?: string
   amount: number
-  /** Xero status, lower-cased: draft, submitted, authorised, paid, voided */
+  /** Zoho Books status: draft, sent, viewed, overdue, unpaid, partially_paid, paid, void (or deleted) */
   status?: string
   outstanding?: number
   createdAt: string
@@ -97,7 +97,7 @@ export type OfficeProject = {
 /** One thing a stage change will do. Shown in the preview, then run. */
 export type PlannedAction = {
   id: string
-  app: 'TickTick' | 'Google Calendar' | 'Xero' | 'Client portal' | 'Back office'
+  app: 'TickTick' | 'Google Calendar' | 'Zoho Books' | 'Client portal' | 'Back office'
   kind: 'ticktick-list' | 'ticktick-task' | 'calendar-sync' | 'calendar-done' | 'invoice' | 'portal-status' | 'stage'
   label: string
   /** Why it can't run right now (not connected, missing amount…). Shown, and skipped. */

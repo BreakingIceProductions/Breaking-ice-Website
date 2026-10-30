@@ -11,7 +11,9 @@ export const isActive = (p: OfficeProject) => idx(p.pipelineStage) >= idx('booke
 const finalAmount = (p: OfficeProject) =>
   p.projectType === 'retainer' ? p.retainer?.monthlyFee ?? 0 : Math.max(0, (p.quoteAmount ?? 0) - (p.depositAmount ?? 0))
 const hasFinalInvoice = (p: OfficeProject) => (p.office.invoices ?? []).some((i) => i.kind === 'final' || i.kind === 'retainer')
-const unpaidSent = (i: { status?: string }) => i.status === 'authorised' || i.status === 'submitted'
+/** Sent from Zoho Books and not fully paid yet. */
+const UNPAID = new Set(['sent', 'viewed', 'overdue', 'unpaid', 'partially_paid'])
+const unpaidSent = (i: { status?: string }) => UNPAID.has(i.status ?? '')
 
 export function kpis(projects: OfficeProject[]) {
   const quoted = projects.filter((p) => p.pipelineStage === 'quoted')
@@ -53,7 +55,7 @@ export function needsAction(projects: OfficeProject[]): Row[] {
     }
     for (const i of (p.office.invoices ?? []).filter((x) => x.status === 'draft')) {
       const d = daysSince(i.createdAt) ?? 0
-      if (d >= 1) rows.push({ project: p, detail: `Draft invoice${i.number ? ` ${i.number}` : ''} hasn’t been approved and sent in Xero.`, when: `${d} days`, sort: 3 })
+      if (d >= 1) rows.push({ project: p, detail: `Draft invoice${i.number ? ` ${i.number}` : ''} hasn’t been sent from Zoho Books.`, when: `${d} days`, sort: 3 })
     }
     for (const m of MILESTONE_LIST) {
       const date = p.milestones[m.key]

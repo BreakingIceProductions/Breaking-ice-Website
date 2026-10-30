@@ -7,7 +7,7 @@ import type { PlannedAction, StagePlan } from '../types'
 type Stage = { title: string; value: string }
 type Result = { id: string; ok: boolean; message: string }
 
-const APPS: PlannedAction['app'][] = ['Back office', 'TickTick', 'Google Calendar', 'Xero', 'Client portal']
+const APPS: PlannedAction['app'][] = ['Back office', 'TickTick', 'Google Calendar', 'Zoho Books', 'Client portal']
 
 /**
  * "Move to …" button. Asks the server for a preview of everything the move will

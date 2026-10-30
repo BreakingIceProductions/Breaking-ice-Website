@@ -2,7 +2,7 @@ import { adminFromRequest } from '@/admin/auth'
 import { syncProjectCalendar } from '@/admin/calendar'
 import { getProject } from '@/admin/data'
 import { refreshInvoices } from '@/admin/sync'
-import { xeroConnection } from '@/admin/xero'
+import { zohoConnection } from '@/admin/zoho'
 import { json } from '@/portal/http'
 
 export const runtime = 'nodejs'
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (admin.sample) return json({ ok: true, message: 'Sample mode: nothing to sync.' })
   try {
     const cal = await syncProjectCalendar(p)
-    if (await xeroConnection()) await refreshInvoices({ ...p, office: { ...p.office, invoices: (p.office.invoices ?? []).map((i) => ({ ...i, syncedAt: undefined })) } })
+    if (await zohoConnection()) await refreshInvoices({ ...p, office: { ...p.office, invoices: (p.office.invoices ?? []).map((i) => ({ ...i, syncedAt: undefined })) } })
     return json({ ok: true, message: 'skipped' in cal ? 'Invoices checked. Calendar isn’t connected yet.' : `Calendar: ${cal.created} added, ${cal.updated} updated, ${cal.removed} removed.` })
   } catch (e) {
     return json({ ok: false, error: 'failed', message: String(e).slice(0, 200) }, 500)

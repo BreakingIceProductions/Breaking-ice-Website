@@ -79,7 +79,7 @@ export async function getProject(id: string): Promise<OfficeProject | null> {
 /** A client with everything we've done for them. */
 export type ClientSummary = OfficeClient & {
   projects: OfficeProject[]
-  /** Invoiced through Xero, and what's been paid of it. */
+  /** Invoiced through Zoho Books, and what's been paid of it. */
   billed: number
   paid: number
   lastActivity?: string
@@ -272,21 +272,21 @@ export async function setVersion(projectId: string, versionKey: string, fields: 
   if (Object.keys(set).length) await portalClient.patch(projectId).set(set).commit()
 }
 
-/* ── Xero contact IDs, one record per client ─────────────────────────── */
+/* ── Zoho Books customer IDs, one record per client ──────────────────── */
 
-export async function getXeroContactId(clientId: string) {
+export async function getZohoContactId(clientId: string) {
   if (sample()) return undefined
-  return (await q<string | null>(`*[_id == $id][0].xeroContactId`, { id: `bo-client-${clientId}` })) ?? undefined
+  return (await q<string | null>(`*[_id == $id][0].zohoContactId`, { id: `bo-client-${clientId}` })) ?? undefined
 }
 
-export async function setXeroContactId(clientId: string, xeroContactId: string) {
+export async function setZohoContactId(clientId: string, zohoContactId: string) {
   if (sample()) return
-  await portalClient.createOrReplace({ _id: `bo-client-${clientId}`, _type: 'boClient', client: clientId, xeroContactId })
+  await portalClient.createOrReplace({ _id: `bo-client-${clientId}`, _type: 'boClient', client: clientId, zohoContactId })
 }
 
 /* ── Connection tokens, encrypted at rest ───────────────────────────── */
 // The portal dataset is already private, but tokens are encrypted with PORTAL_SECRET
-// on top, so a leaked read token alone can't be used to reach TickTick or Xero.
+// on top, so a leaked read token alone can't be used to reach TickTick or Zoho Books.
 
 const SECRETS_ID = 'bo-secrets'
 const cryptoKey = () => createHash('sha256').update(`bo-tokens|${portalEnv.secret}`).digest()
@@ -310,7 +310,7 @@ function open<T>(sealed?: string): T | null {
   }
 }
 
-export type Connection = 'ticktick' | 'xero'
+export type Connection = 'ticktick' | 'zoho'
 
 export async function getConnection<T>(name: Connection): Promise<T | null> {
   if (sample() || !portalEnv.secret) return null
