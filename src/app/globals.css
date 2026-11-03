@@ -1026,3 +1026,10 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .fb-meta { margin: 0; font-size: 13px; color: var(--ink-muted); }
 .fb-meta strong { color: var(--ink); }
 .fb-note { margin: 6px 0 0; white-space: pre-wrap; font-size: 15px; }
+
+/* Delivery: the handover at the top of a delivered project */
+.p-delivery { display: flex; flex-direction: column; gap: var(--space-8); padding: var(--space-8); margin-bottom: var(--space-12); background: var(--surface-raised); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius-lg); }
+.p-delivery-films { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-6); }
+.p-delivery-film { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; min-width: 0; }
+.p-delivery-film .watch-tile { width: 100%; }
+@media (max-width: 560px) { .p-delivery { padding: var(--space-6); } }

@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from '@/portal/file-icon'
 import { Finder, type FinderNode } from '@/portal/finder'
-import { byStart, categoryOf, clientCanOpen, isLatest, projectLabel, projectNode, REFERENCE, resolvePath, versionLabel, type Category, type DeliverableGroup } from '@/portal/library'
+import { byStart, categoryOf, clientCanOpen, FINALS, isLatest, projectLabel, projectNode, REFERENCE, resolvePath, versionLabel, type Category, type DeliverableGroup } from '@/portal/library'
 import { fmtSize } from '@/portal/resumable'
 import { FeedbackList, ReviewThumb, VersionHead, WatchTile } from '@/portal/review-ui'
 import type { Deliverable, DriveFile } from '@/portal/types'
@@ -77,6 +77,9 @@ export function AdminLibrary({ clients, projects }: { clients: LibClient[]; proj
   } else if (at.project && at.folder === 'assets') {
     title = REFERENCE
     panel = <AssetsPanel project={at.project} />
+  } else if (at.project && at.folder === 'finals') {
+    title = FINALS
+    panel = <AssetsPanel project={at.project} folder={FINALS} />
   } else if (at.project && at.category) {
     title = at.category === 'video' ? 'Videos' : 'Documents'
     panel = <AddVersion project={at.project} category={at.category} onAdded={refresh} />
@@ -280,27 +283,31 @@ function VersionPanel({ project, d, onChange }: { project: LibProject; d: Delive
   )
 }
 
-function AssetsPanel({ project }: { project: LibProject }) {
+function AssetsPanel({ project, folder = REFERENCE }: { project: LibProject; folder?: typeof REFERENCE | typeof FINALS }) {
   const [files, setFiles] = useState<DriveFile[] | null>(null)
   const [connected, setConnected] = useState(true)
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/files?projectId=${encodeURIComponent(project._id)}`, { cache: 'no-store' }).catch(() => null)
     const j = await r?.json().catch(() => null)
     setConnected(j?.connected !== false)
-    setFiles(((j?.files ?? []) as DriveFile[]).filter((f) => f.from === 'Reference Assets'))
-  }, [project._id])
+    setFiles(((j?.files ?? []) as DriveFile[]).filter((f) => f.from === folder))
+  }, [project._id, folder])
   useEffect(() => {
     load()
   }, [load])
   if (!connected) return <p className="muted">Google Drive isn’t connected yet.</p>
   return (
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
-      <p className="muted small" style={{ margin: 0 }}>Logos, scripts, music: shared both ways. The client sees and can download everything here.</p>
+      <p className="muted small" style={{ margin: 0 }}>
+        {folder === FINALS
+          ? `What the client downloads once it’s delivered: masters, web and vertical cuts, captions (.srt), stills. ${project.status === 'delivered' ? 'The client can see these now.' : 'Hidden from the client until you mark the project Delivered.'}`
+          : 'Logos, scripts, music: shared both ways. The client sees and can download everything here.'}
+      </p>
       <Uploader
         compact
-        start={(file) => json('POST', '/api/admin/upload', { projectId: project._id, folder: 'Reference Assets', name: file.name, size: file.size, type: file.type })}
+        start={(file) => json('POST', '/api/admin/upload', { projectId: project._id, folder, name: file.name, size: file.size, type: file.type })}
         onDone={async (done) => {
-          await json('POST', '/api/admin/upload-complete', { projectId: project._id, folder: 'Reference Assets', files: done })
+          await json('POST', '/api/admin/upload-complete', { projectId: project._id, folder, files: done })
           await load()
         }}
       />

@@ -35,3 +35,13 @@ export function sameOrigin(req: Request) {
     return false
   }
 }
+
+/** The signed-in person's name as their client has it, for activity lines. */
+export const whoIs = (a: NonNullable<Awaited<ReturnType<typeof projectAccess>>>) =>
+  a.clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === a.session.email)?.name || a.session.email
+
+/** A download counts once: not again for each resumed chunk the browser asks for. */
+export const firstChunk = (req: Request) => {
+  const range = req.headers.get('range')
+  return !range || /^bytes=0-/.test(range)
+}

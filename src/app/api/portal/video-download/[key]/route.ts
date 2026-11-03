@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { json, projectAccess } from '@/portal/http'
+import { addActivity } from '@/portal/data'
+import { json, limited, projectAccess, whoIs } from '@/portal/http'
 import { canDownloadVideo } from '@/portal/library'
 import { vimeoDownloadLink } from '@/portal/vimeo'
 
@@ -15,6 +16,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ key: str
   if (a.session.demo) return json({ ok: false, error: 'This is a sample video. In a real project it downloads straight from Vimeo.' }, 404)
   try {
     const link = await vimeoDownloadLink(d.shareUrl)
+    if (!limited(`vdl:${a.session.email}:${d._key}`, 1, 10 * 60_000)) await addActivity(a.project._id, `${whoIs(a)} downloaded ${d.title}`, 'download')
     // No files back means the token lacks the video_files scope: Vimeo's own page has a Download button.
     if (!link) console.warn('[portal] no Vimeo download files for', d.shareUrl)
     return NextResponse.redirect(link ?? d.shareUrl!, 303)

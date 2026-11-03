@@ -4,8 +4,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from './file-icon'
 import { Finder } from './finder'
-import { canDownloadVideo, categoryOf, clientCanOpen, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
+import { canDownloadVideo, categoryOf, clientCanOpen, FINALS, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
 import { fmtSize } from './resumable'
+import { FinalFiles } from './delivery'
 import { DocLightbox, FeedbackButtons, FeedbackList, ReviewThumb, VersionHead, WatchTile } from './review-ui'
 import type { ClientProject, Deliverable, DriveFile } from './types'
 import { Uploader } from './uploader'
@@ -58,7 +59,10 @@ export function ProjectLibrary({ project, demo, uploaderName }: { project: Clien
   } else if (at.folder === 'assets') {
     panelTitle = REFERENCE
     panel = <AssetsPanel project={project} demo={demo} uploaderName={uploaderName} />
-  } else if (at.folder) {
+  } else if (at.folder === 'finals' && project.status === 'delivered') {
+    panelTitle = FINALS
+    panel = <FinalFiles project={project} demo={demo} />
+  } else if (at.folder === 'videos' || at.folder === 'documents') {
     panelTitle = at.folder === 'videos' ? 'Videos' : 'Documents'
     panel = <p className="muted">Pick a {at.folder === 'videos' ? 'video' : 'document'} to see its versions.</p>
   } else {

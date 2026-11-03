@@ -122,6 +122,14 @@ export const clientProject = defineType({
       options: { list: PROJECT_STATUSES, layout: 'radio', direction: 'horizontal' },
     }),
     defineField({
+      name: 'dontEmailDelivery',
+      title: 'Don’t send the “your files are ready” email',
+      description: 'When you mark it Delivered, the client gets one email (after 10 minutes) linking to their final files. Tick this to skip it.',
+      type: 'boolean',
+      group: 'overview',
+      initialValue: false,
+    }),
+    defineField({
       name: 'stage',
       title: 'Stage (1–4)',
       description: '1 Listen · 2 Earn trust · 3 Find what matters · 4 Craft the film',

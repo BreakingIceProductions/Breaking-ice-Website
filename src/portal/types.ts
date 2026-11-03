@@ -69,6 +69,10 @@ export type ClientProject = {
   /** Invoice statuses only (no amounts), for the billing card. */
   billing?: { kind?: string; status?: string; outstanding?: number }[]
   status: 'in-production' | 'in-review' | 'delivered'
+  dontEmailDelivery?: boolean
+  /** Recorded automatically: when the scheduler first saw it delivered, and when the delivery email went. */
+  deliveredSeenAt?: string
+  deliveredNotifiedAt?: string
   stage: number
   stageDates?: string[]
   nextStep?: string
@@ -113,7 +117,7 @@ export type DriveFile = {
   size?: number
   mimeType: string
   modifiedTime: string
-  from: 'Documents' | 'Reference Assets'
+  from: 'Documents' | 'Reference Assets' | 'Final Files'
   uploadedBy?: string
 }
 

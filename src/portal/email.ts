@@ -135,6 +135,32 @@ ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}
   return { subject: m.subject, html, text }
 }
 
+/** Once, when a project is marked Delivered: the finals and every file are waiting in the portal. */
+export function deliveryEmail(m: { name: string; projectTitle: string; org: string; films: string[]; thumbUrl?: string; portalUrl: string; signOff: string; producerPhone?: string }) {
+  const headline = `Your final files for ${esc(m.projectTitle)} are ready`
+  const intro = `Hi ${m.name}, everything for ${m.projectTitle} is finished. Your final videos and every file that goes with them are waiting in your portal, ready to download.`
+  const list = m.films.length
+    ? `<tr><td style="padding:12px 32px 0"><table role="presentation" cellpadding="0" cellspacing="0">${m.films
+        .map((f) => `<tr><td style="padding:3px 10px 3px 0;color:${COPPER};font:bold 15px ${FONT}">✓</td><td style="padding:3px 0;font:15px/22px ${FONT};color:${NAVY}">${esc(f)}</td></tr>`)
+        .join('')}</table></td></tr>`
+    : ''
+  const html = layout({
+    eyebrow: 'Delivered',
+    preview: 'Your final videos and files are ready to download.',
+    body: `
+${m.thumbUrl ? `<tr><td style="padding:16px 32px 0"><img src="${m.thumbUrl}" width="536" alt="" style="display:block;width:100%;height:auto;border:0"></td></tr>` : ''}
+<tr><td style="padding:14px 32px 0;font:600 12px ${FONT};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${esc(m.projectTitle)} · ${esc(m.org)}</td></tr>
+${para(`<span style="font:bold 24px/30px ${FONT}">${headline}</span>`, 'padding-top:8px')}
+${para(esc(intro))}
+${list}
+<tr><td style="padding:22px 32px 0">${button(m.portalUrl, 'Download your files')}</td></tr>
+${para('Keep a copy somewhere safe. If a file is too big to download from the portal, ask for it there and we’ll send you a link.', `color:${MUTED};font-size:14px`)}
+${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}`, 'padding-top:20px;padding-bottom:24px')}`,
+  })
+  const text = `Your final files for ${m.projectTitle} are ready\n\n${intro}\n\n${m.films.map((f) => `✓ ${f}`).join('\n')}${m.films.length ? '\n\n' : ''}Download your files: ${m.portalUrl}\n\n${m.signOff}`
+  return { subject: `Your final files are ready: ${m.projectTitle}`, html, text }
+}
+
 export async function notifyJosh(text: string) {
   if (portalEnv.slackWebhook) {
     await fetch(portalEnv.slackWebhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) }).catch((e) =>

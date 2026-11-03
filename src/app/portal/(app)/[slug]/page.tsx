@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { requireAccess } from '@/portal/current'
 import { getPortalSettings, producerFor } from '@/portal/data'
+import { Delivery } from '@/portal/delivery'
 import { billingStatus, CLIENT_STAGES, clientStage } from '@/portal/library'
 import { ProjectLibrary } from '@/portal/portal-library'
 import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
@@ -40,6 +41,8 @@ export default async function PortalProject({ params }: Props) {
           {p.summary && <p className="body-lg muted" style={{ margin: 0, maxWidth: '62ch' }}>{p.summary}</p>}
         </div>
       </header>
+
+      {p.status === 'delivered' && <Delivery project={forBrowser} demo={Boolean(session.demo)} />}
 
       <section className="p-where" aria-labelledby="where-h">
         <h2 id="where-h" className="p-label">Where we are</h2>

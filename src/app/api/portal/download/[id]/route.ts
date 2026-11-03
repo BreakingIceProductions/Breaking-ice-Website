@@ -1,12 +1,13 @@
 import { driveReady } from '@/portal/config'
 import { downloadStream, fileInProject } from '@/portal/drive'
-import { json, projectAccess } from '@/portal/http'
+import { addActivity } from '@/portal/data'
+import { firstChunk, json, limited, projectAccess, whoIs } from '@/portal/http'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-/** Streams a project file from Drive. Checks the file really belongs to this client's project first. */
+/** Streams a project file from Drive. Checks the file really belongs to this client's project first. Final Files downloads are noted on the project. */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const a = await projectAccess(new URL(req.url).searchParams.get('project'))
@@ -16,6 +17,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const f = await fileInProject(a.project, id)
     if (!f) return json({ ok: false }, 404)
+    if (f.from === 'Final Files' && firstChunk(req) && !limited(`dl:${a.session.email}:${f.id}`, 1, 10 * 60_000)) {
+      await addActivity(a.project._id, `${whoIs(a)} downloaded ${f.name}`, 'download')
+    }
     const { res, name, type } = await downloadStream(f, req.headers.get('range'))
     const headers = new Headers({
       'Content-Type': type || 'application/octet-stream',

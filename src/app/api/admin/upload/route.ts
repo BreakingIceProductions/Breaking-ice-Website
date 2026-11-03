@@ -7,12 +7,12 @@ import type { ClientProject } from '@/portal/types'
 
 export const runtime = 'nodejs'
 
-/** Opens an upload from the back office straight into the project's Documents or Reference Assets folder. */
+/** Opens an upload from the back office straight into the project's Documents, Reference Assets or Final Files folder. */
 export async function POST(req: Request) {
   const admin = await adminFromRequest(req)
   if (!admin) return json({ ok: false, error: 'signed-out' }, 401)
   const body = await req.json().catch(() => ({}))
-  const folder = body.folder === 'Documents' ? 'Documents' : 'Reference Assets'
+  const folder = body.folder === 'Documents' || body.folder === 'Final Files' ? body.folder : 'Reference Assets'
   const name = String(body.name ?? '').slice(0, 200)
   const size = Number(body.size)
   if (!name || !Number.isFinite(size) || size <= 0) return json({ ok: false, error: 'invalid' }, 400)

@@ -10,6 +10,9 @@ import type { Deliverable } from './types'
 export type Category = 'video' | 'document'
 export const CATEGORY_LABEL: Record<Category, string> = { video: 'Videos', document: 'Documents' }
 export const REFERENCE = 'Reference Assets'
+export const FINALS = 'Final Files'
+/** Bigger files can't finish downloading within one server request, so the client asks for them instead. */
+export const LARGE_FILE = 1.5 * 1024 ** 3
 
 /** "2026-10-19 Management Plan Explainer" (just the title until a start date is set). */
 export const projectLabel = (p: { title: string; startDate?: string }) => (p.startDate ? `${p.startDate} ${p.title}` : p.title)
@@ -128,7 +131,13 @@ export function projectNode(p: ProjectLike, side: 'client' | 'studio'): FinderNo
     kicker: p.startDate,
     meta: p.status === 'delivered' ? 'Delivered' : undefined,
     childTitle: 'Folders',
-    children: [category('videos', 'video'), category('documents', 'document'), { id: 'assets', label: REFERENCE }],
+    children: [
+      category('videos', 'video'),
+      category('documents', 'document'),
+      { id: 'assets', label: REFERENCE },
+      // You stage finals any time; the client sees the folder once the project is delivered.
+      ...(side === 'studio' || p.status === 'delivered' ? [{ id: 'finals', label: FINALS, dot: p.status === 'delivered' ? ('final' as const) : undefined }] : []),
+    ],
   }
 }
 

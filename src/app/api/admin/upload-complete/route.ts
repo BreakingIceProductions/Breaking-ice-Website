@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 
 /**
  * After back-office uploads. Documents become a new version of the given title
- * (one file per version); Reference Assets are just noted on the project.
+ * (one file per version); Reference Assets and Final Files are just noted on the project.
  */
 export async function POST(req: Request) {
   const admin = await adminFromRequest(req)
@@ -37,7 +37,8 @@ export async function POST(req: Request) {
       if (entry) await addActivity(p._id, `${entry.title}: Version ${entry.version} ${send ? 'sent for review' : 'added'}`, 'version')
     }
   } else {
-    await addActivity(p._id, `Shared ${files.length === 1 ? files[0].name : `${files.length} files`} in Reference Assets`, 'upload')
+    const where = body.folder === 'Final Files' ? 'Final Files' : 'Reference Assets'
+    await addActivity(p._id, `Shared ${files.length === 1 ? files[0].name : `${files.length} files`} in ${where}`, 'upload')
   }
   return json({ ok: true })
 }

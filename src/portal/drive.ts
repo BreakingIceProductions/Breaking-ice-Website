@@ -13,10 +13,11 @@ import type { ClientProject, DriveFile } from './types'
  *
  *   BI Clients / [Client] / [YYYY-MM-DD Project] / Documents          (versions of designs, PDFs…)
  *                                                / Reference Assets   (logos, scripts, what the client sends)
- * Videos live on Vimeo, not here.
+ *                                                / Final Files        (masters, web and vertical cuts, captions, stills)
+ * Videos for review live on Vimeo; Final Files is what the client downloads once it's delivered.
  */
 
-export const SUBFOLDERS = ['Documents', 'Reference Assets'] as const
+export const SUBFOLDERS = ['Documents', 'Reference Assets', 'Final Files'] as const
 /** Folders from the first layout, renamed in place the first time a project is opened. */
 const OLD_NAMES: Record<string, string> = { Documents: 'From Breaking Ice', 'Reference Assets': 'From client' }
 type Sub = (typeof SUBFOLDERS)[number]
@@ -249,8 +250,8 @@ export async function fileInProject(p: ClientProject, fileId: string) {
   const f = await drive<{ id: string; name: string; mimeType: string; size?: string; parents?: string[]; trashed: boolean }>(
     `/files/${encodeURIComponent(fileId)}?supportsAllDrives=true&fields=id,name,mimeType,size,parents,trashed`,
   )
-  const allowed = new Set(Object.values(subs))
-  return !f.trashed && f.parents?.some((x) => allowed.has(x)) ? f : null
+  const from = SUBFOLDERS.find((name) => f.parents?.includes(subs[name]))
+  return !f.trashed && from ? { ...f, from } : null
 }
 
 const EXPORTS: Record<string, [string, string]> = {

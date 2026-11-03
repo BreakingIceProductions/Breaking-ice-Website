@@ -115,6 +115,11 @@ export const sampleFiles = (): DriveFile[] => [
   { id: 'f3', name: 'Interview questions v2.pdf', size: 184_000, mimeType: 'application/pdf', modifiedTime: iso(-12), from: 'Reference Assets' },
   { id: 'f4', name: 'Brand fonts.zip', size: 3_400_000, mimeType: 'application/zip', modifiedTime: iso(-14), from: 'Reference Assets', uploadedBy: 'Alex Sample' },
   { id: 'f5', name: 'Music options.mp3', size: 9_800_000, mimeType: 'audio/mpeg', modifiedTime: iso(-15), from: 'Reference Assets' },
+  { id: 'f6', name: 'Safety series 1–4 · Web 1080p.mp4', size: 612_000_000, mimeType: 'video/mp4', modifiedTime: iso(-150), from: 'Final Files' },
+  { id: 'f7', name: 'Safety series 1–4 · Vertical 9x16.mp4', size: 398_000_000, mimeType: 'video/mp4', modifiedTime: iso(-150), from: 'Final Files' },
+  { id: 'f8', name: 'Safety series 1–4 · ProRes master.mov', size: 18_400_000_000, mimeType: 'video/quicktime', modifiedTime: iso(-150), from: 'Final Files' },
+  { id: 'f9', name: 'Safety series 1–4 · Captions EN.srt', size: 24_000, mimeType: 'application/x-subrip', modifiedTime: iso(-150), from: 'Final Files' },
+  { id: 'f10', name: 'Safety series stills.zip', size: 86_000_000, mimeType: 'application/zip', modifiedTime: iso(-150), from: 'Final Files' },
 ]
 
 export const DEFAULT_PORTAL: Required<Omit<PortalSettings, 'signInImage' | 'feedbackVideo' | 'copyTo'>> & Pick<PortalSettings, 'signInImage' | 'feedbackVideo' | 'copyTo'> = {

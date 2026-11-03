@@ -3,11 +3,11 @@ import { SITE_URL } from '@/lib/site'
 import { syncOffice } from '@/admin/sync'
 import { signLinkToken } from './auth'
 import { driveReady, emailReady } from './config'
-import { addActivity, allProjects, claimDeliverable, cleanSignInGuards, freshState, getPortalSettings, producerFor, updateDeliverableState } from './data'
+import { addActivity, allProjects, claimDeliverable, claimProjectState, cleanSignInGuards, freshState, getPortalSettings, producerFor, setProjectState, updateDeliverableState } from './data'
 import { ensureProjectFolders } from './drive'
-import { fill, sendEmail, versionEmail } from './email'
+import { deliveryEmail, fill, sendEmail, versionEmail } from './email'
 import type { ClientProject, Deliverable } from './types'
-import { isLatest } from './library'
+import { groupDeliverables, isLatest } from './library'
 import { syncVimeo } from './vimeo'
 
 /**
@@ -20,6 +20,9 @@ import { syncVimeo } from './vimeo'
  *  Reminder      once per version that is still not approved: 2 days before Feedback due,
  *                or after N days (Portal settings, default 7) when there’s no due date.
  *                Never sooner than a day after the first email.
+ *  Delivered     10 minutes after a project is marked Delivered → one "your files are ready"
+ *                email to every contact, unless “Don’t send the delivery email” is ticked.
+ *                Un-marking it during the hold cancels it.
  *  Folders       every active project gets its Drive folders, and renames follow the Studio.
  *  Back office   calendar events, TickTick due dates and Zoho Books invoice statuses
  *                catch up with the projects (src/admin/sync.ts).
@@ -98,6 +101,15 @@ export async function runScheduler(now = Date.now()) {
     }
   }
 
+  // 1b. The delivery email, once per project.
+  for (const p of projects) {
+    try {
+      await deliveryStep(p, now, settings, log)
+    } catch (e) {
+      log.push(`delivery step failed: ${p.title}: ${String(e).slice(0, 160)}`)
+    }
+  }
+
   // 2. Drive folders, while there's time left in this run (the next run picks up the rest).
   if (driveReady()) {
     for (const p of projects) {
@@ -168,4 +180,56 @@ async function projectEmails(p: ClientProject, now: number, settings: Settings, 
     if (isNew) await addActivity(p._id, `Version ${v} of ${d.title} is ready for review`, 'version')
     log.push(`${isNew ? 'new-version' : 'reminder'} email: ${d.title} v${v} → ${r.sent}/${r.total}${r.failed?.length ? ` · failed: ${r.failed.join('; ')}` : ''}`)
   }
+}
+
+async function deliveryStep(p: ClientProject, now: number, settings: Settings, log: string[]) {
+  if (p.deliveredNotifiedAt) return
+  if (p.status !== 'delivered') {
+    // Marked Delivered and back again within the hold: start over next time.
+    if (p.deliveredSeenAt) await setProjectState(p._id, { deliveredSeenAt: null })
+    return
+  }
+  if (!p.deliveredSeenAt) {
+    await setProjectState(p._id, { deliveredSeenAt: new Date(now).toISOString() })
+    log.push(`delivery hold started: ${p.title}`)
+    return
+  }
+  if (now - Date.parse(p.deliveredSeenAt) < HOLD) return
+  if (!p.dontEmailDelivery && !emailReady()) return
+
+  const fresh = await freshState(p._id)
+  if (!fresh || fresh.deliveredNotifiedAt) return
+  const stamp = new Date(now).toISOString()
+  if (!(await claimProjectState(p._id, fresh._rev, { deliveredSeenAt: p.deliveredSeenAt, deliveredNotifiedAt: stamp }))) return
+  await addActivity(p._id, 'Delivered: final files ready to download', 'approved')
+  if (p.dontEmailDelivery) {
+    log.push(`delivery email skipped (don't send): ${p.title}`)
+    return
+  }
+
+  const finals = groupDeliverables(p.deliverables).video.map((g) => g.latest).filter((d) => d.final)
+  const producer = producerFor(p, settings)
+  const to = p.client.contacts.filter((c) => c.getsEmails !== false && c.email)
+  let sent = 0
+  for (const c of to) {
+    const token = await signLinkToken(c.email.toLowerCase(), `/portal/${p.slug}`, 7 * 24 * 60)
+    const mail = deliveryEmail({
+      name: c.name.split(' ')[0],
+      projectTitle: p.title,
+      org: p.client.organizationName,
+      films: finals.map((d) => d.title),
+      thumbUrl: finals[0]?.thumbUrl,
+      portalUrl: `${SITE_URL}/portal/auth?token=${encodeURIComponent(token)}`,
+      signOff: settings.signOff,
+      producerPhone: producer?.phone,
+    })
+    try {
+      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail })
+      if (r.ok) sent++
+    } catch (e) {
+      log.push(`delivery email failed: ${c.email}: ${String(e).slice(0, 120)}`)
+    }
+    await new Promise((r) => setTimeout(r, 600))
+  }
+  log.push(`delivery email: ${p.title} → ${sent}/${to.length}`)
 }

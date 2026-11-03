@@ -28,10 +28,10 @@ export const portalImage = (img: SanityImage, w: number, h?: number) => {
 }
 
 const CLIENT_FIELDS = `_id, organizationName, logo, contacts[]{_key, name, email, role, getsEmails}, producer, driveFolderId`
-const PROJECT_FIELDS = `_id, _updatedAt, title, "slug": slug.current, startDate, pipelineStage, status,
+const PROJECT_FIELDS = `_id, _updatedAt, title, "slug": slug.current, startDate, pipelineStage, status, dontEmailDelivery,
   "billing": *[_id == "bo-state-" + ^._id][0].invoices[]{kind, status, outstanding}, stage, stageDates, nextStep, summary, coverImage,
   keyDates, links, deliverables, driveFolderId, "client": client->{${CLIENT_FIELDS}},
-  "state": *[_id == "portal-state-" + ^._id][0]{ deliverables, "activity": activity[0...30] }`
+  "state": *[_id == "portal-state-" + ^._id][0]{ deliverables, deliveredSeenAt, deliveredNotifiedAt, "activity": activity[0...30] }`
 
 /**
  * Everything the server records automatically (email sent, viewed, activity) lives in a
@@ -43,7 +43,8 @@ export const STATE_FIELDS = [
   'vimeoThumb', 'vimeoEmbed', 'vimeoLength', 'vimeoVersions', 'vimeoReview', 'vimeoAccess',
 ] as const
 type StateFields = Pick<Deliverable, (typeof STATE_FIELDS)[number]>
-type StateDoc = { _rev: string; deliverables?: (StateFields & { _key: string })[]; activity?: ClientProject['activity'] }
+type ProjectStateFields = Pick<ClientProject, 'deliveredSeenAt' | 'deliveredNotifiedAt'>
+type StateDoc = ProjectStateFields & { _rev: string; deliverables?: (StateFields & { _key: string })[]; activity?: ClientProject['activity'] }
 const stateId = (projectId: string) => `portal-state-${projectId}`
 
 async function q<T>(query: string, params: Record<string, unknown> = {}): Promise<T | null> {
@@ -63,6 +64,8 @@ const decorate = (p: ClientProject & { state?: Partial<StateDoc> | null }): Clie
     stage: Math.min(4, Math.max(1, p.stage || 1)),
     coverUrl: portalImage(p.coverImage, 1200, 750),
     activity: state?.activity ?? p.activity ?? [],
+    deliveredSeenAt: state?.deliveredSeenAt ?? undefined,
+    deliveredNotifiedAt: state?.deliveredNotifiedAt ?? undefined,
     deliverables: (p.deliverables ?? []).map((d) => {
       const st = state?.deliverables?.find((x) => x._key === d._key)
       const auto = Object.fromEntries(STATE_FIELDS.map((f) => [f, st?.[f]]))
@@ -158,6 +161,24 @@ export async function addFeedback(projectId: string, deliverableKey: string, ite
     .setIfMissing({ [`deliverables[_key=="${deliverableKey}"].feedback`]: [] })
     .append(`deliverables[_key=="${deliverableKey}"].feedback`, [{ _key: key(), _type: 'feedbackItem', at: new Date().toISOString(), ...item }])
     .commit({ autoGenerateArrayKeys: false })
+}
+
+/** Project-wide automatic facts (delivery hold and email), kept in the state record. Null clears one. */
+export async function setProjectState(projectId: string, fields: { [K in keyof ProjectStateFields]?: string | null }) {
+  await ensureState(projectId)
+  const set = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== null))
+  const unset = Object.keys(fields).filter((k) => fields[k as keyof ProjectStateFields] === null)
+  await portalClient.patch(stateId(projectId)).set(set).unset(unset).commit()
+}
+
+/** Claims the delivery email, like claimDeliverable: only one run can win. */
+export async function claimProjectState(projectId: string, rev: string, fields: ProjectStateFields) {
+  try {
+    await portalClient.patch(stateId(projectId)).ifRevisionId(rev).set(fields).commit()
+    return true
+  } catch {
+    return false
+  }
 }
 
 export async function setDriveFolder(docId: string, folderId: string) {
