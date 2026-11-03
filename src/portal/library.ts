@@ -65,6 +65,10 @@ export function isLatest(d: Deliverable, all: Deliverable[] = []) {
 export const clientCanOpen = (d: Deliverable, all: Deliverable[] = []) => d.status !== 'in-progress' && (isLatest(d, all) || Boolean(d.clientCanView))
 
 /** Next version number for a title, and the title as already written (so "poster" joins "Poster"). */
+/** Final videos of a delivered project can be downloaded (the file comes from Vimeo). */
+export const canDownloadVideo = (p: { status?: string; deliverables?: Deliverable[] }, d: Deliverable) =>
+  p.status === 'delivered' && Boolean(d.final) && categoryOf(d) === 'video' && Boolean(d.shareUrl) && clientCanOpen(d, p.deliverables)
+
 export function nextVersion(all: Deliverable[] = [], category: Category, title: string) {
   const id = groupId(category, title)
   const same = all.filter((x) => x.title && groupId(categoryOf(x), x.title) === id)

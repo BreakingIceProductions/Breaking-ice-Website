@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from './file-icon'
 import { Finder } from './finder'
-import { categoryOf, clientCanOpen, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
+import { canDownloadVideo, categoryOf, clientCanOpen, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
 import { fmtSize } from './resumable'
 import { DocLightbox, FeedbackButtons, FeedbackList, ReviewThumb, VersionHead, WatchTile } from './review-ui'
 import type { ClientProject, Deliverable, DriveFile } from './types'
@@ -96,7 +96,12 @@ function VersionPanel({ project, d, uploaderName = '' }: { project: ClientProjec
 
       <div className="btn-row">
         {video
-          ? comments && waiting && <a className="btn btn-secondary btn-sm" href={comments} target="_blank" rel="noopener noreferrer">Leave comments on video <span aria-hidden="true">↗</span><span className="sr-only"> (opens Vimeo in a new tab)</span></a>
+          ? (
+              <>
+                {comments && waiting && <a className="btn btn-secondary btn-sm" href={comments} target="_blank" rel="noopener noreferrer">Leave comments on video <span aria-hidden="true">↗</span><span className="sr-only"> (opens Vimeo in a new tab)</span></a>}
+                {canDownloadVideo(project, d) && <a className="btn btn-secondary btn-sm" href={`/api/portal/video-download/${d._key}?project=${encodeURIComponent(project.slug)}`}>Download <span aria-hidden="true">↓</span></a>}
+              </>
+            )
           : d.fileUrl && (
               <>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewing(true)}>View</button>

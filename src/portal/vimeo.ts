@@ -75,3 +75,19 @@ export async function syncVimeo(p: ClientProject, log: string[]) {
     }
   }
 }
+
+type VimeoDownload = { quality?: string; rendition?: string; width?: number; link?: string }
+
+/**
+ * A fresh link to the best file of a video: the original upload when Vimeo keeps it,
+ * otherwise the largest rendition. Links expire, so this is asked for on each click.
+ * Needs a token with the video_files scope.
+ */
+export async function vimeoDownloadLink(url?: string) {
+  const id = vimeoId(url)
+  if (!id || !vimeoReady()) return undefined
+  const { download = [] } = await vimeo<{ download?: VimeoDownload[] }>(`/videos/${id}?fields=download`)
+  const files = download.filter((f) => f.link)
+  const best = files.find((f) => f.quality === 'source' || f.rendition === 'source') ?? files.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]
+  return best?.link
+}
