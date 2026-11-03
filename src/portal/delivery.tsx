@@ -93,13 +93,13 @@ export function FinalFiles({ project, demo, heading = false }: { project: Client
   if (failed) return <p className="err small">Couldn’t load the files. <button type="button" className="linklike" onClick={load}>Try again</button></p>
   if (!files.length) return heading ? null : <p className="muted small" style={{ margin: 0 }}>Nothing here yet.</p>
 
-  const left = [...files]
-  const groups = GROUPS.map((g) => ({ title: g.title, files: left.filter(g.test) }))
-    .map((g) => {
-      for (const f of g.files) left.splice(left.indexOf(f), 1)
-      return g
-    })
-    .filter((g) => g.files.length)
+  // Each file lands in the first group that fits it.
+  let left = files
+  const groups = GROUPS.map((g) => {
+    const mine = left.filter(g.test)
+    left = left.filter((f) => !mine.includes(f))
+    return { title: g.title, files: mine }
+  }).filter((g) => g.files.length)
 
   return (
     <div className="stack" style={{ gap: 'var(--space-6)' }}>
