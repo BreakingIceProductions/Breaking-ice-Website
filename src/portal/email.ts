@@ -173,9 +173,16 @@ ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}
 const money = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '')
 
 /** A quote shared from the back office: review it and sign in the portal. */
-export function quoteEmail(m: { name: string; projectTitle: string; org: string; total?: number; from?: boolean; validUntil?: string; again: boolean; portalUrl: string; signOff: string; producerPhone?: string }) {
+export function quoteEmail(m: { name: string; projectTitle: string; org: string; total?: number; from?: boolean; validUntil?: string; again: boolean; portalUrl: string; signOff: string; producerPhone?: string; note?: string }) {
   const headline = m.again ? `Your updated quote for ${esc(m.projectTitle)}` : `Your quote for ${esc(m.projectTitle)} is ready`
-  const intro = `Hi ${m.name}, ${m.again ? 'here’s the latest version of the quote' : 'the quote for ' + m.projectTitle + ' is ready'}. You can read it in your client portal and sign it there when you’re happy with it. Signing books your project in.`
+  // A personal note already greets them, so the standard line doesn't say hi again.
+  const lead = m.again ? 'here’s the latest version of the quote' : 'the quote for ' + m.projectTitle + ' is ready'
+  const intro = `${m.note ? lead[0].toUpperCase() + lead.slice(1) : `Hi ${m.name}, ${lead}`}. You can read it in your client portal and sign it there when you’re happy with it. Signing books your project in.`
+  const steps = [
+    'Press Review & sign below. It signs you in to your portal, no password needed.',
+    m.from ? 'Read through the quote and pick the package that suits you.' : 'Read through the quote.',
+    'Sign at the bottom of the page when you’re ready. You’ll get a signed copy by email.',
+  ]
   const meta = [m.total && `${m.from ? 'From' : 'Total'} · ${money(m.total)} + GST`, m.validUntil && `Valid until · ${esc(m.validUntil)}`].filter(Boolean).join('&nbsp;&nbsp;&nbsp;')
   const html = layout({
     eyebrow: 'Quote',
@@ -183,13 +190,16 @@ export function quoteEmail(m: { name: string; projectTitle: string; org: string;
     body: `
 <tr><td style="padding:14px 32px 0;font:600 12px ${FONT};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${esc(m.projectTitle)} · ${esc(m.org)}</td></tr>
 ${para(`<span style="font:bold 24px/30px ${FONT}">${headline}</span>`, 'padding-top:8px')}
+${m.note ? para(`<div style="border-left:3px solid ${MUTED};padding-left:14px">${esc(m.note).replace(/\n/g, '<br>')}</div>`) : ''}
 ${para(esc(intro))}
 ${meta ? para(meta, `font-size:13px;color:${MUTED}`) : ''}
+${para(steps.map((t, i) => `${i + 1}.&nbsp; ${esc(t)}`).join('<br>'), 'font-size:14px')}
 <tr><td style="padding:22px 32px 0">${button(m.portalUrl, 'Review & sign')}</td></tr>
+${para(`The button works for 7 days. After that, sign in at ${SITE_URL.replace(/^https?:\/\//, '')}/portal with this email address.`, `color:${MUTED};font-size:13px`)}
 ${para('Questions, or something to change? Just reply to this email.', `color:${MUTED};font-size:14px`)}
 ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}`, 'padding-top:20px;padding-bottom:24px')}`,
   })
-  const text = `${headline.replace(/&amp;/g, '&')}\n\n${intro}\n\nReview & sign: ${m.portalUrl}\n\n${m.signOff}`
+  const text = `${headline.replace(/&amp;/g, '&')}\n\n${m.note ? `${m.note}\n\n` : ''}${intro}\n\n${steps.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n\nReview & sign: ${m.portalUrl}\n(Works for 7 days. After that, sign in at ${SITE_URL}/portal with this email address.)\n\n${m.signOff}`
   return { subject: m.again ? `Updated quote: ${m.projectTitle}` : `Your quote: ${m.projectTitle}`, html, text }
 }
 

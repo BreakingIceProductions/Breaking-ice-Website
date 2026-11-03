@@ -127,7 +127,7 @@ export async function POST(req: Request) {
       name: c.name.split(' ')[0], projectTitle: p.title, org: client.organizationName, from: Boolean(fresh.options?.length),
       total: fresh.options?.length ? Math.min(...fresh.options.map((o) => o.total)) : amount(form.get('total')) ?? p.quoteAmount,
       validUntil: fresh.validUntil ? new Date(`${fresh.validUntil}T12:00:00Z`).toLocaleDateString('en-CA', { dateStyle: 'long', timeZone: 'UTC' }) : undefined,
-      again, portalUrl: `${SITE_URL}/portal/auth?token=${encodeURIComponent(token)}`, signOff: settings.signOff, producerPhone: producer?.phone,
+      again, portalUrl: `${SITE_URL}/portal/auth?token=${encodeURIComponent(token)}`, signOff: settings.signOff, producerPhone: producer?.phone, note: fresh.note || undefined,
     })
     try {
       const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail })
