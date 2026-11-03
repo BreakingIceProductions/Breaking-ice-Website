@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   // Files the share-image route reads at runtime.
   outputFileTracingIncludes: {
     '/og': ['./src/assets/og/**', './public/brand/bi-horizontal-dark.svg'],
+    // Fonts for the certificate page on signed quotes.
+    '/api/portal/quote/sign': ['./src/portal/fonts/**'],
   },
   images: {
     remotePatterns: [

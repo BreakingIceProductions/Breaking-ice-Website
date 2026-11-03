@@ -5,8 +5,8 @@ import { createClient } from 'next-sanity'
 import { apiVersion, projectId } from '@/sanity/env'
 import { PRE_PORTAL_STAGES } from '@/sanity/portal/office-constants'
 import { portalEnv, portalReady } from './config'
-import { DEFAULT_PORTAL, SAMPLE_CLIENT, sampleProjects } from './samples'
-import type { ClientProject, Deliverable, PortalClient, PortalSettings, SanityImage, Session } from './types'
+import { DEFAULT_PORTAL, SAMPLE_CLIENT, sampleProjects, sampleQuotes } from './samples'
+import type { ClientProject, Deliverable, PortalClient, PortalQuote, PortalSettings, SanityImage, Session } from './types'
 
 export const PORTAL_DATASET = 'portal'
 
@@ -89,17 +89,26 @@ export async function findClientsByEmail(email: string): Promise<PortalClient[]>
 
 /** Everything a signed-in person can see. Access is re-checked on every request, so removing a contact removes access. */
 export async function getAccess(session: Session) {
-  if (session.demo) return { clients: [SAMPLE_CLIENT], projects: sampleProjects().map(decorate), name: 'Alex' }
-  const clients = await findClientsByEmail(session.email)
-  if (!clients.length) return { clients, projects: [] as ClientProject[], name: undefined }
+  if (session.demo) return { clients: [SAMPLE_CLIENT], projects: sampleProjects().map(decorate), quotes: sampleQuotes(), name: 'Alex' }
+  const clients = session.preview
+    ? ((await q<PortalClient[]>(`*[_type == "client" && _id == $id]{${CLIENT_FIELDS}}`, { id: session.preview })) ?? [])
+    : await findClientsByEmail(session.email)
+  if (!clients.length) return { clients, projects: [] as ClientProject[], quotes: [] as PortalQuote[], name: undefined }
+  // Quotes are shown from the moment they're shared, before the project is booked, and stay afterwards.
+  const quotes = import('./quotes').then((m) => m.quotesForClients(clients.map((c) => c._id))).catch((e) => {
+    console.error('[portal] quotes query failed', e)
+    return [] as PortalQuote[]
+  })
   const projects =
     (await q<ClientProject[]>(`*[_type == "clientProject" && client._ref in $ids && defined(slug.current) && !(pipelineStage in $hidden)] | order(_updatedAt desc){${PROJECT_FIELDS}}`, {
       ids: clients.map((c) => c._id),
-      // Leads and quotes live in the back office only; clients see a project once it's booked.
+      // A project opens in the portal once it's booked; before that, a shared quote has its own page.
       hidden: PRE_PORTAL_STAGES,
     })) ?? []
   const contact = clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === session.email)
-  return { clients, projects: projects.map(decorate), name: contact?.name?.split(' ')[0] }
+  // In a preview, the greeting uses the client's first contact, as they'd see it.
+  const shown = session.preview ? clients[0].contacts?.[0] : contact
+  return { clients, projects: projects.map(decorate), quotes: await quotes, name: shown?.name?.split(' ')[0] }
 }
 
 export async function getProjectForSession(session: Session, slug: string) {

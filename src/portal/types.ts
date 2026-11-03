@@ -121,4 +121,33 @@ export type DriveFile = {
   uploadedBy?: string
 }
 
-export type Session = { email: string; name?: string; demo?: boolean }
+/** preview: the back office viewing a client's portal (the client's id). Read-only. */
+export type Session = { email: string; name?: string; demo?: boolean; preview?: string }
+
+/** A quote as the client sees it. Amounts come from the project; everything else from the quote record. */
+export type PortalQuote = {
+  projectId: string
+  slug: string
+  title: string
+  org: string
+  /** The project's back-office stage: once it's booked, the project itself opens in the portal. */
+  pipelineStage?: string
+  version: number
+  fileName?: string
+  summary?: string
+  includes?: string[]
+  /** Packages to choose from (Base, Expanded…). The client picks one when signing. */
+  options?: QuoteOption[]
+  /** Deposit as a share of the chosen total, when it isn't a fixed amount. */
+  depositPercent?: number
+  validUntil?: string
+  sharedAt: string
+  total?: number
+  deposit?: number
+  signature?: QuoteSignature
+}
+
+/** What the client can see of a signature. The full record (IP, device, fingerprints) stays on the server. */
+export type QuoteSignature = { name: string; title?: string; org?: string; at: string; method: 'typed' | 'drawn'; option?: string; total?: number; deposit?: number; certificateId: string }
+
+export type QuoteOption = { _key: string; name: string; total: number }

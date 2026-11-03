@@ -20,6 +20,8 @@ import type { Session } from './types'
 
 const SESSION = 'bi_portal'
 const PENDING = 'bi_portal_pending'
+const PREVIEW = 'bi_portal_preview'
+const PREVIEW_HOURS = 4
 const key = () => new TextEncoder().encode(sessionSecret())
 const secure = process.env.NODE_ENV === 'production'
 
@@ -111,6 +113,8 @@ export async function startSession(email: string, demo = false) {
 
 export async function getSession(): Promise<Session | null> {
   if (!sessionSecret()) return null
+  const preview = await previewSession()
+  if (preview) return preview
   const raw = (await cookies()).get(SESSION)?.value
   if (!raw) return null
   try {
@@ -122,8 +126,38 @@ export async function getSession(): Promise<Session | null> {
   }
 }
 
+/**
+ * "View as client" from the back office: a short cookie naming the client, honoured only
+ * while the back-office session is valid too. Pages show exactly what the client sees;
+ * anything that would write or send is refused.
+ */
+export async function startPreview(clientId: string) {
+  const jwt = await new SignJWT({ c: clientId, p: 'preview' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime(`${PREVIEW_HOURS}h`).sign(key())
+  ;(await cookies()).set(PREVIEW, jwt, { httpOnly: true, secure, sameSite: 'lax', path: '/', maxAge: PREVIEW_HOURS * 3600 })
+}
+
+export async function endPreview() {
+  ;(await cookies()).delete(PREVIEW)
+}
+
+async function previewSession(): Promise<Session | null> {
+  const raw = (await cookies()).get(PREVIEW)?.value
+  if (!raw) return null
+  try {
+    const { payload } = await jwtVerify(raw, key())
+    if (payload.p !== 'preview' || typeof payload.c !== 'string') return null
+    // Loaded lazily: the back office's auth imports portal helpers.
+    const { getAdminSession } = await import('@/admin/auth')
+    const admin = await getAdminSession()
+    return admin ? { email: admin.email.toLowerCase(), preview: payload.c } : null
+  } catch {
+    return null
+  }
+}
+
 export async function endSession() {
   const jar = await cookies()
   jar.delete(SESSION)
   jar.delete(PENDING)
+  jar.delete(PREVIEW)
 }

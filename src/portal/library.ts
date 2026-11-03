@@ -90,6 +90,10 @@ export function nextVersion(all: Deliverable[] = [], category: Category, title: 
   return { version: same.reduce((n, x) => Math.max(n, x.version || 1), 0) + 1, title: same[0]?.title ?? title.trim() }
 }
 
+/** A quote's deposit for a total: a share of it, or the fixed amount. */
+export const quoteDeposit = (total: number | undefined, q: { depositPercent?: number; deposit?: number }) =>
+  q.depositPercent && total ? Math.round(total * q.depositPercent) / 100 : q.deposit
+
 export const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Edmonton' })
 
 /* ── Columns ───────────────────────────────────────────────────────────── */

@@ -92,6 +92,24 @@ export type OfficeProject = {
   client: OfficeClient
   activity: ActivityItem[]
   office: OfficeState
+  /** The quote shared through the portal, and its signature once signed. */
+  quote?: OfficeQuote
+}
+
+export type OfficeQuote = {
+  version: number
+  fileName?: string
+  summary?: string
+  includes?: string[]
+  options?: import('@/portal/types').QuoteOption[]
+  depositPercent?: number
+  validUntil?: string
+  updatedAt?: string
+  sharedAt?: string
+  lastSentAt?: string
+  viewedAt?: string
+  viewedBy?: string
+  signature?: import('@/portal/types').QuoteSignature & { email: string }
 }
 
 /** One thing a stage change will do. Shown in the preview, then run. */

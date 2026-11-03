@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { requireAccess } from '@/portal/current'
-import { byStart, CLIENT_STAGES, clientCanOpen, clientStage, projectThumb, versionLabel, versionPath } from '@/portal/library'
+import { byStart, CLIENT_STAGES, clientCanOpen, clientStage, projectThumb, today, versionLabel, versionPath } from '@/portal/library'
+import { QuoteList } from '@/portal/quote-list'
+import { quoteExpired } from '@/portal/quotes'
 import type { ClientProject } from '@/portal/types'
 import { EmptyMark } from '@/portal/ui'
 
@@ -13,7 +15,7 @@ const isDone = (p: ClientProject) => p.status === 'delivered' || p.pipelineStage
 const atPath = (parts: string[]) => parts.map(encodeURIComponent).join('/')
 
 export default async function Home({ searchParams }: Props) {
-  const { session, clients, projects, name } = await requireAccess()
+  const { session, clients, projects, quotes, name } = await requireAccess()
 
   // Email links (?open=<version>) go straight to that version on its project page.
   const { open } = await searchParams
@@ -39,6 +41,8 @@ export default async function Home({ searchParams }: Props) {
   const active = sorted.filter((p) => !isDone(p))
   const archive = sorted.filter(isDone)
   const multi = clients.length > 1
+  // Quotes come first: before we book, they're the whole relationship.
+  const toSign = quotes.filter((q) => !q.signature && !quoteExpired(q, today()))
   const waiting = projects.flatMap((p) =>
     (p.deliverables ?? []).filter((d) => d.status === 'awaiting-feedback' && clientCanOpen(d, p.deliverables)).map((d) => ({ p, d })),
   )
@@ -49,9 +53,13 @@ export default async function Home({ searchParams }: Props) {
         <span className="eyebrow">{clients.map((c) => c.organizationName).join(' · ')}</span>
         <h1 className="h1">Hi {name ?? 'there'}, welcome to your client portal.</h1>
         <p className="body-lg muted" style={{ margin: 0 }}>
-          {waiting.length ? `${waiting.length === 1 ? 'One thing is' : `${waiting.length} things are`} waiting for your feedback.` : 'You’re all caught up.'}
+          {toSign.length
+            ? `${toSign.length === 1 ? `Your quote for ${toSign[0].title} is` : `${toSign.length} quotes are`} ready to review and sign.`
+            : waiting.length ? `${waiting.length === 1 ? 'One thing is' : `${waiting.length} things are`} waiting for your feedback.` : 'You’re all caught up.'}
         </p>
       </section>
+
+      {toSign.length > 0 && <QuoteList id="quotes-h" label="Ready for your signature" quotes={toSign} t={today()} />}
 
       {waiting.length > 0 && (
         <section aria-labelledby="waiting-h" className="p-home-sec">
@@ -73,6 +81,7 @@ export default async function Home({ searchParams }: Props) {
         </section>
       )}
 
+      {(active.length > 0 || !toSign.length) && (
       <section aria-labelledby="projects-h" className="p-home-sec">
         <h2 id="projects-h" className="p-label">{active.length ? 'Your projects' : 'No projects on the go right now'}</h2>
         {active.length > 0 && (
@@ -81,6 +90,7 @@ export default async function Home({ searchParams }: Props) {
           </ul>
         )}
       </section>
+      )}
 
       {archive.length > 0 && (
         <details className="p-archive">

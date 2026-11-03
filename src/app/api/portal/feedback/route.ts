@@ -2,7 +2,7 @@ import { SITE_URL } from '@/lib/site'
 import { portalEnv } from '@/portal/config'
 import { addActivity, addFeedback, updateDeliverable } from '@/portal/data'
 import { notifyJosh, sendEmail } from '@/portal/email'
-import { json, limited, projectAccess, sameOrigin } from '@/portal/http'
+import { json, limited, projectAccess, sameOrigin, whoIs } from '@/portal/http'
 import { clientCanOpen, versionLabel } from '@/portal/library'
 
 export const runtime = 'nodejs'
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   if (a.session.demo) return json({ ok: true })
   if (limited(`fb:${a.session.email}`, 30, 60 * 60_000)) return json({ ok: false, error: 'too-many' }, 429)
 
-  const who = a.clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === a.session.email)?.name || a.session.email
+  const who = whoIs(a)
   await updateDeliverable(a.project._id, d._key, { status: approve ? 'approved' : 'changes-requested' })
   await addFeedback(a.project._id, d._key, { who, action: approve ? 'approve' : 'changes', ...(note ? { note } : {}) })
   await addActivity(a.project._id, approve ? `${who} approved ${d.title} (${versionLabel(d)})` : `${who} asked for changes to ${d.title} (${versionLabel(d)})`, approve ? 'approved' : 'comment')

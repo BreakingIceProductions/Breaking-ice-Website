@@ -7,6 +7,7 @@ import { ago, cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
 import { NoteForm } from '@/admin/ui/note-form'
+import { QuoteCard } from '@/admin/ui/quote-card'
 import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
 import { invoiceUrl, zohoConnection } from '@/admin/zoho'
@@ -84,6 +85,22 @@ export default async function ProjectPage({ params }: Props) {
     ...(p.office.notes ?? []).map((n) => ({ at: n.at, text: n.text, source: 'Your note' })),
   ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 12)
 
+  // Before booking the quote leads the page; after, it's the signed record further down.
+  const quoteCard = (
+    <QuoteCard
+      projectId={p._id}
+      quote={p.quote}
+      total={p.quoteAmount}
+      deposit={p.depositAmount}
+      recipients={(p.client.contacts ?? []).filter((c) => c.email && c.getsEmails !== false).map((c) => c.name)}
+      previewHref={p.slug && p.client._id ? `/api/admin/view-as?client=${encodeURIComponent(p.client._id)}&next=${encodeURIComponent(`/portal/quotes/${p.slug}`)}` : undefined}
+    />
+  )
+  const preBooking = si < stageIndex('booked')
+  // Before booking the client only has the quote page (once it's sent); after, the project page.
+  const clientPath = !p.slug ? '/portal' : preBooking ? (p.quote?.sharedAt ? `/portal/quotes/${p.slug}` : '/portal') : `/portal/${p.slug}`
+  const viewAs = `/api/admin/view-as?client=${encodeURIComponent(p.client._id)}&next=${encodeURIComponent(clientPath)}`
+
   return (
     <div className="a-page">
       <nav className="small" aria-label="Breadcrumb">
@@ -101,6 +118,9 @@ export default async function ProjectPage({ params }: Props) {
             {p.projectType && <span className="a-chip">{PROJECT_TYPES.find((x) => x.value === p.projectType)?.title}</span>}
             {p.deliverables.length > 0 && <span className="a-chip">{p.deliverables.length} deliverable{p.deliverables.length === 1 ? '' : 's'}</span>}
             <a className="a-chip a-chip-link" href={studioHref(p._id)} target="_blank" rel="noopener noreferrer">Edit in Studio<span className="sr-only"> (opens in a new tab)</span> ↗</a>
+            {p.client._id && (
+              <a className="a-chip a-chip-link" href={viewAs} target="_blank" rel="noopener noreferrer">View as client<span className="sr-only"> (opens their portal in a new tab)</span> ↗</a>
+            )}
           </div>
         </div>
         <StageControl
@@ -130,6 +150,8 @@ export default async function ProjectPage({ params }: Props) {
 
       <div className="a-split">
         <div className="stack a-col">
+          {preBooking && quoteCard}
+
           <section className="p-card" aria-labelledby="h-deliv">
             <div className="a-card-head">
               <h2 id="h-deliv" className="a-h2">Deliverables</h2>
@@ -211,6 +233,7 @@ export default async function ProjectPage({ params }: Props) {
             <div><Link className="btn btn-primary btn-sm" href={`/admin/clients?at=${encodeURIComponent(p.client._id)}/${encodeURIComponent(p.slug ?? p._id)}`}>Open in the library</Link></div>
           </section>
 
+          {!preBooking && p.quote && quoteCard}
 
           <section className="p-card" aria-labelledby="h-notes">
             <h2 id="h-notes" className="a-h2">Notes and activity</h2>

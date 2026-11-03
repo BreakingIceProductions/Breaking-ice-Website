@@ -11,7 +11,15 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 export const fill = (t: string, vars: Record<string, string | number | undefined>) =>
   t.replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined ? String(vars[k]) : ''))
 
-export async function sendEmail(msg: { to: string[]; subject: string; html: string; text: string; bcc?: string[]; preview?: string }) {
+export async function sendEmail(msg: {
+  to: string[]
+  subject: string
+  html: string
+  text: string
+  bcc?: string[]
+  preview?: string
+  attachments?: { filename: string; content: Uint8Array }[]
+}) {
   if (!portalEnv.resendKey) {
     console.info('[portal] email not configured; would send:', msg.subject, '→', msg.to.join(', '))
     return { ok: false as const, reason: 'not-configured' }
@@ -27,6 +35,7 @@ export async function sendEmail(msg: { to: string[]; subject: string; html: stri
       subject: msg.subject,
       html: msg.html,
       text: msg.text,
+      attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })),
     }),
   })
   if (!res.ok) throw new Error(`email ${res.status}: ${(await res.text()).slice(0, 300)}`)
@@ -159,6 +168,52 @@ ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}
   })
   const text = `Your final files for ${m.projectTitle} are ready\n\n${intro}\n\n${m.films.map((f) => `✓ ${f}`).join('\n')}${m.films.length ? '\n\n' : ''}Download your files: ${m.portalUrl}\n\n${m.signOff}`
   return { subject: `Your final files are ready: ${m.projectTitle}`, html, text }
+}
+
+const money = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '')
+
+/** A quote shared from the back office: review it and sign in the portal. */
+export function quoteEmail(m: { name: string; projectTitle: string; org: string; total?: number; from?: boolean; validUntil?: string; again: boolean; portalUrl: string; signOff: string; producerPhone?: string }) {
+  const headline = m.again ? `Your updated quote for ${esc(m.projectTitle)}` : `Your quote for ${esc(m.projectTitle)} is ready`
+  const intro = `Hi ${m.name}, ${m.again ? 'here’s the latest version of the quote' : 'the quote for ' + m.projectTitle + ' is ready'}. You can read it in your client portal and sign it there when you’re happy with it. Signing books your project in.`
+  const meta = [m.total && `${m.from ? 'From' : 'Total'} · ${money(m.total)} + GST`, m.validUntil && `Valid until · ${esc(m.validUntil)}`].filter(Boolean).join('&nbsp;&nbsp;&nbsp;')
+  const html = layout({
+    eyebrow: 'Quote',
+    preview: 'Review your quote and sign it in your client portal.',
+    body: `
+<tr><td style="padding:14px 32px 0;font:600 12px ${FONT};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${esc(m.projectTitle)} · ${esc(m.org)}</td></tr>
+${para(`<span style="font:bold 24px/30px ${FONT}">${headline}</span>`, 'padding-top:8px')}
+${para(esc(intro))}
+${meta ? para(meta, `font-size:13px;color:${MUTED}`) : ''}
+<tr><td style="padding:22px 32px 0">${button(m.portalUrl, 'Review & sign')}</td></tr>
+${para('Questions, or something to change? Just reply to this email.', `color:${MUTED};font-size:14px`)}
+${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}`, 'padding-top:20px;padding-bottom:24px')}`,
+  })
+  const text = `${headline.replace(/&amp;/g, '&')}\n\n${intro}\n\nReview & sign: ${m.portalUrl}\n\n${m.signOff}`
+  return { subject: m.again ? `Updated quote: ${m.projectTitle}` : `Your quote: ${m.projectTitle}`, html, text }
+}
+
+/** To the signer, with the signed PDF attached. */
+export function signedEmail(m: { name: string; projectTitle: string; org: string; at: string; deposit?: number; booked: boolean; portalUrl: string; signOff: string; producerPhone?: string }) {
+  const headline = `Signed: ${esc(m.projectTitle)}`
+  const intro = `Thanks ${m.name}. Your signed quote is attached, with a certificate page that records when and how it was signed. You’ll also find it in your client portal any time.`
+  const next = m.booked
+    ? `Your project is booked.${m.deposit ? ` The deposit invoice (${money(m.deposit)} + GST) follows separately.` : ''} We’ll be in touch shortly to lock in dates.`
+    : 'We’ll be in touch shortly about next steps.'
+  const html = layout({
+    eyebrow: 'Quote signed',
+    preview: 'Your signed quote is attached.',
+    body: `
+<tr><td style="padding:14px 32px 0;font:600 12px ${FONT};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${esc(m.projectTitle)} · ${esc(m.org)}</td></tr>
+${para(`<span style="font:bold 24px/30px ${FONT}">${headline}</span>`, 'padding-top:8px')}
+${para(esc(intro))}
+${para(esc(next))}
+${para(`Signed ${esc(m.at)}`, `font-size:13px;color:${MUTED}`)}
+<tr><td style="padding:22px 32px 0">${button(m.portalUrl, 'Open your portal')}</td></tr>
+${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}`, 'padding-top:20px;padding-bottom:24px')}`,
+  })
+  const text = `Signed: ${m.projectTitle}\n\n${intro}\n\n${next}\n\nSigned ${m.at}\n\n${m.portalUrl}\n\n${m.signOff}`
+  return { subject: `Signed quote: ${m.projectTitle}`, html, text }
 }
 
 export async function notifyJosh(text: string) {

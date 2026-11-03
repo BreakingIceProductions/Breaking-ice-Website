@@ -1037,3 +1037,55 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .p-delivery-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--space-6); }
 .p-download-all { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); text-align: right; max-width: 28ch; }
 @media (max-width: 560px) { .p-download-all { align-items: flex-start; text-align: left; } }
+
+/* ── Quotes ─────────────────────────────────────────────────────────── */
+.q-page { padding-block: var(--space-8) var(--space-16); }
+.q-head { display: flex; flex-direction: column; gap: var(--space-2); padding-bottom: var(--space-8); }
+.q-head .h1 { margin: 0; overflow-wrap: anywhere; }
+.q-status { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; font-weight: 600; }
+.q-status .billing-dot { background: var(--accent-fill); }
+.q-status-signed .billing-dot { background: var(--ok, #2e9e6a); }
+.q-status-expired { color: var(--ink-muted); }
+.q-status-expired .billing-dot { background: var(--ink-muted); }
+.q-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-8); align-items: start; }
+@media (min-width: 1000px) { .q-grid { grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); } .q-side { position: sticky; top: var(--space-6); } }
+.q-doc { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.q-pdf { width: 100%; height: min(80vh, 1000px); border: 1px solid var(--line); border-radius: var(--radius-lg); background: #fff; }
+.q-pdf-sample { display: grid; place-items: center; background: var(--surface-raised); }
+/* Phones show one page of an embedded PDF at best: the button opens the whole thing. */
+@media (max-width: 720px) { .q-pdf { display: none; } }
+.q-side { gap: var(--space-4); }
+.q-total { display: flex; align-items: baseline; gap: var(--space-2); margin: 0; }
+.q-total span:first-child { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.q-includes { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--space-1); }
+.q-sign { gap: var(--space-4); }
+.q-sign-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--space-3); }
+.q-sig { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.q-sig legend { font-weight: 600; font-size: 15px; padding: 0; margin-bottom: var(--space-2); }
+.q-sig-tabs { display: inline-flex; border: 1.5px solid var(--input-line); border-radius: 999px; padding: 3px; align-self: flex-start; }
+.q-sig-tabs label { position: relative; padding: 6px 16px; border-radius: 999px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.q-sig-tabs label.on { background: var(--ink); color: var(--surface-raised); }
+.q-sig-tabs input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.q-sig-tabs label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* The pad stays paper-white in dark mode, so the ink matches the signed PDF. */
+.q-sig-box { width: 100%; height: 130px; border: 1.5px dashed var(--input-line); border-radius: var(--radius-sm); background: #fff; color: #18202f; }
+.q-sig-typed { display: flex; align-items: center; padding: 0 var(--space-4); font-size: 40px; line-height: 1; overflow: hidden; white-space: nowrap; }
+.q-sig-pad { touch-action: none; cursor: crosshair; display: block; }
+.q-agree { display: grid; grid-template-columns: auto 1fr; gap: var(--space-3); align-items: start; font-size: 14px; line-height: 1.5; }
+.q-agree input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent-fill); }
+.q-signed-note { margin: 0; font-weight: 600; }
+.a-quote-form { gap: var(--space-4); }
+.a-quote-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: var(--space-3); }
+textarea.input.a-quote-text { min-height: 90px; }
+.q-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: var(--space-2); }
+.q-option { position: relative; display: flex; padding: var(--space-3) var(--space-4); border: 1.5px solid var(--input-line); border-radius: var(--radius-sm); cursor: pointer; background: var(--surface); }
+.q-option.on { border-color: var(--accent-fill); box-shadow: inset 0 0 0 1px var(--accent-fill); }
+.q-option input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.q-option:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.q-packages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.q-packages li { display: flex; justify-content: space-between; gap: var(--space-3); }
+.q-packages strong { font-size: 18px; }
+.p-preview-ribbon { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-1) var(--space-4); background: var(--accent-fill); color: #18202f; font-weight: 600; }
+.p-preview-ribbon form { margin: 0; }
+.p-preview-ribbon .linklike { color: inherit; text-decoration: underline; font-weight: 700; }
+.q-sign .btn:disabled, .p-card .btn:disabled { opacity: 0.45; cursor: not-allowed; }

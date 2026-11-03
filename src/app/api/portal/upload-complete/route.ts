@@ -2,7 +2,7 @@ import { SITE_URL } from '@/lib/site'
 import { portalEnv } from '@/portal/config'
 import { addActivity } from '@/portal/data'
 import { notifyJosh, sendEmail } from '@/portal/email'
-import { json, limited, projectAccess, sameOrigin } from '@/portal/http'
+import { json, limited, projectAccess, sameOrigin, whoIs } from '@/portal/http'
 
 export const runtime = 'nodejs'
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const names: string[] = (Array.isArray(body.files) ? body.files : []).slice(0, 50).map((f: { name?: string }) => String(f?.name ?? '').slice(0, 200))
   const total = (Array.isArray(body.files) ? body.files : []).reduce((s: number, f: { size?: number }) => s + (Number(f?.size) || 0), 0)
   if (!names.length) return json({ ok: false }, 400)
-  const who = a.clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === a.session.email)?.name || a.session.email
+  const who = whoIs(a)
   const what = names.length === 1 ? names[0] : `${names.length} files`
   await addActivity(a.project._id, `${who} uploaded ${what}`, 'upload')
   const line = `${who} (${a.project.client.organizationName}) uploaded ${what} (${size(total)}) to ${a.project.title}.`

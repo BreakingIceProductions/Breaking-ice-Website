@@ -90,7 +90,7 @@ export function ProducerCard({ producer, title = 'Your producer' }: { producer?:
   )
 }
 
-export function PortalHeader({ name, demo }: { name?: string; demo?: boolean }) {
+export function PortalHeader({ name, demo, quotes, previewOf }: { name?: string; demo?: boolean; quotes?: number; previewOf?: string }) {
   return (
     <header className="p-header">
       <div className="wrap">
@@ -101,6 +101,7 @@ export function PortalHeader({ name, demo }: { name?: string; demo?: boolean }) 
         <span className="p-header-label">Client portal</span>
         <nav className="p-nav" aria-label="Portal">
           <Link href="/portal">Projects</Link>
+          {quotes ? <Link href="/portal/quotes">Quotes</Link> : null}
           <a href="/" target="_blank" rel="noopener">Website ↗</a>
         </nav>
         <div className="header-tools">
@@ -111,6 +112,12 @@ export function PortalHeader({ name, demo }: { name?: string; demo?: boolean }) 
           </form>
         </div>
       </div>
+      {previewOf && (
+        <div className="p-demo-ribbon p-preview-ribbon">
+          <span>Viewing as {previewOf}. Everything works: your actions show as yours, and signing is off.</span>
+          <form action="/api/portal/preview-exit" method="post"><button type="submit" className="linklike">Back to the back office</button></form>
+        </div>
+      )}
       {demo && (
         <div className="p-demo-ribbon">
           Sample project · this is what clients see. Nothing here is real, and nothing you do is sent.

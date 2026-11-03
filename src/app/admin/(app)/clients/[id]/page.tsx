@@ -55,6 +55,7 @@ export default async function ClientPage({ params }: Props) {
             {c.driveFolderId && (
               <a className="a-chip a-chip-link" href={`https://drive.google.com/drive/folders/${c.driveFolderId}`} target="_blank" rel="noopener noreferrer">Drive folder<span className="sr-only"> (opens in a new tab)</span> ↗</a>
             )}
+            <a className="a-chip a-chip-link" href={`/api/admin/view-as?client=${encodeURIComponent(c._id)}`} target="_blank" rel="noopener noreferrer">View their portal<span className="sr-only"> (opens in a new tab)</span> ↗</a>
           </div>
         </div>
         <a className="btn btn-primary" href={`/studio/portal/intent/create/template=clientProject;type=clientProject`} target="_blank" rel="noopener noreferrer">

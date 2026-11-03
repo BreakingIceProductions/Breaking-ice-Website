@@ -24,11 +24,14 @@ const key = () => randomBytes(6).toString('hex')
 
 const FIELDS = `_id, _updatedAt, title, "slug": slug.current, startDate, status, stage, nextStep, deliverables, links, driveFolderId,
   pipelineStage, projectType, region, quoteAmount, depositAmount, quoteUrl, milestones, schedule, crew, retainer,
-  "client": client->{_id, organizationName, contacts[]{_key, name, email, role}, billingEmail, driveFolderId},
+  "client": client->{_id, organizationName, contacts[]{_key, name, email, role, getsEmails}, billingEmail, driveFolderId},
   "portalState": *[_id == "portal-state-" + ^._id][0]{ deliverables, "activity": activity[0...20] },
-  "office": *[_id == "bo-state-" + ^._id][0]`
+  "office": *[_id == "bo-state-" + ^._id][0],
+  "quote": *[_id == "quote-" + ^._id][0]{version, fileName, summary, includes, options, depositPercent, validUntil, updatedAt, sharedAt, lastSentAt, viewedAt, viewedBy,
+    "signature": signature{name, title, email, at, method, option, total, deposit, certificateId}}`
 
-type Raw = Omit<OfficeProject, 'office' | 'activity' | 'milestones' | 'schedule' | 'deliverables' | 'pipelineStage'> & {
+type Raw = Omit<OfficeProject, 'office' | 'activity' | 'milestones' | 'schedule' | 'deliverables' | 'pipelineStage' | 'quote'> & {
+  quote?: OfficeProject['quote'] | null
   pipelineStage?: PipelineStage
   milestones?: OfficeProject['milestones']
   schedule?: OfficeProject['schedule']
@@ -51,6 +54,7 @@ function normalize(p: Raw): OfficeProject {
     }),
     activity: portalState?.activity ?? [],
     office: office ?? { _id: officeId(p._id) },
+    quote: p.quote ?? undefined,
     client: p.client ?? { _id: '', organizationName: 'No client' },
   }
 }

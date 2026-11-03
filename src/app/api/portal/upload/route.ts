@@ -1,6 +1,6 @@
 import { driveReady, MAX_UPLOAD_BYTES } from '@/portal/config'
 import { startUpload } from '@/portal/drive'
-import { ipOf, json, limited, projectAccess, sameOrigin } from '@/portal/http'
+import { ipOf, json, limited, projectAccess, sameOrigin, whoIs } from '@/portal/http'
 
 export const runtime = 'nodejs'
 
@@ -23,9 +23,8 @@ export async function POST(req: Request) {
   if (limited(`up:${a.session.email}:${ipOf(req)}`, 60, 60 * 60_000)) return json({ ok: false, error: 'too-many' }, 429)
 
   const origin = req.headers.get('origin') || new URL(req.url).origin
-  const contact = a.clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === a.session.email)
   try {
-    const sessionUrl = await startUpload(a.project, { name, size, type: String(body.type || '') }, origin, contact?.name || a.session.email)
+    const sessionUrl = await startUpload(a.project, { name, size, type: String(body.type || '') }, origin, whoIs(a))
     return json({ ok: true, sessionUrl })
   } catch (e) {
     console.error('[portal] upload start failed', e)

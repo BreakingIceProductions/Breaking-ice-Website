@@ -36,9 +36,11 @@ export function sameOrigin(req: Request) {
   }
 }
 
-/** The signed-in person's name as their client has it, for activity lines. */
+/** The signed-in person's name as their client has it, for activity lines. The back office viewing as the client says so. */
 export const whoIs = (a: NonNullable<Awaited<ReturnType<typeof projectAccess>>>) =>
-  a.clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === a.session.email)?.name || a.session.email
+  a.session.preview
+    ? `${a.session.email.split('@')[0].replace(/^./, (c) => c.toUpperCase())} (viewing as client)`
+    : a.clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === a.session.email)?.name || a.session.email
 
 /** A download counts once: not again for each resumed chunk the browser asks for. */
 export const firstChunk = (req: Request) => {
