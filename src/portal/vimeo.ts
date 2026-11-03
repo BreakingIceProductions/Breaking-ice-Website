@@ -81,13 +81,17 @@ type VimeoDownload = { quality?: string; rendition?: string; width?: number; lin
 /**
  * A fresh link to the best file of a video: the original upload when Vimeo keeps it,
  * otherwise the largest rendition. Links expire, so this is asked for on each click.
- * Needs a token with the video_files scope.
+ * Needs a token with the video_files scope; `files` is the fallback when `download` is empty.
  */
 export async function vimeoDownloadLink(url?: string) {
   const id = vimeoId(url)
   if (!id || !vimeoReady()) return undefined
-  const { download = [] } = await vimeo<{ download?: VimeoDownload[] }>(`/videos/${id}?fields=download`)
-  const files = download.filter((f) => f.link)
-  const best = files.find((f) => f.quality === 'source' || f.rendition === 'source') ?? files.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]
-  return best?.link
+  const v = await vimeo<{ download?: VimeoDownload[]; files?: VimeoDownload[] }>(`/videos/${id}?fields=download,files`)
+  const pick = (list: VimeoDownload[] = []) => {
+    const files = list.filter((f) => f.link && !/\.m3u8|\.mpd/.test(f.link) && f.quality !== 'hls' && f.quality !== 'dash')
+    return (files.find((f) => f.quality === 'source' || f.rendition === 'source') ?? files.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0])?.link
+  }
+  const link = pick(v.download) ?? pick(v.files)
+  if (!link) console.warn('[portal] vimeo download reply', JSON.stringify({ keys: Object.keys(v), download: v.download?.length, files: v.files?.length, raw: JSON.stringify(v).slice(0, 300) }))
+  return link
 }
