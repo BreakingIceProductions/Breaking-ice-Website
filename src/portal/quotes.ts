@@ -84,17 +84,18 @@ type RawClientQuote = Omit<PortalQuote, 'slug' | 'title' | 'org' | 'pipelineStag
   p?: { title: string; slug?: string; pipelineStage?: string; quoteAmount?: number; depositAmount?: number; org?: string } | null
 }
 
-/** Shared quotes for these clients, newest first. */
-export async function quotesForClients(clientIds: string[]): Promise<PortalQuote[]> {
+/** Shared quotes for these clients, newest first. The back office's preview also sees ones not sent yet. */
+export async function quotesForClients(clientIds: string[], unsent = false): Promise<PortalQuote[]> {
   const rows = await portalClient.fetch<RawClientQuote[]>(
-    `*[_type == "projectQuote" && clientId in $ids && defined(sharedAt) && defined(file)] | order(sharedAt desc){${CLIENT_QUOTE_FIELDS}}`,
-    { ids: clientIds },
+    `*[_type == "projectQuote" && clientId in $ids && (defined(sharedAt) || $unsent) && defined(file)] | order(coalesce(sharedAt, updatedAt) desc){${CLIENT_QUOTE_FIELDS}}`,
+    { ids: clientIds, unsent },
     { cache: 'no-store' },
   )
   return rows
     .filter((r) => r.p?.slug)
     .map(({ p, ...r }) => ({
       ...r,
+      sharedAt: r.sharedAt ?? '',
       slug: p!.slug!,
       title: p!.title,
       org: p!.org ?? '',

@@ -97,7 +97,7 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
             {busy === 'Sending…' ? busy : q.sharedAt ? 'Send again' : 'Send to client'}
           </button>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditing(true)} disabled={Boolean(busy)}>Edit or replace</button>
-          {previewHref && q.sharedAt && <a className="text-link small" href={previewHref} target="_blank" rel="noopener noreferrer">Client’s page<span className="sr-only"> (opens in a new tab)</span></a>}
+          {previewHref && <a className="text-link small" href={previewHref} target="_blank" rel="noopener noreferrer">{q.sharedAt ? 'Client’s page' : 'Preview as client'}<span className="sr-only"> (opens in a new tab)</span></a>}
           {q.sharedAt && <button type="button" className="linklike small" onClick={() => post('hide')} disabled={Boolean(busy)}>Hide from client</button>}
         </div>
       )}

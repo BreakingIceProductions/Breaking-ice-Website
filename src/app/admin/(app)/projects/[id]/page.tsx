@@ -98,7 +98,7 @@ export default async function ProjectPage({ params }: Props) {
   )
   const preBooking = si < stageIndex('booked')
   // Before booking the client only has the quote page (once it's sent); after, the project page.
-  const clientPath = !p.slug ? '/portal' : preBooking ? (p.quote?.sharedAt ? `/portal/quotes/${p.slug}` : '/portal') : `/portal/${p.slug}`
+  const clientPath = !p.slug ? '/portal' : preBooking ? (p.quote ? `/portal/quotes/${p.slug}` : '/portal') : `/portal/${p.slug}`
   const viewAs = `/api/admin/view-as?client=${encodeURIComponent(p.client._id)}&next=${encodeURIComponent(clientPath)}`
 
   return (

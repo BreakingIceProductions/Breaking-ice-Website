@@ -95,7 +95,7 @@ export async function getAccess(session: Session) {
     : await findClientsByEmail(session.email)
   if (!clients.length) return { clients, projects: [] as ClientProject[], quotes: [] as PortalQuote[], name: undefined }
   // Quotes are shown from the moment they're shared, before the project is booked, and stay afterwards.
-  const quotes = import('./quotes').then((m) => m.quotesForClients(clients.map((c) => c._id))).catch((e) => {
+  const quotes = import('./quotes').then((m) => m.quotesForClients(clients.map((c) => c._id), Boolean(session.preview))).catch((e) => {
     console.error('[portal] quotes query failed', e)
     return [] as PortalQuote[]
   })
