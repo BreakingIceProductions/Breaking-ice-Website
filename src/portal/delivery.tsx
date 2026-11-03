@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from './file-icon'
-import { canDownloadVideo, groupDeliverables, LARGE_FILE } from './library'
+import { canDownloadVideo, groupDeliverables, isVideoFile, LARGE_FILE, matchFinalFile } from './library'
 import { fmtSize } from './resumable'
 import { WatchTile } from './review-ui'
 import type { ClientProject, DriveFile } from './types'
@@ -63,16 +63,8 @@ export function Delivery({ project, demo }: { project: ClientProject; demo: bool
   )
 }
 
-const isVideo = (f: DriveFile) => fileKind({ name: f.name, mime: f.mimeType }) === 'video'
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
-
-/** The file for a final video: its name contains the video's title. Web/MP4 copies beat masters when there are several. */
-function matchFile(title: string, files: DriveFile[]) {
-  const t = norm(title)
-  if (!t) return undefined
-  const hits = files.filter((f) => ` ${norm(f.name)} `.includes(` ${t} `))
-  return hits.sort((a, b) => Number((b.size ?? 0) <= LARGE_FILE) - Number((a.size ?? 0) <= LARGE_FILE) || (a.size ?? 0) - (b.size ?? 0))[0]
-}
+const isVideo = isVideoFile
+const matchFile = matchFinalFile
 
 type FinalData = { files: DriveFile[] | null; failed: boolean; load: () => void }
 

@@ -5,7 +5,8 @@
  */
 
 import type { Dot, FinderNode } from './finder'
-import type { Deliverable } from './types'
+import { fileKind } from './file-icon'
+import type { Deliverable, DriveFile } from './types'
 
 export type Category = 'video' | 'document'
 export const CATEGORY_LABEL: Record<Category, string> = { video: 'Videos', document: 'Documents' }
@@ -71,6 +72,17 @@ export const clientCanOpen = (d: Deliverable, all: Deliverable[] = []) => d.stat
 /** Final videos of a delivered project can be downloaded (the file comes from Vimeo). */
 export const canDownloadVideo = (p: { status?: string; deliverables?: Deliverable[] }, d: Deliverable) =>
   p.status === 'delivered' && Boolean(d.final) && categoryOf(d) === 'video' && Boolean(d.shareUrl) && clientCanOpen(d, p.deliverables)
+
+export const isVideoFile = (f: Pick<DriveFile, 'name' | 'mimeType'>) => fileKind({ name: f.name, mime: f.mimeType }) === 'video'
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+/** The Final Files video for a deliverable: its name contains the title. Copies that download directly beat masters. */
+export function matchFinalFile<F extends Pick<DriveFile, 'name' | 'mimeType' | 'size'>>(title: string, files: F[]) {
+  const t = norm(title)
+  if (!t) return undefined
+  const hits = files.filter((f) => isVideoFile(f) && ` ${norm(f.name)} `.includes(` ${t} `))
+  return hits.sort((a, b) => Number((b.size ?? 0) <= LARGE_FILE) - Number((a.size ?? 0) <= LARGE_FILE) || (a.size ?? 0) - (b.size ?? 0))[0]
+}
 
 export function nextVersion(all: Deliverable[] = [], category: Category, title: string) {
   const id = groupId(category, title)
