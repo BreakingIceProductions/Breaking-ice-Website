@@ -174,8 +174,9 @@ export function resolvePath<P extends ProjectLike>(projects: P[], path: string[]
 
 /* ── Project page helpers ──────────────────────────────────────────────── */
 
-/** The stages a client sees, in order. Earlier back-office stages count as Booked; Paid counts as Delivered. */
+/** The stages a client sees, in order. A lead counts as Quote; Paid counts as Delivered. */
 export const CLIENT_STAGES = [
+  { value: 'quoted', title: 'Quote' },
   { value: 'booked', title: 'Booked' },
   { value: 'preproduction', title: 'Pre-production' },
   { value: 'shoot', title: 'Shoot' },
@@ -187,8 +188,10 @@ export const CLIENT_STAGES = [
 /** 1-based position in CLIENT_STAGES. */
 export function clientStage(pipelineStage?: string, status?: string) {
   if (pipelineStage === 'paid' || (!pipelineStage && status === 'delivered')) return CLIENT_STAGES.length
+  if (pipelineStage === 'lead') return 1
   const i = CLIENT_STAGES.findIndex((s) => s.value === pipelineStage)
-  return i >= 0 ? i + 1 : 1
+  // Projects from before the back office have no stage: they're booked.
+  return i >= 0 ? i + 1 : 2
 }
 
 export type Billing = { label: string; tone: 'ok' | 'due' }

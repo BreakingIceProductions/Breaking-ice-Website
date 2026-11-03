@@ -163,8 +163,12 @@ export const sampleQuotes = (): PortalQuote[] => [
     includes: ['Pre-production: story call, interview plan and shot list', 'Two shoot days with a two-person crew', 'Edit with two rounds of changes', 'Music licence, captions and colour grade', 'Final files for web and social'],
     validUntil: date(21),
     sharedAt: iso(-1),
-    total: 14800,
-    deposit: 7400,
+    options: [
+      { _key: 'o1', name: 'Essentials', total: 9800, note: 'The main film' },
+      { _key: 'o2', name: 'Full story', total: 14800, note: 'Adds three cut-downs' },
+    ],
+    depositPercent: 30,
+    total: 9800,
   },
   {
     projectId: 'sample-p1',

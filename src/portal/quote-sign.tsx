@@ -2,7 +2,7 @@
 
 import { Dancing_Script } from 'next/font/google'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { quoteDeposit } from './library'
 import type { QuoteOption } from './types'
 
@@ -27,6 +27,93 @@ type Props = {
 
 const cad = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })}` : '')
 
+/** The package being looked at, shared by the At a glance card and the Sign panel. */
+const Choice = createContext<[string, (key: string) => void] | null>(null)
+
+export function QuoteChoice({ initial = '', children }: { initial?: string; children: React.ReactNode }) {
+  const state = useState(initial)
+  return <Choice.Provider value={state}>{children}</Choice.Provider>
+}
+
+const useChoice = (fallback: string) => {
+  const shared = useContext(Choice)
+  const local = useState(fallback)
+  return shared ?? local
+}
+
+type GlanceProps = {
+  options?: QuoteOption[]
+  total?: number
+  depositPercent?: number
+  deposit?: number
+  summary?: string
+  includes?: string[]
+  version: number
+  /** Once signed, the numbers are the signed ones and nothing switches. */
+  signed?: { option?: string; total?: number; deposit?: number }
+}
+
+/** Price, deposit due and balance: they follow the package chosen. */
+export function QuoteGlance({ options, total, depositPercent, deposit, summary, includes, version, signed }: GlanceProps) {
+  const [option, setOption] = useChoice(options?.length === 1 ? options[0]._key : '')
+  const chosen = signed ? undefined : options?.find((o) => o._key === option)
+  const price = signed ? signed.total : options?.length ? chosen?.total : total
+  const due = signed ? signed.deposit : price ? quoteDeposit(price, { depositPercent, deposit }) : undefined
+  const from = !signed && options?.length && !chosen ? Math.min(...options.map((o) => o.total)) : undefined
+
+  return (
+    <section className="p-card q-summary" aria-labelledby="sum-h">
+      <h2 id="sum-h" className="p-label">At a glance</h2>
+      {!signed && options && options.length > 1 && (
+        <div className="q-packages" role="radiogroup" aria-label="Packages">
+          {options.map((o) => (
+            <button key={o._key} type="button" role="radio" aria-checked={option === o._key} className={`q-package${option === o._key ? ' on' : ''}`} onClick={() => setOption(o._key)}>
+              <span className="stack" style={{ gap: 0, textAlign: 'left' }}>
+                <strong>{o.name}</strong>
+                {o.note && <span className="muted small">{o.note}</span>}
+              </span>
+              <span className="q-package-price">{cad(o.total)}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {signed?.option && <p className="small" style={{ margin: 0 }}>Package: <strong>{signed.option}</strong></p>}
+      <div aria-live="polite" className="stack" style={{ gap: 'var(--space-2)' }}>
+        {price ? (
+          <p className="q-total">
+            <span className="q-amount">{cad(price)}</span>
+            <span className="muted small">+ GST{chosen ? ` · ${chosen.name}` : ''}</span>
+          </p>
+        ) : from ? (
+          <p className="q-total">
+            <span className="muted small">From</span>
+            <span className="q-amount">{cad(from)}</span>
+            <span className="muted small">+ GST</span>
+          </p>
+        ) : null}
+        {price && due ? (
+          <dl className="q-money">
+            <div><dt>Deposit due to book{depositPercent && !signed ? ` (${depositPercent}%)` : ''}</dt><dd>{cad(due)} + GST</dd></div>
+            <div><dt>Balance on delivery</dt><dd>{cad(Math.round((price - due) * 100) / 100)} + GST</dd></div>
+          </dl>
+        ) : options && options.length > 1 && !signed ? (
+          <p className="muted small" style={{ margin: 0 }}>Choose a package to see your total and the deposit due{depositPercent ? ` (${depositPercent}%)` : ''}.</p>
+        ) : null}
+      </div>
+      {summary && <p style={{ margin: 0 }}>{summary}</p>}
+      {includes && includes.length > 0 && (
+        <>
+          <h3 className="p-label">What’s included</h3>
+          <ul className="q-includes">
+            {includes.map((x) => <li key={x}>{x}</li>)}
+          </ul>
+        </>
+      )}
+      <p className="muted small" style={{ margin: 0 }}>The PDF has the full details{version > 1 ? ` (version ${version})` : ''}.</p>
+    </section>
+  )
+}
+
 /** Type or draw a signature, agree, sign. */
 export function QuoteSign({ slug, version, org, options, depositPercent, deposit, defaultName, defaultTitle, demo, preview }: Props) {
   const router = useRouter()
@@ -34,7 +121,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
   const [title, setTitle] = useState(defaultTitle)
   const [method, setMethod] = useState<'typed' | 'drawn'>('typed')
   const [agree, setAgree] = useState(false)
-  const [option, setOption] = useState(options?.length === 1 ? options[0]._key : '')
+  const [option, setOption] = useChoice(options?.length === 1 ? options[0]._key : '')
   const [drawn, setDrawn] = useState(false)
   const [state, setState] = useState<{ busy?: boolean; err?: string; done?: string }>({})
   const pad = useRef<HTMLCanvasElement>(null)
@@ -84,6 +171,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
                 <span className="stack" style={{ gap: 0 }}>
                   <strong>{o.name}</strong>
                   <span className="small">{cad(o.total)} + GST</span>
+                  {o.note && <span className="muted small">{o.note}</span>}
                   {quoteDeposit(o.total, { depositPercent, deposit }) ? <span className="muted small">Deposit {cad(quoteDeposit(o.total, { depositPercent, deposit }))}</span> : null}
                 </span>
               </label>

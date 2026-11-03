@@ -150,4 +150,4 @@ export type PortalQuote = {
 /** What the client can see of a signature. The full record (IP, device, fingerprints) stays on the server. */
 export type QuoteSignature = { name: string; title?: string; org?: string; at: string; method: 'typed' | 'drawn'; option?: string; total?: number; deposit?: number; certificateId: string }
 
-export type QuoteOption = { _key: string; name: string; total: number }
+export type QuoteOption = { _key: string; name: string; total: number; note?: string }

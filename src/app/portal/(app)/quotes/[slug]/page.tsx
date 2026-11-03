@@ -4,11 +4,11 @@ import { SITE_URL } from '@/lib/site'
 import { requireAccess } from '@/portal/current'
 import { addActivity, getPortalSettings, producerFor } from '@/portal/data'
 import { notifyJosh } from '@/portal/email'
-import { quoteDeposit, today } from '@/portal/library'
+import { CLIENT_STAGES, clientStage, today } from '@/portal/library'
 import { PRE_PORTAL_STAGES } from '@/sanity/portal/office-constants'
-import { QuoteSign } from '@/portal/quote-sign'
+import { QuoteChoice, QuoteGlance, QuoteSign } from '@/portal/quote-sign'
 import { fmtMoment, markQuoteViewed, quoteExpired } from '@/portal/quotes'
-import { fmtDate, ProducerCard } from '@/portal/ui'
+import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -18,8 +18,6 @@ export async function generateMetadata({ params }: Props) {
   const q = quotes.find((x) => x.slug === slug)
   return { title: q ? `Quote · ${q.title}` : 'Quote' }
 }
-
-const cad = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : undefined)
 
 export default async function QuotePage({ params }: Props) {
   const { slug } = await params
@@ -65,6 +63,11 @@ export default async function QuotePage({ params }: Props) {
         </p>
       </header>
 
+      <section className="p-where" aria-labelledby="where-h">
+        <h2 id="where-h" className="p-label">Where we are</h2>
+        <StageBar stage={clientStage(q.pipelineStage)} names={CLIENT_STAGES.map((s) => s.title)} />
+      </section>
+
       <div className="q-grid">
         <section className="q-doc" aria-label="The quote">
           {demo ? (
@@ -80,41 +83,18 @@ export default async function QuotePage({ params }: Props) {
           </div>
         </section>
 
+        <QuoteChoice>
         <aside className="q-side stack">
-          <section className="p-card q-summary" aria-labelledby="sum-h">
-            <h2 id="sum-h" className="p-label">At a glance</h2>
-            {q.signature?.option && <p className="small" style={{ margin: 0 }}>Package: <strong>{q.signature.option}</strong></p>}
-            {!q.signature && q.options?.length ? (
-              <ul className="q-packages">
-                {q.options.map((o) => (
-                  <li key={o._key}><span>{o.name}</span><strong>{cad(o.total)}</strong></li>
-                ))}
-                <li className="muted small">Before GST. You choose one when you sign.</li>
-              </ul>
-            ) : q.total ? (
-              <p className="q-total">
-                <span>{cad(q.total)}</span>
-                <span className="muted small">+ GST</span>
-              </p>
-            ) : null}
-            {q.signature?.deposit ? (
-              <p className="small" style={{ margin: 0 }}>Deposit of {cad(q.signature.deposit)} + GST to book, then the balance on delivery.</p>
-            ) : q.depositPercent ? (
-              <p className="small" style={{ margin: 0 }}>A {q.depositPercent}% deposit books the project, then the balance on delivery.</p>
-            ) : quoteDeposit(q.total, q) ? (
-              <p className="small" style={{ margin: 0 }}>Deposit of {cad(quoteDeposit(q.total, q))} + GST to book, then the balance on delivery.</p>
-            ) : null}
-            {q.summary && <p style={{ margin: 0 }}>{q.summary}</p>}
-            {q.includes && q.includes.length > 0 && (
-              <>
-                <h3 className="p-label">What’s included</h3>
-                <ul className="q-includes">
-                  {q.includes.map((x) => <li key={x}>{x}</li>)}
-                </ul>
-              </>
-            )}
-            <p className="muted small" style={{ margin: 0 }}>The PDF has the full details{q.version > 1 ? ` (version ${q.version})` : ''}.</p>
-          </section>
+          <QuoteGlance
+            options={q.options}
+            total={q.total}
+            depositPercent={q.depositPercent}
+            deposit={q.deposit}
+            summary={q.summary}
+            includes={q.includes}
+            version={q.version}
+            signed={q.signature ? { option: q.signature.option, total: q.signature.total, deposit: q.signature.deposit } : undefined}
+          />
 
           {q.signature ? (
             <section className="p-card q-signed" aria-labelledby="signed-h">
@@ -137,6 +117,7 @@ export default async function QuotePage({ params }: Props) {
 
           <ProducerCard producer={producer} title="Questions about the quote?" />
         </aside>
+        </QuoteChoice>
       </div>
     </div>
   )

@@ -20,15 +20,16 @@ const amount = (v: FormDataEntryValue | null) => {
   return String(v ?? '').trim() && Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : undefined
 }
 
-/** "Base, $9,420" or "Expanded | 14220": the last number on the line is the price. */
+/** "Base, $9,420" or "The Story | 10200 | Adds a crafted edit": name, price, then an optional one-line note. */
 function parseOptions(raw: string) {
   return raw
     .split('\n')
     .map((line) => {
-      const m = /^(.*?)[\s,|:–—-]*\$?\s*([\d,]+(?:\.\d{1,2})?)\s*$/.exec(line.trim())
-      const name = m?.[1].replace(/[\s,|:–—-]+$/, '').trim()
+      const m = /^(.+?)\s*[,|:–—-]\s*\$?\s*(\d[\d,]*(?:\.\d{1,2})?)\s*(?:[,|:–—-]\s*(.+))?$/.exec(line.trim())
+      const name = m?.[1].trim()
       const total = m ? Number(m[2].replace(/,/g, '')) : NaN
-      return name && total > 0 ? { _key: randomBytes(4).toString('hex'), _type: 'quoteOption', name: name.slice(0, 60), total } : null
+      const note = m?.[3]?.trim().slice(0, 80)
+      return name && total > 0 ? { _key: randomBytes(4).toString('hex'), _type: 'quoteOption', name: name.slice(0, 60), total, ...(note ? { note } : {}) } : null
     })
     .filter(Boolean)
     .slice(0, 6)

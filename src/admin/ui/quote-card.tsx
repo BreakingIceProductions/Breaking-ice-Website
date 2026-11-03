@@ -128,7 +128,7 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
           </div>
           <div className="field">
             <label htmlFor="q-opt">Packages <span className="muted small">(optional)</span></label>
-            <textarea id="q-opt" name="options" className="input a-quote-text" rows={3} defaultValue={(q?.options ?? []).map((o) => `${o.name}, ${o.total}`).join('\n')} placeholder={'One per line, the client picks one when signing\nBase, 9420\nExpanded, 14220'} />
+            <textarea id="q-opt" name="options" className="input a-quote-text" rows={3} defaultValue={(q?.options ?? []).map((o) => `${o.name}, ${o.total}${o.note ? `, ${o.note}` : ''}`).join('\n')} placeholder={'One per line: name, price, short note (optional)\nThe Record, 6540, The full record\nThe Story, 10200, Adds highlights'} />
             <span className="hint">With packages, the total is set by the one they choose. A deposit like 30% follows it.</span>
           </div>
           <div className="field">
