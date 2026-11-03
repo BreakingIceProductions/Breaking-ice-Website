@@ -1033,3 +1033,4 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .p-delivery-film { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; min-width: 0; }
 .p-delivery-film .watch-tile { width: 100%; }
 @media (max-width: 560px) { .p-delivery { padding: var(--space-6); } }
+.p-delivery .fname { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
