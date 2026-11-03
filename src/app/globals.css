@@ -1034,3 +1034,6 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .p-delivery-film .watch-tile { width: 100%; }
 @media (max-width: 560px) { .p-delivery { padding: var(--space-6); } }
 .p-delivery .fname { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.p-delivery-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--space-6); }
+.p-download-all { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); text-align: right; max-width: 28ch; }
+@media (max-width: 560px) { .p-download-all { align-items: flex-start; text-align: left; } }

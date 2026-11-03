@@ -15,19 +15,24 @@ export function Delivery({ project, demo }: { project: ClientProject; demo: bool
   const finals = groupDeliverables(project.deliverables).video.map((g) => g.latest).filter((d) => d.final)
   const data = useFinalFiles(project.slug)
   const videoFiles = (data.files ?? []).filter(isVideo)
+  const onCards = new Map(finals.map((d) => [d._key, matchFile(d.title, videoFiles)]))
+  const shown = new Set([...onCards.values()].filter(Boolean).map((f) => f!.id))
   return (
     <section className="p-delivery" aria-labelledby="delivery-h">
-      <div className="stack" style={{ gap: 'var(--space-2)' }}>
-        <h2 id="delivery-h" className="p-label">Delivered</h2>
-        <p className="h3" style={{ margin: 0 }}>Your final files are ready</p>
-        <p className="muted" style={{ margin: 0, maxWidth: '62ch' }}>Everything we made for {project.title}, ready to download. Keep a copy somewhere safe: these are the finished masters.</p>
+      <div className="p-delivery-head">
+        <div className="stack" style={{ gap: 'var(--space-2)' }}>
+          <h2 id="delivery-h" className="p-label">Delivered</h2>
+          <p className="h3" style={{ margin: 0 }}>Your final files are ready</p>
+          <p className="muted" style={{ margin: 0, maxWidth: '62ch' }}>Everything we made for {project.title}, ready to download. Keep a copy somewhere safe: these are the finished masters.</p>
+        </div>
+        {data.files && <DownloadAll project={project} demo={demo} files={data.files} />}
       </div>
 
       {finals.length > 0 && (
         <ul className="p-delivery-films">
           {finals.map((d) => {
             const watch = d.vimeoEmbed ?? d.shareUrl
-            const file = matchFile(d.title, videoFiles)
+            const file = onCards.get(d._key)
             return (
               <li key={d._key} className="p-delivery-film">
                 {watch && <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={d.title} />}
@@ -52,7 +57,8 @@ export function Delivery({ project, demo }: { project: ClientProject; demo: bool
         </ul>
       )}
 
-      <FinalFiles project={project} demo={demo} heading data={data} />
+      {/* Videos that have a card above aren't listed twice. */}
+      <FinalFiles project={project} demo={demo} heading data={data} hide={shown} />
     </section>
   )
 }
@@ -89,6 +95,42 @@ function useFinalFiles(slug: string, enabled = true): FinalData {
     if (enabled) load()
   }, [enabled, load])
   return { files, failed, load }
+}
+
+/**
+ * Every file that fits in one download, one after another (each is its own download, so
+ * a slow connection can't time out a giant zip). Browsers ask once to allow several files.
+ */
+function DownloadAll({ project, demo, files }: { project: ClientProject; demo: boolean; files: DriveFile[] }) {
+  const [state, setState] = useState<{ done: number; total: number }>()
+  const ready = files.filter((f) => (f.size ?? 0) <= LARGE_FILE)
+  if (ready.length < 2) return null
+  const total = ready.reduce((n, f) => n + (f.size ?? 0), 0)
+  const start = async () => {
+    if (demo) return
+    for (let i = 0; i < ready.length; i++) {
+      setState({ done: i, total: ready.length })
+      const a = document.createElement('a')
+      a.href = `/api/portal/download/${encodeURIComponent(ready[i].id)}?project=${encodeURIComponent(project.slug)}`
+      a.download = ''
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      await new Promise((r) => setTimeout(r, 1200))
+    }
+    setState({ done: ready.length, total: ready.length })
+  }
+  const busy = state && state.done < state.total
+  return (
+    <div className="p-download-all">
+      <button type="button" className="btn btn-primary btn-sm" onClick={start} disabled={busy}>
+        {busy ? `Starting ${state.done + 1} of ${state.total}…` : 'Download all'} {!busy && <span aria-hidden="true">↓</span>}
+      </button>
+      <span className="muted small" role="status">
+        {state && !busy ? `${state.total} downloads started. If only one arrived, allow multiple downloads when your browser asks.` : `${ready.length} files · ${fmtSize(total)}`}
+      </span>
+    </div>
+  )
 }
 
 /** Download, or for a file too big for one download, ask Breaking Ice to send it. */
@@ -129,9 +171,10 @@ const GROUPS: { title: string; test: (f: DriveFile) => boolean }[] = [
 ]
 
 /** The Final Files folder, grouped by kind. Files too big for one download are requested instead. */
-export function FinalFiles({ project, demo, heading = false, data }: { project: ClientProject; demo: boolean; heading?: boolean; data?: FinalData }) {
+export function FinalFiles({ project, demo, heading = false, data, hide }: { project: ClientProject; demo: boolean; heading?: boolean; data?: FinalData; hide?: Set<string> }) {
   const own = useFinalFiles(project.slug, !data)
-  const { files, failed, load } = data ?? own
+  const { failed, load } = data ?? own
+  const files = (data ?? own).files?.filter((f) => !hide?.has(f.id)) ?? null
 
   if (files === null) return <p className="muted small">Loading files…</p>
   if (failed) return <p className="err small">Couldn’t load the files. <button type="button" className="linklike" onClick={load}>Try again</button></p>
