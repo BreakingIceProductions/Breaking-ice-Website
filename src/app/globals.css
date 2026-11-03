@@ -1097,3 +1097,7 @@ textarea.input.a-quote-text { min-height: 90px; }
 .p-preview-ribbon form { margin: 0; }
 .p-preview-ribbon .linklike { color: inherit; text-decoration: underline; font-weight: 700; }
 .q-sign .btn:disabled, .p-card .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.a-packages { border: 0; padding: 0; margin: 0; min-width: 0; }
+.a-packages legend { font-weight: 600; font-size: 15px; padding: 0; margin-bottom: var(--space-2); }
+.a-package-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.7fr) minmax(0, 1.6fr) auto; gap: var(--space-2); align-items: center; }
+@media (max-width: 640px) { .a-package-row { grid-template-columns: 1fr 1fr; } .a-package-row > :nth-child(3) { grid-column: 1 / -1; } }

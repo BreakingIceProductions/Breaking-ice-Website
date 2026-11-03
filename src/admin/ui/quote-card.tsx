@@ -126,11 +126,7 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
               <input id="q-valid" name="validUntil" type="date" className="input" defaultValue={q?.validUntil ?? ''} />
             </div>
           </div>
-          <div className="field">
-            <label htmlFor="q-opt">Packages <span className="muted small">(optional)</span></label>
-            <textarea id="q-opt" name="options" className="input a-quote-text" rows={3} defaultValue={(q?.options ?? []).map((o) => `${o.name}, ${o.total}${o.note ? `, ${o.note}` : ''}`).join('\n')} placeholder={'One per line: name, price, short note (optional)\nThe Record, 6540, The full record\nThe Story, 10200, Adds highlights'} />
-            <span className="hint">With packages, the total is set by the one they choose. A deposit like 30% follows it.</span>
-          </div>
+          <PackagesField initial={q?.options ?? []} />
           <div className="field">
             <label htmlFor="q-sum">Summary for the client</label>
             <textarea id="q-sum" name="summary" className="input a-quote-text" rows={3} defaultValue={q?.summary ?? ''} placeholder="One or two sentences on what they’re getting." />
@@ -158,5 +154,34 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
       )}
       <p className={`small ${msg?.err ? 'err' : 'muted'}`} role="status" style={{ margin: 0 }}>{busy || msg?.text}</p>
     </section>
+  )
+}
+
+type Row = { id: number; name: string; total: string; note: string }
+
+/** One row per package, so every tier is in view. Sent as "name | price | note" lines. */
+function PackagesField({ initial }: { initial: NonNullable<OfficeQuote['options']> }) {
+  const [rows, setRows] = useState<Row[]>(() => initial.map((o, i) => ({ id: i, name: o.name, total: String(o.total), note: o.note ?? '' })))
+  const set = (id: number, f: Partial<Row>) => setRows((r) => r.map((x) => (x.id === id ? { ...x, ...f } : x)))
+  const value = rows.filter((r) => r.name.trim() && r.total.trim()).map((r) => [r.name.trim(), r.total.replace(/[$,\s]/g, ''), r.note.trim()].filter(Boolean).join(' | ')).join('\n')
+  return (
+    <fieldset className="field a-packages">
+      <legend>Packages <span className="muted small">(optional)</span></legend>
+      <input type="hidden" name="options" value={value} />
+      {rows.map((r, i) => (
+        <div key={r.id} className="a-package-row">
+          <input className="input" aria-label={`Package ${i + 1} name`} placeholder="The Story" value={r.name} onChange={(e) => set(r.id, { name: e.target.value })} />
+          <input className="input" aria-label={`Package ${i + 1} price, before tax`} placeholder="10200" inputMode="decimal" value={r.total} onChange={(e) => set(r.id, { total: e.target.value })} />
+          <input className="input" aria-label={`Package ${i + 1} short note`} placeholder="Adds highlights (optional)" value={r.note} onChange={(e) => set(r.id, { note: e.target.value })} />
+          <button type="button" className="linklike small" onClick={() => setRows((x) => x.filter((y) => y.id !== r.id))}>Remove<span className="sr-only"> package {i + 1}</span></button>
+        </div>
+      ))}
+      <div>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRows((x) => [...x, { id: Date.now(), name: '', total: '', note: '' }])} disabled={rows.length >= 6}>
+          Add a package
+        </button>
+      </div>
+      <span className="hint">With packages, the client picks one when signing and the total follows it. A deposit like 30% does too.</span>
+    </fieldset>
   )
 }
