@@ -128,6 +128,11 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
           </div>
           <PackagesField initial={q?.options ?? []} />
           <div className="field">
+            <label htmlFor="q-note">Note for the client <span className="muted small">(optional)</span></label>
+            <textarea id="q-note" name="note" className="input a-quote-text" rows={2} maxLength={400} defaultValue={q?.note ?? ''} placeholder="Krystle, thanks for the call today. Here’s what we talked through." />
+            <span className="hint">Shown with your photo when they first open the quote, and at the top of the quote page.</span>
+          </div>
+          <div className="field">
             <label htmlFor="q-sum">Summary for the client</label>
             <textarea id="q-sum" name="summary" className="input a-quote-text" rows={3} defaultValue={q?.summary ?? ''} placeholder="One or two sentences on what they’re getting." />
           </div>

@@ -135,6 +135,8 @@ export type PortalQuote = {
   version: number
   fileName?: string
   summary?: string
+  /** A line or two from Josh, shown when the quote is first opened. */
+  note?: string
   includes?: string[]
   /** Packages to choose from (Base, Expanded…). The client picks one when signing. */
   options?: QuoteOption[]

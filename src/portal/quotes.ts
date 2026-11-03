@@ -31,6 +31,7 @@ export type QuoteDoc = {
   fileName?: string
   fileHash?: string
   summary?: string
+  note?: string
   includes?: string[]
   options?: QuoteOption[]
   depositPercent?: number
@@ -76,7 +77,7 @@ export async function getQuote(projectId: string) {
   return portalClient.getDocument<QuoteDoc>(quoteId(projectId))
 }
 
-const CLIENT_QUOTE_FIELDS = `projectId, version, fileName, summary, includes, options, depositPercent, validUntil, sharedAt,
+const CLIENT_QUOTE_FIELDS = `projectId, version, fileName, summary, note, includes, options, depositPercent, validUntil, sharedAt,
   "signature": signature{name, title, org, at, method, option, total, deposit, certificateId},
   "p": *[_type == "clientProject" && _id == ^.projectId][0]{title, "slug": slug.current, pipelineStage, quoteAmount, depositAmount, "org": client->organizationName}`
 
@@ -304,4 +305,22 @@ export function pdfResponse(bytes: Uint8Array, filename: string, download: boole
       'X-Content-Type-Options': 'nosniff',
     },
   })
+}
+
+/** For the sample client: a short navy quote, so the viewer and the welcome have something to show. */
+export async function samplePdf() {
+  const pdf = await PDFDocument.create()
+  pdf.registerFontkit(fontkit)
+  const [reg, bold] = await Promise.all([font('Archivo-Regular.ttf'), font('Archivo-SemiBold.ttf')].map((p) => p.then((b) => pdf.embedFont(b, { subset: true }))))
+  const pages = ['Teacher recruitment film', 'Overview', 'Scope of work', 'Investment']
+  pages.forEach((heading, i) => {
+    const page = pdf.addPage([612, 792])
+    const dark = i === 0
+    page.drawRectangle({ x: 0, y: 0, width: 612, height: 792, color: dark ? NAVY : rgb(1, 1, 1) })
+    page.drawText('BREAKING ICE PRODUCTIONS', { x: 56, y: 730, size: 9, font: bold, color: COPPER })
+    page.drawText(dark ? 'QUOTE · SAMPLE' : `Sample quote · page ${i + 1}`, { x: 56, y: dark ? 260 : 700, size: 9, font: bold, color: dark ? COPPER : MUTED })
+    page.drawText(heading, { x: 56, y: dark ? 220 : 660, size: dark ? 34 : 26, font: bold, color: dark ? rgb(0.98, 0.97, 0.95) : NAVY })
+    if (!dark) page.drawText('This is a sample page. Real quotes show the PDF you upload.', { x: 56, y: 620, size: 11, font: reg, color: MUTED })
+  })
+  return pdf.save()
 }

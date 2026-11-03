@@ -1,6 +1,6 @@
 import { getSession } from '@/portal/auth'
 import { getAccess } from '@/portal/data'
-import { assetBytes, getQuote, pdfResponse } from '@/portal/quotes'
+import { assetBytes, getQuote, pdfResponse, samplePdf } from '@/portal/quotes'
 
 export const runtime = 'nodejs'
 
@@ -8,7 +8,8 @@ export const runtime = 'nodejs'
 export async function GET(req: Request) {
   const u = new URL(req.url)
   const session = await getSession()
-  if (!session || session.demo) return new Response('Not found', { status: 404 })
+  if (!session) return new Response('Not found', { status: 404 })
+  if (session.demo) return pdfResponse(await samplePdf(), 'Sample quote.pdf', u.searchParams.get('download') === '1')
   const q = (await getAccess(session)).quotes.find((x) => x.slug === u.searchParams.get('project'))
   if (!q) return new Response('Not found', { status: 404 })
   const doc = await getQuote(q.projectId)

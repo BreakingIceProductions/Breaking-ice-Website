@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     '/og': ['./src/assets/og/**', './public/brand/bi-horizontal-dark.svg'],
     // Fonts for the certificate page on signed quotes.
     '/api/portal/quote/sign': ['./src/portal/fonts/**'],
+    '/api/portal/quote/file': ['./src/portal/fonts/**'],
   },
   images: {
     remotePatterns: [

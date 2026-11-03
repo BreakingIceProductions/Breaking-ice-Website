@@ -100,6 +100,7 @@ export type OfficeQuote = {
   version: number
   fileName?: string
   summary?: string
+  note?: string
   includes?: string[]
   options?: import('@/portal/types').QuoteOption[]
   depositPercent?: number

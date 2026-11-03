@@ -159,6 +159,7 @@ export const sampleQuotes = (): PortalQuote[] => [
     pipelineStage: 'quoted',
     version: 1,
     fileName: 'Teacher recruitment film_Quote.pdf',
+    note: 'Alex, thanks for the call on Tuesday. Here’s the plan we talked through, in two sizes. Happy to walk through it anytime.',
     summary: 'A three-minute recruitment film and three 30-second cut-downs, shot over two days in the community, ready for the spring hiring season.',
     includes: ['Pre-production: story call, interview plan and shot list', 'Two shoot days with a two-person crew', 'Edit with two rounds of changes', 'Music licence, captions and colour grade', 'Final files for web and social'],
     validUntil: date(21),

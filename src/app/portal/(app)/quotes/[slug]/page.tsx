@@ -2,10 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SITE_URL } from '@/lib/site'
 import { requireAccess } from '@/portal/current'
-import { addActivity, getPortalSettings, producerFor } from '@/portal/data'
+import { addActivity, getPortalSettings, portalImage, producerFor } from '@/portal/data'
 import { notifyJosh } from '@/portal/email'
 import { CLIENT_STAGES, clientStage, today } from '@/portal/library'
 import { PRE_PORTAL_STAGES } from '@/sanity/portal/office-constants'
+import { PdfPages } from '@/portal/pdf-view'
+import { QuoteReveal, ReplayReveal } from '@/portal/quote-reveal'
 import { QuoteChoice, QuoteGlance, QuoteSign } from '@/portal/quote-sign'
 import { fmtMoment, markQuoteViewed, quoteExpired } from '@/portal/quotes'
 import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
@@ -43,9 +45,26 @@ export default async function QuotePage({ params }: Props) {
 
   const fileUrl = `/api/portal/quote/file?project=${encodeURIComponent(q.slug)}`
   const signedUrl = `${fileUrl}&signed=1`
+  const money = (n: number) => `$${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })}`
+  const price = q.options?.length
+    ? `${q.options.length > 1 ? 'From ' : ''}${money(Math.min(...q.options.map((o) => o.total)))} + GST`
+    : q.total ? `${money(q.total)} + GST` : undefined
+  const from = producer?.name ? { name: producer.name, photo: portalImage(producer.portrait, 160, 160) } : undefined
 
   return (
     <div className="wrap q-page">
+      {!q.signature && !expired && (
+        <QuoteReveal
+          seenKey={`quote-reveal:${q.projectId}:v${q.version}`}
+          pdfUrl={fileUrl}
+          title={q.title}
+          org={q.org}
+          firstName={(session.preview ? client?.contacts?.[0]?.name : me?.name)?.split(' ')[0]}
+          price={price}
+          note={q.note}
+          from={from}
+        />
+      )}
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/portal/quotes">← All quotes</Link>
       </nav>
@@ -70,21 +89,24 @@ export default async function QuotePage({ params }: Props) {
 
       <div className="q-grid">
         <section className="q-doc" aria-label="The quote">
-          {demo ? (
-            <div className="q-pdf q-pdf-sample"><p className="muted">The quote PDF appears here.</p></div>
-          ) : (
-            <iframe className="q-pdf" src={`${q.signature ? signedUrl : fileUrl}#view=FitH`} title={`Quote for ${q.title} (PDF)`} />
-          )}
+          <PdfPages url={q.signature ? signedUrl : fileUrl} title={`Quote for ${q.title}`} />
           <div className="row-wrap">
             <a className="btn btn-secondary btn-sm" href={q.signature ? signedUrl : fileUrl} target="_blank" rel="noopener noreferrer">
               Open the PDF<span className="sr-only"> (opens in a new tab)</span>
             </a>
             <a className="text-link small" href={`${q.signature ? signedUrl : fileUrl}&download=1`}>Download{q.signature ? ' signed copy' : ''}</a>
+            {!q.signature && !expired && <ReplayReveal />}
           </div>
         </section>
 
         <QuoteChoice>
         <aside className="q-side stack">
+          {q.note && (
+            <figure className="p-card q-note">
+              <blockquote>{q.note}</blockquote>
+              {from && <figcaption>{from.name}</figcaption>}
+            </figure>
+          )}
           <QuoteGlance
             options={q.options}
             total={q.total}

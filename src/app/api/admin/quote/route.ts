@@ -63,6 +63,7 @@ export async function POST(req: Request) {
     const now = new Date().toISOString()
     const set: Record<string, unknown> = {
       summary: text(form.get('summary'), 600) || undefined,
+      note: text(form.get('note'), 400) || undefined,
       includes: text(form.get('includes'), 3000).split('\n').map((l) => l.replace(/^[-•*\s]+/, '').trim()).filter(Boolean).slice(0, 30),
       options: parseOptions(text(form.get('options'), 1000)),
       validUntil: /^\d{4}-\d{2}-\d{2}$/.test(text(form.get('validUntil'), 10)) ? text(form.get('validUntil'), 10) : undefined,
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
     // "30%" keeps the deposit as a share of whichever package is chosen.
     const pct = /^\s*(\d{1,2}(?:\.\d+)?)\s*%\s*$/.exec(text(form.get('deposit'), 10))
     if (pct) set.depositPercent = Number(pct[1])
-    const unset = (['summary', 'validUntil', 'depositPercent'] as const).filter((k) => set[k] === undefined)
+    const unset = (['summary', 'note', 'validUntil', 'depositPercent'] as const).filter((k) => set[k] === undefined)
     // A new PDF hasn't been opened yet.
     await (set.file ? patch.unset([...unset, 'viewedAt', 'viewedBy']) : patch.unset(unset)).commit()
 

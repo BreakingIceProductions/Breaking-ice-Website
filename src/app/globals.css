@@ -1053,7 +1053,7 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .q-pdf { width: 100%; height: min(80vh, 1000px); border: 1px solid var(--line); border-radius: var(--radius-lg); background: #fff; }
 .q-pdf-sample { display: grid; place-items: center; background: var(--surface-raised); }
 /* Phones show one page of an embedded PDF at best: the button opens the whole thing. */
-@media (max-width: 720px) { .q-pdf { display: none; } }
+
 .q-side { gap: var(--space-4); }
 .q-total { display: flex; align-items: baseline; gap: var(--space-2); margin: 0; }
 .q-total .q-amount { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
@@ -1101,3 +1101,57 @@ textarea.input.a-quote-text { min-height: 90px; }
 .a-packages legend { font-weight: 600; font-size: 15px; padding: 0; margin-bottom: var(--space-2); }
 .a-package-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.7fr) minmax(0, 1.6fr) auto; gap: var(--space-2); align-items: center; }
 @media (max-width: 640px) { .a-package-row { grid-template-columns: 1fr 1fr; } .a-package-row > :nth-child(3) { grid-column: 1 / -1; } }
+
+/* ── Quote PDF viewer: one page per frame, snapping ─────────────────── */
+.pdfv { display: flex; flex-direction: column; gap: var(--space-2); }
+.pdfv-frame { position: relative; height: min(82vh, 1000px); overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; background: #121925; border: 1px solid var(--line); border-radius: var(--radius-lg); scrollbar-width: none; }
+.pdfv-frame::-webkit-scrollbar { display: none; }
+.pdfv-frame:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pdfv-page { scroll-snap-align: start; scroll-snap-stop: always; display: grid; place-items: center; height: 100%; padding: 12px; }
+.pdfv-page canvas { display: block; border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+.pdfv-bar { display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
+.pdfv-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--input-line); background: transparent; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; }
+.pdfv-btn:disabled { opacity: 0.35; cursor: default; }
+.pdfv-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.pdfv-count { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--ink-muted); min-width: 4.5em; text-align: center; }
+.pdfv-loading { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.15); border-top-color: var(--accent-fill); animation: pdfv-spin 0.9s linear infinite; }
+.pdfv-msg { display: grid; place-items: center; min-height: 240px; background: #121925; border-radius: var(--radius-lg); padding: var(--space-6); text-align: center; }
+@keyframes pdfv-spin { to { transform: rotate(360deg); } }
+
+/* ── Quote welcome: the cover rises ─────────────────────────────────── */
+.qr { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow-y: auto; padding: var(--space-8) var(--gutter, 16px); background: radial-gradient(120% 90% at 50% 20%, #1f2a3d 0%, #121925 70%); color: #faf7f2; animation: qr-in 0.45s ease-out both; }
+.qr-out { animation: qr-out 0.45s ease-in both; }
+.qr-skip { position: absolute; top: var(--space-4); right: var(--space-4); background: none; border: 0; color: rgba(250, 247, 242, 0.65); font: inherit; font-size: 14px; cursor: pointer; padding: var(--space-2) var(--space-3); border-radius: 999px; }
+.qr-skip:hover { color: #faf7f2; }
+.qr-skip:focus-visible, .qr-go:focus-visible { outline: 2px solid #f0a46c; outline-offset: 3px; }
+.qr-stage { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-5, 20px); max-width: 560px; width: 100%; }
+.qr-mark { width: 44px; height: auto; color: #faf7f2; animation: qr-mark 2.6s cubic-bezier(.2, .7, .2, 1) both; }
+.qr-doc { position: relative; width: min(280px, 64vw, calc(36vh * 612 / 792)); aspect-ratio: 612 / 792; perspective: 1200px; animation: qr-rise 1.1s cubic-bezier(.16, .84, .3, 1) 0.75s both; }
+.qr-cover, .qr-cover-blank { position: absolute; inset: 0; width: 100% !important; height: 100% !important; border-radius: 6px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.qr-cover-blank { background: linear-gradient(160deg, #222c40, #18202f); }
+.qr-cover { opacity: 0; transition: opacity 0.5s ease; z-index: 1; }
+.qr-cover.ready { opacity: 1; }
+.qr-text { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.qr-text > * { animation: qr-up 0.7s cubic-bezier(.2, .7, .2, 1) both; }
+.qr-eyebrow { font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #e0955d; font-weight: 600; animation-delay: 1.55s !important; }
+.qr-title { margin: 0; font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: clamp(30px, 5vw, 44px); line-height: 1.05; letter-spacing: -0.01em; animation-delay: 1.7s !important; }
+.qr-price { margin: 0; font-size: 18px; color: rgba(250, 247, 242, 0.8); animation-delay: 1.85s !important; }
+.qr-note { margin: var(--space-2) 0 0; max-width: 44ch; animation-delay: 2s !important; }
+.qr-note blockquote { margin: 0; font-family: var(--font-serif); font-style: italic; font-size: 19px; line-height: 1.45; color: rgba(250, 247, 242, 0.92); }
+.qr-note figcaption { display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: 14px; color: rgba(250, 247, 242, 0.7); }
+.qr-note img, .qr-initials { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.qr-initials { display: grid; place-items: center; background: #faf7f2; color: #18202f; font-size: 12px; font-weight: 700; }
+.qr-go { margin-top: var(--space-3); animation-delay: 2.2s !important; }
+@keyframes qr-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qr-out { to { opacity: 0; transform: scale(1.02); } }
+@keyframes qr-mark { 0% { opacity: 0; transform: translateY(70px) scale(1.5); } 25% { opacity: 1; transform: translateY(70px) scale(1.5); } 45% { opacity: 1; transform: none; } 100% { opacity: 1; transform: none; } }
+@keyframes qr-rise { from { opacity: 0; transform: translateY(60px) rotateX(14deg) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes qr-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.q-note { margin: 0; gap: var(--space-2); }
+.q-note blockquote { margin: 0; font-family: var(--font-serif); font-style: italic; font-size: 18px; line-height: 1.45; }
+.q-note figcaption { font-size: 14px; color: var(--ink-muted); }
+.q-note figcaption::before { content: '— '; }
+@media (prefers-reduced-motion: reduce) {
+  .qr, .qr-out, .qr-mark, .qr-doc, .qr-text > * { animation-duration: 0.3s !important; animation-delay: 0s !important; }
+  .qr-mark, .qr-doc, .qr-text > * { animation-name: qr-in !important; }
+}
