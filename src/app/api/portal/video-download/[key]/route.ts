@@ -15,10 +15,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ key: str
   if (a.session.demo) return json({ ok: false, error: 'This is a sample video. In a real project it downloads straight from Vimeo.' }, 404)
   try {
     const link = await vimeoDownloadLink(d.shareUrl)
-    if (!link) return json({ ok: false, error: 'This video isn’t ready to download yet. Ask Breaking Ice for a copy.' }, 404)
-    return NextResponse.redirect(link, 303)
+    // No files back means the token lacks the video_files scope: Vimeo's own page has a Download button.
+    if (!link) console.warn('[portal] no Vimeo download files for', d.shareUrl)
+    return NextResponse.redirect(link ?? d.shareUrl!, 303)
   } catch (e) {
     console.error('[portal] video download failed', e)
-    return json({ ok: false }, 502)
+    return NextResponse.redirect(d.shareUrl!, 303)
   }
 }
