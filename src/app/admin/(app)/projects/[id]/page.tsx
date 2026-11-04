@@ -9,6 +9,7 @@ import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
 import { NoteForm } from '@/admin/ui/note-form'
 import { PaymentsCard } from '@/admin/ui/payments-card'
 import { QuoteCard } from '@/admin/ui/quote-card'
+import { ReviewEmail } from '@/admin/ui/review-email'
 import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
 import { invoiceUrl, zohoConnection } from '@/admin/zoho'
@@ -16,7 +17,7 @@ import { stripeReady } from '@/portal/config'
 import { getPortalSettings } from '@/portal/data'
 import { paymentsForProject, stripeTestMode } from '@/portal/payments'
 import { DELIVERABLE_LABEL } from '@/portal/ui'
-import { categoryOf, versionLabel } from '@/portal/library'
+import { categoryOf, isLatest, versionLabel } from '@/portal/library'
 import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS } from '@/sanity/portal/office-constants'
 
 type Props = { params: Promise<{ id: string }> }
@@ -162,6 +163,13 @@ export default async function ProjectPage({ params }: Props) {
               <h2 id="h-deliv" className="a-h2">Deliverables</h2>
               <span className="muted small">{p.deliverables.length ? `${openDeliverables} still open` : 'Upload with “Send for review”, or add in the Studio'}</span>
             </div>
+            <ReviewEmail
+              projectId={p._id}
+              to={p.client.contacts?.filter((c) => c.email && c.getsEmails !== false).map((c) => c.name.split(' ')[0]).join(', ') || 'the client'}
+              items={p.deliverables
+                .filter((d) => d.status === 'awaiting-feedback' && isLatest(d, p.deliverables))
+                .map((d) => ({ key: d._key, title: d.title, version: d.version || 1, emailed: !d.dontEmail && d.notifiedVersion === (d.version || 1) }))}
+            />
             {p.deliverables.length ? (
               <div className="a-table-scroll">
                 <table className="a-table">

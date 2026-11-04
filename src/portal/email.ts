@@ -144,6 +144,33 @@ ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}
   return { subject: m.subject, html, text }
 }
 
+/** Several versions sent from the back office together: one email instead of one per video. */
+export function reviewBatchEmail(m: { name: string; projectTitle: string; org: string; items: { title: string; length?: string }[]; thumbUrl?: string; portalUrl: string; signOff: string; producerPhone?: string; note?: string }) {
+  const n = m.items.length
+  const what = n === 1 ? m.items[0].title : `${n} new videos`
+  const headline = n === 1 ? `${esc(what)} is ready for you` : `${n} new videos are ready for you`
+  const intro = `Hi ${m.name}, ${n === 1 ? 'a new video is' : 'these are'} ready for your review in your client portal. Watch ${n === 1 ? 'it' : 'each one'}, then approve it or leave your notes right there.`
+  const list = `<tr><td style="padding:12px 32px 0"><table role="presentation" cellpadding="0" cellspacing="0">${m.items
+    .map((f) => `<tr><td style="padding:3px 10px 3px 0;color:${COPPER};font:bold 15px ${FONT}">▶</td><td style="padding:3px 0;font:15px/22px ${FONT};color:${NAVY}">${esc(f.title)}${f.length ? `<span style="color:${MUTED};font-size:13px">&nbsp;&nbsp;${esc(f.length)}</span>` : ''}</td></tr>`)
+    .join('')}</table></td></tr>`
+  const html = layout({
+    eyebrow: 'Ready for review',
+    preview: n === 1 ? 'Ready for your review in the client portal.' : `${m.items.map((f) => f.title).join(', ')}`.slice(0, 140),
+    body: `
+${m.thumbUrl ? `<tr><td style="padding:16px 32px 0"><img src="${m.thumbUrl}" width="536" alt="" style="display:block;width:100%;height:auto;border:0"></td></tr>` : ''}
+<tr><td style="padding:14px 32px 0;font:600 12px ${FONT};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${esc(m.projectTitle)} · ${esc(m.org)}</td></tr>
+${para(`<span style="font:bold 24px/30px ${FONT}">${headline}</span>`, 'padding-top:8px')}
+${m.note ? para(`<div style="border-left:3px solid ${MUTED};padding-left:14px">${esc(m.note).replace(/\n/g, '<br>')}</div>`) : ''}
+${para(esc(intro))}
+${list}
+<tr><td style="padding:22px 32px 0">${button(m.portalUrl, 'Review & leave feedback')}</td></tr>
+${para(`The button works for 7 days. After that, sign in at ${SITE_URL.replace(/^https?:\/\//, '')}/portal with this email address.`, `color:${MUTED};font-size:13px`)}
+${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}`, 'padding-top:20px;padding-bottom:24px')}`,
+  })
+  const text = `${headline.replace(/&amp;/g, '&')}\n\n${m.note ? m.note + '\n\n' : ''}${intro}\n\n${m.items.map((f) => `▶ ${f.title}${f.length ? ` (${f.length})` : ''}`).join('\n')}\n\nReview & leave feedback: ${m.portalUrl}\n\n${m.signOff}`
+  return { subject: n === 1 ? `Ready for review: ${m.items[0].title}` : `Ready for review: ${n} new videos for ${m.projectTitle}`, html, text }
+}
+
 /** Once, when a project is marked Delivered: the finals and every file are waiting in the portal. */
 export function deliveryEmail(m: { name: string; projectTitle: string; org: string; films: string[]; thumbUrl?: string; portalUrl: string; signOff: string; producerPhone?: string }) {
   const headline = `Your final files for ${esc(m.projectTitle)} are ready`
