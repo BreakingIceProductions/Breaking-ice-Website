@@ -15,18 +15,27 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'i.vimeocdn.com' },
     ],
   },
-  // Keep the whole site out of search engines until launch day.
-  // Remove this header (and robots.ts) when going live.
+  // Old WordPress addresses, so links and search results from the previous site still land.
+  async redirects() {
+    const story = (from: string, to: string) => ({ source: `/${from}`, destination: `/stories/${to}`, permanent: true })
+    return [
+      { source: '/photography-services', destination: '/services/photography', permanent: true },
+      { source: '/:old(videography-services|digital-rendering-services|web-services)', destination: '/services', permanent: true },
+      { source: '/breaking-ice-the-podcast', destination: '/about', permanent: true },
+      story('2023-ten-stone-mountain-lodge', 'ten-stone-mountain-lodge-into-the-mackenzie-mountains'),
+      story('2023-tenstone-lodge', 'ten-stone-mountain-lodge-into-the-mackenzie-mountains'),
+      story('2024-a-case-for-the-mackenzie-valley-highway', 'mackenzie-valley-highway-connecting-the-sahtu'),
+      // Every other old project post goes to the stories page.
+      { source: '/:old(20\\d\\d-[a-z0-9-]+|ongoing-[a-z0-9-]+)', destination: '/stories', permanent: true },
+      { source: '/:old(feed|comments/feed|author/.*|category/.*)', destination: '/', permanent: true },
+    ]
+  },
   async headers() {
     return [
       // The client portal stays out of search engines for good (keep this one after launch).
       { source: '/portal/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }, { key: 'Referrer-Policy', value: 'same-origin' }] },
       // The back office too.
       { source: '/admin/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }, { key: 'Referrer-Policy', value: 'same-origin' }] },
-      {
-        source: '/:path*',
-        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
-      },
     ]
   },
 }
