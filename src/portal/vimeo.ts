@@ -53,10 +53,17 @@ export async function syncVimeo(p: ClientProject, log: string[]) {
   for (const d of p.deliverables ?? []) {
     const id = vimeoId(d.shareUrl)
     if (!id) continue
-    const [video, versions] = await Promise.all([
-      vimeo<VimeoVideo>(`/videos/${id}?fields=duration,player_embed_url,pictures.base_link,review_page`),
-      vimeo<{ total?: number }>(`/videos/${id}/versions?per_page=1&fields=uri`).catch(() => ({ total: undefined })),
-    ])
+    let video: VimeoVideo, versions: { total?: number }
+    try {
+      ;[video, versions] = await Promise.all([
+        vimeo<VimeoVideo>(`/videos/${id}?fields=duration,player_embed_url,pictures.base_link,review_page`),
+        vimeo<{ total?: number }>(`/videos/${id}/versions?per_page=1&fields=uri`).catch(() => ({ total: undefined })),
+      ])
+    } catch (e) {
+      // A video deleted from Vimeo (often an old version) mustn't stop the rest of the project.
+      log.push(`vimeo skipped ${p.title} / ${d.title} v${d.version || 1}: ${String(e).slice(0, 80)}`)
+      continue
+    }
     const total = versions.total
     await updateDeliverableState(p._id, d._key, {
       vimeoThumb: thumb(video.pictures?.base_link),
