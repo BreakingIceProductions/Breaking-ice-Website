@@ -5,6 +5,8 @@ import { fmtDay } from '@/admin/dates'
 import { cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { stageIndex } from '@/admin/stages'
+import { Bucket } from '@/admin/ui/bucket'
+import { StageControl } from '@/admin/ui/stage-control'
 import { PIPELINE_STAGES, REGIONS } from '@/sanity/portal/office-constants'
 
 export const metadata = { title: 'Projects' }
@@ -23,15 +25,10 @@ export default async function Projects() {
           New project<span className="sr-only"> (opens the Studio)</span>
         </a>
       </header>
-      {PIPELINE_STAGES.map((s) => {
-        const list = projects.filter((p) => p.pipelineStage === s.value)
+      {[...PIPELINE_STAGES.map((s) => ({ id: s.value as string, title: s.title as string, list: projects.filter((p) => !p.archived && p.pipelineStage === s.value) })), { id: 'archived', title: 'Archived', list: projects.filter((p) => p.archived) }].map(({ id, title, list }) => {
         if (!list.length) return null
         return (
-          <section key={s.value} className="p-card" aria-labelledby={`h-${s.value}`}>
-            <div className="a-card-head">
-              <h2 id={`h-${s.value}`} className="a-h2">{s.title}</h2>
-              <span className="muted small">{list.length}</span>
-            </div>
+          <Bucket key={id} id={id} title={title} count={list.length} closed={id === 'delivered' || id === 'paid' || id === 'archived'}>
             <div className="a-table-scroll">
               <table className="a-table">
                 <thead>
@@ -41,6 +38,7 @@ export default async function Projects() {
                     <th scope="col">Region</th>
                     <th scope="col">Next date</th>
                     <th scope="col" className="num">Quote</th>
+                    <th scope="col" className="a-stage-col">Stage</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -56,13 +54,16 @@ export default async function Projects() {
                         <td>{REGIONS.find((r) => r.value === p.region)?.title ?? '—'}</td>
                         <td>{next ? `${next.label} · ${fmtDay(next.date)}` : '—'}</td>
                         <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>
+                        <td className="a-stage-col">
+                          <StageControl compact archived={p.archived} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
+                        </td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
-          </section>
+          </Bucket>
         )
       })}
       {!projects.length && <p className="muted">No projects yet. Add one in the Studio and it shows up here.</p>}

@@ -172,3 +172,14 @@
 .a-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .a-notes li { padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--surface); border-left: 3px solid var(--accent-fill); }
 .a-notes li.fb-approve { border-left-color: var(--ok, #2e9e6a); }
+
+/* Projects pipeline: collapsible buckets and the per-row stage menu */
+.a-bucket > summary { list-style: none; cursor: pointer; justify-content: flex-start; align-items: center; }
+.a-bucket > summary::-webkit-details-marker { display: none; }
+.a-bucket > summary::before { content: ''; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s; margin-right: 4px; flex: none; }
+.a-bucket[open] > summary::before { transform: rotate(45deg); }
+.a-bucket:not([open]) > summary { margin-bottom: 0; }
+.a-bucket[open] > summary { margin-bottom: var(--space-3); }
+.a-select.a-select-sm { margin: 0; padding: 0; min-height: 0; }
+.a-select.a-select-sm select { min-height: 36px; padding: 0 32px 0 var(--space-3); font-size: 14px; }
+.a-table .a-stage-col { padding-left: var(--space-6); width: 1%; white-space: nowrap; }

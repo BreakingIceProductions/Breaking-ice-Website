@@ -81,6 +81,7 @@ export type OfficeProject = {
   links?: import('@/portal/links').ProjectLink[]
   driveFolderId?: string
   pipelineStage: PipelineStage
+  archived?: boolean
   projectType?: string
   region?: 'alberta' | 'nwt' | 'other'
   quoteAmount?: number
