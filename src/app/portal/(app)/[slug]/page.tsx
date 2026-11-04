@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import { requireAccess } from '@/portal/current'
@@ -30,10 +29,6 @@ export default async function PortalProject({ params }: Props) {
 
   return (
     <div className="wrap p-project">
-      <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link href="/portal">← All projects</Link>
-      </nav>
-
       <header className="p-project-head">
         <div className="stack" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
           {p.startDate && <span className="fd-kicker p-kicker">{p.startDate}</span>}
@@ -44,7 +39,7 @@ export default async function PortalProject({ params }: Props) {
 
       {p.status === 'delivered' && <Delivery project={forBrowser} demo={Boolean(session.demo)} />}
 
-      <section className="p-where" aria-labelledby="where-h">
+      <section id="overview" className="p-where p-anchor" aria-labelledby="where-h">
         <h2 id="where-h" className="p-label">Where we are</h2>
         <StageBar stage={clientStage(p.pipelineStage, p.status)} names={CLIENT_STAGES.map((s) => s.title)} />
       </section>
@@ -67,7 +62,7 @@ export default async function PortalProject({ params }: Props) {
           </section>
         )}
         {billing && (
-          <section className="p-card" aria-labelledby="bill-h">
+          <section id="billing" className="p-card p-anchor" aria-labelledby="bill-h">
             <h2 id="bill-h" className="p-label">Billing</h2>
             <p className={`billing billing-${billing.tone}`}><span className="billing-dot" aria-hidden="true" />{billing.label}</p>
           </section>
@@ -75,7 +70,7 @@ export default async function PortalProject({ params }: Props) {
         <ProducerCard producer={producerFor(p, ps)} />
       </div>
 
-      <section aria-labelledby="work-h" className="p-work">
+      <section id="work" aria-labelledby="work-h" className="p-work p-anchor">
         <h2 id="work-h" className="h3">Your work</h2>
         <Suspense>
           <ProjectLibrary project={forBrowser} demo={Boolean(session.demo)} uploaderName={me?.name ?? ''} />

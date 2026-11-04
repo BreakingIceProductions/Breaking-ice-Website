@@ -41,6 +41,12 @@ export function ProjectLibrary({ project, demo, uploaderName }: { project: Clien
     [pathname, router],
   )
 
+  // The sidebar links straight to a folder (?at=videos), so follow the address when it changes.
+  const fromUrl = params.get('at') ?? ''
+  useEffect(() => {
+    setPathState(fromUrl.split('/').filter(Boolean).map(decodeURIComponent))
+  }, [fromUrl])
+
   const at = resolvePath([project], [project.slug, ...path])
 
   let panel: React.ReactNode

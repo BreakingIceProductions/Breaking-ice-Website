@@ -90,7 +90,7 @@ export function ProducerCard({ producer, title = 'Your producer' }: { producer?:
   )
 }
 
-export function PortalHeader({ name, demo, quotes, previewOf }: { name?: string; demo?: boolean; quotes?: number; previewOf?: string }) {
+export function PortalHeader({ name, demo, previewOf }: { name?: string; demo?: boolean; previewOf?: string }) {
   return (
     <header className="p-header">
       <div className="wrap">
@@ -99,11 +99,6 @@ export function PortalHeader({ name, demo, quotes, previewOf }: { name?: string;
           <Logo tone="dark" className="logo-for-dark" />
         </Link>
         <span className="p-header-label">Client portal</span>
-        <nav className="p-nav" aria-label="Portal">
-          <Link href="/portal">Projects</Link>
-          {quotes ? <Link href="/portal/quotes">Quotes</Link> : null}
-          <a href="/" target="_blank" rel="noopener">Website ↗</a>
-        </nav>
         <div className="header-tools">
           <ThemeToggle />
           {name && <span className="p-who" title={demo ? 'Sample client' : undefined}>{name}</span>}
