@@ -33,6 +33,8 @@ export const portalEnv = {
   stripeSecret: process.env.STRIPE_SECRET_KEY || '',
   /** Signing secret of the Stripe webhook (whsec_…), so payment confirmations can be trusted. */
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  /** A live key (sk_live_…) only takes real money when this is "on". Test keys always work. */
+  stripeLive: process.env.STRIPE_LIVE === 'on',
   /** "off" hides the sample-project preview on the sign-in page. */
   demo: process.env.PORTAL_DEMO !== 'off',
 }
@@ -42,7 +44,9 @@ export const googleKeyless = () => Boolean(portalEnv.googleWifProvider && portal
 export const driveReady = () => Boolean((portalEnv.googleServiceAccount || googleKeyless()) && portalEnv.sharedDriveId)
 export const emailReady = () => Boolean(portalEnv.resendKey)
 export const vimeoReady = () => Boolean(portalEnv.vimeoToken)
-export const stripeReady = () => Boolean(portalEnv.stripeSecret)
+const stripeTestKey = () => /^(sk|rk)_test_/.test(portalEnv.stripeSecret)
+/** On with a test key, or with a live key once STRIPE_LIVE=on, so a pasted live key can't charge anyone by surprise. */
+export const stripeReady = () => Boolean(portalEnv.stripeSecret) && (stripeTestKey() || portalEnv.stripeLive)
 
 /** Development fallback so the demo works locally without settings. */
 export const sessionSecret = () =>
