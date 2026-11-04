@@ -1225,3 +1225,19 @@ textarea.input.a-quote-text { min-height: 90px; }
 /* On phones the header scrolls away, so the Menu bar sticks to the very top. */
 @media (max-width: 560px) { .p-shell { --p-head-h: 0px; } .p-shell.with-ribbon { --p-head-h: 0px; } }
 @media (prefers-reduced-motion: reduce) { .ps { transition: none; } }
+
+/* ── Portal payments ───────────────────────────────────────────────────── */
+.pay-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.pay-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--line); }
+.pay-row:first-child { border-top: 0; padding-top: 0; }
+.pay-amount { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pay-paid .pay-amount { color: var(--ink-muted); font-weight: 600; }
+.pay-row form { margin: 0; }
+.pay-note { margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--ok-bg); }
+.pay-note.err { background: var(--danger-bg); }
+@media (max-width: 420px) { .pay-row { grid-template-columns: minmax(0, 1fr) auto; } .pay-row > :last-child { grid-column: 1 / -1; justify-self: start; } }
+.a-pay-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.a-pay-list li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+.a-pay-list li > .stack { flex: 1 1 200px; }
+.a-pay-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); align-items: end; }
+.p-cards > .pay-card { grid-column: 1 / -1; }

@@ -1,4 +1,4 @@
-import type { ClientProject, DriveFile, PortalClient, PortalQuote, PortalSettings } from './types'
+import type { ClientProject, DriveFile, PortalClient, PortalPayment, PortalQuote, PortalSettings } from './types'
 
 /**
  * Preview mode: a made-up client so the portal can be judged before any
@@ -13,6 +13,7 @@ export const DEMO_EMAIL = 'preview@sample.client'
 export const SAMPLE_CLIENT: PortalClient = {
   _id: 'sample-client',
   organizationName: 'Sample Development Corporation',
+  portalPayments: true,
   contacts: [{ _key: 'c1', name: 'Alex Sample', email: DEMO_EMAIL, role: 'Communications lead', getsEmails: true }],
 }
 
@@ -122,7 +123,7 @@ export const sampleFiles = (): DriveFile[] => [
   { id: 'f10', name: 'Safety series stills.zip', size: 86_000_000, mimeType: 'application/zip', modifiedTime: iso(-150), from: 'Final Files' },
 ]
 
-export const DEFAULT_PORTAL: Required<Omit<PortalSettings, 'signInImage' | 'feedbackVideo' | 'copyTo'>> & Pick<PortalSettings, 'signInImage' | 'feedbackVideo' | 'copyTo'> = {
+export const DEFAULT_PORTAL: Required<Omit<PortalSettings, 'signInImage' | 'feedbackVideo' | 'copyTo' | 'gstNumber'>> & Pick<PortalSettings, 'signInImage' | 'feedbackVideo' | 'copyTo' | 'gstNumber'> = {
   signInHeadline: 'Your projects, in one place.',
   signInIntro: 'We’ll email you a link and a code. No password to remember.',
   checkEmailHeadline: 'Check your email',
@@ -147,6 +148,7 @@ export const DEFAULT_PORTAL: Required<Omit<PortalSettings, 'signInImage' | 'feed
   signInImage: undefined,
   feedbackVideo: undefined,
   copyTo: undefined,
+  gstNumber: undefined,
 }
 
 /** One quote waiting for a signature and one already signed, for the preview. */
@@ -184,4 +186,10 @@ export const sampleQuotes = (): PortalQuote[] => [
     deposit: 9250,
     signature: { name: 'Alex Sample', title: 'Communications lead', org: SAMPLE_CLIENT.organizationName, at: iso(-55), method: 'typed', total: 18500, deposit: 9250, certificateId: 'SAMP-LE00-0000-0001' },
   },
+]
+
+/** The sample client pays in the portal: Community voices' deposit is in, the balance is due. */
+export const samplePayments = (): PortalPayment[] => [
+  { _id: 'sample-pay-1', projectId: 'sample-p1', clientId: 'sample-client', slug: 'sample-community-voices', projectTitle: 'Community voices film', kind: 'deposit', label: 'Deposit', amount: 5550, gst: 277.5, total: 5827.5, status: 'paid', createdAt: '2026-09-10T18:00:00Z', paidAt: '2026-09-11T16:20:00Z', method: 'card' },
+  { _id: 'sample-pay-2', projectId: 'sample-p1', clientId: 'sample-client', slug: 'sample-community-voices', projectTitle: 'Community voices film', kind: 'balance', label: 'Balance', amount: 12950, gst: 647.5, total: 13597.5, status: 'due', createdAt: '2026-11-01T18:00:00Z' },
 ]

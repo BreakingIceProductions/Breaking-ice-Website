@@ -81,6 +81,13 @@ export const client = defineType({
       type: 'string',
       validation: (r) => r.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { name: 'email' }),
     }),
+    defineField({
+      name: 'portalPayments',
+      title: 'Takes payments in the portal',
+      description: 'Deposits and balances are paid by card or bank debit in their portal (Stripe). Leave off for clients invoiced in QuickBooks.',
+      type: 'boolean',
+      initialValue: false,
+    }),
   ],
   preview: { select: { title: 'organizationName', media: 'logo', contacts: 'contacts' }, prepare: ({ title, media, contacts }) => ({ title, media, subtitle: `${contacts?.length ?? 0} contact(s)` }) },
 })
@@ -321,8 +328,34 @@ export const portalSettings = defineType({
     defineField({ name: 'reminderDays', title: 'Reminder after (days, when there’s no due date)', type: 'number', initialValue: 7, group: 'email' }),
     defineField({ name: 'signOff', title: 'Email sign-off', type: 'string', group: 'email' }),
     defineField({ name: 'copyTo', title: 'Send me a copy at', description: 'Gets a copy of every client email.', type: 'string', group: 'email' }),
+    defineField({ name: 'gstNumber', title: 'GST number', description: 'When set, portal payments add 5% GST. Leave empty if the company isn’t registered.', type: 'string', group: 'email' }),
   ],
   preview: { prepare: () => ({ title: 'Portal settings' }) },
 })
 
-export const portalSchemaTypes = [client, clientProject, portalSettings]
+/** A request for money in the portal. Written by the site and Stripe; read-only here. */
+export const portalPayment = defineType({
+  name: 'portalPayment',
+  title: 'Portal payment',
+  type: 'document',
+  readOnly: true,
+  fields: [
+    defineField({ name: 'label', type: 'string' }),
+    defineField({ name: 'projectId', type: 'string' }),
+    defineField({ name: 'clientId', type: 'string' }),
+    defineField({ name: 'kind', type: 'string' }),
+    defineField({ name: 'amount', title: 'Amount before GST', type: 'number' }),
+    defineField({ name: 'gst', type: 'number' }),
+    defineField({ name: 'total', type: 'number' }),
+    defineField({ name: 'status', type: 'string' }),
+    defineField({ name: 'createdAt', type: 'datetime' }),
+    defineField({ name: 'paidAt', type: 'datetime' }),
+    defineField({ name: 'method', type: 'string' }),
+    defineField({ name: 'receiptUrl', type: 'url' }),
+    defineField({ name: 'sessionId', title: 'Stripe Checkout session', type: 'string' }),
+    defineField({ name: 'paymentIntent', title: 'Stripe payment', type: 'string' }),
+  ],
+  preview: { select: { title: 'label', total: 'total', status: 'status' }, prepare: ({ title, total, status }) => ({ title, subtitle: `$${total ?? 0} · ${status ?? ''}` }) },
+})
+
+export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment]

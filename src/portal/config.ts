@@ -29,6 +29,10 @@ export const portalEnv = {
   from: process.env.PORTAL_FROM || 'Josh Ferguson, Breaking Ice <josh@breakingiceproductions.com>',
   replyTo: process.env.PORTAL_REPLY_TO || 'josh@breakingiceproductions.com',
   slackWebhook: process.env.SLACK_WEBHOOK_URL || '',
+  /** Stripe secret key (sk_test_… while testing). Clients who take payments in the portal pay through Stripe Checkout. */
+  stripeSecret: process.env.STRIPE_SECRET_KEY || '',
+  /** Signing secret of the Stripe webhook (whsec_…), so payment confirmations can be trusted. */
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   /** "off" hides the sample-project preview on the sign-in page. */
   demo: process.env.PORTAL_DEMO !== 'off',
 }
@@ -38,6 +42,7 @@ export const googleKeyless = () => Boolean(portalEnv.googleWifProvider && portal
 export const driveReady = () => Boolean((portalEnv.googleServiceAccount || googleKeyless()) && portalEnv.sharedDriveId)
 export const emailReady = () => Boolean(portalEnv.resendKey)
 export const vimeoReady = () => Boolean(portalEnv.vimeoToken)
+export const stripeReady = () => Boolean(portalEnv.stripeSecret)
 
 /** Development fallback so the demo works locally without settings. */
 export const sessionSecret = () =>

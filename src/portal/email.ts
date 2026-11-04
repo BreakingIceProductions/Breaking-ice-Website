@@ -203,12 +203,33 @@ ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}
   return { subject: m.again ? `Updated quote: ${m.projectTitle}` : `Your quote: ${m.projectTitle}`, html, text }
 }
 
+/** To whoever paid: a short confirmation (Stripe's own receipt is linked when there is one). */
+export function paidEmail(m: { name: string; projectTitle: string; org: string; label: string; total: number; processing: boolean; receiptUrl?: string; portalUrl: string; signOff: string }) {
+  const headline = m.processing ? `Payment started: ${esc(m.label)}` : `Payment received: ${esc(m.label)}`
+  const intro = m.processing
+    ? `Thanks ${m.name}. Your bank payment of ${money(m.total)} for ${m.projectTitle} is on its way. Bank debits take a few business days to clear; we’ll mark it paid in your portal when it does.`
+    : `Thanks ${m.name}. We’ve received ${money(m.total)} for ${m.projectTitle}. It shows as paid in your client portal.`
+  const html = layout({
+    eyebrow: 'Payment',
+    preview: m.processing ? 'Your bank payment is on its way.' : 'Thanks, your payment is in.',
+    body: `
+<tr><td style="padding:14px 32px 0;font:600 12px ${FONT};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${esc(m.projectTitle)} · ${esc(m.org)}</td></tr>
+${para(`<span style="font:bold 24px/30px ${FONT}">${headline}</span>`, 'padding-top:8px')}
+${para(esc(intro))}
+${m.receiptUrl ? para(`<a href="${m.receiptUrl}" style="color:${NAVY}">View your receipt</a>`, 'font-size:14px') : ''}
+<tr><td style="padding:22px 32px 0">${button(m.portalUrl, 'Open your portal')}</td></tr>
+${para(esc(m.signOff), 'padding-top:20px;padding-bottom:24px')}`,
+  })
+  const text = `${headline}\n\n${intro}${m.receiptUrl ? `\n\nReceipt: ${m.receiptUrl}` : ''}\n\n${m.portalUrl}\n\n${m.signOff}`
+  return { subject: `${m.processing ? 'Payment started' : 'Payment received'}: ${m.projectTitle}`, html, text }
+}
+
 /** To the signer, with the signed PDF attached. */
-export function signedEmail(m: { name: string; projectTitle: string; org: string; at: string; deposit?: number; booked: boolean; portalUrl: string; signOff: string; producerPhone?: string }) {
+export function signedEmail(m: { name: string; projectTitle: string; org: string; at: string; deposit?: number; booked: boolean; portalUrl: string; signOff: string; producerPhone?: string; payInPortal?: boolean }) {
   const headline = `Signed: ${esc(m.projectTitle)}`
   const intro = `Thanks ${m.name}. Your signed quote is attached, with a certificate page that records when and how it was signed. You’ll also find it in your client portal any time.`
   const next = m.booked
-    ? `Your project is booked.${m.deposit ? ` The deposit invoice (${money(m.deposit)} + GST) follows separately.` : ''} We’ll be in touch shortly to lock in dates.`
+    ? `Your project is booked.${m.deposit ? (m.payInPortal ? ` You can pay the deposit (${money(m.deposit)}) in your portal by card or bank debit.` : ` The deposit invoice (${money(m.deposit)} + GST) follows separately.`) : ''} We’ll be in touch shortly to lock in dates.`
     : 'We’ll be in touch shortly about next steps.'
   const html = layout({
     eyebrow: 'Quote signed',

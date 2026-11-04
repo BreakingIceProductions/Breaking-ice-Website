@@ -11,6 +11,8 @@ export type PortalClient = {
   contacts: Contact[]
   producer?: Producer
   driveFolderId?: string
+  /** Pays deposits and balances by card or bank debit in the portal (Stripe). Off for clients invoiced elsewhere. */
+  portalPayments?: boolean
 }
 
 export type DeliverableStatus = 'in-progress' | 'awaiting-feedback' | 'changes-requested' | 'approved'
@@ -109,6 +111,8 @@ export type PortalSettings = {
   reminderDays?: number
   signOff?: string
   copyTo?: string
+  /** The company's GST/HST number. When set, portal payments add 5% GST and show the number. */
+  gstNumber?: string
 }
 
 export type DriveFile = {
@@ -153,3 +157,26 @@ export type PortalQuote = {
 export type QuoteSignature = { name: string; title?: string; org?: string; at: string; method: 'typed' | 'drawn'; option?: string; total?: number; deposit?: number; certificateId: string }
 
 export type QuoteOption = { _key: string; name: string; total: number; note?: string }
+
+/** Money asked of a client through the portal: a deposit, a balance, or anything else. Amounts in dollars. */
+export type PortalPayment = {
+  _id: string
+  projectId: string
+  clientId: string
+  /** Project slug and title, for links and labels. */
+  slug?: string
+  projectTitle?: string
+  kind: 'deposit' | 'balance' | 'other'
+  label: string
+  /** Before tax. */
+  amount: number
+  gst?: number
+  total: number
+  /** due → (processing, while a bank debit clears) → paid. Canceled ones aren't shown to the client. */
+  status: 'due' | 'processing' | 'paid' | 'canceled'
+  createdAt: string
+  paidAt?: string
+  /** How it was paid: card, acss_debit (bank), or outside (marked paid by Josh). */
+  method?: string
+  receiptUrl?: string
+}

@@ -15,7 +15,7 @@ const isDone = (p: ClientProject) => p.status === 'delivered' || p.pipelineStage
 const atPath = (parts: string[]) => parts.map(encodeURIComponent).join('/')
 
 export default async function Home({ searchParams }: Props) {
-  const { session, clients, projects, quotes, name } = await requireAccess()
+  const { session, clients, projects, quotes, name, payments } = await requireAccess()
 
   // Email links (?open=<version>) go straight to that version on its project page.
   const { open } = await searchParams
@@ -43,6 +43,7 @@ export default async function Home({ searchParams }: Props) {
   const multi = clients.length > 1
   // Quotes come first: before we book, they're the whole relationship.
   const toSign = quotes.filter((q) => !q.signature && !quoteExpired(q, today()))
+  const due = payments.filter((x) => x.status === 'due')
   const waiting = projects.flatMap((p) =>
     (p.deliverables ?? []).filter((d) => d.status === 'awaiting-feedback' && clientCanOpen(d, p.deliverables)).map((d) => ({ p, d })),
   )
@@ -55,16 +56,29 @@ export default async function Home({ searchParams }: Props) {
         <p className="body-lg muted" style={{ margin: 0 }}>
           {toSign.length
             ? `${toSign.length === 1 ? `Your quote for ${toSign[0].title} is` : `${toSign.length} quotes are`} ready to review and sign.`
-            : waiting.length ? `${waiting.length === 1 ? 'One thing is' : `${waiting.length} things are`} waiting for your feedback.` : 'You’re all caught up.'}
+            : waiting.length ? `${waiting.length === 1 ? 'One thing is' : `${waiting.length} things are`} waiting for your feedback.`
+              : due.length ? `${due.length === 1 ? 'One payment is' : `${due.length} payments are`} ready when you are.` : 'You’re all caught up.'}
         </p>
       </section>
 
       {toSign.length > 0 && <QuoteList id="quotes-h" label="Ready for your signature" quotes={toSign} t={today()} />}
 
-      {waiting.length > 0 && (
+      {waiting.length + due.length > 0 && (
         <section aria-labelledby="waiting-h" className="p-home-sec">
           <h2 id="waiting-h" className="p-label">Waiting for you</h2>
           <ul className="lib-list">
+            {due.map((x) => (
+              <li key={x._id}>
+                <Link className="lib-row" href={`/portal/${x.slug}#billing`}>
+                  <span className="fd-dot fd-dot-awaiting" aria-hidden="true" />
+                  <span className="stack" style={{ gap: 0, minWidth: 0 }}>
+                    <strong>{x.label} · ${x.total.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    <span className="muted small">{x.projectTitle} · ready to pay</span>
+                  </span>
+                  <span className="lib-row-go" aria-hidden="true">→</span>
+                </Link>
+              </li>
+            ))}
             {waiting.map(({ p, d }) => (
               <li key={d._key}>
                 <Link className="lib-row" href={`/portal/${p.slug}?at=${atPath(versionPath(d))}`}>

@@ -7,10 +7,14 @@ import { ago, cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
 import { NoteForm } from '@/admin/ui/note-form'
+import { PaymentsCard } from '@/admin/ui/payments-card'
 import { QuoteCard } from '@/admin/ui/quote-card'
 import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
 import { invoiceUrl, zohoConnection } from '@/admin/zoho'
+import { stripeReady } from '@/portal/config'
+import { getPortalSettings } from '@/portal/data'
+import { paymentsForProject, stripeTestMode } from '@/portal/payments'
 import { DELIVERABLE_LABEL } from '@/portal/ui'
 import { categoryOf, versionLabel } from '@/portal/library'
 import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS } from '@/sanity/portal/office-constants'
@@ -48,6 +52,7 @@ export default async function ProjectPage({ params }: Props) {
   const invoices = p.office.invoices ?? []
   const zoho = invoices.length ? await zohoConnection().catch(() => null) : null
   const deposit = invoices.find((i) => i.kind === 'deposit')
+  const [payments, ps] = await Promise.all([p._id.startsWith('sample-') ? [] : paymentsForProject(p._id).catch(() => []), getPortalSettings()])
   const final = invoices.find((i) => i.kind === 'final' || i.kind === 'retainer')
   const openDeliverables = p.deliverables.filter((d) => d.status !== 'approved').length
   const round = si >= stageIndex('delivered') ? 3 : si >= stageIndex('finalcut') ? 2 : si >= stageIndex('roughcut') ? 1 : 0
@@ -313,6 +318,17 @@ export default async function ProjectPage({ params }: Props) {
             )}
             {!final && <p className="muted small" style={{ margin: 0 }}>The final invoice is drafted when you move the project to Delivered.</p>}
           </section>
+
+          <PaymentsCard
+            projectId={p._id}
+            on={Boolean(p.client.portalPayments)}
+            payments={payments}
+            deposit={p.depositAmount}
+            balance={p.quoteAmount ? Math.max(0, p.quoteAmount - (p.depositAmount ?? 0)) : undefined}
+            stripeOn={stripeReady()}
+            testMode={stripeTestMode()}
+            gst={Boolean(ps.gstNumber)}
+          />
 
           <section className="p-card" aria-labelledby="h-links">
             <h2 id="h-links" className="a-h2">Links</h2>

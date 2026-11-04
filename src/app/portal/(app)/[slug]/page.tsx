@@ -4,10 +4,11 @@ import { requireAccess } from '@/portal/current'
 import { getPortalSettings, producerFor } from '@/portal/data'
 import { Delivery } from '@/portal/delivery'
 import { billingStatus, CLIENT_STAGES, clientStage } from '@/portal/library'
+import { PaymentList } from '@/portal/payment-list'
 import { ProjectLibrary } from '@/portal/portal-library'
 import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
 
-type Props = { params: Promise<{ slug: string }> }
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ pay?: string }> }
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params
@@ -15,9 +16,10 @@ export async function generateMetadata({ params }: Props) {
   return { title: projects.find((p) => p.slug === slug)?.title ?? 'Project' }
 }
 
-export default async function PortalProject({ params }: Props) {
+export default async function PortalProject({ params, searchParams }: Props) {
   const { slug } = await params
-  const { projects, session, clients } = await requireAccess()
+  const { pay: note } = await searchParams
+  const { projects, session, clients, payments } = await requireAccess()
   const p = projects.find((x) => x.slug === slug)
   if (!p) notFound()
   const ps = await getPortalSettings()
@@ -61,7 +63,10 @@ export default async function PortalProject({ params }: Props) {
             </dl>
           </section>
         )}
-        {billing && (
+        {/* Clients who pay in the portal see each payment; others see the invoice status. */}
+        {payments.some((x) => x.projectId === p._id) ? (
+          <PaymentList id="billing" payments={payments.filter((x) => x.projectId === p._id)} back={`/portal/${p.slug}`} note={note} />
+        ) : billing && (
           <section id="billing" className="p-card p-anchor" aria-labelledby="bill-h">
             <h2 id="bill-h" className="p-label">Billing</h2>
             <p className={`billing billing-${billing.tone}`}><span className="billing-dot" aria-hidden="true" />{billing.label}</p>

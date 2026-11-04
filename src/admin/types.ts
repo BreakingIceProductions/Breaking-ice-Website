@@ -65,6 +65,7 @@ export type OfficeClient = {
   contacts?: Contact[]
   billingEmail?: string
   driveFolderId?: string
+  portalPayments?: boolean
 }
 
 export type OfficeProject = {

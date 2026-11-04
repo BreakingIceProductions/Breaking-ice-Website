@@ -6,13 +6,14 @@ import { addActivity, getPortalSettings, portalImage, producerFor } from '@/port
 import { notifyJosh } from '@/portal/email'
 import { CLIENT_STAGES, clientStage, today } from '@/portal/library'
 import { PRE_PORTAL_STAGES } from '@/sanity/portal/office-constants'
+import { PaymentList } from '@/portal/payment-list'
 import { PdfPages } from '@/portal/pdf-view'
 import { QuoteReveal, ReplayReveal } from '@/portal/quote-reveal'
 import { QuoteChoice, QuoteGlance, QuoteSign } from '@/portal/quote-sign'
 import { fmtMoment, markQuoteViewed, quoteExpired } from '@/portal/quotes'
 import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
 
-type Props = { params: Promise<{ slug: string }> }
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ pay?: string }> }
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params
@@ -21,9 +22,10 @@ export async function generateMetadata({ params }: Props) {
   return { title: q ? `Quote · ${q.title}` : 'Quote' }
 }
 
-export default async function QuotePage({ params }: Props) {
+export default async function QuotePage({ params, searchParams }: Props) {
   const { slug } = await params
-  const { quotes, clients, session } = await requireAccess()
+  const { quotes, clients, session, payments } = await requireAccess()
+  const { pay: note } = await searchParams
   const q = quotes.find((x) => x.slug === slug)
   if (!q) notFound()
   const demo = Boolean(session.demo)
@@ -135,6 +137,10 @@ export default async function QuotePage({ params }: Props) {
             <section className="p-card">
               <QuoteSign slug={q.slug} version={q.version} org={q.org} options={q.options} depositPercent={q.depositPercent} deposit={q.deposit} defaultName={me?.name ?? ''} defaultTitle={me?.role ?? ''} demo={demo} preview={Boolean(session.preview)} />
             </section>
+          )}
+
+          {q.signature && (
+            <PaymentList id="billing" heading="Your deposit" payments={payments.filter((x) => x.projectId === q.projectId)} back={`/portal/quotes/${q.slug}`} note={note} />
           )}
 
           <ProducerCard producer={producer} title="Questions about the quote?" />

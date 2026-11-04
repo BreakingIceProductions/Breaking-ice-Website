@@ -5,8 +5,8 @@ import { createClient } from 'next-sanity'
 import { apiVersion, projectId } from '@/sanity/env'
 import { PRE_PORTAL_STAGES } from '@/sanity/portal/office-constants'
 import { portalEnv, portalReady } from './config'
-import { DEFAULT_PORTAL, SAMPLE_CLIENT, sampleProjects, sampleQuotes } from './samples'
-import type { ClientProject, Deliverable, PortalClient, PortalQuote, PortalSettings, SanityImage, Session } from './types'
+import { DEFAULT_PORTAL, SAMPLE_CLIENT, samplePayments, sampleProjects, sampleQuotes } from './samples'
+import type { ClientProject, Deliverable, PortalClient, PortalPayment, PortalQuote, PortalSettings, SanityImage, Session } from './types'
 
 export const PORTAL_DATASET = 'portal'
 
@@ -27,7 +27,7 @@ export const portalImage = (img: SanityImage, w: number, h?: number) => {
   return (h ? b.height(h).fit('crop') : b).url()
 }
 
-const CLIENT_FIELDS = `_id, organizationName, logo, contacts[]{_key, name, email, role, getsEmails}, producer, driveFolderId`
+const CLIENT_FIELDS = `_id, organizationName, logo, contacts[]{_key, name, email, role, getsEmails}, producer, driveFolderId, portalPayments`
 const PROJECT_FIELDS = `_id, _updatedAt, title, "slug": slug.current, startDate, pipelineStage, status, dontEmailDelivery,
   "billing": *[_id == "bo-state-" + ^._id][0].invoices[]{kind, status, outstanding}, stage, stageDates, nextStep, summary, coverImage,
   keyDates, links, deliverables, driveFolderId, "client": client->{${CLIENT_FIELDS}},
@@ -89,15 +89,21 @@ export async function findClientsByEmail(email: string): Promise<PortalClient[]>
 
 /** Everything a signed-in person can see. Access is re-checked on every request, so removing a contact removes access. */
 export async function getAccess(session: Session) {
-  if (session.demo) return { clients: [SAMPLE_CLIENT], projects: sampleProjects().map(decorate), quotes: sampleQuotes(), name: 'Alex' }
+  if (session.demo) return { clients: [SAMPLE_CLIENT], projects: sampleProjects().map(decorate), quotes: sampleQuotes(), payments: samplePayments(), name: 'Alex' }
   const clients = session.preview
     ? ((await q<PortalClient[]>(`*[_type == "client" && _id == $id]{${CLIENT_FIELDS}}`, { id: session.preview })) ?? [])
     : await findClientsByEmail(session.email)
-  if (!clients.length) return { clients, projects: [] as ClientProject[], quotes: [] as PortalQuote[], name: undefined }
+  if (!clients.length) return { clients, projects: [] as ClientProject[], quotes: [] as PortalQuote[], payments: [] as PortalPayment[], name: undefined }
   // Quotes are shown from the moment they're shared, before the project is booked, and stay afterwards.
   const quotes = import('./quotes').then((m) => m.quotesForClients(clients.map((c) => c._id), Boolean(session.preview))).catch((e) => {
     console.error('[portal] quotes query failed', e)
     return [] as PortalQuote[]
+  })
+  // Only clients who pay in the portal have payments to show.
+  const payers = clients.filter((c) => c.portalPayments).map((c) => c._id)
+  const payments = import('./payments').then((m) => m.paymentsForClients(payers)).catch((e) => {
+    console.error('[portal] payments query failed', e)
+    return [] as PortalPayment[]
   })
   const projects =
     (await q<ClientProject[]>(`*[_type == "clientProject" && client._ref in $ids && defined(slug.current) && !(pipelineStage in $hidden)] | order(_updatedAt desc){${PROJECT_FIELDS}}`, {
@@ -108,7 +114,7 @@ export async function getAccess(session: Session) {
   const contact = clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === session.email)
   // In a preview, the greeting uses the client's first contact, as they'd see it.
   const shown = session.preview ? clients[0].contacts?.[0] : contact
-  return { clients, projects: projects.map(decorate), quotes: await quotes, name: shown?.name?.split(' ')[0] }
+  return { clients, projects: projects.map(decorate), quotes: await quotes, payments: await payments, name: shown?.name?.split(' ')[0] }
 }
 
 export async function getProjectForSession(session: Session, slug: string) {

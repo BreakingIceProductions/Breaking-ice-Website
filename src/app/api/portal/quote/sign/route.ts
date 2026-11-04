@@ -8,6 +8,7 @@ import { addActivity, getAccess, getPortalSettings, portalClient, producerFor } 
 import { notifyJosh, sendEmail, signedEmail } from '@/portal/email'
 import { ipOf, json, limited, sameOrigin } from '@/portal/http'
 import { quoteDeposit, today } from '@/portal/library'
+import { createPayment } from '@/portal/payments'
 import { assetBytes, buildSignedPdf, fmtMoment, getQuote, newCertificateId, quoteExpired, sha256, uploadAsset } from '@/portal/quotes'
 
 export const runtime = 'nodejs'
@@ -100,6 +101,12 @@ export async function POST(req: Request) {
   }
 
   // The client gets their answer now; booking and emails carry on in the background.
+  // Clients who pay in the portal get the deposit to pay right away.
+  const payer = access.clients.find((c) => c._id === doc.clientId)
+  if (payer?.portalPayments && deposit && deposit > 0) {
+    await createPayment({ projectId: q.projectId, clientId: payer._id, kind: 'deposit', label: 'Deposit', amount: deposit }).catch((e) => console.error('[portal] deposit request failed', e))
+  }
+
   after(async () => {
     const when = fmtMoment(at)
     await addActivity(q.projectId, `${name} signed the quote`, 'approved')
@@ -135,7 +142,7 @@ export async function POST(req: Request) {
         to: [session.email],
         ...signedEmail({
           name: name.split(' ')[0], projectTitle: q.title, org: q.org, at: when, deposit, booked,
-          portalUrl: `${SITE_URL}/portal/quotes/${q.slug}`, signOff: settings.signOff, producerPhone: producer?.phone,
+          portalUrl: `${SITE_URL}/portal/quotes/${q.slug}${payer?.portalPayments ? '#billing' : ''}`, signOff: settings.signOff, producerPhone: producer?.phone, payInPortal: Boolean(payer?.portalPayments),
         }),
         attachments,
       })

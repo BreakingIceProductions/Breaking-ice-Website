@@ -8,7 +8,7 @@ import { PortalFooter, PortalHeader } from '@/portal/ui'
 export const dynamic = 'force-dynamic'
 
 export default async function PortalAppLayout({ children }: { children: React.ReactNode }) {
-  const { session, name, quotes, clients, projects } = await requireAccess()
+  const { session, name, quotes, clients, projects, payments } = await requireAccess()
   const ps = await getPortalSettings()
   const nav: NavProject[] = [...projects].sort(byStart).map((p) => ({
     slug: p.slug,
@@ -16,8 +16,9 @@ export default async function PortalAppLayout({ children }: { children: React.Re
     stage: CLIENT_STAGES[clientStage(p.pipelineStage, p.status) - 1].title,
     done: p.status === 'delivered' || p.pipelineStage === 'delivered' || p.pipelineStage === 'paid',
     delivered: p.status === 'delivered',
-    billing: Boolean(billingStatus(p.billing)),
+    billing: Boolean(billingStatus(p.billing)) || payments.some((x) => x.projectId === p._id),
     waiting: (p.deliverables ?? []).filter((d) => d.status === 'awaiting-feedback' && clientCanOpen(d, p.deliverables)).length,
+    due: payments.filter((x) => x.projectId === p._id && x.status === 'due').length,
   }))
   const producer = clients[0] ? producerFor({ client: clients[0] }, ps) : ps.producer
   return (
@@ -29,7 +30,7 @@ export default async function PortalAppLayout({ children }: { children: React.Re
           <PortalSidebar
             projects={nav}
             quotes={quotes.map((q) => ({ slug: q.slug, title: q.title, signed: Boolean(q.signature) }))}
-            waiting={nav.reduce((n, p) => n + p.waiting, 0)}
+            waiting={nav.reduce((n, p) => n + p.waiting, 0) + payments.filter((x) => x.status === 'due').length}
             producer={producer?.name ? { name: producer.name, role: producer.role, email: producer.email, phone: producer.phone, photo: portalImage(producer.portrait, 80, 80) } : undefined}
           />
         </Suspense>

@@ -12,6 +12,8 @@ export type NavProject = {
   done: boolean
   /** Versions waiting on their feedback. */
   waiting: number
+  /** Payments due. */
+  due: number
   delivered: boolean
   billing: boolean
 }
@@ -71,7 +73,7 @@ export function PortalSidebar({ projects, quotes, waiting, producer }: Props) {
         <Link href={base} className={`ps-proj${on ? ' on' : ''}`} aria-current={on ? 'page' : undefined}>
           <span className="ps-proj-title">{p.title}</span>
           <span className="ps-tag">{p.stage}</span>
-          {!on && p.waiting ? <span className="ps-dot" aria-label={`${p.waiting} waiting for you`} /> : null}
+          {!on && p.waiting + p.due ? <span className="ps-dot" aria-label={`${p.waiting + p.due} waiting for you`} /> : null}
         </Link>
         {on && (
           <ul className="ps-subs" aria-label={`${p.title} sections`}>
@@ -80,7 +82,7 @@ export function PortalSidebar({ projects, quotes, waiting, producer }: Props) {
             {section('?at=documents#work', 'Documents', '?at=documents')}
             {section('?at=assets#work', 'Share files', '?at=assets')}
             {p.delivered && section('?at=finals#work', 'Final files', '?at=finals')}
-            {p.billing && section('#billing', 'Billing', '#billing')}
+            {p.billing && section('#billing', 'Billing', '#billing', p.due)}
           </ul>
         )}
       </li>
