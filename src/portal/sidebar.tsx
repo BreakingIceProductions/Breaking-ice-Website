@@ -152,7 +152,7 @@ export function PortalSidebar({ projects, quotes, waiting, producer }: Props) {
                   {producer.role && <span className="muted small">{producer.role}</span>}
                 </span>
               </div>
-              {producer.email && <a className="text-link small" href={`mailto:${producer.email}`}>{producer.email}</a>}
+              {producer.email && <a className="text-link small" href={`mailto:${producer.email}`} title={producer.email}>Email {producer.name.split(' ')[0]}</a>}
               {producer.phone && <a className="text-link small" href={`tel:${producer.phone.replace(/[^\d+]/g, '')}`}>{producer.phone}</a>}
             </div>
           )}
