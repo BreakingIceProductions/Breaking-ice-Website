@@ -34,7 +34,7 @@ export const officeFields = [
   defineField({
     name: 'declinedAt',
     title: 'Declined',
-    description: 'Set when a quote didn’t book. Files the project into the Declined section of the back office. The client portal is unaffected.',
+    description: 'Set when a quote didn’t book. Files the project under Archived › Declined in the back office. The client portal is unaffected.',
     type: 'datetime',
     group: G,
   }),

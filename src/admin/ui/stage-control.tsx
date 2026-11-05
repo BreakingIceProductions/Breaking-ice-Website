@@ -91,30 +91,30 @@ export function StageControl({ projectId, projectTitle, current, next, stages, c
         <label className="a-select a-select-sm">
           <span className="sr-only">Stage of {projectTitle}</span>
           <select
-            value={archived ? '__archived' : declined ? '__declined' : current}
+            value={archived ? '__archived' : current}
             disabled={busy}
             onChange={(e) => {
               const v = e.target.value
               if (v === '__archive') return void file({ archived: true })
               if (v === '__unarchive') return void file({ archived: false })
               if (v === '__decline') return void file({ declined: true })
-              if (v === '__undecline') return void file({ declined: false })
               const s = stages.find((x) => x.value === v)
               if (s) open(s)
             }}
           >
-            {archived && <option value="__archived" disabled>Archived</option>}
-            {declined && !archived && <option value="__declined" disabled>Declined</option>}
-            {declined && !archived ? (
-              <option value="__undecline">Move back to {stages.find((s) => s.value === current)?.title ?? 'its stage'}</option>
-            ) : (
-              stages.map((s) => (
-                <option key={s.value} value={s.value} disabled={!archived && s.value === current}>{s.value === current && !archived ? s.title : `Move to ${s.title}`}</option>
-              ))
-            )}
+            {archived && <option value="__archived" disabled>{declined ? 'Archived · declined' : 'Archived'}</option>}
+            {stages.map((s) => (
+              <option key={s.value} value={s.value} disabled={!archived && s.value === current}>{s.value === current && !archived ? s.title : `Move to ${s.title}`}</option>
+            ))}
             <option disabled>──────────</option>
-            {!archived && !declined && (current === 'lead' || current === 'quoted') && <option value="__decline">Mark declined</option>}
-            {archived ? <option value="__unarchive">Unarchive</option> : <option value="__archive">Archive</option>}
+            {archived ? (
+              <option value="__unarchive">Unarchive</option>
+            ) : (
+              <>
+                <option value="__archive">Archive as completed</option>
+                <option value="__decline">Archive as declined</option>
+              </>
+            )}
           </select>
         </label>
       ) : (
