@@ -11,7 +11,7 @@ export type PortalClient = {
   contacts: Contact[]
   producer?: Producer
   driveFolderId?: string
-  /** Pays deposits and balances by card or bank debit in the portal (Stripe). Off for clients invoiced elsewhere. */
+  /** Pays deposits and balances in the portal: e-Transfer or EFT first, card (Stripe) with a fee. Off for clients invoiced elsewhere. */
   portalPayments?: boolean
 }
 
@@ -113,6 +113,12 @@ export type PortalSettings = {
   copyTo?: string
   /** The company's GST/HST number. When set, portal payments add 5% GST and show the number. */
   gstNumber?: string
+  /** Where clients send Interac e-Transfers. Shown as the first way to pay. */
+  etransferEmail?: string
+  /** Bank details for EFT / direct deposit, shown to signed-in clients with something due. */
+  eftDetails?: string
+  /** Processing fee added when a client chooses to pay by credit card, in percent. */
+  cardFeePercent?: number
 }
 
 export type DriveFile = {
@@ -172,11 +178,17 @@ export type PortalPayment = {
   amount: number
   gst?: number
   total: number
-  /** due → (processing, while a bank debit clears) → paid. Canceled ones aren't shown to the client. */
+  /** due → (processing, once the client says an e-Transfer or EFT is on its way) → paid. Canceled ones aren't shown to the client. */
   status: 'due' | 'processing' | 'paid' | 'canceled'
   createdAt: string
   paidAt?: string
-  /** How it was paid: card, acss_debit (bank), or outside (marked paid by Josh). */
+  /** How it was (or is being) paid: etransfer, eft, card, or outside (marked paid by Josh). */
   method?: string
   receiptUrl?: string
+  /** Card processing fee and its GST, added only when paid by card. */
+  cardFee?: number
+  cardFeeGst?: number
+  /** The matching Zoho Books invoice. */
+  zohoInvoiceId?: string
+  zohoInvoiceNumber?: string
 }

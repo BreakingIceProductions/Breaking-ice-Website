@@ -7,15 +7,18 @@ import type { OfficeClient } from './types'
 
 /**
  * Zoho Books: the back office finds or creates the customer and saves DRAFT
- * invoices; you send them from Zoho Books. Access tokens last an hour; the
+ * invoices; you send them from Zoho Books. The one thing written without you is a
+ * card payment from the portal: its processing fee is added to the invoice and the
+ * payment recorded, so the books match what Stripe took. Access tokens last an hour; the
  * refresh token doesn't expire, so one Connect lasts until you disconnect.
  * Breaking Ice's books are on Zoho's Canadian data centre (zohocloud.ca).
  */
 
-const SCOPES = 'ZohoBooks.contacts.ALL,ZohoBooks.invoices.ALL,ZohoBooks.settings.READ'
+// Customer payments: card payments taken in the portal are recorded against their invoice.
+const SCOPES = 'ZohoBooks.contacts.ALL,ZohoBooks.invoices.ALL,ZohoBooks.customerpayments.CREATE,ZohoBooks.settings.READ'
 export const zohoRedirect = () => `${SITE_URL}/api/admin/connect/zoho/callback`
 
-type Conn = { access: string; refresh: string; exp: number; api: string; orgId: string; orgName?: string; connectedAt: string }
+type Conn = { access: string; refresh: string; exp: number; api: string; orgId: string; orgName?: string; connectedAt: string; scopes?: string }
 
 export function zohoAuthorizeUrl(state: string) {
   const u = new URL(`${adminEnv.zohoAccounts}/oauth/v2/auth`)
@@ -66,8 +69,12 @@ export async function zohoExchange(code: string) {
     orgId: org.organization_id,
     orgName: org.name,
     connectedAt: new Date().toISOString(),
+    scopes: SCOPES,
   } satisfies Conn)
 }
+
+/** Connected before the site asked for everything it now uses: Connect again to grant it. */
+export const zohoNeedsReconnect = (c: Conn) => c.scopes !== SCOPES
 
 export async function zohoConnection() {
   if (!zohoReady()) return null
@@ -183,6 +190,55 @@ export async function getInvoice(id: string) {
     if ((e as { status?: number }).status === 404) return null
     throw e
   }
+}
+
+type LineItem = { line_item_id: string; name?: string; description?: string; quantity?: number; rate?: number; tax_id?: string; account_id?: string }
+type FullInvoice = ZohoInvoice & { customer_id: string; line_items: LineItem[] }
+
+/**
+ * A card payment taken in the portal: adds the processing fee as its own line (taxed like
+ * the rest), marks a draft as sent, and records the payment against the invoice.
+ * Safe to retry: a second run finds the fee line and a zero balance and does nothing.
+ */
+export async function recordCardPayment(invoiceId: string, p: { fee: number; feeLabel: string; amount: number; reference: string; date: string }) {
+  const inv = (await call<{ invoice: FullInvoice }>(`/invoices/${encodeURIComponent(invoiceId)}`)).invoice
+  if (p.fee > 0 && !inv.line_items.some((l) => l.name === p.feeLabel)) {
+    await call(`/invoices/${encodeURIComponent(invoiceId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        customer_id: inv.customer_id,
+        line_items: [
+          ...inv.line_items.map((l) => ({ line_item_id: l.line_item_id, name: l.name, description: l.description, quantity: l.quantity, rate: l.rate, tax_id: l.tax_id || undefined, account_id: l.account_id || undefined })),
+          {
+            name: p.feeLabel,
+            description: 'Added because this invoice was paid by credit card.',
+            quantity: 1,
+            rate: p.fee,
+            ...(adminEnv.zohoAccountId ? { account_id: adminEnv.zohoAccountId } : {}),
+            ...(adminEnv.zohoTaxId ? { tax_id: adminEnv.zohoTaxId } : {}),
+          },
+        ],
+      }),
+    })
+  }
+  if (statusOf(inv) === 'draft') await call(`/invoices/${encodeURIComponent(invoiceId)}/status/sent`, { method: 'POST' })
+  const fresh = (await call<{ invoice: FullInvoice }>(`/invoices/${encodeURIComponent(invoiceId)}`)).invoice
+  const applied = Math.min(p.amount, fresh.balance ?? p.amount)
+  if (applied <= 0) return fresh
+  await call('/customerpayments', {
+    method: 'POST',
+    body: JSON.stringify({
+      customer_id: inv.customer_id,
+      payment_mode: 'Credit Card',
+      amount: p.amount,
+      date: p.date,
+      reference_number: p.reference.slice(0, 100),
+      description: 'Paid by card in the client portal (Stripe).',
+      invoices: [{ invoice_id: invoiceId, amount_applied: applied }],
+      ...(adminEnv.zohoCardAccountId ? { account_id: adminEnv.zohoCardAccountId } : {}),
+    }),
+  })
+  return fresh
 }
 
 /** Zoho statuses: draft, sent, viewed, overdue, unpaid, partially_paid, paid, void. */

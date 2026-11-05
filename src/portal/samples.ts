@@ -123,7 +123,8 @@ export const sampleFiles = (): DriveFile[] => [
   { id: 'f10', name: 'Safety series stills.zip', size: 86_000_000, mimeType: 'application/zip', modifiedTime: iso(-150), from: 'Final Files' },
 ]
 
-export const DEFAULT_PORTAL: Required<Omit<PortalSettings, 'signInImage' | 'feedbackVideo' | 'copyTo' | 'gstNumber'>> & Pick<PortalSettings, 'signInImage' | 'feedbackVideo' | 'copyTo' | 'gstNumber'> = {
+type Optional = 'signInImage' | 'feedbackVideo' | 'copyTo' | 'gstNumber' | 'etransferEmail' | 'eftDetails'
+export const DEFAULT_PORTAL: Required<Omit<PortalSettings, Optional>> & Pick<PortalSettings, Optional> = {
   signInHeadline: 'Your projects, in one place.',
   signInIntro: 'We’ll email you a link and a code. No password to remember.',
   checkEmailHeadline: 'Check your email',
@@ -149,6 +150,9 @@ export const DEFAULT_PORTAL: Required<Omit<PortalSettings, 'signInImage' | 'feed
   feedbackVideo: undefined,
   copyTo: undefined,
   gstNumber: undefined,
+  etransferEmail: undefined,
+  eftDetails: undefined,
+  cardFeePercent: 2.4,
 }
 
 /** One quote waiting for a signature and one already signed, for the preview. */

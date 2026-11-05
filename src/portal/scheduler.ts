@@ -5,6 +5,7 @@ import { signLinkToken } from './auth'
 import { driveReady, emailReady } from './config'
 import { addActivity, allProjects, claimDeliverable, claimProjectState, cleanSignInGuards, freshState, getPortalSettings, producerFor, setProjectState, updateDeliverableState } from './data'
 import { ensureProjectFolders } from './drive'
+import { syncPaymentsFromZoho } from './payments'
 import { deliveryEmail, fill, sendEmail, versionEmail } from './email'
 import type { ClientProject, Deliverable } from './types'
 import { groupDeliverables, isLatest } from './library'
@@ -26,6 +27,7 @@ import { syncVimeo } from './vimeo'
  *  Folders       every active project gets its Drive folders, and renames follow the Studio.
  *  Back office   calendar events, TickTick due dates and Zoho Books invoice statuses
  *                catch up with the projects (src/admin/sync.ts).
+ *  Payments      portal payments whose Zoho Books invoice is paid show as paid.
  *
  *  Each email is claimed before it's sent (a write that only succeeds if nothing changed
  *  since we read the project), so a run that's cut short or overlaps another can never
@@ -124,6 +126,12 @@ export async function runScheduler(now = Date.now()) {
     log.push(...(await syncOffice(started + 52_000)))
   } catch (e) {
     log.push(`office sync failed: ${String(e).slice(0, 160)}`)
+  }
+  // 3b. Portal payments paid in Zoho Books (e-Transfers and EFTs from the bank feed).
+  try {
+    log.push(...(await syncPaymentsFromZoho()))
+  } catch (e) {
+    log.push(`payment sync failed: ${String(e).slice(0, 160)}`)
   }
 
   await cleanSignInGuards()

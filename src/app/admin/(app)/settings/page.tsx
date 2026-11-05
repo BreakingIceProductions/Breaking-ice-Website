@@ -3,7 +3,7 @@ import { adminEnv, calendarReady, ticktickReady, zohoReady } from '@/admin/confi
 import { fmtDay } from '@/admin/dates'
 import { serviceAccountEmail } from '@/admin/google'
 import { ticktickConnection, ticktickRedirect } from '@/admin/ticktick'
-import { zohoConnection, zohoRedirect } from '@/admin/zoho'
+import { zohoConnection, zohoNeedsReconnect, zohoRedirect } from '@/admin/zoho'
 
 export const metadata = { title: 'Settings' }
 
@@ -43,9 +43,10 @@ export default async function Settings({ searchParams }: Props) {
           <h2 id="h-zoho" className="a-h2">Zoho Books</h2>
           <span className={`a-conn-state ${zoho ? 'on' : 'off'}`}>{zoho ? 'Connected' : zohoReady() ? 'Not connected' : 'Not set up'}</span>
         </div>
-        <p className="muted small" style={{ margin: 0 }}>Creates customers and draft invoices (deposit when booked, balance when delivered). You send every invoice yourself from Zoho Books.</p>
+        <p className="muted small" style={{ margin: 0 }}>Creates customers and draft invoices (deposit when booked, balance when delivered, and each portal payment request). You send every invoice yourself from Zoho Books. When a client pays by card in the portal, the card fee is added to their invoice and the payment recorded for you; e-Transfers and EFTs show as paid in the portal once Zoho Books has them.</p>
         {zoho ? (
           <>
+            {zohoNeedsReconnect(zoho) && <p className="small err" style={{ margin: 0 }}>Disconnect and connect again so card payments from the portal can be recorded in Zoho Books.</p>}
             <p className="small" style={{ margin: 0 }}>Connected to <strong>{zoho.orgName ?? 'your organisation'}</strong> since {fmtDay(zoho.connectedAt.slice(0, 10))}. Invoice lines go to {adminEnv.zohoAccountId ? 'the chosen income account' : 'Sales'}{adminEnv.zohoTaxId ? ' with GST added' : ' with no tax added (set ZOHO_TAX_ID once GST is set up in Zoho)'}, due in {adminEnv.zohoDueDays} days.</p>
             <form action="/api/admin/disconnect" method="post"><input type="hidden" name="app" value="zoho" /><button className="btn btn-secondary btn-sm" type="submit">Disconnect</button></form>
           </>

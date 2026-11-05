@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { methodLabel } from '@/portal/pay-methods'
 import type { PortalPayment } from '@/portal/types'
 
 type Props = {
@@ -21,7 +22,7 @@ const cad = (n: number) => `$${n.toLocaleString('en-CA', { minimumFractionDigits
 const day = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Edmonton' }) : '')
 const STATUS: Record<PortalPayment['status'], { tone: string; text: string }> = {
   due: { tone: 'awaiting-feedback', text: 'Waiting for payment' },
-  processing: { tone: 'in-progress', text: 'Bank debit clearing' },
+  processing: { tone: 'in-progress', text: 'Client says it’s sent' },
   paid: { tone: 'approved', text: 'Paid' },
   canceled: { tone: 'in-progress', text: 'Canceled' },
 }
@@ -72,11 +73,16 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
                     <strong>{p.label} · {cad(p.total)}</strong>
                     <span className="muted small">
                       {p.gst ? `${cad(p.amount)} + ${cad(p.gst)} GST · ` : ''}
-                      {p.status === 'paid' ? `Paid ${day(p.paidAt)}${p.method === 'outside' ? ' (outside the portal)' : p.method === 'acss_debit' ? ' by bank debit' : p.method === 'card' ? ' by card' : ''}` : `Asked ${day(p.createdAt)}`}
+                      {p.status === 'paid'
+                        ? `Paid ${day(p.paidAt)}${p.method === 'outside' ? ' (outside the portal)' : p.method ? ` by ${methodLabel(p.method)}` : ''}${p.cardFee ? ` · ${cad(p.cardFee + (p.cardFeeGst ?? 0))} card fee added` : ''}`
+                        : p.status === 'processing'
+                          ? `${methodLabel(p.method)} on its way · shows paid once Zoho Books has it`
+                          : `Asked ${day(p.createdAt)}`}
+                      {p.zohoInvoiceNumber ? ` · Zoho ${p.zohoInvoiceNumber}` : ''}
                     </span>
                   </span>
                   <span className={`pill pill-${STATUS[p.status].tone}`}>{STATUS[p.status].text}</span>
-                  {p.status === 'due' && (
+                  {(p.status === 'due' || p.status === 'processing') && (
                     <span className="row-wrap" style={{ gap: 'var(--space-3)' }}>
                       <button type="button" className="linklike small" disabled={busy} onClick={() => confirm(`Mark ${p.label.toLowerCase()} (${cad(p.total)}) as paid some other way?`) && call({ action: 'mark-paid', id: p._id }, 'Marked paid.')}>Mark paid</button>
                       <button type="button" className="linklike small" disabled={busy} onClick={() => confirm(`Withdraw the ${p.label.toLowerCase()} request?`) && call({ action: 'cancel', id: p._id }, 'Request withdrawn.')}>Cancel</button>
@@ -118,8 +124,9 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
             <button type="submit" className="btn btn-primary btn-sm" disabled={busy || !(amount || suggested)}>{busy ? 'Saving…' : 'Ask in the portal'}</button>
           </form>
           <p className="muted small" style={{ margin: 0 }}>
-            {!stripeOn ? 'Stripe isn’t connected yet, so the client sees the amount but can’t pay online. ' : ''}
-            {gst ? '5% GST is added at checkout.' : 'No GST is added (no GST number in the portal settings).'} The client gets no email for a new request; tell them, or it shows on their portal home.
+            Each request gets a draft invoice in Zoho Books. The client sees your e-Transfer and EFT details first; paid ones show as paid once Zoho Books has the payment.
+            {stripeOn ? ' Card is offered as a fallback, with the processing fee added.' : ' Card payment is off until Stripe is connected.'}{' '}
+            {gst ? '5% GST is added.' : 'No GST is added (no GST number in the portal settings).'} The client gets no email for a new request; tell them, or it shows on their portal home.
           </p>
           <div><button type="button" className="linklike small" disabled={busy} onClick={() => confirm('Stop taking payments in the portal for this client? Unpaid requests stay hidden from them.') && call({ action: 'portal-payments', on: false }, 'Portal payments switched off for this client.')}>Switch off portal payments for this client</button></div>
         </>

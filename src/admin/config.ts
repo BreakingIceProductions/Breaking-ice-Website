@@ -27,6 +27,8 @@ export const adminEnv = {
   zohoTaxId: process.env.ZOHO_TAX_ID || '',
   /** Invoice due date, in days after the invoice date. */
   zohoDueDays: Number(process.env.ZOHO_DUE_DAYS || 30),
+  /** Optional account card payments are deposited to (e.g. a "Stripe clearing" bank account); empty uses Zoho's default. */
+  zohoCardAccountId: process.env.ZOHO_CARD_ACCOUNT_ID || '',
   /** The "Breaking Ice Projects" calendar, shared with the service account ("Make changes to events"). */
   calendarId: process.env.GOOGLE_CALENDAR_ID || '',
   timeZone: 'America/Edmonton',
