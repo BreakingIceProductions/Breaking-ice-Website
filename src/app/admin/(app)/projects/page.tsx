@@ -11,6 +11,20 @@ import { PIPELINE_STAGES, REGIONS } from '@/sanity/portal/office-constants'
 
 export const metadata = { title: 'Projects' }
 
+type Project = Awaited<ReturnType<typeof listProjects>>[number]
+
+/** A section's projects grouped under each client, A to Z. */
+function clientsOf(list: Project[]) {
+  const groups = new Map<string, { key: string; name: string; clientId?: string; items: Project[] }>()
+  for (const p of list) {
+    const key = p.client._id || p.client.organizationName || 'none'
+    const g = groups.get(key) ?? { key, name: p.client.organizationName || 'No client', clientId: p.client._id || undefined, items: [] }
+    g.items.push(p)
+    groups.set(key, g)
+  }
+  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
 export default async function Projects() {
   await requireAdmin()
   const projects = await listProjects()
@@ -29,40 +43,43 @@ export default async function Projects() {
         if (!list.length) return null
         return (
           <Bucket key={id} id={id} title={title} count={list.length} closed={id === 'delivered' || id === 'paid' || id === 'archived'}>
-            <div className="a-table-scroll">
-              <table className="a-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Project</th>
-                    <th scope="col">Client</th>
-                    <th scope="col">Region</th>
-                    <th scope="col">Next date</th>
-                    <th scope="col" className="num">Quote</th>
-                    <th scope="col" className="a-stage-col">Stage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((p) => {
-                    const next = MILESTONE_LIST.filter((m) => p.milestones[m.key] && stageIndex(p.pipelineStage) < stageIndex(m.doneFrom))
-                      .map((m) => ({ label: m.label, date: p.milestones[m.key]! }))
-                      .concat(p.schedule.map((x) => ({ label: x.title, date: x.start })))
-                      .sort((a, b) => a.date.localeCompare(b.date))[0]
-                    return (
-                      <tr key={p._id}>
-                        <td><Link className="a-strong-link" href={`/admin/projects/${p._id}`}>{p.title}</Link></td>
-                        <td>{p.client._id ? <Link className="text-link-plain" href={`/admin/clients/${p.client._id}`}>{p.client.organizationName}</Link> : p.client.organizationName}</td>
-                        <td>{REGIONS.find((r) => r.value === p.region)?.title ?? '—'}</td>
-                        <td>{next ? `${next.label} · ${fmtDay(next.date)}` : '—'}</td>
-                        <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>
-                        <td className="a-stage-col">
-                          <StageControl compact archived={p.archived} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
-                        </td>
+            {clientsOf(list).map(({ key, name, clientId, items }) => (
+              <Bucket key={key} id={`${id}:${key}`} title={name} count={items.length} closed nested>
+                {clientId && <Link className="text-link small a-client-link" href={`/admin/clients/${clientId}`}>Client page</Link>}
+                <div className="a-table-scroll">
+                  <table className="a-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Project</th>
+                        <th scope="col">Region</th>
+                        <th scope="col">Next date</th>
+                        <th scope="col" className="num">Quote</th>
+                        <th scope="col" className="a-stage-col">Stage</th>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    </thead>
+                    <tbody>
+                      {items.map((p) => {
+                        const next = MILESTONE_LIST.filter((m) => p.milestones[m.key] && stageIndex(p.pipelineStage) < stageIndex(m.doneFrom))
+                          .map((m) => ({ label: m.label, date: p.milestones[m.key]! }))
+                          .concat(p.schedule.map((x) => ({ label: x.title, date: x.start })))
+                          .sort((a, b) => a.date.localeCompare(b.date))[0]
+                        return (
+                          <tr key={p._id}>
+                            <td><Link className="a-strong-link" href={`/admin/projects/${p._id}`}>{p.title}</Link></td>
+                            <td>{REGIONS.find((r) => r.value === p.region)?.title ?? '—'}</td>
+                            <td>{next ? `${next.label} · ${fmtDay(next.date)}` : '—'}</td>
+                            <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>
+                            <td className="a-stage-col">
+                              <StageControl compact archived={p.archived} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Bucket>
+            ))}
           </Bucket>
         )
       })}
