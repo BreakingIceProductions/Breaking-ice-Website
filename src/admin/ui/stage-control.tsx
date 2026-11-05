@@ -13,7 +13,7 @@ const APPS: PlannedAction['app'][] = ['Back office', 'TickTick', 'Google Calenda
  * "Move to …" button. Asks the server for a preview of everything the move will
  * do, lets you untick any step, and only then runs it.
  */
-export function StageControl({ projectId, projectTitle, current, next, stages, compact, archived }: { projectId: string; projectTitle: string; current: string; next?: Stage; stages: Stage[]; compact?: boolean; archived?: boolean }) {
+export function StageControl({ projectId, projectTitle, current, next, stages, compact, archived, declined }: { projectId: string; projectTitle: string; current: string; next?: Stage; stages: Stage[]; compact?: boolean; archived?: boolean; declined?: boolean }) {
   const router = useRouter()
   const dialog = useRef<HTMLDialogElement>(null)
   const [target, setTarget] = useState<Stage | null>(null)
@@ -76,10 +76,10 @@ export function StageControl({ projectId, projectTitle, current, next, stages, c
   const toggle = (id: string) => setSkip((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
   const others = stages.filter((s) => s.value !== current && s.value !== next?.value)
 
-  // Archiving only files the project away in the back office; no stage steps run.
-  async function archive(on: boolean) {
+  // Archiving and declining only file the project away in the back office; no stage steps run.
+  async function file(change: { archived: boolean } | { declined: boolean }) {
     setBusy(true)
-    const r = await fetch('/api/admin/archive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, archived: on }) }).catch(() => null)
+    const r = await fetch('/api/admin/archive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, ...change }) }).catch(() => null)
     setBusy(false)
     if (r?.ok) router.refresh()
     else alert('That didn’t save. Reload the page and try again.')
@@ -91,21 +91,29 @@ export function StageControl({ projectId, projectTitle, current, next, stages, c
         <label className="a-select a-select-sm">
           <span className="sr-only">Stage of {projectTitle}</span>
           <select
-            value={archived ? '__archived' : current}
+            value={archived ? '__archived' : declined ? '__declined' : current}
             disabled={busy}
             onChange={(e) => {
               const v = e.target.value
-              if (v === '__archive') return void archive(true)
-              if (v === '__unarchive') return void archive(false)
+              if (v === '__archive') return void file({ archived: true })
+              if (v === '__unarchive') return void file({ archived: false })
+              if (v === '__decline') return void file({ declined: true })
+              if (v === '__undecline') return void file({ declined: false })
               const s = stages.find((x) => x.value === v)
               if (s) open(s)
             }}
           >
             {archived && <option value="__archived" disabled>Archived</option>}
-            {stages.map((s) => (
-              <option key={s.value} value={s.value} disabled={!archived && s.value === current}>{s.value === current && !archived ? s.title : `Move to ${s.title}`}</option>
-            ))}
+            {declined && !archived && <option value="__declined" disabled>Declined</option>}
+            {declined && !archived ? (
+              <option value="__undecline">Move back to {stages.find((s) => s.value === current)?.title ?? 'its stage'}</option>
+            ) : (
+              stages.map((s) => (
+                <option key={s.value} value={s.value} disabled={!archived && s.value === current}>{s.value === current && !archived ? s.title : `Move to ${s.title}`}</option>
+              ))
+            )}
             <option disabled>──────────</option>
+            {!archived && !declined && (current === 'lead' || current === 'quoted') && <option value="__decline">Mark declined</option>}
             {archived ? <option value="__unarchive">Unarchive</option> : <option value="__archive">Archive</option>}
           </select>
         </label>

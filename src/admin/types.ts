@@ -82,6 +82,8 @@ export type OfficeProject = {
   driveFolderId?: string
   pipelineStage: PipelineStage
   archived?: boolean
+  /** Set when a quote didn't book. */
+  declinedAt?: string
   projectType?: string
   region?: 'alberta' | 'nwt' | 'other'
   quoteAmount?: number

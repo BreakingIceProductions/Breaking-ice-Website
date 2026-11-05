@@ -39,10 +39,14 @@ export default async function Projects() {
           New project<span className="sr-only"> (opens the Studio)</span>
         </a>
       </header>
-      {[...PIPELINE_STAGES.map((s) => ({ id: s.value as string, title: s.title as string, list: projects.filter((p) => !p.archived && p.pipelineStage === s.value) })), { id: 'archived', title: 'Archived', list: projects.filter((p) => p.archived) }].map(({ id, title, list }) => {
+      {[
+        ...PIPELINE_STAGES.map((s) => ({ id: s.value as string, title: s.title as string, list: projects.filter((p) => !p.archived && !p.declinedAt && p.pipelineStage === s.value) })),
+        { id: 'declined', title: 'Declined', list: projects.filter((p) => !p.archived && p.declinedAt) },
+        { id: 'archived', title: 'Archived', list: projects.filter((p) => p.archived) },
+      ].map(({ id, title, list }) => {
         if (!list.length) return null
         return (
-          <Bucket key={id} id={id} title={title} count={list.length} closed={id === 'delivered' || id === 'paid' || id === 'archived'}>
+          <Bucket key={id} id={id} title={title} count={list.length} closed={id === 'delivered' || id === 'paid' || id === 'declined' || id === 'archived'}>
             {clientsOf(list).map(({ key, name, clientId, items }) => (
               <Bucket key={key} id={`${id}:${key}`} title={name} count={items.length} closed nested>
                 {clientId && <Link className="text-link small a-client-link" href={`/admin/clients/${clientId}`}>Client page</Link>}
@@ -67,10 +71,10 @@ export default async function Projects() {
                           <tr key={p._id}>
                             <td><Link className="a-strong-link" href={`/admin/projects/${p._id}`}>{p.title}</Link></td>
                             <td>{REGIONS.find((r) => r.value === p.region)?.title ?? '—'}</td>
-                            <td>{next ? `${next.label} · ${fmtDay(next.date)}` : '—'}</td>
+                            <td>{p.declinedAt && !p.archived ? `Declined · ${fmtDay(p.declinedAt.slice(0, 10))}` : next ? `${next.label} · ${fmtDay(next.date)}` : '—'}</td>
                             <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>
                             <td className="a-stage-col">
-                              <StageControl compact archived={p.archived} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
+                              <StageControl compact archived={p.archived} declined={Boolean(p.declinedAt)} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
                             </td>
                           </tr>
                         )

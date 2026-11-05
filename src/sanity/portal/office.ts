@@ -31,6 +31,13 @@ export const officeFields = [
     group: G,
     initialValue: false,
   }),
+  defineField({
+    name: 'declinedAt',
+    title: 'Declined',
+    description: 'Set when a quote didn’t book. Files the project into the Declined section of the back office. The client portal is unaffected.',
+    type: 'datetime',
+    group: G,
+  }),
   defineField({ name: 'projectType', title: 'Project type', type: 'string', group: G, options: { list: PROJECT_TYPES } }),
   defineField({ name: 'region', type: 'string', group: G, options: { list: REGIONS, layout: 'radio', direction: 'horizontal' } }),
   defineField({ name: 'quoteAmount', title: 'Quote total (CAD, before tax)', type: 'number', group: G, validation: (r) => r.min(0) }),
