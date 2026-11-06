@@ -29,8 +29,8 @@ export const fmtCad = (n: number) => `$${n.toLocaleString('en-CA', { minimumFrac
 /** GST is only added when the company's GST number is set in the portal settings. */
 export const gstFor = (amount: number, settings: Pick<PortalSettings, 'gstNumber'>) => (settings.gstNumber ? round2(amount * 0.05) : 0)
 
-/** Visa and Mastercard cap credit card surcharges in Canada at 2.4%. */
-const FEE_CAP = 2.4
+/** Breaking Ice policy: card payments carry a 3% processing fee. */
+const FEE_CAP = 3
 
 /** What paying by card adds: the fee on the pre-tax amount, and GST on the fee. */
 export function cardFeeFor(p: Pick<PortalPayment, 'amount'>, settings: Pick<PortalSettings, 'gstNumber' | 'cardFeePercent'>) {

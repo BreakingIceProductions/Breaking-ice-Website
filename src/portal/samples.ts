@@ -152,7 +152,7 @@ export const DEFAULT_PORTAL: Required<Omit<PortalSettings, Optional>> & Pick<Por
   gstNumber: undefined,
   etransferEmail: undefined,
   eftDetails: undefined,
-  cardFeePercent: 2.4,
+  cardFeePercent: 3,
 }
 
 /** One quote waiting for a signature and one already signed, for the preview. */

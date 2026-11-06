@@ -342,10 +342,10 @@ export const portalSettings = defineType({
     defineField({
       name: 'cardFeePercent',
       title: 'Card processing fee (%)',
-      description: 'Added when a client chooses to pay by credit card, plus GST on the fee. Visa and Mastercard cap surcharges in Canada at 2.4%.',
+      description: 'Added when a client chooses to pay by credit card, plus GST on the fee. Our policy is 3%.',
       type: 'number',
-      initialValue: 2.4,
-      validation: (r) => r.min(0).max(2.4),
+      initialValue: 3,
+      validation: (r) => r.min(0).max(3),
       group: 'payments',
     }),
   ],
