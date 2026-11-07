@@ -10,10 +10,11 @@ import { PaymentList } from '@/portal/payment-list'
 import { PdfPages } from '@/portal/pdf-view'
 import { QuoteReveal, ReplayReveal } from '@/portal/quote-reveal'
 import { QuoteChoice, QuoteGlance, QuoteSign } from '@/portal/quote-sign'
+import { ScrollTo } from '@/portal/scroll-to'
 import { fmtMoment, markQuoteViewed, quoteExpired } from '@/portal/quotes'
 import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ pay?: string }> }
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ pay?: string; signed?: string }> }
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: Props) {
 export default async function QuotePage({ params, searchParams }: Props) {
   const { slug } = await params
   const { quotes, clients, session, payments } = await requireAccess()
-  const { pay: note } = await searchParams
+  const { pay: note, signed: justSigned } = await searchParams
   const q = quotes.find((x) => x.slug === slug)
   if (!q) notFound()
   const demo = Boolean(session.demo)
@@ -53,6 +54,10 @@ export default async function QuotePage({ params, searchParams }: Props) {
     ? `${q.options.length > 1 ? 'From ' : ''}${money(Math.min(...q.options.map((o) => o.total)))}${tax}`
     : q.total ? `${money(q.total)}${tax}` : undefined
   const from = producer?.name ? { name: producer.name, photo: portalImage(producer.portrait, 160, 160) } : undefined
+  const mine = payments.filter((x) => x.projectId === q.projectId)
+  // Once signed, the deposit replaces At a glance: one clear next step.
+  const payFirst = Boolean(q.signature && mine.length)
+  const coverImg = q.coverUrl ? `${q.coverUrl}?w=600&auto=format` : undefined
 
   return (
     <div className="wrap q-page">
@@ -60,7 +65,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
         <QuoteReveal
           seenKey={`quote-reveal:${q.projectId}:v${q.version}`}
           pdfUrl={fileUrl}
-          coverUrl={q.coverUrl ? `${q.coverUrl}?w=600&auto=format` : undefined}
+          coverUrl={coverImg}
           title={q.title}
           org={q.org}
           firstName={(session.preview ? client?.contacts?.[0]?.name : me?.name)?.split(' ')[0]}
@@ -105,13 +110,19 @@ export default async function QuotePage({ params, searchParams }: Props) {
 
         <QuoteChoice>
         <aside className="q-side stack">
-          {q.note && (
+          {payFirst && (
+            <>
+              <PaymentList id="billing" heading={mine.some((x) => x.status === 'due') ? 'Pay your deposit' : 'Your deposit'} payments={mine} back={`/portal/quotes/${q.slug}`} note={note} />
+              {justSigned && <ScrollTo id="billing" />}
+            </>
+          )}
+          {q.note && !q.signature && (
             <figure className="p-card q-note">
               <blockquote>{q.note}</blockquote>
               {from && <figcaption>{from.name}</figcaption>}
             </figure>
           )}
-          <QuoteGlance
+          {!payFirst && <QuoteGlance
             options={q.options}
             total={q.total}
             depositPercent={q.depositPercent}
@@ -121,11 +132,12 @@ export default async function QuotePage({ params, searchParams }: Props) {
             version={q.version}
             noGst={q.noGst}
             signed={q.signature ? { option: q.signature.option, total: q.signature.total, deposit: q.signature.deposit } : undefined}
-          />
+          />}
 
           {q.signature ? (
             <section className="p-card q-signed" aria-labelledby="signed-h">
               <h2 id="signed-h" className="p-label">Signed</h2>
+              {payFirst && q.signature.option && <p className="small" style={{ margin: 0 }}>{q.signature.option} · {money(q.signature.total ?? 0)}</p>}
               <p style={{ margin: 0 }}>
                 <strong>{q.signature.name}</strong>{q.signature.title ? `, ${q.signature.title}` : ''}
                 <br />
@@ -138,13 +150,10 @@ export default async function QuotePage({ params, searchParams }: Props) {
             </section>
           ) : expired ? null : (
             <section className="p-card">
-              <QuoteSign slug={q.slug} version={q.version} org={q.org} options={q.options} depositPercent={q.depositPercent} deposit={q.deposit} defaultName={me?.name ?? ''} defaultTitle={me?.role ?? ''} demo={demo} preview={Boolean(session.preview)} noGst={q.noGst} />
+              <QuoteSign slug={q.slug} version={q.version} org={q.org} options={q.options} depositPercent={q.depositPercent} deposit={q.deposit} defaultName={me?.name ?? ''} defaultTitle={me?.role ?? ''} demo={demo} preview={Boolean(session.preview)} noGst={q.noGst} coverUrl={coverImg} depositNext={Boolean(client?.portalPayments && (q.depositPercent || q.deposit))} />
             </section>
           )}
 
-          {q.signature && (
-            <PaymentList id="billing" heading="Your deposit" payments={payments.filter((x) => x.projectId === q.projectId)} back={`/portal/quotes/${q.slug}`} note={note} />
-          )}
 
           <ProducerCard producer={producer} title="Questions about the quote?" />
         </aside>

@@ -1,8 +1,10 @@
 'use client'
 
 import { Dancing_Script } from 'next/font/google'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Mark } from '@/components/brand'
 import { quoteDeposit } from './library'
 import type { QuoteOption } from './types'
 
@@ -24,6 +26,10 @@ type Props = {
   demo: boolean
   preview?: boolean
   noGst?: boolean
+  /** The cover image, folded into the envelope after signing. */
+  coverUrl?: string
+  /** Whether a deposit is paid in the portal next (the animation says so). */
+  depositNext?: boolean
 }
 
 const cad = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })}` : '')
@@ -119,8 +125,10 @@ export function QuoteGlance({ options, total, depositPercent, deposit, summary, 
 }
 
 /** Type or draw a signature, agree, sign. */
-export function QuoteSign({ slug, version, org, options, depositPercent, deposit, defaultName, defaultTitle, demo, preview, noGst }: Props) {
+export function QuoteSign({ slug, version, org, options, depositPercent, deposit, defaultName, defaultTitle, demo, preview, noGst, coverUrl, depositNext }: Props) {
   const router = useRouter()
+  const pathname = usePathname()
+  const [sending, setSending] = useState(false)
   const [name, setName] = useState(defaultName)
   const [title, setTitle] = useState(defaultTitle)
   const [method, setMethod] = useState<'typed' | 'drawn'>('typed')
@@ -146,8 +154,17 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
     }).catch(() => null)
     const j = await r?.json().catch(() => null)
     if (r?.ok && j?.ok) {
-      setState({ done: demo ? 'Sample only: nothing was signed or sent.' : 'Signed. A copy is on its way to your inbox.' })
-      if (!demo) router.refresh()
+      // Fold it up and send it off, then show the signed page (which leads with the deposit).
+      setSending(true)
+      setTimeout(() => {
+        if (demo) {
+          setSending(false)
+          setState({ done: 'Sample only: nothing was signed or sent.' })
+        } else {
+          window.scrollTo({ top: 0 })
+          router.replace(`${pathname}?signed=1`)
+        }
+      }, reducedMotion() ? 1400 : 4300)
       return
     }
     const err =
@@ -160,6 +177,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
     setState({ err })
   }
 
+  if (sending) return <SentOff coverUrl={coverUrl} next={depositNext ? 'Next: your deposit.' : 'A signed copy is on its way to your inbox.'} />
   if (state.done) return <p className="q-signed-note" role="status">{state.done}</p>
 
   return (
@@ -222,7 +240,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
         <button type="submit" className="btn btn-primary" disabled={!ready || state.busy}>{state.busy ? 'Signing…' : 'Sign quote'}</button>
       </div>
       <p className="muted small" style={{ margin: 0 }}>
-        You’ll get the signed PDF by email, with a certificate page recording your name, email, the time and this device. Signing books your project in.
+        You’ll get the signed PDF by email, with a certificate page recording your name, email, the time and this device.{depositNext ? ' Your project is booked once the deposit is paid.' : ' Signing books your project in.'}
       </p>
     </form>
   )
@@ -295,5 +313,34 @@ function SignaturePad({ canvas, onChange }: { canvas: React.RefObject<HTMLCanvas
         {!has && <span className="muted small">Sign in the box above</span>}
       </div>
     </div>
+  )
+}
+
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+/** After signing: the quote folds in three, slips into an envelope, the flap seals and it flies off. */
+function SentOff({ coverUrl, next }: { coverUrl?: string; next: string }) {
+  const face = (i: number) => (coverUrl ? { backgroundImage: `url(${coverUrl})`, backgroundPosition: `0 ${i * 50}%` } : undefined)
+  // On <body>, so nothing on the page (the sticky side column, the header) sits above it.
+  return createPortal(
+    <div className="qs" role="status" aria-live="polite">
+      <div className="qs-stage" aria-hidden="true">
+        <div className="qs-fly">
+          <div className="qs-env-back" />
+          <div className="qs-letter">
+            <div className="qs-p qs-p1"><i className="qs-front" style={face(0)} /><i className="qs-back" /></div>
+            <div className="qs-p qs-p2"><i className="qs-front" style={face(1)} /></div>
+            <div className="qs-p qs-p3"><i className="qs-front" style={face(2)} /><i className="qs-back" /></div>
+          </div>
+          <div className="qs-env-front" />
+          <div className="qs-flap"><Mark size={26} className="qs-seal" right="#faf7f2" /></div>
+        </div>
+      </div>
+      <p className="qs-text">
+        <strong>Signed and sent.</strong>
+        <span>{next}</span>
+      </p>
+    </div>,
+    document.body,
   )
 }
