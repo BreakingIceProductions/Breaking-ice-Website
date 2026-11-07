@@ -7,6 +7,7 @@ import { activityFeed, ago, cad, kpis, needsAction, waitingOnClients, week, type
 import { stageTitle } from '@/admin/stages'
 import { isDueByToday, openTasks, taskDay, ticktickConnection, type OpenTask } from '@/admin/ticktick'
 import type { OfficeProject } from '@/admin/types'
+import { DismissableRow } from '@/admin/ui/dismissable-row'
 
 export const metadata = { title: 'Dashboard' }
 
@@ -37,7 +38,7 @@ function RowList({ rows, empty, nudge }: { rows: Row[]; empty: string; nudge?: b
   return (
     <ul className="a-rows">
       {rows.slice(0, 6).map((r, i) => (
-        <li key={`${r.project._id}-${i}`}>
+        <DismissableRow key={r.key ?? `${r.project._id}-${i}`} projectId={r.project._id} dismissKey={r.key} label={`${r.project.title}: ${r.detail}`}>
           <Link href={`/admin/projects/${r.project._id}`} className="a-row-main">
             <span className="a-client">{r.project.client.organizationName}</span>
             <strong>{r.project.title}</strong>
@@ -46,7 +47,6 @@ function RowList({ rows, empty, nudge }: { rows: Row[]; empty: string; nudge?: b
           <span className="a-row-side">
             {!nudge && <span className="a-stage">{stageTitle(r.project.pipelineStage)}</span>}
             <span className={`small ${r.urgent ? 'a-urgent' : 'muted'}`}>{r.when}</span>
-            <span className="a-row-acts">
             {nudge && (
               <a
                 className="btn btn-secondary btn-sm"
@@ -55,19 +55,8 @@ function RowList({ rows, empty, nudge }: { rows: Row[]; empty: string; nudge?: b
                 Nudge<span className="sr-only"> {r.project.client.organizationName} by email</span>
               </a>
             )}
-            {r.key && (
-              <form action="/api/admin/dismiss" method="post" className="a-dismiss">
-                <input type="hidden" name="projectId" value={r.project._id} />
-                <input type="hidden" name="key" value={r.key} />
-                <button type="submit" className="a-dismiss-btn" title="Dismiss">
-                  <span aria-hidden="true">×</span>
-                  <span className="sr-only">Dismiss {r.project.title}: {r.detail}</span>
-                </button>
-              </form>
-            )}
-            </span>
           </span>
-        </li>
+        </DismissableRow>
       ))}
     </ul>
   )

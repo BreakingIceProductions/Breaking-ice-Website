@@ -43,28 +43,32 @@ export function needsAction(projects: OfficeProject[]): Row[] {
   const rows: Row[] = []
   for (const p of projects) {
     const si = idx(p.pipelineStage)
+    // Each reminder has a key naming this one occurrence, so dismissing it doesn't hide the next.
+    const dismissed = new Set(p.office.dismissed ?? [])
+    const add = (key: string, r: Omit<Row, 'project' | 'key'>) => !dismissed.has(key) && rows.push({ project: p, key, ...r })
+    const since = p.office.stageChangedAt ?? ''
     if (p.pipelineStage === 'lead') {
       const d = daysSince(p.office.stageChangedAt) ?? 0
-      rows.push({ project: p, detail: 'New lead. Reply and send a quote.', when: d ? `${d} day${d === 1 ? '' : 's'}` : 'Today', urgent: d >= 2, sort: 10 - d })
+      add(`lead-${since}`, { detail: 'New lead. Reply and send a quote.', when: d ? `${d} day${d === 1 ? '' : 's'}` : 'Today', urgent: d >= 2, sort: 10 - d })
     }
     for (const d of p.deliverables.filter((x) => x.status === 'changes-requested'))
-      rows.push({ project: p, detail: `Notes in on ${d.title}. Start the fixes.`, when: `v${d.version}`, sort: 5 })
+      add(`fixes-${d._key}-v${d.version}`, { detail: `Notes in on ${d.title}. Start the fixes.`, when: `v${d.version}`, sort: 5 })
     if (p.pipelineStage === 'delivered' && !hasFinalInvoice(p)) {
       const d = daysSince(p.office.stageChangedAt) ?? 0
-      rows.push({ project: p, detail: finalAmount(p) ? 'Delivered. No invoice yet.' : 'Delivered. Add the quote total to draft the invoice.', when: `${d} day${d === 1 ? '' : 's'}`, urgent: true, sort: 0 })
+      add(`no-invoice-${since}`, { detail: finalAmount(p) ? 'Delivered. No invoice yet.' : 'Delivered. Add the quote total to draft the invoice.', when: `${d} day${d === 1 ? '' : 's'}`, urgent: true, sort: 0 })
     }
     for (const i of (p.office.invoices ?? []).filter((x) => x.status === 'draft')) {
       const d = daysSince(i.createdAt) ?? 0
-      if (d >= 1) rows.push({ project: p, detail: `Draft invoice${i.number ? ` ${i.number}` : ''} hasn’t been sent from Zoho Books.`, when: `${d} days`, sort: 3 })
+      if (d >= 1) add(`draft-${i.id}`, { detail: `Draft invoice${i.number ? ` ${i.number}` : ''} hasn’t been sent from Zoho Books.`, when: `${d} days`, sort: 3 })
     }
     for (const m of MILESTONE_LIST) {
       const date = p.milestones[m.key]
       if (!date || !m.yours || si >= idx(m.doneFrom)) continue
       const n = daysBetween(t, date)
-      if (n <= 3) rows.push({ project: p, detail: `${m.label} ${n < 0 ? 'was' : ''} ${fmtDay(date, { weekday: 'long' })}.`.replace('  ', ' '), when: n < 0 ? `${-n} days late` : n === 0 ? 'Today' : `In ${n} day${n === 1 ? '' : 's'}`, urgent: n <= 0, sort: n })
+      if (n <= 3) add(`due-${m.key}-${date}`, { detail: `${m.label} ${n < 0 ? 'was' : ''} ${fmtDay(date, { weekday: 'long' })}.`.replace('  ', ' '), when: n < 0 ? `${-n} days late` : n === 0 ? 'Today' : `In ${n} day${n === 1 ? '' : 's'}`, urgent: n <= 0, sort: n })
     }
     if (si >= idx('roughcut') && si < idx('delivered') && p.deliverables.length && p.deliverables.every((d) => d.status === 'approved'))
-      rows.push({ project: p, detail: 'Everything’s approved. Move it to Delivered.', when: 'Ready', sort: 2 })
+      add(`approved-${since}`, { detail: 'Everything’s approved. Move it to Delivered.', when: 'Ready', sort: 2 })
   }
   return rows.sort((a, b) => a.sort - b.sort)
 }

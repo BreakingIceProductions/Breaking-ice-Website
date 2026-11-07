@@ -192,5 +192,8 @@
 .a-archive-head { margin: 0 0 var(--space-2) var(--space-6); }
 .a-client-link { display: inline-block; margin-bottom: var(--space-2); }
 
-.a-row-acts { display: flex; align-items: center; gap: 4px; }
-.a-row-acts:empty { display: none; }
+/* Dismissable reminders: the × sits on the left like a bullet; the row folds away when dismissed. */
+.a-rows li.a-row-x { justify-content: flex-start; gap: var(--space-3); transition: opacity .2s ease, transform .2s ease; }
+.a-rows li.a-row-x .a-row-main { flex: 1; }
+.a-rows li.a-row-x.is-leaving { opacity: 0; transform: translateX(-12px); }
+.a-rows li.a-row-x .a-dismiss-btn { margin-left: -6px; }
