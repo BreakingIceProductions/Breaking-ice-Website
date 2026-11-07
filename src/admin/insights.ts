@@ -36,7 +36,7 @@ export function kpis(projects: OfficeProject[]) {
   }
 }
 
-export type Row = { project: OfficeProject; detail: string; when: string; urgent?: boolean; sort: number }
+export type Row = { project: OfficeProject; detail: string; when: string; urgent?: boolean; sort: number; /** Set when the row can be dismissed. */ key?: string }
 
 export function needsAction(projects: OfficeProject[]): Row[] {
   const t = today()
@@ -72,7 +72,10 @@ export function needsAction(projects: OfficeProject[]): Row[] {
 export function waitingOnClients(projects: OfficeProject[]): Row[] {
   const rows: Row[] = []
   for (const p of projects) {
+    const dismissed = new Set(p.office.dismissed ?? [])
     for (const d of p.deliverables.filter((x) => x.status === 'awaiting-feedback')) {
+      const key = `feedback-${d._key}-v${d.version}`
+      if (dismissed.has(key)) continue
       const days = daysSince(d.notifiedAt ?? d.readyAt) ?? 0
       const late = d.feedbackDue ? daysBetween(d.feedbackDue, today()) : 0
       rows.push({
@@ -81,11 +84,13 @@ export function waitingOnClients(projects: OfficeProject[]): Row[] {
         when: `${days} day${days === 1 ? '' : 's'}`,
         urgent: late > 0 || days >= 7,
         sort: -days,
+        key,
       })
     }
-    if (p.pipelineStage === 'quoted') {
+    const quoteKey = `quote-${p.office.stageChangedAt ?? ''}`
+    if (p.pipelineStage === 'quoted' && !dismissed.has(quoteKey)) {
       const days = daysSince(p.office.stageChangedAt) ?? 0
-      rows.push({ project: p, detail: 'Quote sent. No answer yet.', when: `${days} day${days === 1 ? '' : 's'}`, urgent: days >= 7, sort: -days })
+      rows.push({ project: p, detail: 'Quote sent. No answer yet.', when: `${days} day${days === 1 ? '' : 's'}`, urgent: days >= 7, sort: -days, key: quoteKey })
     }
   }
   return rows.sort((a, b) => a.sort - b.sort)

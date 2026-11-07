@@ -54,6 +54,16 @@ function RowList({ rows, empty, nudge }: { rows: Row[]; empty: string; nudge?: b
                 Nudge<span className="sr-only"> {r.project.client.organizationName} by email</span>
               </a>
             )}
+            {r.key && (
+              <form action="/api/admin/dismiss" method="post" className="a-dismiss">
+                <input type="hidden" name="projectId" value={r.project._id} />
+                <input type="hidden" name="key" value={r.key} />
+                <button type="submit" className="a-dismiss-btn" title="Dismiss">
+                  <span aria-hidden="true">×</span>
+                  <span className="sr-only">Dismiss {r.project.title}: {r.detail}</span>
+                </button>
+              </form>
+            )}
           </span>
         </li>
       ))}

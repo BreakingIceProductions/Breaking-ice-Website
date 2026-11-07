@@ -136,6 +136,14 @@ export const clientProject = defineType({
       options: { list: PROJECT_STATUSES, layout: 'radio', direction: 'horizontal' },
     }),
     defineField({
+      name: 'hiddenFromClient',
+      title: 'Hide from the client’s portal',
+      description: 'The client won’t see this project in their portal. Everything else (the back office, files, invoices) carries on as normal.',
+      type: 'boolean',
+      group: 'overview',
+      initialValue: false,
+    }),
+    defineField({
       name: 'dontEmailDelivery',
       title: 'Don’t send the “your files are ready” email',
       description: 'When you mark it Delivered, the client gets one email (after 10 minutes) linking to their final files. Tick this to skip it.',

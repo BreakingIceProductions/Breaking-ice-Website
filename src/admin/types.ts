@@ -57,6 +57,8 @@ export type OfficeState = {
   invoices?: InvoiceRecord[]
   notes?: { _key: string; at: string; text: string }[]
   log?: { _key: string; at: string; text: string; kind?: string }[]
+  /** Dashboard reminders Josh dismissed. Each key names one wait (a version, a quote), so a new one shows again. */
+  dismissed?: string[]
 }
 
 export type OfficeClient = {

@@ -1299,3 +1299,7 @@ textarea.input.a-quote-text { min-height: 90px; }
 @keyframes q-pay-in { from { opacity: 0; transform: translateX(min(60vw, 480px)); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .q-pay-in { animation: qr-in 0.3s ease-out both; } }
 .p-main:has(.q-pay-in) { overflow-x: clip; }
+.a-dismiss { margin: 0; display: inline-flex; }
+.a-dismiss-btn { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; border: 0; background: transparent; color: var(--ink-muted); font-size: 20px; line-height: 1; cursor: pointer; }
+.a-dismiss-btn:hover { background: var(--line); color: var(--ink); }
+.a-dismiss-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

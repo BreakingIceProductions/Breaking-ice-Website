@@ -106,7 +106,7 @@ export async function getAccess(session: Session) {
     return [] as PortalPayment[]
   })
   const projects =
-    (await q<ClientProject[]>(`*[_type == "clientProject" && client._ref in $ids && defined(slug.current) && !(pipelineStage in $hidden)] | order(_updatedAt desc){${PROJECT_FIELDS}}`, {
+    (await q<ClientProject[]>(`*[_type == "clientProject" && client._ref in $ids && defined(slug.current) && !(pipelineStage in $hidden) && hiddenFromClient != true] | order(_updatedAt desc){${PROJECT_FIELDS}}`, {
       ids: clients.map((c) => c._id),
       // A project opens in the portal once it's booked; before that, a shared quote has its own page.
       hidden: PRE_PORTAL_STAGES,
