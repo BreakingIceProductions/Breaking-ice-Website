@@ -164,7 +164,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
           window.scrollTo({ top: 0 })
           router.replace(`${pathname}?signed=1`)
         }
-      }, reducedMotion() ? 1400 : 4300)
+      }, reducedMotion() ? 1400 : 4500)
       return
     }
     const err =
@@ -318,19 +318,46 @@ function SignaturePad({ canvas, onChange }: { canvas: React.RefObject<HTMLCanvas
 
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** After signing: the quote folds in three, slips into an envelope, the flap seals and it flies off. */
+/**
+ * After signing, inside the quote viewer: the page shrinks into a letter, folds in three,
+ * slips into an envelope, the flap seals and it flies off. Without the viewer, full screen.
+ */
 function SentOff({ coverUrl, next }: { coverUrl?: string; next: string }) {
+  const [frame, setFrame] = useState<HTMLElement | null>(null)
+  const [vars, setVars] = useState<React.CSSProperties>({})
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const f = document.querySelector<HTMLElement>('.q-doc .pdfv-frame')
+    if (f) {
+      f.scrollTo({ top: 0 })
+      f.style.overflow = 'hidden'
+      f.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Fit the envelope scene to the frame, and start the letter at the size of the page.
+      const s = Math.min(1, (f.clientHeight - 40) / 470, (f.clientWidth - 24) / 280)
+      const k = Math.min((f.clientHeight - 24) / 258, (f.clientWidth - 24) / 200) / s
+      setVars({ '--s': s, '--k': k } as React.CSSProperties)
+    }
+    setFrame(f)
+    setReady(true)
+    return () => {
+      if (f) f.style.overflow = ''
+    }
+  }, [])
+
+  if (!ready) return null
   const face = (i: number) => (coverUrl ? { backgroundImage: `url(${coverUrl})`, backgroundPosition: `0 ${i * 50}%` } : undefined)
-  // On <body>, so nothing on the page (the sticky side column, the header) sits above it.
   return createPortal(
-    <div className="qs" role="status" aria-live="polite">
+    <div className={`qs${frame ? ' qs-in-frame' : ''}`} style={vars} role="status" aria-live="polite">
       <div className="qs-stage" aria-hidden="true">
         <div className="qs-fly">
           <div className="qs-env-back" />
           <div className="qs-letter">
-            <div className="qs-p qs-p1"><i className="qs-front" style={face(0)} /><i className="qs-back" /></div>
-            <div className="qs-p qs-p2"><i className="qs-front" style={face(1)} /></div>
-            <div className="qs-p qs-p3"><i className="qs-front" style={face(2)} /><i className="qs-back" /></div>
+            <div className="qs-letter-in">
+              <div className="qs-p qs-p1"><i className="qs-front" style={face(0)} /><i className="qs-back" /></div>
+              <div className="qs-p qs-p2"><i className="qs-front" style={face(1)} /></div>
+              <div className="qs-p qs-p3"><i className="qs-front" style={face(2)} /><i className="qs-back" /></div>
+            </div>
           </div>
           <div className="qs-env-front" />
           <div className="qs-flap"><Mark size={26} className="qs-seal" right="#faf7f2" /></div>
@@ -341,6 +368,6 @@ function SentOff({ coverUrl, next }: { coverUrl?: string; next: string }) {
         <span>{next}</span>
       </p>
     </div>,
-    document.body,
+    frame ?? document.body,
   )
 }
