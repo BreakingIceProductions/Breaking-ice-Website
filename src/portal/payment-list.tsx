@@ -8,11 +8,11 @@ const cad = (n: number) => `$${n.toLocaleString('en-CA', { minimumFractionDigits
 
 const NOTES: Record<string, { text: string; err?: boolean }> = {
   paid: { text: 'Thanks, your payment is in. A confirmation is on its way by email.' },
-  sent: { text: 'Thanks for letting us know. It’ll show as paid here once it lands: e-Transfers usually arrive the same day, EFTs in one to three business days.' },
+  sent: { text: 'Thanks for letting us know. It’ll show as paid here once it lands, usually within one to three business days.' },
   processing: { text: 'Thanks, your payment is on its way. It’ll show as paid here once it clears.' },
   sample: { text: 'This is the sample project, so nothing is sent or charged.' },
   preview: { text: 'Payments are off while you’re viewing as the client.' },
-  off: { text: 'Card payment isn’t switched on yet. Please use e-Transfer or EFT.', err: true },
+  off: { text: 'Card payment isn’t switched on yet. Please use the bank transfer details above.', err: true },
   error: { text: 'That didn’t go through and nothing was charged. Try again, or reply to any of our emails and we’ll sort it out.', err: true },
 }
 
@@ -31,6 +31,9 @@ export async function PaymentList({ payments, back, note, heading = 'Payments', 
   const msg = note ? NOTES[note] : undefined
   const due = payments.filter((p) => p.status === 'due')
   const bankWays = Boolean(settings.etransferEmail || settings.eftDetails)
+  // Only name the ways that are set up: e-Transfer can be switched off by leaving its email empty.
+  const ways = [settings.etransferEmail && 'e-Transfer', settings.eftDetails && 'EFT'].filter(Boolean).join(' or ')
+  const where = settings.etransferEmail ? (settings.eftDetails ? 'message or memo' : 'message') : 'memo'
 
   return (
     <section id={id} className="p-card p-anchor pay-card" aria-labelledby={`${id ?? 'pay'}-h`}>
@@ -70,7 +73,7 @@ export async function PaymentList({ payments, back, note, heading = 'Payments', 
             {bankWays ? (
               <>
                 <p className="small" style={{ margin: 0 }}>
-                  e-Transfer or EFT is best: no fees. Put <strong>{ref}</strong> in the message so we can match it.
+                  {ways} is best: no fees. Put <strong>{ref}</strong> in the {where} so we can match it.
                 </p>
                 <div className="pay-ways">
                   {settings.etransferEmail && (

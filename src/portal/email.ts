@@ -256,7 +256,7 @@ export function signedEmail(m: { name: string; projectTitle: string; org: string
   const headline = `Signed: ${esc(m.projectTitle)}`
   const intro = `Thanks ${m.name}. Your signed quote is attached, with a certificate page that records when and how it was signed. You’ll also find it in your client portal any time.`
   const next = m.booked
-    ? `Your project is booked.${m.deposit ? (m.payInPortal ? ` You can pay the deposit (${money(m.deposit)}) in your portal by e-Transfer, EFT or card.` : ` The deposit invoice (${money(m.deposit)}${m.noGst ? '' : ' + GST'}) follows separately.`) : ''} We’ll be in touch shortly to lock in dates.`
+    ? `Your project is booked.${m.deposit ? (m.payInPortal ? ` You can pay the deposit (${money(m.deposit)}) in your portal by bank transfer or card.` : ` The deposit invoice (${money(m.deposit)}${m.noGst ? '' : ' + GST'}) follows separately.`) : ''} We’ll be in touch shortly to lock in dates.`
     : 'We’ll be in touch shortly about next steps.'
   const html = layout({
     eyebrow: 'Quote signed',
