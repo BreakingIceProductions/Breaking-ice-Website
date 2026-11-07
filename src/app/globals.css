@@ -1254,7 +1254,7 @@ textarea.input.a-quote-text { min-height: 90px; }
 .qs-fly { position: relative; width: 240px; height: 430px; transform-style: preserve-3d; animation: qs-fly 0.8s cubic-bezier(.55, 0, .8, .4) 2.9s both; }
 .qs-env-back, .qs-env-front, .qs-flap { position: absolute; left: 0; width: 240px; }
 .qs-env-back { bottom: 0; height: 150px; border-radius: 6px; background: #d9cdb9; z-index: 1; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); animation: qr-up 0.5s ease-out 0.35s both; }
-.qs-env-front { bottom: 0; height: 150px; border-radius: 0 0 6px 6px; z-index: 3; background: linear-gradient(170deg, #f1e9dc, #e8dece); clip-path: polygon(0 18%, 50% 62%, 100% 18%, 100% 100%, 0 100%); animation: qr-up 0.5s ease-out 0.35s both; }
+.qs-env-front { bottom: 0; height: 150px; border-radius: 0 0 6px 6px; z-index: 3; background: linear-gradient(170deg, #f1e9dc, #e8dece); clip-path: polygon(0 0, 50% 58%, 100% 0, 100% 100%, 0 100%); animation: qr-up 0.5s ease-out 0.35s both; }
 .qs-flap { bottom: 60px; height: 90px; z-index: 0; transform-origin: 50% 0; transform: rotateX(180deg); display: grid; place-items: end center; padding-bottom: 6px; animation: qs-flap 0.45s ease-in-out 2.3s both; }
 .qs-flap::before { content: ''; position: absolute; inset: 0; background: #e2d6c3; clip-path: polygon(0 0, 100% 0, 50% 100%); }
 .qs-seal { position: relative; opacity: 0; animation: qs-seal 0.3s ease-out 2.65s both; }
@@ -1274,7 +1274,7 @@ textarea.input.a-quote-text { min-height: 90px; }
 .qs-text span { color: rgba(250, 247, 242, 0.8); font-size: 17px; }
 @keyframes qs-fold-up { to { transform: rotateX(180deg); } }
 @keyframes qs-fold-down { to { transform: rotateX(-180deg); } }
-@keyframes qs-drop { to { transform: translateY(206px); } }
+@keyframes qs-drop { to { transform: translateY(218px); } }
 /* From the size and place of the page in the viewer (centre of the scene) down to letter size. */
 @keyframes qs-shrink { from { transform: translateY(74px) scale(var(--k, 1)); } to { transform: none; } }
 .qs-in-frame { position: absolute; inset: 0; z-index: 5; padding: 12px; gap: var(--space-4); background: #121925; border-radius: inherit; animation: none; }
