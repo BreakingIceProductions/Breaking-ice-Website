@@ -46,6 +46,7 @@ function RowList({ rows, empty, nudge }: { rows: Row[]; empty: string; nudge?: b
           <span className="a-row-side">
             {!nudge && <span className="a-stage">{stageTitle(r.project.pipelineStage)}</span>}
             <span className={`small ${r.urgent ? 'a-urgent' : 'muted'}`}>{r.when}</span>
+            <span className="a-row-acts">
             {nudge && (
               <a
                 className="btn btn-secondary btn-sm"
@@ -64,6 +65,7 @@ function RowList({ rows, empty, nudge }: { rows: Row[]; empty: string; nudge?: b
                 </button>
               </form>
             )}
+            </span>
           </span>
         </li>
       ))}
