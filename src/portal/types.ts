@@ -146,6 +146,8 @@ export type PortalQuote = {
   pipelineStage?: string
   version: number
   fileName?: string
+  /** A small image of the PDF's first page, so the reveal shows the cover straight away. */
+  coverUrl?: string
   summary?: string
   /** A line or two from Josh, shown when the quote is first opened. */
   note?: string

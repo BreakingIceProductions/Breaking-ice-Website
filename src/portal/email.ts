@@ -210,7 +210,7 @@ export function quoteEmail(m: { name: string; projectTitle: string; org: string;
     m.from ? 'Read through the quote and pick the package that suits you.' : 'Read through the quote.',
     'Sign at the bottom of the page when you’re ready. You’ll get a signed copy by email.',
   ]
-  const meta = [m.total && `${m.from ? 'From' : 'Total'} · ${money(m.total)}${m.noGst ? ' (no GST)' : ' + GST'}`, m.validUntil && `Valid until · ${esc(m.validUntil)}`].filter(Boolean).join('&nbsp;&nbsp;&nbsp;')
+  const meta = [m.total && `${m.from ? 'From' : 'Total'} · ${money(m.total)}${m.noGst ? '' : ' + GST'}`, m.validUntil && `Valid until · ${esc(m.validUntil)}`].filter(Boolean).join('&nbsp;&nbsp;&nbsp;')
   const html = layout({
     eyebrow: 'Quote',
     preview: 'Review your quote and sign it in your client portal.',

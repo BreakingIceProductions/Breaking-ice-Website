@@ -8,6 +8,8 @@ type Props = {
   /** Remembered per quote version, so a new version plays it again. */
   seenKey: string
   pdfUrl?: string
+  /** The cover as an image: shown at once. Without it, the PDF's first page is drawn. */
+  coverUrl?: string
   title: string
   org: string
   firstName?: string
@@ -28,7 +30,7 @@ const seen = (k: string) => {
  * The first time someone opens a quote: the page dims, the mark appears, and the cover
  * of their quote rises into view with who it's for and the price. One button opens it.
  */
-export function QuoteReveal({ seenKey, pdfUrl, title, org, firstName, price, note, from }: Props) {
+export function QuoteReveal({ seenKey, pdfUrl, coverUrl, title, org, firstName, price, note, from }: Props) {
   const [open, setOpen] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -51,7 +53,7 @@ export function QuoteReveal({ seenKey, pdfUrl, title, org, firstName, price, not
     document.documentElement.style.overflow = 'hidden'
     // The button takes focus once it has appeared.
     const t = setTimeout(() => go.current?.focus({ preventScroll: true }), 2300)
-    if (pdfUrl && cover.current) {
+    if (!coverUrl && pdfUrl && cover.current) {
       const c = cover.current
       loadPdf(pdfUrl).then((d) => drawPage(d, 1, c, 300, 390)).then(() => c.classList.add('ready')).catch(() => {})
     }
@@ -59,7 +61,7 @@ export function QuoteReveal({ seenKey, pdfUrl, title, org, firstName, price, not
       clearTimeout(t)
       document.documentElement.style.overflow = ''
     }
-  }, [open, pdfUrl])
+  }, [open, pdfUrl, coverUrl])
 
   const close = () => {
     try {
@@ -95,7 +97,12 @@ export function QuoteReveal({ seenKey, pdfUrl, title, org, firstName, price, not
       <div className="qr-stage">
         <Mark className="qr-mark" />
         <div className="qr-doc">
-          <canvas ref={cover} className="qr-cover" aria-hidden="true" />
+          {coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={coverUrl} alt="" className="qr-cover" onLoad={(e) => e.currentTarget.classList.add('ready')} ref={(el) => { if (el?.complete && el.naturalWidth) el.classList.add('ready') }} />
+          ) : (
+            <canvas ref={cover} className="qr-cover" aria-hidden="true" />
+          )}
           <span className="qr-cover-blank" aria-hidden="true" />
         </div>
         <div className="qr-text">

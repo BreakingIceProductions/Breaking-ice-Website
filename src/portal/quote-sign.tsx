@@ -86,13 +86,13 @@ export function QuoteGlance({ options, total, depositPercent, deposit, summary, 
         {price ? (
           <p className="q-total">
             <span className="q-amount">{cad(price)}</span>
-            <span className="muted small">{noGst ? 'No GST' : '+ GST'}{chosen ? ` · ${chosen.name}` : ''}</span>
+            {(!noGst || chosen) && <span className="muted small">{noGst ? chosen!.name : `+ GST${chosen ? ` · ${chosen.name}` : ''}`}</span>}
           </p>
         ) : from ? (
           <p className="q-total">
             <span className="muted small">From</span>
             <span className="q-amount">{cad(from)}</span>
-            <span className="muted small">{noGst ? 'No GST' : '+ GST'}</span>
+            {!noGst && <span className="muted small">+ GST</span>}
           </p>
         ) : null}
         {price && due ? (

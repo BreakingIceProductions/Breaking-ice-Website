@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     if (pct) set.depositPercent = Number(pct[1])
     const unset = (['summary', 'note', 'validUntil', 'depositPercent'] as const).filter((k) => set[k] === undefined)
     // A new PDF hasn't been opened yet.
-    await (set.file ? patch.unset([...unset, 'viewedAt', 'viewedBy']) : patch.unset(unset)).commit()
+    await (set.file ? patch.unset([...unset, 'viewedAt', 'viewedBy', 'cover']) : patch.unset(unset)).commit()
 
     // The amounts live on the project, where the invoices read them.
     const options = set.options as { total: number }[]

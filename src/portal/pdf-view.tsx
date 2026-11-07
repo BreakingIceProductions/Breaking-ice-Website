@@ -24,6 +24,25 @@ export function loadPdf(url: string) {
   return p
 }
 
+/** The first page of a local PDF as a small JPEG, for the quote reveal's cover. */
+export async function coverImage(file: File, width = 600): Promise<Blob> {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.mjs'
+  const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) })
+  const doc = await task.promise
+  try {
+    const page = await doc.getPage(1)
+    const vp = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width })
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(vp.width)
+    canvas.height = Math.round(vp.height)
+    await page.render({ canvas, viewport: vp }).promise
+    return await new Promise<Blob>((ok, no) => canvas.toBlob((b) => (b ? ok(b) : no(new Error('no image'))), 'image/jpeg', 0.85))
+  } finally {
+    task.destroy()
+  }
+}
+
 /** Draws a page into a canvas, fitted inside w × h CSS pixels. */
 export async function drawPage(doc: PDFDocumentProxy, n: number, canvas: HTMLCanvasElement, w: number, h: number) {
   const page = await doc.getPage(n)

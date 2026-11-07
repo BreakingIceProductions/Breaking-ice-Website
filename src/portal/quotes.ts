@@ -28,6 +28,8 @@ export type QuoteDoc = {
   clientId: string
   version: number
   file?: AssetRef
+  /** A JPEG of the first page, for the reveal. */
+  cover?: AssetRef
   fileName?: string
   fileHash?: string
   summary?: string
@@ -77,7 +79,7 @@ export async function getQuote(projectId: string) {
   return portalClient.getDocument<QuoteDoc>(quoteId(projectId))
 }
 
-const CLIENT_QUOTE_FIELDS = `projectId, version, fileName, summary, note, includes, options, depositPercent, validUntil, sharedAt,
+const CLIENT_QUOTE_FIELDS = `projectId, version, fileName, "coverUrl": cover.asset->url, summary, note, includes, options, depositPercent, validUntil, sharedAt,
   "signature": signature{name, title, org, at, method, option, total, deposit, certificateId},
   "p": *[_type == "clientProject" && _id == ^.projectId][0]{title, "slug": slug.current, pipelineStage, quoteAmount, depositAmount, "org": client->organizationName, "noGst": client->noGst}`
 

@@ -48,7 +48,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
   const fileUrl = `/api/portal/quote/file?project=${encodeURIComponent(q.slug)}`
   const signedUrl = `${fileUrl}&signed=1`
   const money = (n: number) => `$${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })}`
-  const tax = q.noGst ? ' · no GST' : ' + GST'
+  const tax = q.noGst ? '' : ' + GST'
   const price = q.options?.length
     ? `${q.options.length > 1 ? 'From ' : ''}${money(Math.min(...q.options.map((o) => o.total)))}${tax}`
     : q.total ? `${money(q.total)}${tax}` : undefined
@@ -60,6 +60,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
         <QuoteReveal
           seenKey={`quote-reveal:${q.projectId}:v${q.version}`}
           pdfUrl={fileUrl}
+          coverUrl={q.coverUrl ? `${q.coverUrl}?w=600&auto=format` : undefined}
           title={q.title}
           org={q.org}
           firstName={(session.preview ? client?.contacts?.[0]?.name : me?.name)?.split(' ')[0]}

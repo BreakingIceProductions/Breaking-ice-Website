@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import type { OfficeQuote } from '@/admin/types'
+import { coverImage } from '@/portal/pdf-view'
 
 type Props = {
   projectId: string
@@ -39,6 +40,17 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
     setBusy('')
     if (!r?.ok || !j?.ok) return setMsg({ text: j?.message ?? 'That didn’t work. Try again.', err: true })
     if (j.sample) return setMsg({ text: 'Sample mode: nothing was saved or sent.' })
+    // A new PDF: save a small image of its cover for the client's welcome screen.
+    const pdf = body.get('file')
+    if (pdf instanceof File && pdf.size > 0) {
+      const img = await coverImage(pdf).catch(() => null)
+      if (img) {
+        const cb = new FormData()
+        cb.set('projectId', projectId)
+        cb.set('image', img, 'cover.jpg')
+        await fetch('/api/admin/quote/cover', { method: 'POST', body: cb }).catch(() => null)
+      }
+    }
     setMsg({
       text: j.sent
         ? `Sent to ${j.sent.join(', ')}.${j.failed?.length ? ` Couldn’t email ${j.failed.join(', ')}.` : ''}`
