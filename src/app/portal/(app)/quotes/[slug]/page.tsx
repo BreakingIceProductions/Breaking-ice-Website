@@ -10,7 +10,6 @@ import { PaymentList } from '@/portal/payment-list'
 import { PdfPages } from '@/portal/pdf-view'
 import { QuoteReveal, ReplayReveal } from '@/portal/quote-reveal'
 import { QuoteChoice, QuoteGlance, QuoteSign } from '@/portal/quote-sign'
-import { ScrollTo } from '@/portal/scroll-to'
 import { fmtMoment, markQuoteViewed, quoteExpired } from '@/portal/quotes'
 import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
 
@@ -58,6 +57,38 @@ export default async function QuotePage({ params, searchParams }: Props) {
   // Once signed, the deposit replaces At a glance: one clear next step.
   const payFirst = Boolean(q.signature && mine.length)
   const coverImg = q.coverUrl ? `${q.coverUrl}?w=600&auto=format` : undefined
+
+  // Signed with a deposit to pay: the quote steps aside and the deposit is the whole page.
+  if (q.signature && mine.some((x) => x.status === 'due')) {
+    return (
+      <div className={`wrap q-page q-pay-page${justSigned ? ' q-pay-in' : ''}`}>
+        <nav className="breadcrumb" aria-label="Breadcrumb">
+          <Link href="/portal/quotes">← All quotes</Link>
+        </nav>
+        <header className="q-head">
+          <span className="eyebrow">{q.org} · {q.title}</span>
+          <h1 className="h1">Pay your deposit</h1>
+          <p className="lede" style={{ margin: 0 }}>Your quote is signed. Your project is booked as soon as your deposit arrives.</p>
+        </header>
+        <div className="q-pay-grid">
+          <PaymentList id="billing" heading="Deposit" payments={mine} back={`/portal/quotes/${q.slug}`} note={note} />
+          <aside className="q-side stack">
+            <section className="p-card q-signed" aria-labelledby="signed-h">
+              <h2 id="signed-h" className="p-label">Signed</h2>
+              {q.signature.option && <p className="small" style={{ margin: 0 }}>{q.signature.option} · {money(q.signature.total ?? 0)}</p>}
+              <p style={{ margin: 0 }}>
+                <strong>{q.signature.name}</strong>{q.signature.title ? `, ${q.signature.title}` : ''}
+                <br />
+                <span className="muted small">{fmtMoment(q.signature.at)} · Certificate {q.signature.certificateId}</span>
+              </p>
+              {!demo && <a className="text-link small" href={`${signedUrl}&download=1`}>Download your signed copy</a>}
+            </section>
+            <ProducerCard producer={producer} title="Questions about the deposit?" />
+          </aside>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="wrap q-page">
@@ -112,8 +143,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
         <aside className="q-side stack">
           {payFirst && (
             <>
-              <PaymentList id="billing" heading={mine.some((x) => x.status === 'due') ? 'Pay your deposit' : 'Your deposit'} payments={mine} back={`/portal/quotes/${q.slug}`} note={note} />
-              {justSigned && <ScrollTo id="billing" />}
+              <PaymentList id="billing" heading="Your deposit" payments={mine} back={`/portal/quotes/${q.slug}`} note={note} />
             </>
           )}
           {q.note && !q.signature && (
