@@ -2,7 +2,7 @@ import { adminFromRequest } from '@/admin/auth'
 import { addLog, getProject } from '@/admin/data'
 import { portalClient } from '@/portal/data'
 import { json } from '@/portal/http'
-import { createPayment, fmtCad, getPayment } from '@/portal/payments'
+import { bookOnDeposit, createPayment, fmtCad, getPayment } from '@/portal/payments'
 
 export const runtime = 'nodejs'
 
@@ -55,6 +55,7 @@ export async function POST(req: Request) {
     if (pay.status === 'paid') return json({ ok: true })
     await portalClient.patch(pay._id).set({ status: 'paid', paidAt: new Date().toISOString(), method: 'outside' }).commit()
     await addLog(p._id, `${pay.label} marked paid outside the portal (${fmtCad(pay.total)})`, 'payment')
+    await bookOnDeposit(pay).catch((e) => console.error('[admin] booking on deposit failed', e))
     return json({ ok: true })
   }
   return json({ ok: false, error: 'invalid' }, 400)

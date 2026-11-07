@@ -2,6 +2,7 @@ import 'server-only'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { SITE_URL } from '@/lib/site'
 import { addInvoiceRecord, addLog, getProject } from '@/admin/data'
+import { runStage, stageIndex } from '@/admin/stages'
 import { createDraftInvoice, ensureZohoContact, getInvoice, recordCardPayment, statusOf, zohoConnection } from '@/admin/zoho'
 import { portalEnv, portalReady, stripeReady } from './config'
 import { addActivity, getPortalSettings, portalClient } from './data'
@@ -111,7 +112,26 @@ export async function markSent(pay: PortalPayment, method: BankMethod) {
   if (pay.status !== 'due') return
   await portalClient.patch(pay._id).set({ status: 'processing', method }).commit()
   await addLog(pay.projectId, `Client says the ${pay.label.toLowerCase()} (${fmtCad(pay.total)}) is on its way by ${methodLabel(method)}`, 'payment')
-  await notifyJosh(`📨 ${pay.label} sent by ${methodLabel(method)}: ${fmtCad(pay.total)} · ${pay.projectTitle}. Reference ${payReference(pay)}. ${SITE_URL}/admin/projects/${pay.projectId}`)
+  const line = `${pay.label} sent by ${methodLabel(method)}: ${fmtCad(pay.total)} · ${pay.projectTitle}. Reference ${payReference(pay)}.`
+  const admin = `${SITE_URL}/admin/projects/${pay.projectId}`
+  await notifyJosh(`📨 ${line} ${admin}`)
+  await sendEmail({
+    to: [portalEnv.replyTo],
+    subject: `${pay.label} sent by ${methodLabel(method)}: ${pay.projectTitle}`,
+    text: `${line}\n\nThe client says it's on its way. Once it's in, mark it paid in the back office (or it shows as paid when Zoho Books has it)${pay.kind === 'deposit' ? ', and the project moves to Booked' : ''}.\n\n${admin}`,
+    html: `<p>${esc(line)}</p><p>The client says it’s on its way. Once it’s in, mark it paid in the back office (or it shows as paid when Zoho Books has it)${pay.kind === 'deposit' ? ', and the project moves to Booked' : ''}.</p><p><a href="${admin}">Open the project</a></p>`,
+  }).catch((e) => console.error('[portal] payment-sent email to Josh failed', e))
+}
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/** A paid deposit books the project, if signing didn't already. Safe to run twice. */
+export async function bookOnDeposit(pay: Pick<PortalPayment, 'kind' | 'projectId'>) {
+  if (pay.kind !== 'deposit') return
+  const p = await getProject(pay.projectId)
+  if (!p || stageIndex(p.pipelineStage) >= stageIndex('booked')) return
+  const results = await runStage(p, 'booked')
+  await addLog(p._id, `Deposit paid, so the project is booked${results.some((r) => !r.ok) ? ` (${results.filter((r) => !r.ok).length} step(s) failed)` : ''}`, 'stage')
 }
 
 /**
@@ -270,6 +290,7 @@ export async function failSession(sessionId: string) {
 async function announce(pay: PortalPayment, processing: boolean) {
   const amount = fmtCad(pay.total)
   if (!processing) await addActivity(pay.projectId, `${pay.label} paid`, 'approved')
+  if (!processing) await bookOnDeposit(pay).catch((e) => console.error('[portal] booking on deposit failed', e))
   await addLog(pay.projectId, processing ? `${pay.label} (${amount}) paid by bank debit; clearing` : `${pay.label} paid: ${amount}${pay.method ? ` by ${methodLabel(pay.method)}` : ''}${pay.cardFee ? `, incl. ${fmtCad(round2(pay.cardFee + (pay.cardFeeGst ?? 0)))} card fee` : ''}`, 'payment')
   await notifyJosh(`${processing ? '⏳' : '💸'} ${pay.label} ${processing ? 'started by bank debit' : 'paid'}: ${amount} · ${pay.projectTitle}. ${SITE_URL}/admin/projects/${pay.projectId}`)
   try {

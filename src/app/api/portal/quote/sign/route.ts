@@ -103,7 +103,9 @@ export async function POST(req: Request) {
   // The client gets their answer now; booking and emails carry on in the background.
   // Clients who pay in the portal get the deposit to pay right away.
   const payer = access.clients.find((c) => c._id === doc.clientId)
-  if (payer?.portalPayments && deposit && deposit > 0) {
+  // Paying the deposit in the portal is what books the project (see bookOnDeposit).
+  const waitForDeposit = Boolean(payer?.portalPayments && deposit && deposit > 0)
+  if (waitForDeposit && payer && deposit) {
     await createPayment({ projectId: q.projectId, clientId: payer._id, kind: 'deposit', label: 'Deposit', amount: deposit }).catch((e) => console.error('[portal] deposit request failed', e))
   }
 
@@ -123,7 +125,7 @@ export async function POST(req: Request) {
     const steps: string[] = []
     try {
       const p = await getProject(q.projectId)
-      if (p && stageIndex(p.pipelineStage) < stageIndex('booked')) {
+      if (p && !waitForDeposit && stageIndex(p.pipelineStage) < stageIndex('booked')) {
         const results = await runStage(p, 'booked')
         booked = true
         steps.push(...results.map((r) => `${r.ok ? '✓' : '✗'} ${r.message}`))
@@ -142,7 +144,7 @@ export async function POST(req: Request) {
         to: [session.email],
         ...signedEmail({
           name: name.split(' ')[0], projectTitle: q.title, org: q.org, at: when, deposit, booked,
-          portalUrl: `${SITE_URL}/portal/quotes/${q.slug}${payer?.portalPayments ? '#billing' : ''}`, signOff: settings.signOff, producerPhone: producer?.phone, payInPortal: Boolean(payer?.portalPayments), noGst: Boolean(payer?.noGst),
+          portalUrl: `${SITE_URL}/portal/quotes/${q.slug}${payer?.portalPayments ? '#billing' : ''}`, signOff: settings.signOff, producerPhone: producer?.phone, payInPortal: waitForDeposit, noGst: Boolean(payer?.noGst),
         }),
         attachments,
       })
@@ -155,8 +157,8 @@ export async function POST(req: Request) {
     await sendEmail({
       to: [portalEnv.replyTo],
       subject: `Signed: ${q.title} · ${q.org}`,
-      text: `${line}\n\nSigned ${when} by ${session.email}. The signed PDF is attached.\n\n${steps.length ? `Booking:\n${steps.join('\n')}\n\n` : ''}${admin}`,
-      html: `<p>${esc(line)}</p><p>Signed ${esc(when)} by ${esc(session.email)}. The signed PDF is attached.</p>${steps.length ? `<p><strong>Booking</strong><br>${steps.map(esc).join('<br>')}</p>` : ''}<p><a href="${admin}">Open the project</a></p>`,
+      text: `${line}\n\nSigned ${when} by ${session.email}. The signed PDF is attached.${waitForDeposit ? ' The project is booked once the deposit is paid.' : ''}\n\n${steps.length ? `Booking:\n${steps.join('\n')}\n\n` : ''}${admin}`,
+      html: `<p>${esc(line)}</p><p>Signed ${esc(when)} by ${esc(session.email)}. The signed PDF is attached.${waitForDeposit ? ' The project is booked once the deposit is paid.' : ''}</p>${steps.length ? `<p><strong>Booking</strong><br>${steps.map(esc).join('<br>')}</p>` : ''}<p><a href="${admin}">Open the project</a></p>`,
       attachments,
     }).catch((e) => console.error('[portal] signed email to Josh failed', e))
   })

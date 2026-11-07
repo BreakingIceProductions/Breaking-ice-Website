@@ -8,7 +8,7 @@ const cad = (n: number) => `$${n.toLocaleString('en-CA', { minimumFractionDigits
 
 const NOTES: Record<string, { text: string; err?: boolean }> = {
   paid: { text: 'Thanks, your payment is in. A confirmation is on its way by email.' },
-  sent: { text: 'Thanks for letting us know. It’ll show as paid here once it lands, usually within one to three business days.' },
+  sent: { text: 'Thanks, we’ve let Josh know it’s on its way. As soon as it arrives (usually one to three business days), it shows as paid here and your project is booked.' },
   processing: { text: 'Thanks, your payment is on its way. It’ll show as paid here once it clears.' },
   sample: { text: 'This is the sample project, so nothing is sent or charged.' },
   preview: { text: 'Payments are off while you’re viewing as the client.' },
@@ -99,9 +99,9 @@ export async function PaymentList({ payments, back, note, heading = 'Payments', 
             ) : (
               <p className="small" style={{ margin: 0 }}>To pay by e-Transfer or EFT (no fees), reply to any of our emails and we’ll send the details.</p>
             )}
-            <details className="pay-card-opt" open={!bankWays}>
-              <summary className="small">Pay by credit card instead</summary>
-              <p className="muted small" style={{ margin: 'var(--space-2) 0' }}>
+            <div className="pay-way pay-card-opt">
+              <span className="p-label">Credit card</span>
+              <p className="small" style={{ margin: 0 }}>
                 {fee.fee
                   ? `Card payments add a ${fee.pct}% processing fee (${cad(fee.fee)}${fee.gst ? ` + ${cad(fee.gst)} GST` : ''}), so the total is ${cad(p.total + fee.added)}. You pay on Stripe’s secure page.`
                   : 'You pay on Stripe’s secure page.'}
@@ -109,9 +109,9 @@ export async function PaymentList({ payments, back, note, heading = 'Payments', 
               <form action="/api/portal/pay" method="post">
                 <input type="hidden" name="payment" value={p._id} />
                 <input type="hidden" name="back" value={back} />
-                <button type="submit" name="how" value="card" className="btn btn-secondary btn-sm">Pay {cad(p.total + fee.added)} by card<span className="sr-only"> for the {p.label.toLowerCase()}</span></button>
+                <button type="submit" name="how" value="card" className="btn btn-secondary">Pay {cad(p.total + fee.added)} by credit card<span className="sr-only"> for the {p.label.toLowerCase()}</span></button>
               </form>
-            </details>
+            </div>
           </div>
         )
       })}

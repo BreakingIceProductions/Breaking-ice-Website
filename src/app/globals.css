@@ -1245,5 +1245,5 @@ textarea.input.a-quote-text { min-height: 90px; }
 .pay-way { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-sm); min-width: 0; }
 .pay-copy { overflow-wrap: anywhere; user-select: all; }
 .pay-eft { white-space: pre-line; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.pay-card-opt > summary { cursor: pointer; color: var(--ink-muted); }
+.pay-card-opt { gap: var(--space-2); align-items: flex-start; }
 .pay-card-opt form { margin: 0; }
