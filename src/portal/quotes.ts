@@ -79,10 +79,10 @@ export async function getQuote(projectId: string) {
 
 const CLIENT_QUOTE_FIELDS = `projectId, version, fileName, summary, note, includes, options, depositPercent, validUntil, sharedAt,
   "signature": signature{name, title, org, at, method, option, total, deposit, certificateId},
-  "p": *[_type == "clientProject" && _id == ^.projectId][0]{title, "slug": slug.current, pipelineStage, quoteAmount, depositAmount, "org": client->organizationName}`
+  "p": *[_type == "clientProject" && _id == ^.projectId][0]{title, "slug": slug.current, pipelineStage, quoteAmount, depositAmount, "org": client->organizationName, "noGst": client->noGst}`
 
 type RawClientQuote = Omit<PortalQuote, 'slug' | 'title' | 'org' | 'pipelineStage' | 'total' | 'deposit'> & {
-  p?: { title: string; slug?: string; pipelineStage?: string; quoteAmount?: number; depositAmount?: number; org?: string } | null
+  p?: { title: string; slug?: string; pipelineStage?: string; quoteAmount?: number; depositAmount?: number; org?: string; noGst?: boolean } | null
 }
 
 /** Shared quotes for these clients, newest first. The back office's preview also sees ones not sent yet. */
@@ -107,6 +107,7 @@ export async function quotesForClients(clientIds: string[], unsent = false): Pro
       signature: r.signature ?? undefined,
       options: r.options ?? undefined,
       depositPercent: r.depositPercent ?? undefined,
+      noGst: Boolean(p!.noGst),
     }))
 }
 

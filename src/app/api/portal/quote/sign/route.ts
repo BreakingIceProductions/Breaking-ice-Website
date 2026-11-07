@@ -142,7 +142,7 @@ export async function POST(req: Request) {
         to: [session.email],
         ...signedEmail({
           name: name.split(' ')[0], projectTitle: q.title, org: q.org, at: when, deposit, booked,
-          portalUrl: `${SITE_URL}/portal/quotes/${q.slug}${payer?.portalPayments ? '#billing' : ''}`, signOff: settings.signOff, producerPhone: producer?.phone, payInPortal: Boolean(payer?.portalPayments),
+          portalUrl: `${SITE_URL}/portal/quotes/${q.slug}${payer?.portalPayments ? '#billing' : ''}`, signOff: settings.signOff, producerPhone: producer?.phone, payInPortal: Boolean(payer?.portalPayments), noGst: Boolean(payer?.noGst),
         }),
         attachments,
       })

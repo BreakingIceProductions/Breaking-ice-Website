@@ -154,7 +154,7 @@ export type ZohoInvoice = { invoice_id: string; invoice_number?: string; status:
  * Zoho has no idempotency key, so the reference (unique per project and kind) is
  * checked first and a double click returns the same draft.
  */
-export async function createDraftInvoice(customerId: string, line: { name: string; description: string; amount: number; reference: string }) {
+export async function createDraftInvoice(customerId: string, line: { name: string; description: string; amount: number; reference: string; noTax?: boolean }) {
   const reference = line.reference.slice(0, 50)
   const existing = (await call<{ invoices: ZohoInvoice[] }>('/invoices', {}, { customer_id: customerId, reference_number: reference })).invoices?.find((i) => i.status !== 'void')
   if (existing) return existing
@@ -174,7 +174,7 @@ export async function createDraftInvoice(customerId: string, line: { name: strin
           quantity: 1,
           rate: Math.round(line.amount * 100) / 100,
           ...(adminEnv.zohoAccountId ? { account_id: adminEnv.zohoAccountId } : {}),
-          ...(adminEnv.zohoTaxId ? { tax_id: adminEnv.zohoTaxId } : {}),
+          ...(adminEnv.zohoTaxId && !line.noTax ? { tax_id: adminEnv.zohoTaxId } : {}),
         },
       ],
     }),
@@ -215,7 +215,7 @@ export async function recordCardPayment(invoiceId: string, p: { fee: number; fee
             quantity: 1,
             rate: p.fee,
             ...(adminEnv.zohoAccountId ? { account_id: adminEnv.zohoAccountId } : {}),
-            ...(adminEnv.zohoTaxId ? { tax_id: adminEnv.zohoTaxId } : {}),
+            ...(adminEnv.zohoTaxId && inv.line_items.some((l) => l.tax_id) ? { tax_id: adminEnv.zohoTaxId } : {}),
           },
         ],
       }),

@@ -126,7 +126,7 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
           <p className="muted small" style={{ margin: 0 }}>
             Each request gets a draft invoice in Zoho Books. The client sees your e-Transfer and EFT details first; paid ones show as paid once Zoho Books has the payment.
             {stripeOn ? ' Card is offered as a fallback, with the processing fee added.' : ' Card payment is off until Stripe is connected.'}{' '}
-            {gst ? '5% GST is added.' : 'No GST is added (no GST number in the portal settings).'} The client gets no email for a new request; tell them, or it shows on their portal home.
+            {gst ? '5% GST is added.' : 'No GST is added.'} The client gets no email for a new request; tell them, or it shows on their portal home.
           </p>
           <div><button type="button" className="linklike small" disabled={busy} onClick={() => confirm('Stop taking payments in the portal for this client? Unpaid requests stay hidden from them.') && call({ action: 'portal-payments', on: false }, 'Portal payments switched off for this client.')}>Switch off portal payments for this client</button></div>
         </>

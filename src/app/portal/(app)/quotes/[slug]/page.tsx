@@ -48,9 +48,10 @@ export default async function QuotePage({ params, searchParams }: Props) {
   const fileUrl = `/api/portal/quote/file?project=${encodeURIComponent(q.slug)}`
   const signedUrl = `${fileUrl}&signed=1`
   const money = (n: number) => `$${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })}`
+  const tax = q.noGst ? ' · no GST' : ' + GST'
   const price = q.options?.length
-    ? `${q.options.length > 1 ? 'From ' : ''}${money(Math.min(...q.options.map((o) => o.total)))} + GST`
-    : q.total ? `${money(q.total)} + GST` : undefined
+    ? `${q.options.length > 1 ? 'From ' : ''}${money(Math.min(...q.options.map((o) => o.total)))}${tax}`
+    : q.total ? `${money(q.total)}${tax}` : undefined
   const from = producer?.name ? { name: producer.name, photo: portalImage(producer.portrait, 160, 160) } : undefined
 
   return (
@@ -117,6 +118,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
             summary={q.summary}
             includes={q.includes}
             version={q.version}
+            noGst={q.noGst}
             signed={q.signature ? { option: q.signature.option, total: q.signature.total, deposit: q.signature.deposit } : undefined}
           />
 
@@ -135,7 +137,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
             </section>
           ) : expired ? null : (
             <section className="p-card">
-              <QuoteSign slug={q.slug} version={q.version} org={q.org} options={q.options} depositPercent={q.depositPercent} deposit={q.deposit} defaultName={me?.name ?? ''} defaultTitle={me?.role ?? ''} demo={demo} preview={Boolean(session.preview)} />
+              <QuoteSign slug={q.slug} version={q.version} org={q.org} options={q.options} depositPercent={q.depositPercent} deposit={q.deposit} defaultName={me?.name ?? ''} defaultTitle={me?.role ?? ''} demo={demo} preview={Boolean(session.preview)} noGst={q.noGst} />
             </section>
           )}
 

@@ -88,6 +88,13 @@ export const client = defineType({
       type: 'boolean',
       initialValue: false,
     }),
+    defineField({
+      name: 'noGst',
+      title: 'No GST charged',
+      description: 'For GST-exempt clients. Quotes, emails and portal payments show no GST, and Zoho Books invoices add no tax.',
+      type: 'boolean',
+      initialValue: false,
+    }),
   ],
   preview: { select: { title: 'organizationName', media: 'logo', contacts: 'contacts' }, prepare: ({ title, media, contacts }) => ({ title, media, subtitle: `${contacts?.length ?? 0} contact(s)` }) },
 })

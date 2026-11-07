@@ -82,7 +82,7 @@ export async function planStage(p: OfficeProject, to: PipelineStage): Promise<St
   const [tt, zoho] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null)])
   const ttBlocked = !ticktickReady() ? 'TickTick isn’t set up yet (Settings)' : !tt ? 'Connect TickTick in Settings' : undefined
   const zohoBlocked = !zohoReady() ? 'Zoho Books isn’t set up yet (Settings)' : !zoho ? 'Connect Zoho Books in Settings' : undefined
-  const plusTax = adminEnv.zohoTaxId ? ' + GST' : ''
+  const plusTax = adminEnv.zohoTaxId && !p.client.noGst ? ' + GST' : ''
 
   const fi = stageIndex(from)
   const ti = stageIndex(to)
@@ -229,6 +229,7 @@ export async function runStage(p: OfficeProject, to: PipelineStage, skip: string
           description: `${p.title}: ${what.toLowerCase()}`,
           amount: d.amount,
           reference: `${p.title} · ${what}${d.kind === 'retainer' ? ` ${today().slice(0, 7)}` : ''}`,
+          noTax: p.client.noGst,
         })
         await addInvoiceRecord(p._id, {
           kind: d.kind,

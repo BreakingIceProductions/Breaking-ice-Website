@@ -35,7 +35,7 @@ export async function drawPage(doc: PDFDocumentProxy, n: number, canvas: HTMLCan
   canvas.height = Math.floor(vp.height)
   canvas.style.width = `${Math.floor(vp.width / ratio)}px`
   canvas.style.height = `${Math.floor(vp.height / ratio)}px`
-  await page.render({ canvasContext: canvas.getContext('2d')!, viewport: vp }).promise
+  await page.render({ canvas, viewport: vp }).promise
 }
 
 export function PdfPages({ url, title }: { url: string; title: string }) {

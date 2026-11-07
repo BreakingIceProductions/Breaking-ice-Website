@@ -13,6 +13,8 @@ export type PortalClient = {
   driveFolderId?: string
   /** Pays deposits and balances in the portal: e-Transfer or EFT first, card (Stripe) with a fee. Off for clients invoiced elsewhere. */
   portalPayments?: boolean
+  /** GST-exempt: nothing adds or mentions GST. */
+  noGst?: boolean
 }
 
 export type DeliverableStatus = 'in-progress' | 'awaiting-feedback' | 'changes-requested' | 'approved'
@@ -157,6 +159,8 @@ export type PortalQuote = {
   total?: number
   deposit?: number
   signature?: QuoteSignature
+  /** The client is GST-exempt, so prices show without "+ GST". */
+  noGst?: boolean
 }
 
 /** What the client can see of a signature. The full record (IP, device, fingerprints) stays on the server. */

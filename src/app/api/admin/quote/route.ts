@@ -107,7 +107,7 @@ export async function POST(req: Request) {
   // Send: share it in the portal and email every contact.
   const fresh = await getQuote(p._id)
   if (!fresh?.file) return json({ ok: false, error: 'no-file', message: 'Add the quote PDF first.' }, 400)
-  const client = (await portalClient.fetch<PortalClient | null>(`*[_id == $id][0]{_id, organizationName, contacts[]{_key, name, email, role, getsEmails}, producer}`, { id: p.client._id })) ?? null
+  const client = (await portalClient.fetch<PortalClient | null>(`*[_id == $id][0]{_id, organizationName, contacts[]{_key, name, email, role, getsEmails}, producer, noGst}`, { id: p.client._id })) ?? null
   const to = (client?.contacts ?? []).filter((c) => c.email && c.getsEmails !== false)
   if (!client || !to.length) return json({ ok: false, error: 'no-contacts', message: `${p.client.organizationName} has no contacts yet. Add one in the Studio, then send.` }, 400)
   if (!p.slug) return json({ ok: false, error: 'no-slug', message: 'The project needs a portal address (slug) in the Studio.' }, 400)
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
       name: c.name.split(' ')[0], projectTitle: p.title, org: client.organizationName, from: Boolean(fresh.options?.length),
       total: fresh.options?.length ? Math.min(...fresh.options.map((o) => o.total)) : amount(form.get('total')) ?? p.quoteAmount,
       validUntil: fresh.validUntil ? new Date(`${fresh.validUntil}T12:00:00Z`).toLocaleDateString('en-CA', { dateStyle: 'long', timeZone: 'UTC' }) : undefined,
-      again, portalUrl: `${SITE_URL}/portal/auth?token=${encodeURIComponent(token)}`, signOff: settings.signOff, producerPhone: producer?.phone, note: fresh.note || undefined,
+      again, portalUrl: `${SITE_URL}/portal/auth?token=${encodeURIComponent(token)}`, signOff: settings.signOff, producerPhone: producer?.phone, note: fresh.note || undefined, noGst: Boolean(client.noGst),
     })
     try {
       const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail })

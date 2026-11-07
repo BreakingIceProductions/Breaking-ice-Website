@@ -66,6 +66,7 @@ export type OfficeClient = {
   billingEmail?: string
   driveFolderId?: string
   portalPayments?: boolean
+  noGst?: boolean
 }
 
 export type OfficeProject = {

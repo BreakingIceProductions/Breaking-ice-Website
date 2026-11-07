@@ -335,7 +335,7 @@ export default async function ProjectPage({ params }: Props) {
             balance={p.quoteAmount ? Math.max(0, p.quoteAmount - (p.depositAmount ?? 0)) : undefined}
             stripeOn={stripeReady()}
             testMode={stripeTestMode()}
-            gst={Boolean(ps.gstNumber)}
+            gst={Boolean(ps.gstNumber) && !p.client.noGst}
           />
 
           <section className="p-card" aria-labelledby="h-links">

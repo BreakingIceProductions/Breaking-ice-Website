@@ -27,7 +27,7 @@ export const portalImage = (img: SanityImage, w: number, h?: number) => {
   return (h ? b.height(h).fit('crop') : b).url()
 }
 
-const CLIENT_FIELDS = `_id, organizationName, logo, contacts[]{_key, name, email, role, getsEmails}, producer, driveFolderId, portalPayments`
+const CLIENT_FIELDS = `_id, organizationName, logo, contacts[]{_key, name, email, role, getsEmails}, producer, driveFolderId, portalPayments, noGst`
 const PROJECT_FIELDS = `_id, _updatedAt, title, "slug": slug.current, startDate, pipelineStage, status, dontEmailDelivery,
   "billing": *[_id == "bo-state-" + ^._id][0].invoices[]{kind, status, outstanding}, stage, stageDates, nextStep, summary, coverImage,
   keyDates, links, deliverables, driveFolderId, "client": client->{${CLIENT_FIELDS}},

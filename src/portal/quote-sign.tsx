@@ -23,9 +23,12 @@ type Props = {
   defaultTitle: string
   demo: boolean
   preview?: boolean
+  noGst?: boolean
 }
 
 const cad = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })}` : '')
+/** What follows a price: "+ GST", or nothing for a GST-exempt client. */
+const plusGst = (noGst?: boolean) => (noGst ? '' : ' + GST')
 
 /** The package being looked at, shared by the At a glance card and the Sign panel. */
 const Choice = createContext<[string, (key: string) => void] | null>(null)
@@ -49,12 +52,13 @@ type GlanceProps = {
   summary?: string
   includes?: string[]
   version: number
+  noGst?: boolean
   /** Once signed, the numbers are the signed ones and nothing switches. */
   signed?: { option?: string; total?: number; deposit?: number }
 }
 
 /** Price, deposit due and balance: they follow the package chosen. */
-export function QuoteGlance({ options, total, depositPercent, deposit, summary, includes, version, signed }: GlanceProps) {
+export function QuoteGlance({ options, total, depositPercent, deposit, summary, includes, version, noGst, signed }: GlanceProps) {
   const [option, setOption] = useChoice(options?.length === 1 ? options[0]._key : '')
   const chosen = signed ? undefined : options?.find((o) => o._key === option)
   const price = signed ? signed.total : options?.length ? chosen?.total : total
@@ -82,19 +86,19 @@ export function QuoteGlance({ options, total, depositPercent, deposit, summary, 
         {price ? (
           <p className="q-total">
             <span className="q-amount">{cad(price)}</span>
-            <span className="muted small">+ GST{chosen ? ` · ${chosen.name}` : ''}</span>
+            <span className="muted small">{noGst ? 'No GST' : '+ GST'}{chosen ? ` · ${chosen.name}` : ''}</span>
           </p>
         ) : from ? (
           <p className="q-total">
             <span className="muted small">From</span>
             <span className="q-amount">{cad(from)}</span>
-            <span className="muted small">+ GST</span>
+            <span className="muted small">{noGst ? 'No GST' : '+ GST'}</span>
           </p>
         ) : null}
         {price && due ? (
           <dl className="q-money">
-            <div><dt>Deposit due to book{depositPercent && !signed ? ` (${depositPercent}%)` : ''}</dt><dd>{cad(due)} + GST</dd></div>
-            <div><dt>Balance on delivery</dt><dd>{cad(Math.round((price - due) * 100) / 100)} + GST</dd></div>
+            <div><dt>Deposit due to book{depositPercent && !signed ? ` (${depositPercent}%)` : ''}</dt><dd>{cad(due)}{plusGst(noGst)}</dd></div>
+            <div><dt>Balance on delivery</dt><dd>{cad(Math.round((price - due) * 100) / 100)}{plusGst(noGst)}</dd></div>
           </dl>
         ) : options && options.length > 1 && !signed ? (
           <p className="muted small" style={{ margin: 0 }}>Choose a package to see your total and the deposit due{depositPercent ? ` (${depositPercent}%)` : ''}.</p>
@@ -115,7 +119,7 @@ export function QuoteGlance({ options, total, depositPercent, deposit, summary, 
 }
 
 /** Type or draw a signature, agree, sign. */
-export function QuoteSign({ slug, version, org, options, depositPercent, deposit, defaultName, defaultTitle, demo, preview }: Props) {
+export function QuoteSign({ slug, version, org, options, depositPercent, deposit, defaultName, defaultTitle, demo, preview, noGst }: Props) {
   const router = useRouter()
   const [name, setName] = useState(defaultName)
   const [title, setTitle] = useState(defaultTitle)
@@ -170,7 +174,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
                 <input type="radio" name="option" value={o._key} checked={option === o._key} onChange={() => setOption(o._key)} required />
                 <span className="stack" style={{ gap: 0 }}>
                   <strong>{o.name}</strong>
-                  <span className="small">{cad(o.total)} + GST</span>
+                  <span className="small">{cad(o.total)}{plusGst(noGst)}</span>
                   {o.note && <span className="muted small">{o.note}</span>}
                   {quoteDeposit(o.total, { depositPercent, deposit }) ? <span className="muted small">Deposit {cad(quoteDeposit(o.total, { depositPercent, deposit }))}</span> : null}
                 </span>

@@ -32,11 +32,11 @@ export const gstFor = (amount: number, settings: Pick<PortalSettings, 'gstNumber
 /** Breaking Ice policy: card payments carry a 3% processing fee. */
 const FEE_CAP = 3
 
-/** What paying by card adds: the fee on the pre-tax amount, and GST on the fee. */
-export function cardFeeFor(p: Pick<PortalPayment, 'amount'>, settings: Pick<PortalSettings, 'gstNumber' | 'cardFeePercent'>) {
+/** What paying by card adds: the fee on the pre-tax amount, and GST on the fee when the payment itself has GST. */
+export function cardFeeFor(p: Pick<PortalPayment, 'amount' | 'gst'>, settings: Pick<PortalSettings, 'gstNumber' | 'cardFeePercent'>) {
   const pct = Math.min(Math.max(Number(settings.cardFeePercent) || 0, 0), FEE_CAP)
   const fee = round2((p.amount * pct) / 100)
-  const gst = gstFor(fee, settings)
+  const gst = p.gst ? gstFor(fee, settings) : 0
   return { pct, fee, gst, added: round2(fee + gst) }
 }
 
@@ -61,9 +61,12 @@ export async function getPayment(id: string) {
 
 /** Asks for money. The deposit has a fixed id, so signing twice can't ask twice. */
 export async function createPayment(p: { projectId: string; clientId: string; kind: PortalPayment['kind']; label: string; amount: number }) {
-  const settings = await getPortalSettings()
+  const [settings, noGst] = await Promise.all([
+    getPortalSettings(),
+    portalClient.fetch<boolean | null>(`*[_id == $id][0].noGst`, { id: p.clientId }),
+  ])
   const amount = round2(p.amount)
-  const gst = gstFor(amount, settings)
+  const gst = noGst ? 0 : gstFor(amount, settings)
   const _id = p.kind === 'deposit' ? `pay-${p.projectId}-deposit` : `pay-${p.projectId}-${Date.now().toString(36)}`
   const doc = { _id, _type: 'portalPayment', projectId: p.projectId, clientId: p.clientId, kind: p.kind, label: p.label, amount, gst, total: round2(amount + gst), status: 'due', createdAt: new Date().toISOString() }
   const created = await portalClient.createIfNotExists(doc)
@@ -86,6 +89,7 @@ async function linkZohoInvoice(pay: PortalPayment) {
     description: `${project.title}: ${what.toLowerCase()}`,
     amount: pay.amount,
     reference: `${project.title} · ${what}${pay.kind === 'other' ? ` ${pay._id.slice(-6)}` : ''}`,
+    noTax: project.client.noGst,
   })
   await portalClient.patch(pay._id).set({ zohoInvoiceId: inv.invoice_id, ...(inv.invoice_number ? { zohoInvoiceNumber: inv.invoice_number } : {}) }).commit()
   if (!(project.office.invoices ?? []).some((i) => i.id === inv.invoice_id)) {

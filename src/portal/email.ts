@@ -200,7 +200,7 @@ ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}
 const money = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '')
 
 /** A quote shared from the back office: review it and sign in the portal. */
-export function quoteEmail(m: { name: string; projectTitle: string; org: string; total?: number; from?: boolean; validUntil?: string; again: boolean; portalUrl: string; signOff: string; producerPhone?: string; note?: string }) {
+export function quoteEmail(m: { name: string; projectTitle: string; org: string; total?: number; from?: boolean; validUntil?: string; again: boolean; portalUrl: string; signOff: string; producerPhone?: string; note?: string; noGst?: boolean }) {
   const headline = m.again ? `Your updated quote for ${esc(m.projectTitle)}` : `Your quote for ${esc(m.projectTitle)} is ready`
   // A personal note already greets them, so the standard line doesn't say hi again.
   const lead = m.again ? 'here’s the latest version of the quote' : 'the quote for ' + m.projectTitle + ' is ready'
@@ -210,7 +210,7 @@ export function quoteEmail(m: { name: string; projectTitle: string; org: string;
     m.from ? 'Read through the quote and pick the package that suits you.' : 'Read through the quote.',
     'Sign at the bottom of the page when you’re ready. You’ll get a signed copy by email.',
   ]
-  const meta = [m.total && `${m.from ? 'From' : 'Total'} · ${money(m.total)} + GST`, m.validUntil && `Valid until · ${esc(m.validUntil)}`].filter(Boolean).join('&nbsp;&nbsp;&nbsp;')
+  const meta = [m.total && `${m.from ? 'From' : 'Total'} · ${money(m.total)}${m.noGst ? ' (no GST)' : ' + GST'}`, m.validUntil && `Valid until · ${esc(m.validUntil)}`].filter(Boolean).join('&nbsp;&nbsp;&nbsp;')
   const html = layout({
     eyebrow: 'Quote',
     preview: 'Review your quote and sign it in your client portal.',
@@ -252,11 +252,11 @@ ${para(esc(m.signOff), 'padding-top:20px;padding-bottom:24px')}`,
 }
 
 /** To the signer, with the signed PDF attached. */
-export function signedEmail(m: { name: string; projectTitle: string; org: string; at: string; deposit?: number; booked: boolean; portalUrl: string; signOff: string; producerPhone?: string; payInPortal?: boolean }) {
+export function signedEmail(m: { name: string; projectTitle: string; org: string; at: string; deposit?: number; booked: boolean; portalUrl: string; signOff: string; producerPhone?: string; payInPortal?: boolean; noGst?: boolean }) {
   const headline = `Signed: ${esc(m.projectTitle)}`
   const intro = `Thanks ${m.name}. Your signed quote is attached, with a certificate page that records when and how it was signed. You’ll also find it in your client portal any time.`
   const next = m.booked
-    ? `Your project is booked.${m.deposit ? (m.payInPortal ? ` You can pay the deposit (${money(m.deposit)}) in your portal by e-Transfer, EFT or card.` : ` The deposit invoice (${money(m.deposit)} + GST) follows separately.`) : ''} We’ll be in touch shortly to lock in dates.`
+    ? `Your project is booked.${m.deposit ? (m.payInPortal ? ` You can pay the deposit (${money(m.deposit)}) in your portal by e-Transfer, EFT or card.` : ` The deposit invoice (${money(m.deposit)}${m.noGst ? '' : ' + GST'}) follows separately.`) : ''} We’ll be in touch shortly to lock in dates.`
     : 'We’ll be in touch shortly about next steps.'
   const html = layout({
     eyebrow: 'Quote signed',
