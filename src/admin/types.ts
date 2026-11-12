@@ -59,6 +59,8 @@ export type OfficeState = {
   log?: { _key: string; at: string; text: string; kind?: string }[]
   /** Dashboard reminders Josh dismissed. Each key names one wait (a version, a quote), so a new one shows again. */
   dismissed?: string[]
+  /** Stage checklist steps ticked off on the board, as "<stage>:<step number>". */
+  checks?: string[]
 }
 
 export type OfficeClient = {

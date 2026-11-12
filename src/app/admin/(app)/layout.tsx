@@ -3,6 +3,9 @@ import { Logo } from '@/components/brand'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { requireAdmin } from '@/admin/auth'
 import { calendarReady, ticktickReady, zohoReady } from '@/admin/config'
+import { listProjects } from '@/admin/data'
+import { needsAction } from '@/admin/insights'
+import { AdminSearch, type SearchItem } from '@/admin/ui/search'
 import { ticktickConnection } from '@/admin/ticktick'
 import { AdminNav } from '@/admin/ui/nav'
 import { zohoConnection } from '@/admin/zoho'
@@ -11,7 +14,20 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminApp({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin()
-  const [tt, zoho] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null)])
+  const [tt, zoho, projects] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null), listProjects().catch(() => [])])
+  const clients = new Map(projects.filter((p) => p.client._id).map((p) => [p.client._id, p.client.organizationName]))
+  const search: SearchItem[] = [
+    { group: 'Actions', label: 'New proposal', sub: 'Open the builder', href: '/admin/proposals/new' },
+    { group: 'Actions', label: 'New project or lead', sub: 'Opens the Studio', href: '/studio/portal/intent/create/template=clientProject;type=clientProject', external: true },
+    { group: 'Go to', label: 'Dashboard', href: '/admin' },
+    { group: 'Go to', label: 'Leads', href: '/admin/leads' },
+    { group: 'Go to', label: 'Projects board', href: '/admin/projects' },
+    { group: 'Go to', label: 'Projects list and archive', href: '/admin/projects?view=list' },
+    { group: 'Go to', label: 'Clients', href: '/admin/clients' },
+    { group: 'Go to', label: 'Settings and connections', href: '/admin/settings' },
+    ...projects.map((p) => ({ group: 'Projects' as const, label: p.title, sub: `${p.client.organizationName}${p.archived ? ' · archived' : ''}`, href: `/admin/projects/${p._id}` })),
+    ...[...clients].map(([id, name]) => ({ group: 'Clients' as const, label: name, href: `/admin/clients/${id}` })),
+  ]
   const links = [
     { name: 'Zoho Books', on: Boolean(zoho), setUp: zohoReady() },
     { name: 'TickTick', on: Boolean(tt), setUp: ticktickReady() },
@@ -24,7 +40,8 @@ export default async function AdminApp({ children }: { children: React.ReactNode
         <Link href="/admin" className="a-logo" aria-label="Back office home">
           <Logo tone="dark" height={28} />
         </Link>
-        <AdminNav />
+        <AdminSearch items={search} />
+        <AdminNav needs={needsAction(projects).length} />
         <div className="a-side-foot">
           <p className="a-side-label">Connections</p>
           <ul className="a-conn">
