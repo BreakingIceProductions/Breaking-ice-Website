@@ -17,6 +17,7 @@ export async function GET(req: Request, { params }: Props) {
   const admin = await getAdminSession()
   if (!admin) return NextResponse.redirect(new URL('/admin/sign-in', req.url), 303)
   if (admin.sample) return back('error=sample')
+  if (admin.viewOnly) return back('error=view-only')
   if (app === 'ticktick' && ticktickReady()) return NextResponse.redirect(ticktickAuthorizeUrl(await startOAuth(app)), 303)
   if (app === 'zoho' && zohoReady()) return NextResponse.redirect(zohoAuthorizeUrl(await startOAuth(app)), 303)
   return back(`error=not-set-up&app=${encodeURIComponent(app)}`)

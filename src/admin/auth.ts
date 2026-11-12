@@ -6,12 +6,13 @@ import { redirect } from 'next/navigation'
 import { LINK_MINUTES, portalEnv } from '@/portal/config'
 import { countSignInAttempt } from '@/portal/data'
 import { sameOrigin } from '@/portal/http'
-import { adminSampleMode, isAdminEmail } from './config'
+import { adminSampleMode, isAdminEmail, isViewerEmail } from './config'
 
 /**
  * Back-office sign-in: the same email link + 6-digit code as the client portal,
  * but its own cookies and its own token type, and only addresses in ADMIN_EMAILS
  * get anything. A portal session can never open /admin, and the other way round.
+ * Addresses in ADMIN_VIEWERS can sign in and look, but every change is refused (see adminFromRequest).
  */
 
 const SESSION = 'bi_admin'
@@ -89,7 +90,7 @@ export async function startAdminSession(email: string) {
   ;(await cookies()).set(SESSION, jwt, cookieOpts(SESSION_DAYS * 86_400))
 }
 
-export async function getAdminSession(): Promise<{ email: string; sample?: boolean } | null> {
+export async function getAdminSession(): Promise<{ email: string; sample?: boolean; viewOnly?: boolean } | null> {
   if (adminSampleMode()) return { email: 'josh@breakingiceproductions.com', sample: true }
   if (!portalEnv.secret) return null
   const raw = (await cookies()).get(SESSION)?.value
@@ -97,7 +98,7 @@ export async function getAdminSession(): Promise<{ email: string; sample?: boole
   try {
     const { payload } = await jwtVerify(raw, key())
     // Checked on every request, so removing an address from ADMIN_EMAILS locks it out at once.
-    return payload.p === 'admin' && typeof payload.e === 'string' && isAdminEmail(payload.e) ? { email: payload.e } : null
+    return payload.p === 'admin' && typeof payload.e === 'string' && isAdminEmail(payload.e) ? { email: payload.e, ...(isViewerEmail(payload.e) && { viewOnly: true }) } : null
   } catch {
     return null
   }
@@ -119,9 +120,12 @@ export async function requireAdmin() {
 /**
  * For API routes: signed in, and the request provably comes from our own pages.
  * Stricter than the portal: an Origin header (or Sec-Fetch-Site: same-origin) is required.
+ * View-only sessions get reads (GET) only, so they can't change data, email clients or open a client's portal.
  */
 export async function adminFromRequest(req: Request) {
   const fromUs = req.headers.get('sec-fetch-site') === 'same-origin' || (Boolean(req.headers.get('origin')) && sameOrigin(req))
   if (!fromUs) return null
-  return getAdminSession()
+  const s = await getAdminSession()
+  if (s?.viewOnly && req.method !== 'GET' && req.method !== 'HEAD') return null
+  return s
 }

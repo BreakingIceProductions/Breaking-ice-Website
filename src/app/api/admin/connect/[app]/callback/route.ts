@@ -13,7 +13,9 @@ export async function GET(req: Request, { params }: Props) {
   const { app } = await params
   const url = new URL(req.url)
   const back = (q: string) => NextResponse.redirect(new URL(`/admin/settings?${q}`, url), 303)
-  if (!(await getAdminSession())) return NextResponse.redirect(new URL('/admin/sign-in', url), 303)
+  const admin = await getAdminSession()
+  if (!admin) return NextResponse.redirect(new URL('/admin/sign-in', url), 303)
+  if (admin.viewOnly) return back('error=view-only')
   const code = url.searchParams.get('code')
   if (!code || !(await checkOAuth(app, url.searchParams.get('state') ?? ''))) return back(`error=denied&app=${encodeURIComponent(app)}`)
   try {

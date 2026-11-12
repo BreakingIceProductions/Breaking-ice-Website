@@ -11,6 +11,11 @@ export const adminEnv = {
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
+  /** Who can sign in to look around but change nothing. Comma-separated. */
+  viewers: (process.env.ADMIN_VIEWERS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
   ticktickId: process.env.TICKTICK_CLIENT_ID || '',
   ticktickSecret: process.env.TICKTICK_CLIENT_SECRET || '',
   zohoId: process.env.ZOHO_CLIENT_ID || '',
@@ -34,7 +39,8 @@ export const adminEnv = {
   timeZone: 'America/Edmonton',
 }
 
-export const isAdminEmail = (email: string) => adminEnv.emails.includes(email.trim().toLowerCase())
+export const isViewerEmail = (email: string) => !adminEnv.emails.includes(email.trim().toLowerCase()) && adminEnv.viewers.includes(email.trim().toLowerCase())
+export const isAdminEmail = (email: string) => adminEnv.emails.includes(email.trim().toLowerCase()) || isViewerEmail(email)
 
 /** Real data needs the same two settings as the portal. */
 export const adminReady = () => portalReady()

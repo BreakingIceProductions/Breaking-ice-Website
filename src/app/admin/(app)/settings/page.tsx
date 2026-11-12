@@ -22,6 +22,8 @@ export default async function Settings({ searchParams }: Props) {
       ? 'Disconnected.'
       : sp.error === 'sample'
         ? 'Connections need the real site settings; this machine is showing sample data.'
+        : sp.error === 'view-only'
+          ? 'This account is view only, so it can’t connect apps.'
         : sp.error === 'not-set-up'
           ? `${NAMES[sp.app ?? ''] ?? 'That app'} needs its client ID and secret in Vercel first (steps below).`
           : sp.error

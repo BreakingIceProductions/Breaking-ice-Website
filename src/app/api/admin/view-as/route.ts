@@ -8,6 +8,7 @@ export const runtime = 'nodejs'
 export async function GET(req: Request) {
   const admin = await adminFromRequest(req)
   if (!admin) return NextResponse.redirect(new URL('/admin/sign-in', req.url))
+  if (admin.viewOnly) return NextResponse.redirect(new URL('/admin', req.url))
   const u = new URL(req.url)
   const client = u.searchParams.get('client') ?? ''
   const next = u.searchParams.get('next') ?? '/portal'

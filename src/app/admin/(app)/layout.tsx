@@ -47,6 +47,9 @@ export default async function AdminApp({ children }: { children: React.ReactNode
         {admin.sample && (
           <p className="a-sample" role="status">Sample data: Sanity isn’t connected on this machine, so nothing you do here is saved.</p>
         )}
+        {admin.viewOnly && (
+          <p className="a-sample" role="status">View only: you can look around, but changes, emails and payments are switched off.</p>
+        )}
         {children}
       </main>
     </div>
