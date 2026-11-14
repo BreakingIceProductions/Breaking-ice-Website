@@ -364,3 +364,7 @@
 /* Board on two rows: wider columns, each row as tall as its fullest column. */
 .bd.bd-rows { gap: var(--space-4); align-items: stretch; }
 .bd-rows .bd-col { min-height: 240px; padding: var(--space-4); }
+/* Archive bar under a board; also a drop target for cards. */
+.bd-archive { display: flex; flex-direction: column; gap: var(--space-2); border-radius: var(--radius-lg); transition: box-shadow .12s; }
+.bd-archive.is-over { box-shadow: 0 0 0 2px var(--accent-fill); }
+.bd-archive-hint { margin: 0; font-size: 12px; color: var(--ink-muted); text-align: center; }

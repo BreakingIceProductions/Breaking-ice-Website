@@ -6,6 +6,7 @@ import { fmtDay } from '@/admin/dates'
 import { cad, isActive, needsAction } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { stageIndex } from '@/admin/stages'
+import { ArchiveBar } from '@/admin/ui/archive-bar'
 import { Board } from '@/admin/ui/board'
 import { Bucket } from '@/admin/ui/bucket'
 import { StageControl } from '@/admin/ui/stage-control'
@@ -140,20 +141,9 @@ export default async function Projects({ searchParams }: { searchParams: Promise
             stages={STAGES}
             empty="Nothing here"
             perRow={4}
+            archive={<ArchiveBar id="board-archive" list={archived.filter((p) => stageIndex(p.pipelineStage) >= stageIndex('booked'))} />}
             columns={STAGES.filter((s) => stageIndex(s.value) >= stageIndex('booked')).map((s) => ({ ...s, hint: HINTS[s.value] ?? ''}))}
           />
-          {archived.length > 0 && (
-            <Bucket id="board-archive" title="Archive" count={archived.length} closed>
-              {([['completed', 'Completed', archived.filter((p) => !p.declinedAt)], ['declined', 'Declined', archived.filter((p) => p.declinedAt)]] as const).map(([key, label, sub]) =>
-                sub.length ? (
-                  <section key={key} className="a-archive-group" aria-label={`${label} projects`}>
-                    <h3 className="eyebrow a-archive-head">{label} <span className="muted">{sub.length}</span></h3>
-                    <ClientGroups id={`board-archive-${key}`} list={[...sub]} />
-                  </section>
-                ) : null,
-              )}
-            </Bucket>
-          )}
           {early > 0 && <p className="muted small" style={{ margin: 0 }}>{early} lead{early === 1 ? '' : 's'} and quote{early === 1 ? '' : 's'} not booked yet: <Link className="text-link" href="/admin/leads">open the Leads board</Link>.</p>}
         </>
       )}

@@ -65,7 +65,8 @@ function RowList({ rows, empty, nudge }: { rows: Row[]; empty: string; nudge?: b
 export default async function Dashboard() {
   // Checked here as well as in the layout: a page can be requested on its own.
   await requireAdmin()
-  const projects = await listProjects()
+  // Archived projects are filed away: they don't count in the numbers or raise reminders.
+  const projects = (await listProjects()).filter((p) => !p.archived)
   const k = kpis(projects)
   const [tasks] = await Promise.all([todaysTasks(projects)])
   const days = week(projects)

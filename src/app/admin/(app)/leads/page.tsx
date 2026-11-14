@@ -4,6 +4,8 @@ import { boardCard, winRate } from '@/admin/board-data'
 import { listProjects } from '@/admin/data'
 import { daysSince } from '@/admin/dates'
 import { cad } from '@/admin/insights'
+import { stageIndex } from '@/admin/stages'
+import { ArchiveBar } from '@/admin/ui/archive-bar'
 import { Board } from '@/admin/ui/board'
 import { PIPELINE_STAGES } from '@/sanity/portal/office-constants'
 
@@ -65,13 +67,14 @@ export default async function Leads() {
         cards={cards}
         stages={STAGES}
         empty="Nobody here"
+        archive={<ArchiveBar id="leads-archive" list={projects.filter((p) => p.archived && stageIndex(p.pipelineStage) < stageIndex('booked'))} />}
         columns={[
           { title: 'Lead', value: 'lead', hint: 'Reply and book a call' },
           { title: 'Quoted', value: 'quoted', hint: 'Quote written or out with them' },
           { title: 'Booked', value: 'booked', hint: 'Said yes in the last 30 days' },
         ]}
       />
-      <p className="muted small" style={{ margin: 0 }}>Once a job is booked it lives on the <Link className="text-link" href="/admin/projects">Projects board</Link>. Declined quotes are in <Link className="text-link" href="/admin/projects?view=list">List and archive</Link>.</p>
+      <p className="muted small" style={{ margin: 0 }}>Once a job is booked it lives on the <Link className="text-link" href="/admin/projects">Projects board</Link>. Archived leads and quotes don’t count toward the pipeline.</p>
     </div>
   )
 }

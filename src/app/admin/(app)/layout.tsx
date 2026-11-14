@@ -42,7 +42,7 @@ export default async function AdminApp({ children }: { children: React.ReactNode
           <Logo tone="dark" height={28} />
         </Link>
         <AdminSearch items={search} />
-        <AdminNav needs={needsAction(projects).length} />
+        <AdminNav needs={needsAction(projects.filter((p) => !p.archived)).length} />
         <div className="a-side-foot">
           <p className="a-side-label">Connections</p>
           <ul className="a-conn">

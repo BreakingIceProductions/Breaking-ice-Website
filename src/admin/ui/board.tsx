@@ -17,7 +17,7 @@ const inStage = (d: number | null) => (d == null ? '' : d === 0 ? 'Today in stag
  * Move menu) and the usual preview opens before anything runs. Click a card for
  * its checklist, money and links.
  */
-export function Board({ columns, cards, stages, empty, perRow }: { columns: Column[]; cards: BoardCard[]; stages: Stage[]; empty: string; /** Wrap the columns onto rows of this many, instead of one long row. */ perRow?: number }) {
+export function Board({ columns, cards, stages, empty, perRow, archive }: { columns: Column[]; cards: BoardCard[]; stages: Stage[]; empty: string; /** The archive bar. Dropping a card on it files the project away. */ archive?: React.ReactNode; /** Wrap the columns onto rows of this many, instead of one long row. */ perRow?: number }) {
   const router = useRouter()
   const [over, setOver] = useState<string | null>(null)
   const [move, setMove] = useState<{ card: BoardCard; to: Stage } | null>(null)
@@ -26,6 +26,9 @@ export function Board({ columns, cards, stages, empty, perRow }: { columns: Colu
   const [ticks, setTicks] = useState<Record<string, boolean>>({})
   const [shown, setShown] = useState<string[]>([])
   const dragId = useRef<string | null>(null)
+  const [filing, setFiling] = useState<BoardCard | null>(null)
+  const [busy, setBusy] = useState(false)
+  const fileDialog = useRef<HTMLDialogElement>(null)
   const dirty = useRef(false)
   const dialog = useRef<HTMLDialogElement>(null)
   const openCard = cards.find((c) => c.id === openId) ?? null
@@ -58,6 +61,30 @@ export function Board({ columns, cards, stages, empty, perRow }: { columns: Colu
     const card = cards.find((c) => c.id === dragId.current)
     dragId.current = null
     if (card && card.stage !== col.value) setMove({ card, to: { title: col.title, value: col.value } })
+  }
+
+  useEffect(() => {
+    const d = fileDialog.current
+    if (filing && d && !d.open) d.showModal()
+  }, [filing])
+
+  function dropOnArchive(e: React.DragEvent) {
+    e.preventDefault()
+    setOver(null)
+    const card = cards.find((c) => c.id === dragId.current)
+    dragId.current = null
+    if (card) setFiling(card)
+  }
+
+  // Archiving only files the project away; no stage steps run, and it can be unarchived from the bar.
+  async function file(change: { archived: true } | { declined: true }) {
+    if (!filing) return
+    setBusy(true)
+    const r = await fetch('/api/admin/archive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId: filing.id, ...change }) }).catch(() => null)
+    setBusy(false)
+    if (!r?.ok) return alert(r?.status === 401 ? 'This sign-in can’t change things, or it has expired.' : 'That didn’t save. Reload the page and try again.')
+    fileDialog.current?.close()
+    router.refresh()
   }
 
   function open(c: BoardCard) {
@@ -121,6 +148,28 @@ export function Board({ columns, cards, stages, empty, perRow }: { columns: Colu
           })}
         </div>
       </div>
+
+      {archive && (
+        <div className={`bd-archive${over === '__archive' ? ' is-over' : ''}`} onDragOver={(e) => { e.preventDefault(); setOver('__archive') }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null) }} onDrop={dropOnArchive}>
+          {archive}
+          <p className="bd-archive-hint">Drag a card here to archive it</p>
+        </div>
+      )}
+
+      <dialog ref={fileDialog} className="a-dialog" aria-labelledby="file-h" onClose={() => setFiling(null)}>
+        {filing && (
+          <div className="a-dialog-body">
+            <span className="eyebrow">Archive</span>
+            <h2 id="file-h" className="a-h2 a-h2-lg">Archive {filing.title}?</h2>
+            <p className="small" style={{ margin: 0 }}>It leaves the board and stops counting in your pipeline and reminders. Nothing is sent to the client, and you can bring it back from the Archive bar.</p>
+            <div className="btn-row a-dialog-actions">
+              <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => fileDialog.current?.close()}>Cancel</button>
+              <button type="button" className="btn btn-secondary" disabled={busy} onClick={() => file({ declined: true })}>Declined</button>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => file({ archived: true })}>Completed</button>
+            </div>
+          </div>
+        )}
+      </dialog>
 
       <StageDialog projectId={move?.card.id ?? ''} projectTitle={move?.card.title ?? ''} target={move?.to ?? null} onClose={() => setMove(null)} />
 
