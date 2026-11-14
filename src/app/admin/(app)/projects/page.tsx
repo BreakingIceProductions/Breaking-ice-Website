@@ -87,6 +87,7 @@ export default async function Projects({ searchParams }: { searchParams: Promise
   const [projects, sp] = await Promise.all([listProjects(), searchParams])
   const list = sp.view === 'list'
   const live = projects.filter((p) => !p.archived)
+  const archived = projects.filter((p) => p.archived)
   const board = live.filter((p) => stageIndex(p.pipelineStage) >= stageIndex('booked'))
   const active = live.filter(isActive)
   const soon = nextTwoWeeks(projects)
@@ -141,6 +142,18 @@ export default async function Projects({ searchParams }: { searchParams: Promise
             perRow={4}
             columns={STAGES.filter((s) => stageIndex(s.value) >= stageIndex('booked')).map((s) => ({ ...s, hint: HINTS[s.value] ?? ''}))}
           />
+          {archived.length > 0 && (
+            <Bucket id="board-archive" title="Archive" count={archived.length} closed>
+              {([['completed', 'Completed', archived.filter((p) => !p.declinedAt)], ['declined', 'Declined', archived.filter((p) => p.declinedAt)]] as const).map(([key, label, sub]) =>
+                sub.length ? (
+                  <section key={key} className="a-archive-group" aria-label={`${label} projects`}>
+                    <h3 className="eyebrow a-archive-head">{label} <span className="muted">{sub.length}</span></h3>
+                    <ClientGroups id={`board-archive-${key}`} list={[...sub]} />
+                  </section>
+                ) : null,
+              )}
+            </Bucket>
+          )}
           {early > 0 && <p className="muted small" style={{ margin: 0 }}>{early} lead{early === 1 ? '' : 's'} and quote{early === 1 ? '' : 's'} not booked yet: <Link className="text-link" href="/admin/leads">open the Leads board</Link>.</p>}
         </>
       )}
