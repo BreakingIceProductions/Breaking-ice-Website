@@ -113,92 +113,88 @@ export function ProposalBuilder() {
         <label className="a-check pb-gst"><input type="checkbox" checked={s.gst} onChange={(e) => set({ gst: e.target.checked })} /> Charge GST (5%)</label>
       </section>
 
-      <div className="pb-main">
-        <aside className="pb-side">
-          <section className="p-card" aria-labelledby="pb-h-items">
-            <div className="a-card-head">
-              <h2 id="pb-h-items" className="a-h2">Deliverables</h2>
-              <span className="muted small">{s.items.length}</span>
-            </div>
-            <p className="muted small" style={{ margin: 0 }}>Price each one, then drag it into a package. One deliverable can sit in more than one package.</p>
-            <ul className="pb-list">
-              {s.items.map((i) => (
-                <li key={i.id} className={`pb-item${used.has(i.id) ? '' : ' is-unused'}`}>
-                  <span className="pb-grip pb-handle" title="Drag into a package" aria-hidden="true" {...dragProps({ id: i.id, from: 'list' })} />
-                  <div className="pb-item-body">
-                    <div className="pb-item-row">
-                      <input className="pb-in pb-in-name" aria-label="Deliverable" value={i.name} onChange={(e) => setItem(i.id, { name: e.target.value })} />
-                      <button type="button" className="pb-x" aria-label={`Delete ${i.name}`} onClick={() => removeItem(i.id)}>×</button>
-                    </div>
-                    <input className="pb-in pb-in-why" aria-label={`Reasoning for ${i.name}`} placeholder="Why this price (only you see this)" value={i.why} onChange={(e) => setItem(i.id, { why: e.target.value })} />
-                    <div className="pb-item-row pb-item-acts">
-                      <span className="muted">Add to</span>
-                      {s.packs.map((k, n) => (
-                        <button key={n} type="button" className={`pb-add${k.ids.includes(i.id) ? ' on' : ''}`} aria-pressed={k.ids.includes(i.id)} aria-label={`${k.ids.includes(i.id) ? 'Remove from' : 'Add to'} ${k.name}`} onClick={() => (k.ids.includes(i.id) ? take(n, i.id) : place(n, i.id, 'list'))}>{n + 1}</button>
-                      ))}
-                      <span className="pb-money pb-del"><span aria-hidden="true">$</span><input className="pb-in pb-in-num" aria-label={`Price of ${i.name}`} inputMode="decimal" placeholder="0" value={i.price ?? ''} onChange={(e) => setItem(i.id, { price: num(e.target.value) })} /></span>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => set({ items: [...s.items, { id: uid(), name: 'New deliverable', price: null, why: '' }] })}>Add a deliverable</button>
-          </section>
-
-          <section className="p-card" aria-labelledby="pb-h-tr">
-            <h2 id="pb-h-tr" className="a-h2">Client conversation</h2>
-            <p className="muted small" style={{ margin: 0 }}>Paste the transcript or your notes to keep them beside the pricing. Pulling a call straight from Granola comes next.</p>
-            <textarea className="input pb-transcript" aria-label="Transcript or notes" value={s.transcript} onChange={(e) => set({ transcript: e.target.value })} />
-          </section>
-        </aside>
-
-        <div className="pb-packs">
-          {s.packs.map((k, n) => {
-            const t = sums[n]
-            return (
-              <section key={n} className={`p-card pb-pack${over === `p${n}` ? ' is-over' : ''}`} aria-label={k.name}
-                onDragOver={(e) => { e.preventDefault(); setOver(`p${n}`) }} onDrop={(e) => drop(e, n)}>
-                <span className="eyebrow">Package {n + 1}</span>
-                <input className="pb-in pb-pack-name" aria-label={`Name of package ${n + 1}`} value={k.name} onChange={(e) => setPack(n, { name: e.target.value })} />
-                <input className="pb-in" aria-label={`Short description of ${k.name}`} placeholder="Six words or fewer" value={k.blurb} onChange={(e) => setPack(n, { blurb: e.target.value })} />
-
-                <ul className="pb-drop">
-                  {k.ids.map((id) => {
-                    const i = item(id)
-                    if (!i) return null
-                    return (
-                      <li key={id} className={`pb-chip${over === `${n}:${id}` ? ' is-before' : ''}`} {...dragProps({ id, from: n })}
-                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setOver(`${n}:${id}`) }} onDrop={(e) => drop(e, n, id)}>
-                        <span className="pb-grip" aria-hidden="true" />
-                        <span className="pb-chip-name">{i.name}</span>
-                        <span className="pb-chip-price">{i.price == null ? 'No price' : cad(i.price)}</span>
-                        <button type="button" className="pb-x" aria-label={`Remove ${i.name} from ${k.name}`} onClick={() => take(n, id)}>×</button>
-                      </li>
-                    )
-                  })}
-                  {!k.ids.length && <li className="pb-empty">Drag deliverables here</li>}
-                </ul>
-                {n > 0 && <button type="button" className="linklike small" onClick={() => setPack(n, { ids: [...new Set([...s.packs[n - 1].ids, ...k.ids])] })}>Include everything in {s.packs[n - 1].name}</button>}
-
-                <dl className="pb-math">
-                  <div><dt>Deliverables</dt><dd>{cad(t.items)}</dd></div>
-                  <div>
-                    <dt><label htmlFor={`pb-adj-${n}`}>Adjust</label></dt>
-                    <dd><span className="pb-money"><span aria-hidden="true">$</span><input id={`pb-adj-${n}`} className="pb-in pb-in-num" inputMode="decimal" placeholder="0" value={k.adjust ?? ''} onChange={(e) => setPack(n, { adjust: e.target.value.trim() === '-' ? null : num(e.target.value) })} /></span></dd>
-                  </div>
-                  <div className="pb-price"><dt>Package price</dt><dd>{cad(t.price)}</dd></div>
-                  <div><dt>{s.gst ? 'GST (5%)' : 'GST'}</dt><dd>{s.gst ? cad(t.tax) : 'Not charged'}</dd></div>
-                  <div><dt>Total</dt><dd>{cad(t.total)}</dd></div>
-                  <div><dt>Deposit ({s.deposit}%)</dt><dd>{cad(t.deposit)}</dd></div>
-                </dl>
-                <p className="hint pb-hint">Adjust takes a minus for a bundle discount, or a plus for travel and extras.</p>
-                {t.unpriced > 0 && <p className="a-warning pb-warn">{t.unpriced} {t.unpriced === 1 ? 'deliverable has' : 'deliverables have'} no price yet.</p>}
-                <textarea className="input pb-why" aria-label={`Reasoning for ${k.name}`} placeholder="Reasoning: who this package is for and why it’s priced this way (only you see this)" value={k.why} onChange={(e) => setPack(n, { why: e.target.value })} />
-              </section>
-            )
-          })}
+      <section className="p-card" aria-labelledby="pb-h-items">
+        <div className="a-card-head">
+          <h2 id="pb-h-items" className="a-h2">Deliverables</h2>
+          <span className="muted small">{s.items.length}</span>
         </div>
-      </div>
+        <p className="muted small" style={{ margin: 0 }}>Price each one, then drag it into a package. One deliverable can sit in more than one package.</p>
+        <ul className="pb-list">
+          {s.items.map((i) => (
+            <li key={i.id} className={`pb-item${used.has(i.id) ? '' : ' is-unused'}`}>
+              <span className="pb-grip pb-handle" title="Drag into a package" aria-hidden="true" {...dragProps({ id: i.id, from: 'list' })} />
+              <div className="pb-item-body">
+                <div className="pb-item-row">
+                  <input className="pb-in pb-in-name" aria-label="Deliverable" value={i.name} onChange={(e) => setItem(i.id, { name: e.target.value })} />
+                  <button type="button" className="pb-x" aria-label={`Delete ${i.name}`} onClick={() => removeItem(i.id)}>×</button>
+                </div>
+                <input className="pb-in pb-in-why" aria-label={`Reasoning for ${i.name}`} placeholder="Why this price (only you see this)" value={i.why} onChange={(e) => setItem(i.id, { why: e.target.value })} />
+                <div className="pb-item-row pb-item-acts">
+                  <span className="muted">Add to</span>
+                  {s.packs.map((k, n) => (
+                    <button key={n} type="button" className={`pb-add${k.ids.includes(i.id) ? ' on' : ''}`} aria-pressed={k.ids.includes(i.id)} aria-label={`${k.ids.includes(i.id) ? 'Remove from' : 'Add to'} ${k.name}`} onClick={() => (k.ids.includes(i.id) ? take(n, i.id) : place(n, i.id, 'list'))}>{n + 1}</button>
+                  ))}
+                  <span className="pb-money pb-del"><span aria-hidden="true">$</span><input className="pb-in pb-in-num" aria-label={`Price of ${i.name}`} inputMode="decimal" placeholder="0" value={i.price ?? ''} onChange={(e) => setItem(i.id, { price: num(e.target.value) })} /></span>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => set({ items: [...s.items, { id: uid(), name: 'New deliverable', price: null, why: '' }] })}>Add a deliverable</button>
+      </section>
+
+    <div className="pb-packs">
+      {s.packs.map((k, n) => {
+        const t = sums[n]
+        return (
+          <section key={n} className={`p-card pb-pack${over === `p${n}` ? ' is-over' : ''}`} aria-label={k.name}
+            onDragOver={(e) => { e.preventDefault(); setOver(`p${n}`) }} onDrop={(e) => drop(e, n)}>
+            <span className="eyebrow">Package {n + 1}</span>
+            <input className="pb-in pb-pack-name" aria-label={`Name of package ${n + 1}`} value={k.name} onChange={(e) => setPack(n, { name: e.target.value })} />
+            <input className="pb-in" aria-label={`Short description of ${k.name}`} placeholder="Six words or fewer" value={k.blurb} onChange={(e) => setPack(n, { blurb: e.target.value })} />
+
+            <ul className="pb-drop">
+              {k.ids.map((id) => {
+                const i = item(id)
+                if (!i) return null
+                return (
+                  <li key={id} className={`pb-chip${over === `${n}:${id}` ? ' is-before' : ''}`} {...dragProps({ id, from: n })}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setOver(`${n}:${id}`) }} onDrop={(e) => drop(e, n, id)}>
+                    <span className="pb-grip" aria-hidden="true" />
+                    <span className="pb-chip-name">{i.name}</span>
+                    <span className="pb-chip-price">{i.price == null ? 'No price' : cad(i.price)}</span>
+                    <button type="button" className="pb-x" aria-label={`Remove ${i.name} from ${k.name}`} onClick={() => take(n, id)}>×</button>
+                  </li>
+                )
+              })}
+              {!k.ids.length && <li className="pb-empty">Drag deliverables here</li>}
+            </ul>
+            {n > 0 && <button type="button" className="linklike small" onClick={() => setPack(n, { ids: [...new Set([...s.packs[n - 1].ids, ...k.ids])] })}>Include everything in {s.packs[n - 1].name}</button>}
+
+            <dl className="pb-math">
+              <div><dt>Deliverables</dt><dd>{cad(t.items)}</dd></div>
+              <div>
+                <dt><label htmlFor={`pb-adj-${n}`}>Adjust</label></dt>
+                <dd><span className="pb-money"><span aria-hidden="true">$</span><input id={`pb-adj-${n}`} className="pb-in pb-in-num" inputMode="decimal" placeholder="0" value={k.adjust ?? ''} onChange={(e) => setPack(n, { adjust: e.target.value.trim() === '-' ? null : num(e.target.value) })} /></span></dd>
+              </div>
+              <div className="pb-price"><dt>Package price</dt><dd>{cad(t.price)}</dd></div>
+              <div><dt>{s.gst ? 'GST (5%)' : 'GST'}</dt><dd>{s.gst ? cad(t.tax) : 'Not charged'}</dd></div>
+              <div><dt>Total</dt><dd>{cad(t.total)}</dd></div>
+              <div><dt>Deposit ({s.deposit}%)</dt><dd>{cad(t.deposit)}</dd></div>
+            </dl>
+            <p className="hint pb-hint">Adjust takes a minus for a bundle discount, or a plus for travel and extras.</p>
+            {t.unpriced > 0 && <p className="a-warning pb-warn">{t.unpriced} {t.unpriced === 1 ? 'deliverable has' : 'deliverables have'} no price yet.</p>}
+            <textarea className="input pb-why" aria-label={`Reasoning for ${k.name}`} placeholder="Reasoning: who this package is for and why it’s priced this way (only you see this)" value={k.why} onChange={(e) => setPack(n, { why: e.target.value })} />
+          </section>
+        )
+      })}
+    </div>
+
+      <section className="p-card" aria-labelledby="pb-h-tr">
+        <h2 id="pb-h-tr" className="a-h2">Client conversation</h2>
+        <p className="muted small" style={{ margin: 0 }}>Paste the transcript or your notes to keep them beside the pricing. Pulling a call straight from Granola comes next.</p>
+        <textarea className="input pb-transcript" aria-label="Transcript or notes" value={s.transcript} onChange={(e) => set({ transcript: e.target.value })} />
+      </section>
 
       <section className="p-card" aria-labelledby="pb-h-prev">
         <div className="a-card-head">

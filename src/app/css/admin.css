@@ -331,3 +331,9 @@
 .bd-pane { padding: var(--space-5) var(--space-6); min-height: 220px; max-height: 46vh; overflow-y: auto; }
 .bd-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--space-6); }
 .bd-pop-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-6); border-top: 1px solid var(--line); }
+/* Builder layout: deliverables across the top, packages below at full width. */
+.pb-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-3); }
+.pb-packs { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: var(--space-6); }
+.pb-pack { padding: var(--space-6); }
+.pb-transcript { min-height: 140px; }
+.pb .p-card > .btn { align-self: flex-start; }
