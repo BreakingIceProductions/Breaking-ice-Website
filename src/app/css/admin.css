@@ -361,3 +361,6 @@
 .g-form .g-wide { flex: 2 1 240px; }
 .g-form .g-short { flex: 0 1 140px; }
 .g-form .btn { min-height: 52px; }
+/* Board on two rows: wider columns, each row as tall as its fullest column. */
+.bd.bd-rows { gap: var(--space-4); align-items: stretch; }
+.bd-rows .bd-col { min-height: 240px; padding: var(--space-4); }

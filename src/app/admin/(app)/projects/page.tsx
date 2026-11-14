@@ -138,7 +138,8 @@ export default async function Projects({ searchParams }: { searchParams: Promise
             cards={board.map(boardCard)}
             stages={STAGES}
             empty="Nothing here"
-            columns={STAGES.filter((s) => stageIndex(s.value) >= stageIndex('booked')).map((s) => ({ ...s, hint: HINTS[s.value] ?? '', quiet: s.value === 'paid' }))}
+            perRow={4}
+            columns={STAGES.filter((s) => stageIndex(s.value) >= stageIndex('booked')).map((s) => ({ ...s, hint: HINTS[s.value] ?? ''}))}
           />
           {early > 0 && <p className="muted small" style={{ margin: 0 }}>{early} lead{early === 1 ? '' : 's'} and quote{early === 1 ? '' : 's'} not booked yet: <Link className="text-link" href="/admin/leads">open the Leads board</Link>.</p>}
         </>

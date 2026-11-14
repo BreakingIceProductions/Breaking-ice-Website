@@ -17,7 +17,7 @@ const inStage = (d: number | null) => (d == null ? '' : d === 0 ? 'Today in stag
  * Move menu) and the usual preview opens before anything runs. Click a card for
  * its checklist, money and links.
  */
-export function Board({ columns, cards, stages, empty }: { columns: Column[]; cards: BoardCard[]; stages: Stage[]; empty: string }) {
+export function Board({ columns, cards, stages, empty, perRow }: { columns: Column[]; cards: BoardCard[]; stages: Stage[]; empty: string; /** Wrap the columns onto rows of this many, instead of one long row. */ perRow?: number }) {
   const router = useRouter()
   const [over, setOver] = useState<string | null>(null)
   const [move, setMove] = useState<{ card: BoardCard; to: Stage } | null>(null)
@@ -68,7 +68,7 @@ export function Board({ columns, cards, stages, empty }: { columns: Column[]; ca
   return (
     <>
       <div className="bd-scroll">
-        <div className="bd" style={{ gridTemplateColumns: columns.map((c) => (c.quiet && !shown.includes(c.value) ? 'minmax(132px, .5fr)' : 'minmax(204px, 1fr)')).join(' ') }}>
+        <div className={`bd${perRow ? ' bd-rows' : ''}`} style={{ gridTemplateColumns: perRow ? `repeat(${perRow}, minmax(220px, 1fr))` : columns.map((c) => (c.quiet && !shown.includes(c.value) ? 'minmax(132px, .5fr)' : 'minmax(204px, 1fr)')).join(' ') }}>
           {columns.map((col) => {
             const list = cards.filter((c) => c.stage === col.value)
             const folded = Boolean(col.quiet) && !shown.includes(col.value)
