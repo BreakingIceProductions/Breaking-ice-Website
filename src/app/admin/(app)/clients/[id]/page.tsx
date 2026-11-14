@@ -43,7 +43,7 @@ export default async function ClientPage({ params }: Props) {
   return (
     <div className="a-page">
       <nav className="small" aria-label="Breadcrumb">
-        <Link className="text-link-plain muted" href="/admin/clients">Clients</Link> <span aria-hidden="true" className="muted">/</span> <span aria-current="page">{c.organizationName}</span>
+        <Link className="text-link-plain muted" href="/admin/contacts">Clients</Link> <span aria-hidden="true" className="muted">/</span> <span aria-current="page">{c.organizationName}</span>
       </nav>
 
       <header className="a-head">
