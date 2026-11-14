@@ -6,13 +6,15 @@ import { redirect } from 'next/navigation'
 import { LINK_MINUTES, portalEnv } from '@/portal/config'
 import { countSignInAttempt } from '@/portal/data'
 import { sameOrigin } from '@/portal/http'
-import { adminSampleMode, isAdminEmail, isViewerEmail } from './config'
+import { adminSampleMode } from './config'
+import { accessOf } from './guests'
 
 /**
  * Back-office sign-in: the same email link + 6-digit code as the client portal,
  * but its own cookies and its own token type, and only addresses in ADMIN_EMAILS
  * get anything. A portal session can never open /admin, and the other way round.
- * Addresses in ADMIN_VIEWERS can sign in and look, but every change is refused (see adminFromRequest).
+ * Addresses in ADMIN_VIEWERS, and guests added in Settings until their end date, can sign in and look,
+ * but every change is refused (see adminFromRequest).
  */
 
 const SESSION = 'bi_admin'
@@ -33,7 +35,7 @@ export async function signAdminLink(email: string) {
 export async function readAdminLink(token: string) {
   try {
     const { payload } = await jwtVerify(token, key())
-    return payload.p === 'admin-link' && typeof payload.e === 'string' && isAdminEmail(payload.e) ? payload.e : null
+    return payload.p === 'admin-link' && typeof payload.e === 'string' && (await accessOf(payload.e)) ? payload.e : null
   } catch {
     return null
   }
@@ -76,7 +78,7 @@ export async function checkAdminCode(code: string): Promise<{ ok: true; email: s
   if (attempts >= 5 || !(await countSignInAttempt(`admin:${email}`))) return { ok: false, reason: 'locked' }
   const expected = Buffer.from(codeFor(email, String(payload.r)))
   const given = Buffer.from(code.replace(/\D/g, '').padEnd(6, 'x').slice(0, 6))
-  if (given.length === expected.length && timingSafeEqual(given, expected) && isAdminEmail(email)) {
+  if (given.length === expected.length && timingSafeEqual(given, expected) && (await accessOf(email))) {
     jar.delete(PENDING)
     return { ok: true, email }
   }
@@ -97,8 +99,10 @@ export async function getAdminSession(): Promise<{ email: string; sample?: boole
   if (!raw) return null
   try {
     const { payload } = await jwtVerify(raw, key())
-    // Checked on every request, so removing an address from ADMIN_EMAILS locks it out at once.
-    return payload.p === 'admin' && typeof payload.e === 'string' && isAdminEmail(payload.e) ? { email: payload.e, ...(isViewerEmail(payload.e) && { viewOnly: true }) } : null
+    if (payload.p !== 'admin' || typeof payload.e !== 'string') return null
+    // Checked on every request, so removing an address (or a guest's time running out) locks it out at once.
+    const access = await accessOf(payload.e)
+    return access ? { email: payload.e, ...(access === 'viewer' && { viewOnly: true }) } : null
   } catch {
     return null
   }

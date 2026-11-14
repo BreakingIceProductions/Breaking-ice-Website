@@ -1,6 +1,9 @@
 import { requireAdmin } from '@/admin/auth'
 import { adminEnv, calendarReady, ticktickReady, zohoReady } from '@/admin/config'
-import { fmtDay } from '@/admin/dates'
+import { fmtDay, ymd } from '@/admin/dates'
+import { listGuests } from '@/admin/guests'
+import { GuestsCard } from '@/admin/ui/guests-card'
+import { SITE_URL } from '@/lib/site'
 import { serviceAccountEmail } from '@/admin/google'
 import { ticktickConnection, ticktickRedirect } from '@/admin/ticktick'
 import { zohoConnection, zohoNeedsReconnect, zohoRedirect } from '@/admin/zoho'
@@ -12,9 +15,9 @@ type Props = { searchParams: Promise<Record<string, string | undefined>> }
 const NAMES: Record<string, string> = { ticktick: 'TickTick', zoho: 'Zoho Books' }
 
 export default async function Settings({ searchParams }: Props) {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const sp = await searchParams
-  const [tt, zoho] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null)])
+  const [tt, zoho, guests] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null), listGuests()])
   const sa = serviceAccountEmail()
   const notice = sp.connected
     ? `${NAMES[sp.connected] ?? sp.connected} is connected.`
@@ -108,10 +111,22 @@ export default async function Settings({ searchParams }: Props) {
       </section>
 
       <section className="p-card" aria-labelledby="h-access">
-        <h2 id="h-access" className="a-h2">Who can sign in</h2>
+        <h2 id="h-access" className="a-h2">Full access</h2>
         <p className="small" style={{ margin: 0 }}>{adminEnv.emails.join(', ')}</p>
         <p className="muted small" style={{ margin: 0 }}>Change this with <code>ADMIN_EMAILS</code> in Vercel.</p>
       </section>
+
+      <GuestsCard
+        canEdit={!admin.viewOnly}
+        signInUrl={`${SITE_URL}/admin/sign-in`}
+        guests={[
+          ...adminEnv.viewers.map((email) => ({ email, when: 'No end date', fixed: true })),
+          ...guests.map((g) => {
+            const ended = g.until <= new Date().toISOString()
+            return { key: g._key, email: g.email, name: g.name, ended, when: `${ended ? 'Ended' : 'Through'} ${fmtDay(ymd(new Date(g.until)))}` }
+          }),
+        ]}
+      />
     </div>
   )
 }

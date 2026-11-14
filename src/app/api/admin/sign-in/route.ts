@@ -1,7 +1,7 @@
 import { after } from 'next/server'
 import { SITE_URL } from '@/lib/site'
 import { signAdminLink, startAdminPending } from '@/admin/auth'
-import { isAdminEmail } from '@/admin/config'
+import { accessOf } from '@/admin/guests'
 import { normEmail } from '@/portal/auth'
 import { emailReady, portalReady } from '@/portal/config'
 import { adminSignInEmail, sendEmail } from '@/portal/email'
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
   const code = await startAdminPending(email)
   after(async () => {
-    if (!isAdminEmail(email)) return
+    if (!(await accessOf(email))) return
     const link = `${SITE_URL}/admin/auth?token=${encodeURIComponent(await signAdminLink(email))}`
     try {
       await sendEmail({ to: [email], ...adminSignInEmail({ link, code }) })

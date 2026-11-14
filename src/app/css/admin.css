@@ -354,3 +354,10 @@
 .pp-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--slate); }
 .pp-status.k-client::before { background: var(--ok); }
 .pp-status.k-lead::before { background: var(--accent-fill); }
+
+/* Settings: add a view-only guest */
+.g-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); }
+.g-form .field { flex: 1 1 180px; }
+.g-form .g-wide { flex: 2 1 240px; }
+.g-form .g-short { flex: 0 1 140px; }
+.g-form .btn { min-height: 52px; }
