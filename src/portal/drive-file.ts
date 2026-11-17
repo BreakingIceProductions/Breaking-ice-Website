@@ -82,8 +82,20 @@ export async function googleThumbnail(url: string): Promise<Response | null> {
     }
     if (SHOWABLE.has(meta.mimeType) && Number(meta.size ?? 0) <= PREVIEW_MAX) {
       const file = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`, { headers: auth, cache: 'no-store' })
-      // A short cache: Drive's own smaller thumbnail takes over once it exists.
-      if (file.ok && file.body) return new Response(file.body, { headers: { 'Content-Type': meta.mimeType, 'Cache-Control': 'private, max-age=120' } })
+      if (!file.ok) return null
+      const original = Buffer.from(await file.arrayBuffer())
+      const cache = { 'Cache-Control': 'private, max-age=3600' }
+      // Small enough to show as it is.
+      if (original.length <= 600 * 1024) return new Response(original, { headers: { 'Content-Type': meta.mimeType, ...cache } })
+      // Print-size artwork can be tens of megabytes: shrink it to a screen-size preview.
+      try {
+        const sharp = (await import('sharp')).default
+        const small = await sharp(original, { animated: false }).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toBuffer()
+        return new Response(new Uint8Array(small), { headers: { 'Content-Type': 'image/webp', ...cache } })
+      } catch (e) {
+        console.error('[portal] preview resize failed', e)
+        return original.length <= 6 * 1024 * 1024 ? new Response(original, { headers: { 'Content-Type': meta.mimeType, ...cache } }) : null
+      }
     }
     return null
   } catch (e) {
