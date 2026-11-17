@@ -59,6 +59,13 @@ export async function streamGoogleFile(url: string, { inline = false, title = 'd
   }
 }
 
+/** Shrunk previews kept in memory while the server stays warm, so a big file is only resized once. A file's contents never change under one id. */
+const SHRUNK = new Map<string, Uint8Array>()
+const remember = (id: string, img: Uint8Array) => {
+  if (SHRUNK.size >= 24) SHRUNK.delete(SHRUNK.keys().next().value as string)
+  SHRUNK.set(id, img)
+}
+
 /** Image types every browser can show as they are. */
 const SHOWABLE = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif'])
 /** Largest original we'll send as its own preview. */
@@ -81,17 +88,22 @@ export async function googleThumbnail(url: string): Promise<Response | null> {
       if (img.ok && img.body) return new Response(img.body, { headers: { 'Content-Type': img.headers.get('content-type') || 'image/jpeg', 'Cache-Control': 'private, max-age=600' } })
     }
     if (SHOWABLE.has(meta.mimeType) && Number(meta.size ?? 0) <= PREVIEW_MAX) {
+      // The browser keeps it for a day: the file behind a version doesn't change.
+      const cache = { 'Cache-Control': 'private, max-age=86400' }
+      const kept = SHRUNK.get(f.id)
+      if (kept) return new Response(kept, { headers: { 'Content-Type': 'image/webp', ...cache } })
       const file = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`, { headers: auth, cache: 'no-store' })
       if (!file.ok) return null
       const original = Buffer.from(await file.arrayBuffer())
-      const cache = { 'Cache-Control': 'private, max-age=3600' }
       // Small enough to show as it is.
       if (original.length <= 600 * 1024) return new Response(original, { headers: { 'Content-Type': meta.mimeType, ...cache } })
       // Print-size artwork can be tens of megabytes and hundreds of megapixels: shrink it to a screen-size preview.
       try {
         const sharp = (await import('sharp')).default
         const small = await sharp(original, { animated: false, sequentialRead: true, limitInputPixels: 1_500_000_000 }).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toBuffer()
-        return new Response(new Uint8Array(small), { headers: { 'Content-Type': 'image/webp', ...cache } })
+        const out = new Uint8Array(small)
+        remember(f.id, out)
+        return new Response(out, { headers: { 'Content-Type': 'image/webp', ...cache } })
       } catch (e) {
         console.error('[portal] preview resize failed', e)
         return original.length <= 6 * 1024 * 1024 ? new Response(original, { headers: { 'Content-Type': meta.mimeType, ...cache } }) : null

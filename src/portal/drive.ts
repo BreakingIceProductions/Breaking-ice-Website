@@ -254,6 +254,14 @@ export async function fileInProject(p: ClientProject, fileId: string) {
   return !f.trashed && from ? { ...f, from } : null
 }
 
+/** Moves a file in one of this project's folders to Drive's trash, where it can be restored for 30 days. False if it isn't this project's file. */
+export async function trashProjectFile(p: ClientProject, fileId: string) {
+  const f = await fileInProject(p, fileId)
+  if (!f) return false
+  await drive(`/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`, { method: 'PATCH', body: JSON.stringify({ trashed: true }) })
+  return true
+}
+
 const EXPORTS: Record<string, [string, string]> = {
   'application/vnd.google-apps.document': ['application/pdf', '.pdf'],
   'application/vnd.google-apps.spreadsheet': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx'],

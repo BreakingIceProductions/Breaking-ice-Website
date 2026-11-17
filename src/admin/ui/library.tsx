@@ -70,7 +70,7 @@ export function AdminLibrary({ clients, projects }: { clients: LibClient[]; proj
   let title = 'Details'
   if (at.version && at.project) {
     title = versionLabel(at.version)
-    panel = <VersionPanel project={at.project} d={at.version} onChange={refresh} />
+    panel = <VersionPanel project={at.project} d={at.version} onChange={refresh} onDeleted={() => { setPath(path.slice(0, 3)); refresh() }} />
   } else if (at.group && at.project) {
     title = at.group.title
     panel = <GroupPanel project={at.project} group={at.group} onChange={refresh} onOpen={(key) => setPath([...path.slice(0, 4), key])} />
@@ -229,8 +229,17 @@ function GroupPanel({ project, group, onChange, onOpen }: { project: LibProject;
   )
 }
 
-function VersionPanel({ project, d, onChange }: { project: LibProject; d: Deliverable; onChange: () => void }) {
+function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject; d: Deliverable; onChange: () => void; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false)
+  const remove = async () => {
+    const what = categoryOf(d) === 'video' ? 'It comes off the project and the client’s portal. The video itself stays on Vimeo.' : 'It comes off the project and the client’s portal, and the file goes to Google Drive’s trash (restorable there for 30 days).'
+    if (!window.confirm(`Delete ${d.title}, ${versionLabel(d)}?\n\n${what}`)) return
+    setBusy(true)
+    const r = await json('DELETE', '/api/admin/version', { projectId: project._id, key: d._key })
+    setBusy(false)
+    if (r.ok) onDeleted()
+    else alert('That didn’t delete. Reload the page and try again.')
+  }
   const latest = isLatest(d, project.deliverables)
   const video = categoryOf(d) === 'video'
   const set = async (fields: Record<string, unknown>) => {
@@ -279,6 +288,7 @@ function VersionPanel({ project, d, onChange }: { project: LibProject; d: Delive
         {d.vimeoReview && <a className="btn btn-secondary btn-sm" href={d.vimeoReview} target="_blank" rel="noopener noreferrer">Review page ↗</a>}
         {d.fileUrl && <a className="btn btn-secondary btn-sm" href={d.fileUrl} target="_blank" rel="noopener noreferrer">Open in Drive ↗</a>}
       </div>
+      <div><button type="button" className="linklike small lib-delete" disabled={busy} onClick={remove}>Delete this version</button></div>
     </div>
   )
 }
@@ -322,7 +332,21 @@ function AssetsPanel({ project, folder = REFERENCE }: { project: LibProject; fol
                 <span className="fname">{f.name}</span>
                 <span className="muted small">{[f.uploadedBy, new Date(f.modifiedTime).toLocaleDateString('en-CA'), fmtSize(f.size)].filter(Boolean).join(' · ')}</span>
               </span>
-              <a className="text-link small" href={`https://drive.google.com/file/d/${f.id}/view`} target="_blank" rel="noopener noreferrer">Open<span className="sr-only"> {f.name} in Drive</span></a>
+              <span className="row-wrap small">
+                <a className="text-link" href={`https://drive.google.com/file/d/${f.id}/view`} target="_blank" rel="noopener noreferrer">Open<span className="sr-only"> {f.name} in Drive</span></a>
+                <button
+                  type="button"
+                  className="linklike lib-delete"
+                  onClick={async () => {
+                    if (!window.confirm(`Delete ${f.name}?\n\nThe client stops seeing it, and it goes to Google Drive’s trash (restorable there for 30 days).`)) return
+                    const r = await json('DELETE', '/api/admin/files', { projectId: project._id, fileId: f.id })
+                    if (r.ok) await load()
+                    else alert('That didn’t delete. Reload the page and try again.')
+                  }}
+                >
+                  Delete<span className="sr-only"> {f.name}</span>
+                </button>
+              </span>
             </li>
           ))}
         </ul>

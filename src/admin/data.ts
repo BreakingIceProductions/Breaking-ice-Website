@@ -268,6 +268,14 @@ export async function addVersion(
   return entry
 }
 
+/** Takes one version off the project (and off a pending Studio draft, so publishing it can't bring the version back). */
+export async function removeVersion(projectId: string, versionKey: string) {
+  if (sample()) return
+  const path = [`deliverables[_key=="${versionKey.replace(/[^\w-]/g, '')}"]`]
+  await portalClient.patch(projectId).unset(path).commit()
+  await portalClient.patch(`drafts.${projectId}`).unset(path).commit().catch(() => {})
+}
+
 /** Josh's switches on one version. */
 export async function setVersion(projectId: string, versionKey: string, fields: { clientCanView?: boolean; final?: boolean; status?: Deliverable['status'] }) {
   if (sample()) return

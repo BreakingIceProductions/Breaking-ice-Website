@@ -368,3 +368,4 @@
 .bd-archive { display: flex; flex-direction: column; gap: var(--space-2); border-radius: var(--radius-lg); transition: box-shadow .12s; }
 .bd-archive.is-over { box-shadow: 0 0 0 2px var(--accent-fill); }
 .bd-archive-hint { margin: 0; font-size: 12px; color: var(--ink-muted); text-align: center; }
+.lib-delete { color: var(--danger); }

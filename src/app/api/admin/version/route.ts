@@ -1,5 +1,9 @@
 import { adminFromRequest } from '@/admin/auth'
-import { addVersion, getProject, setVersion } from '@/admin/data'
+import { addVersion, getProject, removeVersion, setVersion } from '@/admin/data'
+import { driveReady } from '@/portal/config'
+import { trashProjectFile } from '@/portal/drive'
+import { googleFile } from '@/portal/links'
+import type { ClientProject } from '@/portal/types'
 import { addActivity } from '@/portal/data'
 import { json } from '@/portal/http'
 import { versionLabel } from '@/portal/library'
@@ -8,7 +12,7 @@ export const runtime = 'nodejs'
 
 const STATUSES = ['in-progress', 'awaiting-feedback', 'changes-requested', 'approved'] as const
 
-/** POST adds a video version (a Vimeo link). PATCH flips a version's switches. */
+/** POST adds a video version (a Vimeo link). PATCH flips a version's switches. DELETE removes a version. */
 export async function POST(req: Request) {
   const admin = await adminFromRequest(req)
   if (!admin) return json({ ok: false, error: 'signed-out' }, 401)
@@ -40,4 +44,21 @@ export async function PATCH(req: Request) {
   await setVersion(p._id, d._key, fields)
   if (fields.final === true) await addActivity(p._id, `${d.title}: ${versionLabel(d)} marked Final`, 'approved')
   return json({ ok: true })
+}
+
+/** Removes a version from the project. Its file, if it's in the project's Drive folder, goes to Drive's trash. A Vimeo video is left alone. */
+export async function DELETE(req: Request) {
+  const admin = await adminFromRequest(req)
+  if (!admin) return json({ ok: false, error: 'signed-out' }, 401)
+  const body = await req.json().catch(() => ({}))
+  if (admin.sample) return json({ ok: true })
+  const p = await getProject(String(body.projectId ?? ''))
+  const d = p?.deliverables.find((x) => x._key === body.key)
+  if (!p || !d) return json({ ok: false }, 404)
+  await removeVersion(p._id, d._key)
+  let trashed = false
+  const file = d.fileUrl ? googleFile(d.fileUrl) : null
+  if (file && driveReady()) trashed = await trashProjectFile(p as unknown as ClientProject, file.id).catch((e) => (console.error('[admin] trash failed', e), false))
+  await addActivity(p._id, `${d.title}: ${versionLabel(d)} deleted`, 'version')
+  return json({ ok: true, trashed })
 }
