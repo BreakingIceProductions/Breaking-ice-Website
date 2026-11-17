@@ -87,10 +87,10 @@ export async function googleThumbnail(url: string): Promise<Response | null> {
       const cache = { 'Cache-Control': 'private, max-age=3600' }
       // Small enough to show as it is.
       if (original.length <= 600 * 1024) return new Response(original, { headers: { 'Content-Type': meta.mimeType, ...cache } })
-      // Print-size artwork can be tens of megabytes: shrink it to a screen-size preview.
+      // Print-size artwork can be tens of megabytes and hundreds of megapixels: shrink it to a screen-size preview.
       try {
         const sharp = (await import('sharp')).default
-        const small = await sharp(original, { animated: false }).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toBuffer()
+        const small = await sharp(original, { animated: false, sequentialRead: true, limitInputPixels: 1_500_000_000 }).rotate().resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toBuffer()
         return new Response(new Uint8Array(small), { headers: { 'Content-Type': 'image/webp', ...cache } })
       } catch (e) {
         console.error('[portal] preview resize failed', e)

@@ -4,6 +4,7 @@ import { googleThumbnail } from '@/portal/drive-file'
 import { json } from '@/portal/http'
 
 export const runtime = 'nodejs'
+export const maxDuration = 120
 
 /** Preview image of a document version, for the back office. */
 export async function GET(req: Request) {
