@@ -57,6 +57,7 @@ export function boardCard(p: OfficeProject): BoardCard {
   const sig = p.quote?.signature
   const preBooking = si < stageIndex('booked')
   const clientPath = !p.slug ? '/portal' : preBooking ? (p.quote ? `/portal/quotes/${p.slug}` : '/portal') : `/portal/${p.slug}`
+  const lib = `/admin/clients?at=${encodeURIComponent(p.client._id)}/${encodeURIComponent(p.slug ?? p._id)}`
   return {
     id: p._id,
     title: p.title,
@@ -83,6 +84,8 @@ export function boardCard(p: OfficeProject): BoardCard {
           : undefined,
     invoices: (p.office.invoices ?? []).map((i) => ({ label: `${INVOICE_KIND[i.kind]}${i.number ? ` ${i.number}` : ''}`, status: i.status ?? 'draft', amount: i.amount })),
     links: [
+      p.client._id && { label: 'Add a document', href: `${lib}/documents` },
+      p.client._id && { label: 'Share reference files', href: `${lib}/assets` },
       p.client._id && { label: 'View as the client', href: `/api/admin/view-as?client=${encodeURIComponent(p.client._id)}&next=${encodeURIComponent(clientPath)}` },
       p.driveFolderId && { label: 'Drive folder', href: `https://drive.google.com/drive/folders/${p.driveFolderId}` },
       ...(p.links ?? []).map((l) => ({ label: l.title, href: l.url })),

@@ -107,6 +107,8 @@ export default async function ProjectPage({ params }: Props) {
   const clientPath = !p.slug ? '/portal' : preBooking ? (p.quote ? `/portal/quotes/${p.slug}` : '/portal') : `/portal/${p.slug}`
   const viewAs = `/api/admin/view-as?client=${encodeURIComponent(p.client._id)}&next=${encodeURIComponent(clientPath)}`
 
+  const lib = `/admin/clients?at=${encodeURIComponent(p.client._id)}/${encodeURIComponent(p.slug ?? p._id)}`
+
   return (
     <div className="a-page">
       <nav className="small" aria-label="Breadcrumb">
@@ -242,8 +244,14 @@ export default async function ProjectPage({ params }: Props) {
               <h2 id="h-files" className="a-h2">Videos, documents and files</h2>
               <span className="muted small">Exactly what the client sees in their portal</span>
             </div>
-            <p className="muted small a-empty">Add versions, mark finals, share Reference Assets and choose what the client can see in the library.</p>
-            <div><Link className="btn btn-primary btn-sm" href={`/admin/clients?at=${encodeURIComponent(p.client._id)}/${encodeURIComponent(p.slug ?? p._id)}`}>Open in the library</Link></div>
+            <p className="muted small a-empty">Pick what you’re adding. Each button opens that folder in the Finder with the upload box ready.</p>
+            <div className="row-wrap">
+              <Link className="btn btn-primary btn-sm" href={`${lib}/documents`}>Add a document</Link>
+              <Link className="btn btn-secondary btn-sm" href={`${lib}/videos`}>Add a video</Link>
+              <Link className="btn btn-secondary btn-sm" href={`${lib}/assets`}>Share reference files</Link>
+              <Link className="btn btn-secondary btn-sm" href={`${lib}/finals`}>Finals</Link>
+            </div>
+            <p className="muted small a-empty">A document is something for the client to review or sign off, with versions. Reference files are plain shared files, and the client can add their own there too.</p>
           </section>
 
           {!preBooking && p.quote && quoteCard}
