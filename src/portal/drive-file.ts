@@ -59,17 +59,33 @@ export async function streamGoogleFile(url: string, { inline = false, title = 'd
   }
 }
 
-/** A small preview image of a Drive file (Drive makes these for images, PDFs and design files). */
+/** Image types every browser can show as they are. */
+const SHOWABLE = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif'])
+/** Largest original we'll send as its own preview. */
+const PREVIEW_MAX = 30 * 1024 * 1024
+
+/**
+ * A preview image of a Drive file. Drive makes thumbnails for images, PDFs, Office files and some
+ * design files, but only a while after upload and not for everything. When there isn't one and the
+ * file is itself an image, the image is the preview.
+ */
 export async function googleThumbnail(url: string): Promise<Response | null> {
   const f = googleFile(url)
   if (!f || !driveReady()) return null
   try {
     const auth = { Authorization: `Bearer ${await accessToken()}` }
-    const meta = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?fields=thumbnailLink&supportsAllDrives=true`, { headers: auth, cache: 'no-store' }).then((r) => (r.ok ? r.json() : null))
-    if (!meta?.thumbnailLink) return null
-    const img = await fetch(String(meta.thumbnailLink).replace(/=s\d+$/, '=s800'), { headers: auth, cache: 'no-store' })
-    if (!img.ok || !img.body) return null
-    return new Response(img.body, { headers: { 'Content-Type': img.headers.get('content-type') || 'image/jpeg', 'Cache-Control': 'private, max-age=600' } })
+    const meta = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?fields=thumbnailLink,mimeType,size&supportsAllDrives=true`, { headers: auth, cache: 'no-store' }).then((r) => (r.ok ? r.json() : null))
+    if (!meta) return null
+    if (meta.thumbnailLink) {
+      const img = await fetch(String(meta.thumbnailLink).replace(/=s\d+$/, '=s1200'), { headers: auth, cache: 'no-store' })
+      if (img.ok && img.body) return new Response(img.body, { headers: { 'Content-Type': img.headers.get('content-type') || 'image/jpeg', 'Cache-Control': 'private, max-age=600' } })
+    }
+    if (SHOWABLE.has(meta.mimeType) && Number(meta.size ?? 0) <= PREVIEW_MAX) {
+      const file = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`, { headers: auth, cache: 'no-store' })
+      // A short cache: Drive's own smaller thumbnail takes over once it exists.
+      if (file.ok && file.body) return new Response(file.body, { headers: { 'Content-Type': meta.mimeType, 'Cache-Control': 'private, max-age=120' } })
+    }
+    return null
   } catch (e) {
     console.error('[portal] thumbnail failed', e)
     return null
