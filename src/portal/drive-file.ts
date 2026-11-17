@@ -60,8 +60,8 @@ export async function streamGoogleFile(url: string, { inline = false, title = 'd
 }
 
 /** Shrunk previews kept in memory while the server stays warm, so a big file is only resized once. A file's contents never change under one id. */
-const SHRUNK = new Map<string, Uint8Array>()
-const remember = (id: string, img: Uint8Array) => {
+const SHRUNK = new Map<string, Uint8Array<ArrayBuffer>>()
+const remember = (id: string, img: Uint8Array<ArrayBuffer>) => {
   if (SHRUNK.size >= 24) SHRUNK.delete(SHRUNK.keys().next().value as string)
   SHRUNK.set(id, img)
 }
