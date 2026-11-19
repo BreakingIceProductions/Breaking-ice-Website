@@ -201,7 +201,8 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
 
 /* ── Log contact, and the activity list ──────────────────────────────── */
 
-export type LeadLogEntry = { key: string; date: string; time?: string; text: string }
+/** `source` (where the line came from) and `note` (one of your own notes) are for the project page, which lists more than the log. */
+export type LeadLogEntry = { key: string; date: string; time?: string; text: string; source?: string; note?: boolean }
 
 export function LeadActivity({ projectId, today, entries }: { projectId: string; today: string; entries: LeadLogEntry[] }) {
   const router = useRouter()
@@ -254,7 +255,10 @@ export function LeadActivity({ projectId, today, entries }: { projectId: string;
         <ul className="a-feed ld-feed">
           {shown.map((l) => (
             <li key={l.key}>
-              <span>{l.text}</span>
+              <span className={l.source ? 'stack' : undefined}>
+                <span className={l.note ? 'a-note' : undefined}>{l.text}</span>
+                {l.source && <span className="muted small">{l.source}</span>}
+              </span>
               <span className="muted small ld-when">{l.date}{l.time && <><br />{l.time}</>}</span>
             </li>
           ))}

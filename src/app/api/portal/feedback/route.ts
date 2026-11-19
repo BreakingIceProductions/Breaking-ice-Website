@@ -29,12 +29,12 @@ export async function POST(req: Request) {
   await addActivity(a.project._id, approve ? `${who} approved ${d.title} (${versionLabel(d)})` : `${who} asked for changes to ${d.title} (${versionLabel(d)})`, approve ? 'approved' : 'comment')
 
   const line = approve ? `${who} approved ${d.title} (${versionLabel(d)}) (${a.project.title}).` : `${who} asked for changes to ${d.title} (${versionLabel(d)}) (${a.project.title}).`
-  await notifyJosh(`${approve ? '✅' : '✏️'} ${esc(line)} ${SITE_URL}/admin/projects/${a.project._id}`)
+  await notifyJosh(`${approve ? '✅' : '✏️'} ${esc(line)} ${SITE_URL}/admin/projects/${a.project._id}?tab=portal`)
   await sendEmail({
     to: [portalEnv.replyTo],
     subject: `${approve ? 'Approved' : 'Changes requested'}: ${d.title} (${versionLabel(d)}) · ${a.project.title}`,
-    text: `${line}${note ? `\n\n“${note}”` : ''}\n\n${SITE_URL}/admin/projects/${a.project._id}`,
-    html: `<p>${esc(line)}</p>${note ? `<blockquote style="border-left:3px solid #c87533;margin:0;padding:4px 12px;white-space:pre-wrap">${esc(note)}</blockquote>` : ''}<p><a href="${SITE_URL}/admin/projects/${a.project._id}">Open the project</a></p>`,
+    text: `${line}${note ? `\n\n“${note}”` : ''}\n\n${SITE_URL}/admin/projects/${a.project._id}?tab=portal`,
+    html: `<p>${esc(line)}</p>${note ? `<blockquote style="border-left:3px solid #c87533;margin:0;padding:4px 12px;white-space:pre-wrap">${esc(note)}</blockquote>` : ''}<p><a href="${SITE_URL}/admin/projects/${a.project._id}?tab=portal">Open the project</a></p>`,
   }).catch((e) => console.error('[portal] feedback email failed', e))
   return json({ ok: true })
 }

@@ -41,7 +41,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
     const first = await markQuoteViewed(q.projectId, who).catch(() => false)
     if (first) {
       await addActivity(q.projectId, `${who} opened the quote`, 'view')
-      await notifyJosh(`👀 ${who} opened the quote for ${q.title}. ${SITE_URL}/admin/projects/${q.projectId}`)
+      await notifyJosh(`👀 ${who} opened the quote for ${q.title}. ${SITE_URL}/admin/projects/${q.projectId}?tab=documents`)
     }
   }
 

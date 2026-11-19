@@ -152,7 +152,7 @@ export async function POST(req: Request) {
       console.error('[portal] signed email to client failed', e)
     }
     const line = `${name}${title ? ` (${title})` : ''} signed the quote for ${q.title} · ${q.org}${option ? `, choosing ${option.name}` : ''}.`
-    const admin = `${SITE_URL}/admin/projects/${q.projectId}`
+    const admin = `${SITE_URL}/admin/projects/${q.projectId}?tab=documents`
     await notifyJosh(`✍️ ${esc(line)} ${admin}`)
     await sendEmail({
       to: [portalEnv.replyTo],

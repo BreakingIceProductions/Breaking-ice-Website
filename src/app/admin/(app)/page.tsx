@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { adminSampleMode } from '@/admin/config'
 import { listProjects } from '@/admin/data'
 import { fmtDay, today, weekday } from '@/admin/dates'
+import { pageHref } from '@/admin/lead'
 import { activityFeed, ago, cad, kpis, needsAction, waitingOnClients, week, type Row } from '@/admin/insights'
 import { stageTitle } from '@/admin/stages'
 import { isDueByToday, openTasks, taskDay, ticktickConnection, type OpenTask } from '@/admin/ticktick'
@@ -33,13 +34,21 @@ async function todaysTasks(projects: OfficeProject[]) {
   return { connected: true, tasks: tasks.slice(0, 8) }
 }
 
+/** A reminder opens the part of the project it is about: money for invoices, the portal tab for versions, the lead page for a lead. */
+function rowHref(r: Row) {
+  const k = r.key ?? ''
+  const page = pageHref(r.project._id, r.project.pipelineStage)
+  if (!page.startsWith('/admin/projects/')) return page
+  return /^(no-invoice|draft)-/.test(k) ? `${page}?tab=money` : /^(fixes|feedback)-/.test(k) ? `${page}?tab=portal` : page
+}
+
 function RowList({ rows, empty, nudge }: { rows: Row[]; empty: string; nudge?: boolean }) {
   if (!rows.length) return <p className="muted small a-empty">{empty}</p>
   return (
     <ul className="a-rows">
       {rows.slice(0, 6).map((r, i) => (
         <DismissableRow key={r.key ?? `${r.project._id}-${i}`} projectId={r.project._id} dismissKey={r.key} label={`${r.project.title}: ${r.detail}`}>
-          <Link href={`/admin/projects/${r.project._id}`} className="a-row-main">
+          <Link href={rowHref(r)} className="a-row-main">
             <span className="a-client">{r.project.client.organizationName}</span>
             <strong>{r.project.title}</strong>
             <span className="muted small">{r.detail}</span>

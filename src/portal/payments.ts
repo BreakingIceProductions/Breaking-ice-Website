@@ -113,7 +113,7 @@ export async function markSent(pay: PortalPayment, method: BankMethod) {
   await portalClient.patch(pay._id).set({ status: 'processing', method }).commit()
   await addLog(pay.projectId, `Client says the ${pay.label.toLowerCase()} (${fmtCad(pay.total)}) is on its way by ${methodLabel(method)}`, 'payment')
   const line = `${pay.label} sent by ${methodLabel(method)}: ${fmtCad(pay.total)} · ${pay.projectTitle}. Reference ${payReference(pay)}.`
-  const admin = `${SITE_URL}/admin/projects/${pay.projectId}`
+  const admin = `${SITE_URL}/admin/projects/${pay.projectId}?tab=money`
   await notifyJosh(`📨 ${line} ${admin}`)
   await sendEmail({
     to: [portalEnv.replyTo],
@@ -284,7 +284,7 @@ export async function failSession(sessionId: string) {
   if (!pay || pay.status === 'paid') return
   await portalClient.patch(pay._id).set({ status: 'due' }).commit()
   await addLog(pay.projectId, `${pay.label} bank payment failed; it’s due again`, 'payment')
-  await notifyJosh(`⚠️ Bank payment failed: ${pay.label} · ${pay.projectTitle} (${fmtCad(pay.total)}). ${SITE_URL}/admin/projects/${pay.projectId}`)
+  await notifyJosh(`⚠️ Bank payment failed: ${pay.label} · ${pay.projectTitle} (${fmtCad(pay.total)}). ${SITE_URL}/admin/projects/${pay.projectId}?tab=money`)
 }
 
 async function announce(pay: PortalPayment, processing: boolean) {
@@ -292,7 +292,7 @@ async function announce(pay: PortalPayment, processing: boolean) {
   if (!processing) await addActivity(pay.projectId, `${pay.label} paid`, 'approved')
   if (!processing) await bookOnDeposit(pay).catch((e) => console.error('[portal] booking on deposit failed', e))
   await addLog(pay.projectId, processing ? `${pay.label} (${amount}) paid by bank debit; clearing` : `${pay.label} paid: ${amount}${pay.method ? ` by ${methodLabel(pay.method)}` : ''}${pay.cardFee ? `, incl. ${fmtCad(round2(pay.cardFee + (pay.cardFeeGst ?? 0)))} card fee` : ''}`, 'payment')
-  await notifyJosh(`${processing ? '⏳' : '💸'} ${pay.label} ${processing ? 'started by bank debit' : 'paid'}: ${amount} · ${pay.projectTitle}. ${SITE_URL}/admin/projects/${pay.projectId}`)
+  await notifyJosh(`${processing ? '⏳' : '💸'} ${pay.label} ${processing ? 'started by bank debit' : 'paid'}: ${amount} · ${pay.projectTitle}. ${SITE_URL}/admin/projects/${pay.projectId}?tab=money`)
   try {
     const settings = await getPortalSettings()
     const client = await portalClient.fetch<{ organizationName: string; contacts?: { name: string; email: string; getsEmails?: boolean }[] } | null>(`*[_id == $id][0]{organizationName, contacts}`, { id: pay.clientId })

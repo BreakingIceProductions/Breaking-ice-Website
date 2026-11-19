@@ -1,0 +1,190 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { StageDialog, type Stage } from './stage-dialog'
+
+const SAMPLE = 'Sample data: nothing was saved.'
+const failed = (status?: number) => (status === 401 ? 'This sign-in can’t change things, or it has expired.' : 'That didn’t save. Reload the page and try again.')
+
+/* ── Shared by the Next up card, the stage strip and the checklist ───── */
+
+export type Check = { key: string; label: string; done: boolean }
+
+type Progress = {
+  checks: Check[]
+  isDone: (c: Check) => boolean
+  tick: (c: Check, done: boolean) => void
+  /** Opens the usual stage preview. Nothing moves until it's confirmed there. */
+  move: (to: Stage) => void
+}
+
+const Ctx = createContext<Progress | null>(null)
+const useProgress = () => {
+  const p = useContext(Ctx)
+  if (!p) throw new Error('Used outside ProjectProgress')
+  return p
+}
+
+/**
+ * Wraps the project page. Holds the checklist ticks (so "Next up" follows a tick straight away)
+ * and the one stage preview dialog every stage button on the page opens.
+ */
+export function ProjectProgress({ projectId, projectTitle, checks, children }: { projectId: string; projectTitle: string; checks: Check[]; children: React.ReactNode }) {
+  const [ticks, setTicks] = useState<Record<string, boolean>>({})
+  const [target, setTarget] = useState<Stage | null>(null)
+  const isDone = (c: Check) => ticks[c.key] ?? c.done
+
+  async function tick(c: Check, done: boolean) {
+    setTicks((t) => ({ ...t, [c.key]: done }))
+    const r = await fetch('/api/admin/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, key: c.key, done }) }).catch(() => null)
+    if (r?.ok) return
+    setTicks((t) => ({ ...t, [c.key]: !done }))
+    alert(failed(r?.status))
+  }
+
+  return (
+    <Ctx.Provider value={{ checks, isDone, tick, move: setTarget }}>
+      {children}
+      <StageDialog projectId={projectId} projectTitle={projectTitle} target={target} onClose={() => setTarget(null)} />
+    </Ctx.Provider>
+  )
+}
+
+/** The first unticked step of the stage; once they're all ticked, the move to the next stage. */
+export function NextUp({ stage, next, since }: { stage: string; next?: Stage; since?: string }) {
+  const { checks, isDone, move } = useProgress()
+  const open = checks.find((c) => !isDone(c))
+  const done = checks.filter(isDone).length
+  return (
+    <section className="bd-nextup ld-nextup" aria-label="Next up">
+      <div className="stack" style={{ gap: 2, minWidth: 0 }} aria-live="polite">
+        <span className="eyebrow">Next up</span>
+        <strong className="ld-next-title">{open ? open.label : next ? `${stage} is done. Move it on to ${next.title}.` : `${stage} is done. Nothing left to do.`}</strong>
+        {open && <span className="small">{done} of {checks.length} done in {stage}</span>}
+        {since && <span className="small muted">In {stage} since {since}</span>}
+      </div>
+      {!open && next && <button type="button" className="btn btn-primary btn-sm" onClick={() => move(next)}>Move to {next.title}</button>}
+    </section>
+  )
+}
+
+/** The production stages. Clicking one opens the stage preview for it. */
+export function StageStrip({ stages, current }: { stages: (Stage & { when?: string })[]; current: string }) {
+  const { move } = useProgress()
+  const at = stages.findIndex((s) => s.value === current)
+  return (
+    <ol className="ld-steps pj-steps" aria-label={`Stage ${at + 1} of ${stages.length}: ${stages[at]?.title ?? current}`}>
+      {stages.map((s, i) => (
+        <li key={s.value} className={i < at ? 'done' : i === at ? 'current' : ''} aria-current={i === at ? 'step' : undefined}>
+          <button type="button" disabled={i === at} onClick={() => move({ title: s.title, value: s.value })}>
+            <span className="dot" aria-hidden="true" />
+            <span className="name">{s.title}</span>
+            <span className="when">{i === at ? 'Now' : s.when ?? ''}</span>
+            <span className="sr-only">{i === at ? ' (it is here)' : i < at ? ' (done). Move it back here' : '. Move it here'}</span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+/** "Left in <stage>": the stage's steps, ticked off here or on the board. */
+export function StageChecklist() {
+  const { checks, isDone, tick } = useProgress()
+  if (!checks.length) return <p className="muted small" style={{ margin: 0 }}>Nothing on the list for this stage.</p>
+  return (
+    <div className="stack" style={{ gap: 'var(--space-3)' }}>
+      {checks.map((c) => (
+        <label key={c.key} className="a-plan-item pj-check">
+          <input type="checkbox" checked={isDone(c)} onChange={(e) => tick(c, e.target.checked)} />
+          <span>{c.label}</span>
+        </label>
+      ))}
+    </div>
+  )
+}
+
+/* ── The "More" menu ─────────────────────────────────────────────────── */
+
+export type MenuLink = { label: string; href: string; newTab?: boolean }
+
+/** Secondary actions: links out, and filing the project into or out of the archive. */
+export function ProjectMenu({ projectId, title, archived, links }: { projectId: string; title: string; archived: boolean; links: MenuLink[] }) {
+  const router = useRouter()
+  const menu = useRef<HTMLDetailsElement>(null)
+  const [busy, setBusy] = useState(false)
+
+  // The menu closes on a click outside it or on Escape.
+  useEffect(() => {
+    const close = (e: Event) => {
+      const m = menu.current
+      if (!m?.open) return
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !m.contains(e.target as Node)) m.open = false
+    }
+    document.addEventListener('click', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('click', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [])
+
+  // Archiving only files the project away in the back office; no stage steps run and nothing is sent.
+  async function file(change: { archived: boolean } | { declined: true }, ask?: string) {
+    if (menu.current) menu.current.open = false
+    if (ask && !confirm(ask)) return
+    setBusy(true)
+    const r = await fetch('/api/admin/archive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, ...change }) }).catch(() => null)
+    const j = (await r?.json().catch(() => null)) as { sample?: boolean } | null
+    setBusy(false)
+    if (!r?.ok) return alert(failed(r?.status))
+    if (j?.sample) return alert(SAMPLE)
+    router.refresh()
+  }
+
+  const leaves = `${title} leaves the board and stops counting in your pipeline and reminders. Nothing is sent to the client, and you can bring it back from the Archive bar or this menu.`
+
+  return (
+    <details className="ld-menu" ref={menu}>
+      <summary className="btn btn-secondary btn-sm">More<span className="sr-only"> actions for {title}</span></summary>
+      <ul>
+        {links.map((l) => (
+          <li key={l.label}>
+            <a href={l.href} {...(l.newTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+              {l.label}{l.newTab && <><span aria-hidden="true"> ↗</span><span className="sr-only"> (opens in a new tab)</span></>}
+            </a>
+          </li>
+        ))}
+        {archived ? (
+          <li><button type="button" disabled={busy} onClick={() => file({ archived: false })}>Unarchive</button></li>
+        ) : (
+          <>
+            <li><button type="button" disabled={busy} onClick={() => file({ archived: true }, `Archive as completed? ${leaves}`)}>Archive as completed</button></li>
+            <li><button type="button" disabled={busy} onClick={() => file({ declined: true }, `Archive as declined? ${leaves} It counts as declined in your win rate.`)}>Archive as declined</button></li>
+          </>
+        )}
+      </ul>
+    </details>
+  )
+}
+
+/* ── Copy a link ─────────────────────────────────────────────────────── */
+
+export function CopyButton({ text, label }: { text: string; label: string }) {
+  const [msg, setMsg] = useState('')
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setMsg('Copied.')
+    } catch {
+      setMsg(text)
+    }
+  }
+  return (
+    <span className="row-wrap">
+      <button type="button" className="btn btn-secondary btn-sm" onClick={copy}>{label}</button>
+      <span className="small muted" role="status">{msg}</span>
+    </span>
+  )
+}

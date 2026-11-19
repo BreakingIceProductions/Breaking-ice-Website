@@ -88,10 +88,10 @@ export default async function LeadPage({ params }: Props) {
         {p.pipelineStage === 'proposal' && (
           <div className="btn-row">
             <Link className="btn btn-primary btn-sm" href="/admin/proposals/new">Open the quote builder</Link>
-            <Link className="btn btn-secondary btn-sm" href={projectPage}>Upload and send the quote</Link>
+            <Link className="btn btn-secondary btn-sm" href={`${projectPage}?tab=documents`}>Upload and send the quote</Link>
           </div>
         )}
-        {p.pipelineStage === 'quoted' && <Link className="btn btn-secondary btn-sm" href={projectPage}>Open the quote</Link>}
+        {p.pipelineStage === 'quoted' && <Link className="btn btn-secondary btn-sm" href={`${projectPage}?tab=documents`}>Open the quote</Link>}
       </section>
 
       <div className="stack" style={{ gap: 4 }}>
