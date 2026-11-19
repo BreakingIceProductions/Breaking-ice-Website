@@ -1,5 +1,15 @@
 /* Story (project) page: stills gallery, lightbox, captions download. */
 
+/* Top of the page: title + "Watch the film", then the film straight under them, then the summary. */
+.page-head.story-head { padding-bottom: var(--space-8); }
+.film-section.story-film { padding: 0 0 var(--space-12); }
+.story-lede { margin-top: var(--space-8); }
+@media (max-width: 820px) {
+  .page-head.story-head { padding-bottom: var(--space-6); }
+  .film-section.story-film { padding-bottom: var(--space-8); }
+  .story-lede { margin-top: var(--space-6); }
+}
+
 .still-item { margin: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .still-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; text-align: inherit; color: inherit; }
 .still-open .media { transition: opacity .2s ease; }

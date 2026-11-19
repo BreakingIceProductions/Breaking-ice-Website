@@ -18,6 +18,8 @@ export function StoryCard({ p, priority }: { p: ProjectCard; priority?: boolean 
         ) : (
           <VideoLoop url={p.cardVideo} posterUrl={poster} posterAlt={p.thumbnail?.alt} label="Preview loop" className="ratio-43" priority={priority} hoverOnly />
         )}
+        {/* Navy wash over the picture, under the tag; fades out on hover and focus. */}
+        <span className="card-shade" aria-hidden="true" />
       </div>
       <div className="stack" style={{ gap: 'var(--space-2)' }}>
         <span className="card-meta">

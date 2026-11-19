@@ -15,6 +15,10 @@ import type { Img } from '@/lib/types'
 
 type Props = { params: Promise<{ slug: string }> }
 
+/** Heading of the first story section (may become "Mission"). Change it here. */
+const BRIEF_HEADING = 'The brief'
+
+
 export async function generateStaticParams() {
   const projects = await getProjects()
   return projects.map((p) => ({ slug: p.slug }))
@@ -82,8 +86,25 @@ export default async function ProjectPage({ params }: Props) {
   return (
     <>
       <JsonLd data={[breadcrumbLd([['Stories', '/stories'], [p.title, `/stories/${p.slug}`]]), ...(videoLd ? [videoLd] : [])]} />
-      {/* Hero film */}
-      <section className="dark film-section" aria-label="Film">
+      {/* Title and "Watch the film" first, then the film right under them, then the summary. */}
+      <section className="page-head story-head">
+        <div className="wrap">
+          <nav className="breadcrumb" aria-label="Breadcrumb">
+            <Link href="/stories">← All stories</Link>
+          </nav>
+          {p.sample && <p className="sample-flag" style={{ margin: '0 0 8px' }}>Sample project · replace in the Studio</p>}
+          <Eyebrow>{CATEGORY_LABELS[p.category ?? ''] ?? 'Story'}</Eyebrow>
+          <h1 className="h1">{p.title}</h1>
+          {!isPhoto && (
+            <PlayerButton url={p.heroVideo} className="btn btn-secondary" trackAs={`Story: ${p.title}`} captions={Boolean(captionsUrl)}>
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
+              Watch the film
+            </PlayerButton>
+          )}
+        </div>
+      </section>
+
+      <section className="film-section story-film" aria-label="Film">
         <div className="wrap">
           {isPhoto ? (
             <Still image={p.heroImage} label="Hero photograph" ratio="ratio-169" width={2000} onDark priority sizes="100vw" />
@@ -92,27 +113,10 @@ export default async function ProjectPage({ params }: Props) {
               <VideoLoop url={p.heroVideo} posterUrl={poster ?? heroImg} posterAlt={p.thumbnail?.alt ?? ""} label="The film" className="ratio-169" onDark priority />
             </div>
           )}
-        </div>
-      </section>
-
-      <section className="page-head after-film">
-        <div className="wrap">
-          <nav className="breadcrumb" aria-label="Breadcrumb">
-            <Link href="/stories">← All stories</Link>
-          </nav>
-          {p.sample && <p className="sample-flag" style={{ margin: '0 0 8px' }}>Sample project · replace in the Studio</p>}
-          <Eyebrow>{CATEGORY_LABELS[p.category ?? ''] ?? 'Story'}</Eyebrow>
-          <h1 className="h1">{p.title}</h1>
           {(summary || p.sample) && (
-            <p className="body-lg muted lede" style={{ marginBottom: 'var(--space-8)' }}>
+            <p className="body-lg muted lede story-lede">
               {summary ?? '[Summary: what this story is, in one or two sentences.]'}
             </p>
-          )}
-          {!isPhoto && (
-            <PlayerButton url={p.heroVideo} className="btn btn-secondary" trackAs={`Story: ${p.title}`} captions={Boolean(captionsUrl)}>
-              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
-              Watch the film
-            </PlayerButton>
           )}
         </div>
       </section>
@@ -126,7 +130,7 @@ export default async function ProjectPage({ params }: Props) {
             {full && (
               <>
                 <div className="story-part">
-                  <h2 className="story-h">The brief</h2>
+                  <h2 className="story-h">{BRIEF_HEADING}</h2>
                   <RichText value={brief} fallback="[Who the client is, what they needed and why.]" />
                 </div>
 

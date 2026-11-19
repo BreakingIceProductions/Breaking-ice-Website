@@ -186,12 +186,10 @@ export default async function HomePage() {
             </div>
             <ArrowLink href="/services">All services</ArrowLink>
           </div>
-          {/* Phones: a swipe rail like stories and process, so six cards don't stack into one long column. */}
-          <SwipeRail className="home-rail">
-            <div className="grid-3">
-              {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
-            </div>
-          </SwipeRail>
+          {/* One service per long bar, stacked, so services read differently from the story grid. */}
+          <div className="svc-list">
+            {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
+          </div>
         </div>
       </section>
 

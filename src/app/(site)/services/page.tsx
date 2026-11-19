@@ -24,7 +24,7 @@ export default async function ServicesPage() {
       </section>
       <section className="section svc-overview flush-top" aria-labelledby="all-services">
         <h2 id="all-services" className="sr-only">All services</h2>
-        <div className="wrap grid-3">
+        <div className="wrap svc-list">
           {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
         </div>
       </section>

@@ -79,20 +79,25 @@ export function ClosingBand({ s, headline, secondary = true }: { s: Settings; he
   )
 }
 
-export async function Process({ steps, compact }: { steps: ProcessStep[]; compact?: boolean }) {
+/**
+ * The four steps. Default: number, clip, title and one line (home page).
+ * `detail` adds "What you bring / What you get" and "What's inside" under each step.
+ * `compact` drops the clips (and detail) for a text-only list.
+ */
+export async function Process({ steps, compact, detail }: { steps: ProcessStep[]; compact?: boolean; detail?: boolean }) {
   // A still per clip, so each box shows a picture while its player loads.
   const posters = compact
     ? []
     : await Promise.all(steps.map((st) => (st.poster?.asset ? urlFor(st.poster).width(1000).height(750).fit('crop').url() : vimeoPoster(st.clip))))
   return (
-    <ol className={`process ${compact ? '' : 'process-full'}`}>
+    <ol className={`process ${compact ? '' : 'process-full'} ${!compact && detail ? 'process-detail' : ''}`}>
       {steps.map((st, i) => (
         <li key={st._key} className="step">
           <span className="step-num">0{i + 1}</span>
           {!compact && <VideoLoop url={st.clip} posterUrl={posters[i]} posterAlt={st.poster?.alt} label="Short clip" className="ratio-43 framed" />}
           <h3 className="h3">{st.title}</h3>
           {st.line && <p className="muted" style={{ margin: 0 }}>{st.line}</p>}
-          {!compact && (
+          {!compact && detail && (
             <>
               <dl>
                 <dt>What you bring</dt>
