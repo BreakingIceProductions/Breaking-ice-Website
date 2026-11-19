@@ -3,6 +3,8 @@ import { randomBytes } from 'node:crypto'
 import { SITE_URL } from '@/lib/site'
 import { getPortalSettings, portalClient } from '@/portal/data'
 import { PIPELINE_STAGES, type PipelineStage } from '@/sanity/portal/office-constants'
+import { blockOptions } from './email-blocks'
+import { granolaReady } from './granola'
 import { adminSampleMode } from './config'
 import { LIMITS, STARTER_TEMPLATES, type EmailTemplate, type TemplateVars } from './email-templates-shared'
 import type { OfficeProject } from './types'
@@ -117,7 +119,27 @@ export async function composerSetup(p: OfficeProject, person?: { name?: string; 
     signOff: settings.signOff,
     portalUrl: `${SITE_URL}/portal`,
   }
-  return { templates, to: who?.email ?? '', vars, stage: p.pipelineStage }
+  // Portal blocks for this project, and whether Granola is connected (for "Draft from a call").
+  const blocks = await blockOptions(p)
+  return { templates, to: who?.email ?? '', vars, stage: p.pipelineStage, blocks, granola: granolaReady() || adminSampleMode() }
+}
+
+/**
+ * Who a call was with, for "Draft from a call": the person on the lead, or the client's contacts.
+ * `person` is the one the email is written to (first name and full name).
+ */
+export function callPeople(p: OfficeProject) {
+  const lead = p.office.lead ?? {}
+  const contacts = (p.client.contacts ?? []).filter((c) => c.email || c.name)
+  const listed = lead.email ? contacts.find((c) => c.email?.toLowerCase() === lead.email!.toLowerCase()) : undefined
+  const person = listed ?? (lead.name || lead.email ? { name: lead.name ?? '', email: lead.email ?? '' } : (contacts.find((c) => c.getsEmails !== false) ?? contacts[0]))
+  const name = person?.name?.trim() ?? ''
+  return {
+    emails: [...new Set([lead.email, ...contacts.map((c) => c.email)].filter((e): e is string => Boolean(e)).map((e) => e.toLowerCase()))],
+    names: [...new Set([lead.name, ...contacts.map((c) => c.name)].filter((n): n is string => Boolean(n?.trim())))],
+    company: p.client._id ? p.client.organizationName : undefined,
+    person: { firstName: name.split(/\s+/)[0] || '', name },
+  }
 }
 
 /** Made-up details for the Library's previews. */

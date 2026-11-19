@@ -318,19 +318,28 @@ const linkify = (raw: string) =>
  * The body is plain text: a blank line starts a new paragraph, a single line break stays a line break,
  * bare https links become links, and a line on its own like [button: Label](https://…) becomes a button.
  */
-export function messageEmail({ subject, body, preview }: { subject: string; body: string; preview?: string }) {
-  const paragraphs = body.replace(/\r\n?/g, '\n').trim().split(/\n[ \t]*\n+/).map((p) => p.replace(/^\n+|\n+$/g, '')).filter((p) => p.trim())
+export function messageEmail({ subject, body, preview, sections }: { subject: string; body: string; preview?: string; sections?: Record<string, EmailSection> }) {
+  let source = body.replace(/\r\n?/g, '\n').trim()
+  // A portal block's token always stands as its own paragraph, whatever is typed around it.
+  if (sections) source = source.replace(/^[ \t]*(\[\[block:[^\]\n]*\]\])[ \t]*$/gm, '\n\n$1\n\n').trim()
+  const blockFor = (p?: string) => (sections && p ? sections[p.trim()] : undefined)
+  const paragraphs = source.split(/\n[ \t]*\n+/).map((p) => p.replace(/^\n+|\n+$/g, '')).filter((p) => p.trim())
   const rows = paragraphs.map((p, i) => {
     const last = i === paragraphs.length - 1 ? 'padding-bottom:24px;' : ''
+    const block = blockFor(p)
+    // A rule closes a block, unless another block follows straight on (it opens with its own).
+    if (block) return `${block.html}${blockFor(paragraphs[i + 1]) ? '' : `\n${RULE_ROW}`}${last ? '\n<tr><td style="height:24px;line-height:24px;font-size:0">&nbsp;</td></tr>' : ''}`
     const btn = BUTTON_LINE.exec(p)
     if (btn) return `<tr><td style="padding:18px 32px ${last ? '24px' : '6px'}">${button(esc(btn[2]), btn[1].trim())}</td></tr>`
     return para(p.split('\n').map(linkify).join('<br>'), last)
   })
   const text = paragraphs.map((p) => {
+    const block = blockFor(p)
+    if (block) return block.text
     const btn = BUTTON_LINE.exec(p)
     return btn ? `${btn[1].trim()}: ${btn[2]}` : p
   }).join('\n\n')
-  const firstLine = (paragraphs.find((p) => !BUTTON_LINE.test(p)) ?? '').replace(/\s+/g, ' ').trim()
+  const firstLine = (paragraphs.find((p) => !BUTTON_LINE.test(p) && !blockFor(p)) ?? '').replace(/\s+/g, ' ').trim()
   const html = layout({
     eyebrow: 'Breaking Ice Productions',
     preview: (preview ?? firstLine).slice(0, 140) || undefined,
@@ -338,6 +347,128 @@ export function messageEmail({ subject, body, preview }: { subject: string; body
   })
   return { subject, html, text }
 }
+
+/* ── Portal blocks dropped into a free-written email ──────────────────── */
+
+/** One block's rows for messageEmail's table, and its plain-text version (heading and address). */
+export type EmailSection = { html: string; text: string }
+
+const RULE_ROW = `<tr><td style="padding:22px 32px 0"><div style="border-top:1px solid #E6E1D8;height:1px;line-height:1px;font-size:0">&nbsp;</div></td></tr>`
+const thumbRow = (url?: string) =>
+  url && /^https:\/\//.test(url) ? `<tr><td style="padding:16px 32px 0"><img src="${esc(url)}" width="536" alt="" style="display:block;width:100%;height:auto;border:0"></td></tr>` : ''
+
+/**
+ * A portal block, set off from Josh's words by a thin rule (messageEmail adds the closing one):
+ * a small label, a heading, a short line, an optional list and details, then the button.
+ * Everything is plain text in, escaped here.
+ */
+function section(s: {
+  label: string
+  thumbUrl?: string
+  heading: string
+  line?: string
+  list?: { mark: '▶' | '✓' | '•'; items: string[] }
+  meta?: string[]
+  button: { href: string; label: string }
+  extra?: { href: string; label: string }
+  after?: string
+}): EmailSection {
+  const list = s.list?.items.length
+    ? `<tr><td style="padding:10px 32px 0"><table role="presentation" cellpadding="0" cellspacing="0">${s.list.items
+        .map((f) => `<tr><td style="padding:3px 10px 3px 0;color:${COPPER};font:bold 15px ${FONT}">${s.list!.mark}</td><td style="padding:3px 0;font:15px/22px ${FONT};color:${NAVY}">${esc(f)}</td></tr>`)
+        .join('')}</table></td></tr>`
+    : ''
+  const meta = (s.meta ?? []).filter(Boolean).map(esc).join('&nbsp;&nbsp;&nbsp;')
+  const html = `${RULE_ROW}
+${thumbRow(s.thumbUrl)}
+<tr><td style="padding:16px 32px 0;font:600 12px ${FONT};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${esc(s.label)}</td></tr>
+${para(`<span style="font:bold 20px/26px ${FONT}">${esc(s.heading)}</span>`, 'padding-top:6px')}
+${s.line ? para(esc(s.line)) : ''}
+${list}
+${meta ? para(meta, `font-size:13px;color:${MUTED}`) : ''}
+<tr><td style="padding:18px 32px 0">${button(esc(s.button.href), s.button.label)}</td></tr>
+${s.extra ? para(`<a href="${esc(s.extra.href)}" style="color:${COPPER_DEEP}">${esc(s.extra.label)}</a>`, 'font-size:14px') : ''}
+${s.after ? para(esc(s.after), `color:${MUTED};font-size:13px`) : ''}`
+  const text = [
+    s.heading,
+    s.line,
+    s.list?.items.length ? s.list.items.map((f) => `${s.list!.mark} ${f}`).join('\n') : '',
+    (s.meta ?? []).filter(Boolean).join(' · '),
+    `${s.button.label}: ${s.button.href}`,
+    s.extra ? `${s.extra.label}: ${s.extra.href}` : '',
+  ].filter(Boolean).join('\n')
+  return { html, text }
+}
+
+/** "Sign in to your portal". A plain link to the sign-in page: never a code (those last 15 minutes), never the address. */
+export const portalSignInSection = (m: { projectTitle?: string; portalUrl: string }) =>
+  section({
+    label: 'Client portal',
+    heading: 'Your client portal',
+    line: `${m.projectTitle ? `Everything for ${m.projectTitle} is in your client portal.` : 'Everything for your projects is in your client portal.'} Sign in with this email address and we’ll send you a code. No password needed.`,
+    button: { href: m.portalUrl, label: 'Sign in to your portal' },
+  })
+
+/** Same wording and button as the "New version ready" email. */
+export const versionSection = (m: { title: string; version: number; notes?: string; length?: string; due?: string; thumbUrl?: string; portalUrl: string; shareUrl?: string }) =>
+  section({
+    label: 'New version ready',
+    thumbUrl: m.thumbUrl,
+    heading: `Version ${m.version} of ${m.title} is ready for you`,
+    line: 'Watch it in your client portal, then approve it or leave your notes right there.',
+    meta: [m.length ? `Length · ${m.length}` : '', m.due ? `Feedback by · ${m.due}` : ''],
+    button: { href: m.portalUrl, label: 'Review & leave feedback' },
+    extra: m.shareUrl && /^https:\/\//.test(m.shareUrl) ? { href: m.shareUrl, label: 'Or open it directly on Vimeo' } : undefined,
+  })
+
+/** Same amounts and wording as the "Quote ready" email. Amounts come from the stored quote only. */
+export const quoteSection = (m: { projectTitle: string; total?: number; from?: boolean; noGst?: boolean; validUntil?: string; portalUrl: string }) =>
+  section({
+    label: 'Quote',
+    heading: `Your quote for ${m.projectTitle} is ready`,
+    line: 'You can read it in your client portal and sign it there when you’re happy with it. Signing books your project in.',
+    meta: [m.total ? `${m.from ? 'From' : 'Total'} · ${money(m.total)}${m.noGst ? '' : ' + GST'}` : '', m.validUntil ? `Valid until · ${m.validUntil}` : ''],
+    button: { href: m.portalUrl, label: 'View quote' },
+  })
+
+/** Same wording and button as the "To sign" email, for one document or several. */
+export const signSection = (m: { titles: string[]; portalUrl: string }) =>
+  section({
+    label: 'To sign',
+    heading: m.titles.length === 1 ? `${m.titles[0]} is ready for you to sign` : `${m.titles.length} documents are ready for you to sign`,
+    line: `${m.titles.length === 1 ? 'It’s' : 'They’re'} ready for you to read and sign in your client portal. It takes a minute: read it through, fill in anything it asks for, type your name and sign.`,
+    list: m.titles.length > 1 ? { mark: '•', items: m.titles } : undefined,
+    button: { href: m.portalUrl, label: 'Read & sign' },
+  })
+
+/** Same wording and button as the "Final files ready" email. */
+export const finalsSection = (m: { projectTitle: string; films: string[]; thumbUrl?: string; portalUrl: string }) =>
+  section({
+    label: 'Delivered',
+    thumbUrl: m.thumbUrl,
+    heading: `Your final files for ${m.projectTitle} are ready`,
+    line: 'Your final videos and every file that goes with them are waiting in your portal, ready to download.',
+    list: m.films.length ? { mark: '✓', items: m.films } : undefined,
+    button: { href: m.portalUrl, label: 'Download your files' },
+    after: 'Keep a copy somewhere safe. If a file is too big to download from the portal, ask for it there and we’ll send you a link.',
+  })
+
+/**
+ * A payment from the stored records: due, on its way, or received (same wording as the "Payment received" email).
+ * `total` is left out when the record has no amount to show; nothing is ever worked out here.
+ */
+export const paymentSection = (m: { label: string; projectTitle: string; status: 'due' | 'processing' | 'paid'; total?: number; portalUrl: string; payInPortal: boolean }) =>
+  section({
+    label: 'Payment',
+    heading: `${m.status === 'due' ? 'Payment due' : m.status === 'processing' ? 'Payment started' : 'Payment received'}: ${m.label}`,
+    line:
+      m.status === 'due'
+        ? `${m.total ? `${money(m.total)} for ${m.projectTitle} is due.` : `This is due for ${m.projectTitle}.`}${m.payInPortal ? ' You can pay it in your portal by bank transfer or card.' : ''}`
+        : m.status === 'processing'
+          ? `Your payment${m.total ? ` of ${money(m.total)}` : ''} for ${m.projectTitle} is on its way. We’ll mark it paid in your portal once it clears.`
+          : `We’ve received ${m.total ? money(m.total) : 'your payment'} for ${m.projectTitle}. ${m.payInPortal ? 'It shows as paid in your client portal.' : 'Thank you.'}`,
+    button: { href: m.portalUrl, label: 'Open your portal' },
+  })
 
 export async function notifyJosh(text: string) {
   if (portalEnv.slackWebhook) {
