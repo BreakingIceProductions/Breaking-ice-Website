@@ -1,5 +1,5 @@
 import { adminFromRequest } from '@/admin/auth'
-import { getProject, setOffice } from '@/admin/data'
+import { dismissReminder, getProject } from '@/admin/data'
 import { json } from '@/portal/http'
 
 export const runtime = 'nodejs'
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const p = await getProject(String(body.projectId ?? ''))
   if (!p || !key) return json({ ok: false, error: 'not-found' }, 404)
   if (!admin.sample && !(p.office.dismissed ?? []).includes(key)) {
-    await setOffice(p._id, { dismissed: [...(p.office.dismissed ?? []), key].slice(-60) })
+    await dismissReminder(p._id, key)
   }
   return json({ ok: true })
 }

@@ -1,5 +1,5 @@
 import { adminFromRequest } from '@/admin/auth'
-import { addLog, getProject, setLead, setProjectType } from '@/admin/data'
+import { getProject, setLead, setProjectType, writeLog } from '@/admin/data'
 import { today } from '@/admin/dates'
 import { cleanLeadPatch, CONTACT_KINDS } from '@/admin/lead'
 import { json } from '@/portal/http'
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     if (!kind || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today()) return json({ ok: false, error: 'invalid' }, 400)
     if (admin.sample) return json({ ok: true, sample: true })
     // Logged for today keeps the time; an earlier day is filed at noon Mountain time, shown as a date only.
-    await addLog(p._id, note ? `${kind.title}: ${note}` : kind.title, `contact-${kind.value}`, date === today() ? undefined : { at: `${date}T19:00:00.000Z`, day: true })
+    await writeLog(p._id, note ? `${kind.title}: ${note}` : kind.title, `contact-${kind.value}`, date === today() ? undefined : { at: `${date}T19:00:00.000Z`, day: true })
     return json({ ok: true })
   }
 

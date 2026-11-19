@@ -55,7 +55,7 @@ export function LeadSteps({ projectId, projectTitle, stage, quoteSent }: { proje
 /* ── Details that save when you leave the field ──────────────────────── */
 
 type Patch = Partial<Record<keyof LeadDetails | 'projectType', string>>
-type Saver = (patch: Patch) => void
+type Saver = (patch: Patch) => Promise<boolean>
 
 function TextField({ label, name, value, save, type = 'text', after, placeholder }: { label: string; name: keyof Patch; value?: string; save: Saver; type?: string; after?: (v: string) => React.ReactNode; placeholder?: string }) {
   const id = useId()
@@ -64,8 +64,8 @@ function TextField({ label, name, value, save, type = 'text', after, placeholder
   const blur = () => {
     const next = v.trim()
     if (next === saved.current) return
-    saved.current = next
-    save({ [name]: next })
+    // Remembered only once it saved, so leaving the field again after a failure retries.
+    void save({ [name]: next }).then((ok) => { if (ok) saved.current = next })
   }
   return (
     <div className="ld-row">
@@ -85,7 +85,7 @@ function SelectField({ label, name, value, save, options, none }: { label: strin
     <div className="ld-row">
       <label htmlFor={id}>{label}</label>
       <span className="ld-control">
-        <select id={id} className="ld-in" value={v} onChange={(e) => { setV(e.target.value); save({ [name]: e.target.value }) }}>
+        <select id={id} className="ld-in" value={v} onChange={(e) => { setV(e.target.value); void save({ [name]: e.target.value }) }}>
           <option value="">{none}</option>
           {options.map((o) => <option key={o.value} value={o.value}>{o.title}</option>)}
         </select>
@@ -124,6 +124,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
     setStatus(r.ok ? (r.data.sample ? SAMPLE : 'Saved.') : failed(r.status))
     // The heading and "Next up" read these details too.
     if (r.ok && !r.data.sample) router.refresh()
+    return r.ok
   }
 
   return (
@@ -189,8 +190,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
           onBlur={() => {
             const next = notes.trim()
             if (next === notesSaved.current) return
-            notesSaved.current = next
-            save({ notes: next })
+            void save({ notes: next }).then((ok) => { if (ok) notesSaved.current = next })
           }}
         />
       </section>

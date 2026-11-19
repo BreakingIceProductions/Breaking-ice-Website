@@ -131,16 +131,17 @@ async function ensureOffice(projectId: string) {
 export async function setPipelineStage(p: OfficeProject, to: PipelineStage) {
   if (sample()) return
   const at = new Date().toISOString()
-  await portalClient.patch(p._id).set({ pipelineStage: to }).commit()
+  // One transaction, so the stage never changes without its history entry (or the other way round).
+  await portalClient
+    .transaction()
+    .patch(p._id, (q) => q.set({ pipelineStage: to }))
+    .createIfNotExists({ _id: officeId(p._id), _type: 'boState', project: p._id })
+    .patch(officeId(p._id), (q) =>
+      q.set({ stageChangedAt: at }).setIfMissing({ stageHistory: [] }).append('stageHistory', [{ _key: key(), at, from: p.pipelineStage, to }]),
+    )
+    .commit({ autoGenerateArrayKeys: false })
   // A draft open in the Studio would put the old stage back on publish, so it follows too.
   await portalClient.patch(`drafts.${p._id}`).set({ pipelineStage: to }).commit().catch(() => {})
-  await ensureOffice(p._id)
-  await portalClient
-    .patch(officeId(p._id))
-    .set({ stageChangedAt: at })
-    .setIfMissing({ stageHistory: [] })
-    .append('stageHistory', [{ _key: key(), at, from: p.pipelineStage, to }])
-    .commit({ autoGenerateArrayKeys: false })
 }
 
 /** Portal-facing status and the 1–4 process stage, written to the project itself. */
@@ -300,18 +301,30 @@ export async function setProjectType(projectId: string, projectType: string) {
 
 /** `when.day` logs it for a date (a call written up afterwards) rather than for this moment. */
 export async function addLog(projectId: string, text: string, kind = 'office', when?: { at: string; day?: boolean }) {
-  if (sample()) return
   try {
-    await ensureOffice(projectId)
-    await portalClient
-      .patch(officeId(projectId))
-      .setIfMissing({ log: [] })
-      .insert('before', 'log[0]', [{ _key: key(), at: when?.at ?? new Date().toISOString(), text: text.slice(0, 240), kind, ...(when?.day && { day: true }) }])
-      .commit({ autoGenerateArrayKeys: false })
-    await portalClient.patch(officeId(projectId)).unset(['log[80:]']).commit().catch(() => {})
+    await writeLog(projectId, text, kind, when)
   } catch (e) {
     console.error('[admin] log write failed', e)
   }
+}
+
+/** Appends rather than rewriting the list, so two quick dismissals can't drop one. */
+export async function dismissReminder(projectId: string, reminder: string) {
+  if (sample()) return
+  await ensureOffice(projectId)
+  await portalClient.patch(officeId(projectId)).setIfMissing({ dismissed: [] }).append('dismissed', [reminder]).commit()
+}
+
+/** Like addLog, but a failed write throws: for "Log contact", where the log line is the whole save. */
+export async function writeLog(projectId: string, text: string, kind = 'office', when?: { at: string; day?: boolean }) {
+  if (sample()) return
+  await ensureOffice(projectId)
+  await portalClient
+    .patch(officeId(projectId))
+    .setIfMissing({ log: [] })
+    .insert('before', 'log[0]', [{ _key: key(), at: when?.at ?? new Date().toISOString(), text: text.slice(0, 240), kind, ...(when?.day && { day: true }) }])
+    .commit({ autoGenerateArrayKeys: false })
+  await portalClient.patch(officeId(projectId)).unset(['log[80:]']).commit().catch(() => {})
 }
 
 export async function addNote(projectId: string, text: string) {
