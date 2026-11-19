@@ -23,6 +23,7 @@ export default async function AdminApp({ children }: { children: React.ReactNode
     { group: 'Actions', label: 'New project', sub: 'Opens the Studio', href: '/studio/portal/intent/create/template=clientProject;type=clientProject', external: true },
     { group: 'Go to', label: 'Dashboard', href: '/admin' },
     { group: 'Go to', label: 'Pipeline', sub: 'Leads and projects on one board', href: '/admin/pipeline' },
+    { group: 'Go to', label: 'Client portals', sub: 'What each portal is waiting on', href: '/admin/portals' },
     { group: 'Go to', label: 'Projects list and archive', href: '/admin/projects?view=list' },
     { group: 'Go to', label: 'Clients', sub: 'Everyone in one list', href: '/admin/contacts' },
     { group: 'Go to', label: 'Finder', sub: 'Clients, projects and files', href: '/admin/clients' },

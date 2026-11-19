@@ -1,4 +1,5 @@
 import { addDays, today } from './dates'
+import { sampleMoneyExtras, withSampleMoney } from './money-samples'
 import type { OfficeProject } from './types'
 
 /**
@@ -12,7 +13,8 @@ export function sampleOfficeProjects(): OfficeProject[] {
   const client = (id: string, name: string) => ({ _id: id, organizationName: name, contacts: [{ _key: 'c1', name: '[Client contact]', email: 'client@example.com' }] })
   const base = { deliverables: [], schedule: [], milestones: {}, activity: [], crew: [] }
 
-  return [
+  // The Money page's stage history, quote totals and invoices are added in money-samples.ts.
+  return ([
     {
       ...base,
       _id: 'sample-closure',
@@ -181,5 +183,5 @@ export function sampleOfficeProjects(): OfficeProject[] {
         invoices: [{ _key: 'i1', kind: 'deposit', id: 'sample-inv-2', number: 'INV-0002', amount: 6000, status: 'sent', outstanding: 6000, createdAt: at(-4) }],
       },
     },
-  ] as OfficeProject[]
+  ] as OfficeProject[]).map(withSampleMoney).concat(sampleMoneyExtras())
 }

@@ -111,6 +111,8 @@ export type OfficeProject = {
   driveFolderId?: string
   pipelineStage: PipelineStage
   archived?: boolean
+  /** Switched on in the Studio: the client doesn't see this project in their portal. */
+  hiddenFromClient?: boolean
   /** Set when a quote didn't book. */
   declinedAt?: string
   projectType?: string
