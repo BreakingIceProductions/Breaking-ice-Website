@@ -5,6 +5,8 @@ import { quoteStatus } from '@/admin/board-data'
 import { getProject } from '@/admin/data'
 import { daysSince, fmtDay, today, TZ, ymd } from '@/admin/dates'
 import { budgetTitle, fmtTime, isContactLog, isSalesStage, LOST_REASONS, typeTitle } from '@/admin/lead'
+import { getPeople } from '@/admin/people'
+import { tagsFor } from '@/admin/people-shared'
 import { LeadActivity, LeadArchive, LeadFields, LeadSteps, type LeadLogEntry } from '@/admin/ui/lead'
 
 type Props = { params: Promise<{ id: string }> }
@@ -23,7 +25,7 @@ const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-CA', { timeZ
 export default async function LeadPage({ params }: Props) {
   await requireAdmin()
   const { id } = await params
-  const p = await getProject(id)
+  const [p, people] = await Promise.all([getProject(id), getPeople()])
   if (!p) notFound()
   if (!isSalesStage(p.pipelineStage)) redirect(`/admin/projects/${encodeURIComponent(p._id)}`)
 
@@ -108,7 +110,7 @@ export default async function LeadPage({ params }: Props) {
             projectId={p._id}
             projectType={p.projectType}
             lead={lead}
-            contact={{ name, email, company, onClient: Boolean(listed), studioHref: p.client._id ? `/studio/portal/structure/client;${encodeURIComponent(p.client._id)}` : undefined }}
+            contact={{ name, email, company, onClient: Boolean(listed), tags: tagsFor(people, email), studioHref: p.client._id ? `/studio/portal/structure/client;${encodeURIComponent(p.client._id)}` : undefined }}
           />
         </div>
         <aside className="stack a-col a-aside ld-aside" aria-label="Activity">

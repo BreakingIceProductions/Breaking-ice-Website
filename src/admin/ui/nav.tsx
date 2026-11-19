@@ -23,7 +23,7 @@ const Icon = ({ name }: { name: string }) => (
 export function AdminNav({ needs = 0 }: { needs?: number }) {
   const path = usePathname()
   const items = [
-    { href: '/admin', label: 'Dashboard', icon: 'dash', on: path === '/admin', count: needs },
+    { href: '/admin', label: 'Today', icon: 'dash', on: path === '/admin', count: needs },
     { href: '/admin/pipeline', label: 'Pipeline', icon: 'projects', on: path.startsWith('/admin/pipeline') || path.startsWith('/admin/projects') || path.startsWith('/admin/leads') },
     { href: '/admin/portals', label: 'Client portals', icon: 'portals', on: path.startsWith('/admin/portals') },
     { href: '/admin/money', label: 'Money', icon: 'money', on: path.startsWith('/admin/money') },

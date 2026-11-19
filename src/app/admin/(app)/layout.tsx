@@ -6,6 +6,7 @@ import { calendarReady, ticktickReady, zohoReady } from '@/admin/config'
 import { listProjects } from '@/admin/data'
 import { needsAction } from '@/admin/insights'
 import { isSalesStage, pageHref } from '@/admin/lead'
+import { getPeople } from '@/admin/people'
 import { AdminSearch, type SearchItem } from '@/admin/ui/search'
 import { ticktickConnection } from '@/admin/ticktick'
 import { AdminNav } from '@/admin/ui/nav'
@@ -15,13 +16,13 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminApp({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin()
-  const [tt, zoho, projects] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null), listProjects().catch(() => [])])
+  const [tt, zoho, projects, people] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null), listProjects().catch(() => []), getPeople().catch(() => null)])
   const clients = new Map(projects.filter((p) => p.client._id).map((p) => [p.client._id, p.client.organizationName]))
   const search: SearchItem[] = [
     { group: 'Actions', label: 'New proposal', sub: 'Open the builder', href: '/admin/proposals/new' },
     { group: 'Actions', label: 'New lead', sub: 'Add someone who got in touch', href: '/admin/leads/new' },
     { group: 'Actions', label: 'New project', sub: 'Opens the Studio', href: '/studio/portal/intent/create/template=clientProject;type=clientProject', external: true },
-    { group: 'Go to', label: 'Dashboard', href: '/admin' },
+    { group: 'Go to', label: 'Today', href: '/admin' },
     { group: 'Go to', label: 'Pipeline', sub: 'Leads and projects on one board', href: '/admin/pipeline' },
     { group: 'Go to', label: 'Client portals', sub: 'What each portal is waiting on', href: '/admin/portals' },
     { group: 'Go to', label: 'Projects list and archive', href: '/admin/projects?view=list' },
@@ -30,6 +31,8 @@ export default async function AdminApp({ children }: { children: React.ReactNode
     { group: 'Go to', label: 'Settings and connections', href: '/admin/settings' },
     ...projects.map((p) => ({ group: 'Projects' as const, label: p.title, sub: `${p.client.organizationName}${isSalesStage(p.pipelineStage) ? ' · lead' : ''}${p.archived ? ' · archived' : ''}`, href: pageHref(p._id, p.pipelineStage) })),
     ...[...clients].map(([id, name]) => ({ group: 'Clients' as const, label: name, href: `/admin/clients/${id}` })),
+    // Contacts-only people: crew, vendors, partners. Client contacts are found through their company.
+    ...(people?.people ?? []).map((p) => ({ group: 'People' as const, label: p.name, sub: [p.company, p.role, ...(p.tags ?? [])].filter(Boolean).join(' · ') || 'Contact', href: `/admin/contacts?person=${encodeURIComponent(`p:${p._key}`)}` })),
   ]
   const links = [
     { name: 'Zoho Books', on: Boolean(zoho), setUp: zohoReady() },

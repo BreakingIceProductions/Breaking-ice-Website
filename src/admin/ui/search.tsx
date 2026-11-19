@@ -3,9 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-export type SearchItem = { group: 'Actions' | 'Go to' | 'Projects' | 'Clients'; label: string; sub?: string; href: string; external?: boolean }
+export type SearchItem = { group: 'Actions' | 'Go to' | 'Projects' | 'Clients' | 'People'; label: string; sub?: string; href: string; external?: boolean }
 
-const GROUPS: SearchItem['group'][] = ['Actions', 'Go to', 'Projects', 'Clients']
+const GROUPS: SearchItem['group'][] = ['Actions', 'Go to', 'Projects', 'Clients', 'People']
 
 /** Search box in the sidebar. Cmd+K or Ctrl+K opens it from anywhere in the back office. */
 export function AdminSearch({ items }: { items: SearchItem[] }) {

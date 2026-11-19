@@ -3,8 +3,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getClient } from '@/admin/data'
 import { ago, cad } from '@/admin/insights'
+import { getPeople } from '@/admin/people'
+import { tagsFor } from '@/admin/people-shared'
 import { stageIndex, stageTitle } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
+import { TagChips } from '@/admin/ui/tag-chips'
 import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
 
 type Props = { params: Promise<{ id: string }> }
@@ -27,7 +30,7 @@ const GROUPS: { title: string; test: (p: OfficeProject) => boolean; empty: strin
 export default async function ClientPage({ params }: Props) {
   await requireAdmin()
   const { id } = await params
-  const c = await getClient(id)
+  const [c, people] = await Promise.all([getClient(id), getPeople()])
   if (!c) notFound()
   const delivered = c.projects.filter(GROUPS[2].test).length
   const feed = c.projects
@@ -113,7 +116,7 @@ export default async function ClientPage({ params }: Props) {
               <dl className="key-dates">
                 {c.contacts.map((p) => (
                   <div key={p._key}>
-                    <dt><a className="text-link-plain" href={`mailto:${p.email}`}>{p.name}</a></dt>
+                    <dt><a className="text-link-plain" href={`mailto:${p.email}`}>{p.name}</a><TagChips tags={tagsFor(people, p.email)} label={`Tags on ${p.name}`} /></dt>
                     <dd className="muted">{p.role || p.email}</dd>
                   </div>
                 ))}

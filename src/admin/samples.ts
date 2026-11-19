@@ -10,7 +10,7 @@ export function sampleOfficeProjects(): OfficeProject[] {
   const t = today()
   const d = (n: number) => addDays(t, n)
   const at = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString()
-  const client = (id: string, name: string) => ({ _id: id, organizationName: name, contacts: [{ _key: 'c1', name: '[Client contact]', email: 'client@example.com' }] })
+  const client = (id: string, name: string) => ({ _id: id, organizationName: name, contacts: [{ _key: 'c1', name: '[Client contact]', email: `${id.replace(/^sample-/, '')}@example.com` }] })
   const base = { deliverables: [], schedule: [], milestones: {}, activity: [], crew: [] }
 
   // The Money page's stage history, quote totals and invoices are added in money-samples.ts.

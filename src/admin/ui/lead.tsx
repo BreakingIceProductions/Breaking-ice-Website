@@ -6,6 +6,7 @@ import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
 import { CONTACT_KINDS, LEAD_BUDGETS, LEAD_SOURCES, LOST_REASONS, webHref } from '../lead'
 import type { LeadDetails } from '../types'
 import { StageDialog, type Stage } from './stage-dialog'
+import { TagChips } from './tag-chips'
 
 const post = (url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -107,6 +108,8 @@ export type LeadContact = {
   /** True when the name and email come from the client's contact list, which is edited in the Studio. */
   onClient: boolean
   studioHref?: string
+  /** Their tags from the people list (/admin/contacts), shown read-only. */
+  tags?: string[]
 }
 
 export function LeadFields({ projectId, contact, lead, projectType }: { projectId: string; contact: LeadContact; lead: LeadDetails; projectType?: string }) {
@@ -147,6 +150,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
             )}
             <TextField label="Phone" name="phone" type="tel" value={lead.phone} save={save} />
             <Fixed label="Company">{contact.company}</Fixed>
+            {contact.tags?.length ? <Fixed label="Tags"><TagChips tags={contact.tags} /></Fixed> : null}
             <TextField
               label="Website"
               name="website"
