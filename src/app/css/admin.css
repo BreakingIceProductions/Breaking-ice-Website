@@ -812,3 +812,20 @@ select.ld-in { cursor: pointer; }
   .lb-email-frame { height: 520px; }
   .lb-req-actions .btn { flex: 1 1 auto; }
 }
+
+/* ── Email composer and templates ───────────────────────────────────── */
+.em-dialog { width: min(1100px, calc(100vw - 32px)); }
+.em-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--a-gap); align-items: start; }
+.em-form { gap: var(--space-3); min-width: 0; }
+.em-body { min-height: 300px; resize: vertical; font-size: 15px; line-height: 1.55; }
+.em-preview { gap: var(--space-2); min-width: 0; }
+.em-frame { height: 560px; }
+.em-sent details summary { cursor: pointer; list-style: none; }
+.em-sent details summary::-webkit-details-marker { display: none; }
+.em-sent-body { margin: var(--space-2) 0 0; padding: var(--space-3); border-radius: var(--a-radius-in); background: var(--a-tint); white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; line-height: 1.5; }
+.em-sent li > details { min-width: 0; flex: 1 1 auto; }
+@media (max-width: 860px) {
+  .em-split { grid-template-columns: minmax(0, 1fr); }
+  .em-frame { height: 460px; }
+  .em-body { min-height: 220px; }
+}

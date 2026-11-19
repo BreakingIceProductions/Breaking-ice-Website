@@ -64,6 +64,8 @@ export type OfficeState = {
   checks?: string[]
   /** Sales details kept while the project is a lead. Filled in on the lead page (/admin/leads/<id>). */
   lead?: LeadDetails
+  /** Emails written and sent from the composer on the lead or project page, newest first (up to 50). */
+  emails?: import('./email-templates-shared').SentEmail[]
 }
 
 export type LeadDetails = {

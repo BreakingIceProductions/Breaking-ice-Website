@@ -48,8 +48,8 @@ export const LOST_REASONS = [
 export const budgetTitle = (value?: string) => LEAD_BUDGETS.find((b) => b.value === value)?.title
 export const typeTitle = (value?: string) => PROJECT_TYPES.find((t) => t.value === value)?.title
 
-/** Log kinds written by "Log contact" are "contact-<kind>". */
-export const isContactLog = (kind?: string) => Boolean(kind?.startsWith('contact-'))
+/** Log kinds written by "Log contact" are "contact-<kind>"; emails sent from the back office (the composer, review emails) are "email". */
+export const isContactLog = (kind?: string) => Boolean(kind?.startsWith('contact-')) || kind === 'email'
 
 const TEXT: Record<Exclude<keyof LeadDetails, 'source' | 'budget' | 'lostReason' | 'startDate' | 'callDate' | 'callTime'>, number> = {
   name: 120,

@@ -3,12 +3,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { checklist, quoteStatus } from '@/admin/board-data'
 import { getProject } from '@/admin/data'
+import { composerSetup } from '@/admin/email-templates'
 import { fmtDay, fmtRange, today, TZ, ymd } from '@/admin/dates'
 import { cad } from '@/admin/insights'
 import { isContactLog, isSalesStage } from '@/admin/lead'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
+import { EmailComposer } from '@/admin/ui/email'
 import { SplitBar } from '@/admin/ui/graphics'
 import { LeadActivity, type LeadLogEntry } from '@/admin/ui/lead'
 import { NoteForm } from '@/admin/ui/note-form'
@@ -30,7 +32,7 @@ import type { PortalPayment } from '@/portal/types'
 import { listRequests, listTemplates } from '@/portal/sign-store'
 import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS } from '@/sanity/portal/office-constants'
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string | string[] }> }
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string | string[]; email?: string | string[] }> }
 
 export async function generateMetadata({ params }: Props) {
   await requireAdmin()
@@ -74,9 +76,11 @@ function sentToClient(p: OfficeProject) {
   const log = p.office.log ?? []
   const q = p.quote
   const quoteSends = log.filter((l) => l.kind === 'quote' && /\bsent\b/.test(l.text))
-  const reviewSends = log.filter((l) => l.kind === 'email')
+  // Emails from the composer are logged as "Emailed: <subject>" and listed from their own record below.
+  const reviewSends = log.filter((l) => l.kind === 'email' && !l.text.startsWith('Emailed: '))
   const near = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) < 5 * 60_000
-  const rows: { key: string; at: string; kind: string; text: string; status?: string }[] = [
+  const rows: { key: string; at: string; kind: string; text: string; status?: string; body?: string }[] = [
+    ...(p.office.emails ?? []).map((e) => ({ key: `e-${e._key}`, at: e.at, kind: 'Email', text: e.subject, status: `To ${e.to.join(', ')}${e.template ? ` · from “${e.template}”` : ''}`, body: e.body })),
     ...quoteSends.map((l) => ({ key: l._key, at: l.at, kind: 'Quote email', text: l.text })),
     ...reviewSends.map((l) => ({ key: l._key, at: l.at, kind: 'Review email', text: l.text })),
     ...log
@@ -98,6 +102,13 @@ function sentToClient(p: OfficeProject) {
   const latestQuote = rows.find((r) => r.kind === 'Quote email')
   if (latestQuote && q) latestQuote.status = q.signature ? `Signed by ${q.signature.name} on ${day(q.signature.at)}` : q.viewedAt ? `Opened${q.viewedBy ? ` by ${q.viewedBy}` : ''} on ${day(q.viewedAt)}` : 'Not opened yet'
   return rows
+}
+
+/** The person on a lead, as the lead page works it out: their client contact when the emails match, else what was typed on the lead. */
+function leadPerson(p: OfficeProject) {
+  const lead = p.office.lead ?? {}
+  const listed = lead.email ? (p.client.contacts ?? []).find((c) => c.email?.toLowerCase() === lead.email!.toLowerCase()) : undefined
+  return { name: listed?.name ?? lead.name, email: listed?.email ?? lead.email }
 }
 
 /** "$X paid of $Y · $Z not billed yet", from the quote total and the Zoho Books invoices on record. Parts that can't be worked out are left off. */
@@ -134,6 +145,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   const [{ id }, sp] = await Promise.all([params, searchParams])
   const p = await getProject(id)
   if (!p) notFound()
+  const compose = admin.viewOnly ? null : await composerSetup(p, isSalesStage(p.pipelineStage) && (p.office.lead?.email || p.office.lead?.name) ? leadPerson(p) : undefined)
   const asked = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab
   const tab: Tab = TABS.find((x) => x.key === asked)?.key ?? 'overview'
 
@@ -202,7 +214,10 @@ export default async function ProjectPage({ params, searchParams }: Props) {
               <strong>Last contact:</strong>{' '}
               {lastContact ? `${lastContact.text}, ${day(lastContact.at)}` : log[0] ? `none logged yet. Latest activity: ${log[0].text}, ${day(log[0].at)}` : 'none logged yet.'}
             </p>
-            <ProjectMenu projectId={p._id} title={p.title} archived={Boolean(p.archived)} links={menu} />
+            <div className="btn-row">
+              {compose && <EmailComposer projectId={p._id} {...compose} startOpen={sp.email === '1'} />}
+              <ProjectMenu projectId={p._id} title={p.title} archived={Boolean(p.archived)} links={menu} />
+            </div>
           </div>
         </header>
 
@@ -431,6 +446,12 @@ function Emails({ p }: { p: OfficeProject }) {
                 <span className="a-round-label">{r.kind}</span>
                 <span>{r.text}</span>
                 {r.status && <span className="muted small">{r.status}</span>}
+                {r.body && (
+                  <details className="lb-email-text">
+                    <summary className="small">Show the email</summary>
+                    <pre>{r.body}</pre>
+                  </details>
+                )}
               </span>
               <span className="muted small ld-when">{day(r.at)}<br />{clock(r.at)}</span>
             </li>

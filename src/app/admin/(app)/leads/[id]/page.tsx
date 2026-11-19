@@ -3,13 +3,15 @@ import { notFound, redirect } from 'next/navigation'
 import { requireAdmin } from '@/admin/auth'
 import { quoteStatus } from '@/admin/board-data'
 import { getProject } from '@/admin/data'
+import { composerSetup } from '@/admin/email-templates'
 import { daysSince, fmtDay, today, TZ, ymd } from '@/admin/dates'
 import { budgetTitle, fmtTime, isContactLog, isSalesStage, LOST_REASONS, typeTitle } from '@/admin/lead'
 import { getPeople } from '@/admin/people'
 import { tagsFor } from '@/admin/people-shared'
+import { EmailComposer, SentEmails } from '@/admin/ui/email'
 import { LeadActivity, LeadArchive, LeadFields, LeadSteps, type LeadLogEntry } from '@/admin/ui/lead'
 
-type Props = { params: Promise<{ id: string }> }
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ email?: string | string[] }> }
 
 export async function generateMetadata({ params }: Props) {
   await requireAdmin()
@@ -22,9 +24,9 @@ const day = (d?: string) => fmtDay(d, { weekday: 'short', month: 'short', day: '
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-CA', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })
 
 /** One lead: where they are, what's next, their details and every contact so far. Booked projects have the project page. */
-export default async function LeadPage({ params }: Props) {
-  await requireAdmin()
-  const { id } = await params
+export default async function LeadPage({ params, searchParams }: Props) {
+  const admin = await requireAdmin()
+  const [{ id }, sp] = await Promise.all([params, searchParams])
   const [p, people] = await Promise.all([getProject(id), getPeople()])
   if (!p) notFound()
   if (!isSalesStage(p.pipelineStage)) redirect(`/admin/projects/${encodeURIComponent(p._id)}`)
@@ -38,6 +40,7 @@ export default async function LeadPage({ params }: Props) {
   const company = p.client.organizationName
   const title = name || p.title
   const projectPage = `/admin/projects/${encodeURIComponent(p._id)}`
+  const compose = admin.viewOnly ? null : await composerSetup(p, { name, email })
 
   const log = [...(p.office.log ?? [])].sort((a, b) => b.at.localeCompare(a.at))
   const entries: LeadLogEntry[] = log.map((l) => ({ key: l._key, date: day(ymd(new Date(l.at))), time: l.day ? undefined : clock(l.at), text: l.text }))
@@ -67,6 +70,7 @@ export default async function LeadPage({ params }: Props) {
         </div>
         <div className="btn-row">
           <Link className="text-link small" href={projectPage}>Quote, files and the rest</Link>
+          {compose && <EmailComposer projectId={p._id} {...compose} startOpen={sp.email === '1'} />}
           {!p.archived && <LeadArchive projectId={p._id} name={title} />}
         </div>
       </header>
@@ -115,6 +119,7 @@ export default async function LeadPage({ params }: Props) {
         </div>
         <aside className="stack a-col a-aside ld-aside" aria-label="Activity">
           <LeadActivity projectId={p._id} today={today()} entries={entries} />
+          <SentEmails emails={p.office.emails ?? []} />
         </aside>
       </div>
     </div>

@@ -298,6 +298,47 @@ ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}
   return { subject: `To sign: ${m.title}`, html, text }
 }
 
+/* ── A free-written email from the back office ─────────────────────── */
+
+const BUTTON_LINE = /^\s*\[button:\s*([^\]]{1,60})\]\((https:\/\/[^\s)]+)\)\s*$/i
+
+/** Escapes a line of plain text and turns bare https addresses into links (trailing punctuation stays outside). */
+const linkify = (raw: string) =>
+  raw
+    .split(/(https:\/\/[^\s<>"]+)/g)
+    .map((part, i) => {
+      if (i % 2 === 0) return esc(part)
+      const [, url, trail] = /^(.*?)([.,;:!?)\]']*)$/.exec(part) ?? [part, part, '']
+      return `<a href="${esc(url)}" style="color:${COPPER_DEEP}">${esc(url)}</a>${esc(trail)}`
+    })
+    .join('')
+
+/**
+ * An email Josh writes himself (from a lead or project page), in the portal's branded layout.
+ * The body is plain text: a blank line starts a new paragraph, a single line break stays a line break,
+ * bare https links become links, and a line on its own like [button: Label](https://…) becomes a button.
+ */
+export function messageEmail({ subject, body, preview }: { subject: string; body: string; preview?: string }) {
+  const paragraphs = body.replace(/\r\n?/g, '\n').trim().split(/\n[ \t]*\n+/).map((p) => p.replace(/^\n+|\n+$/g, '')).filter((p) => p.trim())
+  const rows = paragraphs.map((p, i) => {
+    const last = i === paragraphs.length - 1 ? 'padding-bottom:24px;' : ''
+    const btn = BUTTON_LINE.exec(p)
+    if (btn) return `<tr><td style="padding:18px 32px ${last ? '24px' : '6px'}">${button(esc(btn[2]), btn[1].trim())}</td></tr>`
+    return para(p.split('\n').map(linkify).join('<br>'), last)
+  })
+  const text = paragraphs.map((p) => {
+    const btn = BUTTON_LINE.exec(p)
+    return btn ? `${btn[1].trim()}: ${btn[2]}` : p
+  }).join('\n\n')
+  const firstLine = (paragraphs.find((p) => !BUTTON_LINE.test(p)) ?? '').replace(/\s+/g, ' ').trim()
+  const html = layout({
+    eyebrow: 'Breaking Ice Productions',
+    preview: (preview ?? firstLine).slice(0, 140) || undefined,
+    body: `<tr><td style="height:6px;line-height:6px;font-size:0">&nbsp;</td></tr>\n${rows.join('\n')}`,
+  })
+  return { subject, html, text }
+}
+
 export async function notifyJosh(text: string) {
   if (portalEnv.slackWebhook) {
     await fetch(portalEnv.slackWebhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) }).catch((e) =>

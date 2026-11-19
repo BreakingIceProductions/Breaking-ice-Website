@@ -2,9 +2,13 @@ import Link from 'next/link'
 import { requireAdmin } from '@/admin/auth'
 import { listProjects } from '@/admin/data'
 import { emailCatalog } from '@/admin/email-catalog'
+import { getEmailTemplates, sampleTemplateVars } from '@/admin/email-templates'
+import { fillTemplate } from '@/admin/email-templates-shared'
 import { requestRow, sendProjects, signCounts } from '@/admin/sign-rows'
 import { TemplatePanel, WordingChip } from '@/admin/ui/doc-library'
+import { EmailTemplates } from '@/admin/ui/email'
 import { RequestTable } from '@/admin/ui/sign-requests'
+import { messageEmail } from '@/portal/email'
 import { DOC_GROUPS, KIND, type SignRequest } from '@/portal/sign-docs'
 import { listRequests, listTemplates, memoryMode } from '@/portal/sign-store'
 
@@ -13,6 +17,7 @@ export const metadata = { title: 'Library' }
 const TABS = [
   { key: 'documents', label: 'Documents' },
   { key: 'emails', label: 'Client emails' },
+  { key: 'templates', label: 'Email templates' },
   { key: 'out', label: 'Out and signed' },
 ] as const
 type Tab = (typeof TABS)[number]['key']
@@ -42,7 +47,7 @@ export default async function Library({ searchParams }: Props) {
       <header className="a-head">
         <div className="stack" style={{ gap: 'var(--space-3)' }}>
           <h1 className="a-h1">Library</h1>
-          <p className="muted" style={{ margin: 0 }}>Your documents to sign, the emails clients get, and everything out for signature.</p>
+          <p className="muted" style={{ margin: 0 }}>Your documents to sign, the emails clients get, your email templates, and everything out for signature.</p>
         </div>
       </header>
       {memoryMode() && <p className="a-sample" role="status" style={{ margin: 0 }}>Sample mode: changes are kept in memory until the dev server restarts. Emails are simulated.</p>}
@@ -55,6 +60,7 @@ export default async function Library({ searchParams }: Props) {
 
       {tab === 'documents' && <Documents doc={sp.doc} readOnly={Boolean(admin.viewOnly)} sample={Boolean(admin.sample)} />}
       {tab === 'emails' && <Emails />}
+      {tab === 'templates' && <Templates readOnly={Boolean(admin.viewOnly)} sample={Boolean(admin.sample)} />}
       {tab === 'out' && <OutAndSigned show={sp.show} />}
     </div>
   )
@@ -117,6 +123,13 @@ async function Emails() {
       </ul>
     </div>
   )
+}
+
+/** The Email button's templates, with previews built here so they show straight away (and for view-only sign-ins). */
+async function Templates({ readOnly, sample }: { readOnly: boolean; sample: boolean }) {
+  const [{ templates, saved }, vars] = await Promise.all([getEmailTemplates(), sampleTemplateVars()])
+  const previews = Object.fromEntries(templates.map((t) => [t._key, messageEmail({ subject: fillTemplate(t.subject, vars), body: fillTemplate(t.body, vars) }).html]))
+  return <EmailTemplates templates={templates} saved={saved} previews={previews} sampleVars={vars} readOnly={readOnly} sample={sample} />
 }
 
 async function OutAndSigned({ show }: { show?: string }) {

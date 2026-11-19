@@ -234,7 +234,10 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                   <strong>{nextOf(c)}</strong>
                   <span className="small muted">{c.checks.length ? `${done} of ${c.checks.length} done in ${stages[si]?.title}` : inStage(c.days)}</span>
                 </div>
-                <Link className="btn btn-primary btn-sm" href={c.href.startsWith('/admin/projects/') && tab !== 'overview' ? `${c.href}?tab=${tab === 'money' ? 'money' : 'portal'}` : c.href}>Open the full page</Link>
+                <div className="btn-row">
+                  <Link className="btn btn-secondary btn-sm" href={`${c.href}?email=1`}>Email<span className="sr-only"> about {c.title}</span></Link>
+                  <Link className="btn btn-primary btn-sm" href={c.href.startsWith('/admin/projects/') && tab !== 'overview' ? `${c.href}?tab=${tab === 'money' ? 'money' : 'portal'}` : c.href}>Open the full page</Link>
+                </div>
               </div>
 
               <div className="bd-tabs" role="tablist" aria-label="Project sections">

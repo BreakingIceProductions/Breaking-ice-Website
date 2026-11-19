@@ -6,6 +6,7 @@ import { nextVersion, today, type Category } from '@/portal/library'
 import type { Deliverable } from '@/portal/types'
 import type { PipelineStage } from '@/sanity/portal/office-constants'
 import { adminSampleMode } from './config'
+import type { SentEmail } from './email-templates-shared'
 import { sampleOfficeProjects } from './samples'
 import type { InvoiceRecord, LeadDetails, OfficeClient, OfficeProject, OfficeState, TaskRecord } from './types'
 
@@ -325,6 +326,18 @@ export async function writeLog(projectId: string, text: string, kind = 'office',
     .insert('before', 'log[0]', [{ _key: key(), at: when?.at ?? new Date().toISOString(), text: text.slice(0, 240), kind, ...(when?.day && { day: true }) }])
     .commit({ autoGenerateArrayKeys: false })
   await portalClient.patch(officeId(projectId)).unset(['log[80:]']).commit().catch(() => {})
+}
+
+/** A message sent from the composer: kept newest first, the latest 50 only. Throws when the write fails. */
+export async function addSentEmail(projectId: string, email: Omit<SentEmail, '_key'>) {
+  if (sample()) return
+  await ensureOffice(projectId)
+  await portalClient
+    .patch(officeId(projectId))
+    .setIfMissing({ emails: [] })
+    .insert('before', 'emails[0]', [{ _key: key(), ...email }])
+    .commit({ autoGenerateArrayKeys: false })
+  await portalClient.patch(officeId(projectId)).unset(['emails[50:]']).commit().catch(() => {})
 }
 
 export async function addNote(projectId: string, text: string) {
