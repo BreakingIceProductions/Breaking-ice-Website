@@ -11,6 +11,7 @@ import { portalsOverview } from '@/admin/portals'
 import { STAGE_TASKS, stageIndex, stageTitle } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
 import { DismissableRow } from '@/admin/ui/dismissable-row'
+import { Bar, DayStrip, MiniCols, SplitBar } from '@/admin/ui/graphics'
 import { TodayTasks } from '@/admin/ui/today-tasks'
 import { portalEnv } from '@/portal/config'
 
@@ -188,9 +189,16 @@ export default async function Today() {
   // Money row
   const money = moneyView(all, payments, goals, t)
   const sixMonths = reportView(all, payments, '12m', t).moneyByMonth.slice(-6)
-  const sixMax = Math.max(1, ...sixMonths.map((m) => m.collected))
   const tiles = pipelineTiles(projects)
   const signed = money.goalLines.find((g) => g.key === 'signedYear')
+  // Pictures for the tiles, from the same figures: quotes to write against quotes out, what's been paid on the work in production, and signed against the goal.
+  const toWrite = projects.filter((p) => p.pipelineStage === 'proposal').length
+  const quoted = projects.filter((p) => p.pipelineStage === 'quoted').length
+  const quotedWork = money.toBill.rows.filter((r) => r.total !== undefined)
+  const paidOnWork = quotedWork.reduce((n, r) => n + r.paid, 0)
+  const quotedTotal = quotedWork.reduce((n, r) => n + (r.total ?? 0), 0)
+  // The goal sits at the tick, with room past it for a year that beats the goal.
+  const signedScale = Math.max(signed?.share ?? 0, 1) * 1.12
 
   // Up next and calls
   const coming = comingUp(projects, t)
@@ -285,29 +293,37 @@ export default async function Today() {
             <span className="a-kpi-label">Collected this month</span>
             <span className="a-kpi-num">{cad(money.collectedMonth.total)}</span>
             <span className="a-kpi-note">{plural(money.collectedMonth.count, 'payment')} in {money.monthLabel}</span>
-            <span className="td-bars" role="img" aria-label={`Collected in the last six months: ${sixMonths.map((m) => `${m.label} ${cad(m.collected)}`).join(', ')}.`}>
-              {sixMonths.map((m) => (
-                <span key={m.label} className="td-bar" aria-hidden="true">
-                  <span className="td-bar-fill" style={{ height: `${Math.round((m.collected / sixMax) * 100)}%` }} />
-                  <span className="td-bar-label">{m.label.slice(0, 3)}</span>
-                </span>
-              ))}
+            <span className="gx-wrap" role="img" aria-label={`Collected in the last six months: ${sixMonths.map((m) => `${m.label} ${cad(m.collected)}`).join(', ')}.`}>
+              <MiniCols cols={sixMonths.map((m, i) => ({ label: m.label.slice(0, 1), value: m.collected, current: i === sixMonths.length - 1 }))} />
             </span>
           </Link>
           <Link href="/admin/pipeline" className="a-kpi td-tile">
             <span className="a-kpi-label">Open pipeline</span>
             <span className="a-kpi-num">{cad(tiles.inPlay.sum)}</span>
             <span className="a-kpi-note">{plural(tiles.inPlay.count, 'quote')} in play{tiles.inPlay.missing ? `, ${tiles.inPlay.missing} with no total yet` : ''}</span>
+            {toWrite + quoted > 0 && <SplitBar parts={[{ label: 'To write', value: toWrite, text: String(toWrite), tone: 'soft' }, { label: 'Out', value: quoted, text: String(quoted), tone: 'accent' }]} />}
           </Link>
           <Link href="/admin/pipeline" className="a-kpi td-tile">
             <span className="a-kpi-label">In production</span>
             <span className="a-kpi-num">{cad(tiles.production.sum)}</span>
             <span className="a-kpi-note">{plural(tiles.production.count, 'project')}, Onboarding to Final delivery</span>
+            {quotedTotal > 0 && (
+              <span className="gx-wrap">
+                <Bar value={paidOnWork / quotedTotal} />
+                <span className="gx-caption">{cad(paidOnWork)} paid of {cad(quotedTotal)} quoted</span>
+              </span>
+            )}
           </Link>
           <Link href="/admin/money" className="a-kpi td-tile">
             <span className="a-kpi-label">Signed this year</span>
             <span className="a-kpi-num">{cad(signed?.value ?? 0)}</span>
             <span className="a-kpi-note">{signed?.goal && signed.share !== undefined ? `${Math.round(signed.share * 100)}% of the ${cad(signed.goal)} goal` : 'No goal set'}</span>
+            {signed?.goal && signed.share !== undefined ? (
+              <span className="gx-wrap">
+                <Bar value={signed.share / signedScale} tick={1 / signedScale} />
+                <span className="gx-caption">The tick is the goal</span>
+              </span>
+            ) : null}
           </Link>
         </div>
       </section>
@@ -336,19 +352,20 @@ export default async function Today() {
 
         <section className="p-card" aria-labelledby="td-calls-h">
           <h2 id="td-calls-h" className="a-h2">Calls</h2>
-          <ol className="td-week" aria-label="The next seven days">
-            {weekDays.map((d) => {
+          <DayStrip
+            label="The next seven days"
+            cells={weekDays.map((d) => {
               const n = calls.filter((c) => c.date === d).length
-              return (
-                <li key={d} className={[d === t && 'is-today', n > 0 && 'has-call'].filter(Boolean).join(' ') || undefined}>
-                  <span className="td-dow">{weekday(d)}</span>
-                  <span className="td-daynum">{Number(d.slice(8))}</span>
-                  {d === t && <span className="sr-only">(today)</span>}
-                  <span className="td-mark">{n ? plural(n, 'call') : <span className="sr-only">no calls</span>}</span>
-                </li>
-              )
+              return {
+                key: d,
+                label: weekday(d),
+                value: <>{Number(d.slice(8))}{d === t && <span className="sr-only"> (today)</span>}</>,
+                note: n ? plural(n, 'call') : <span className="sr-only">no calls</span>,
+                level: n ? Math.min(1, 0.5 + n / 4) : 0,
+                current: d === t,
+              }
             })}
-          </ol>
+          />
           {calls.length ? (
             <ul className="td-list">
               {calls.map((c, i) => (

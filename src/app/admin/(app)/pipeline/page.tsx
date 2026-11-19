@@ -6,6 +6,7 @@ import { cad } from '@/admin/insights'
 import { stageIndex } from '@/admin/stages'
 import { ArchiveBar } from '@/admin/ui/archive-bar'
 import { Board } from '@/admin/ui/board'
+import { SplitBar } from '@/admin/ui/graphics'
 import { PIPELINE_STAGES } from '@/sanity/portal/office-constants'
 
 export const metadata = { title: 'Pipeline' }
@@ -24,6 +25,8 @@ export default async function Pipeline() {
   const won = (p: (typeof projects)[number]) => stageIndex(p.pipelineStage) >= stageIndex('booked')
   const cold = cards.filter((c) => c.cold).length
   const t = pipelineTiles(projects)
+  const toWrite = cards.filter((c) => c.stage === 'proposal').length
+  const quoted = cards.filter((c) => c.stage === 'quoted').length
   return (
     <div className="a-page a-page-wide">
       <header className="a-head">
@@ -34,7 +37,7 @@ export default async function Pipeline() {
         </div>
         <div className="btn-row">
           <Link className="text-link" href="/admin/projects?view=list">List and archive</Link>
-          <Link className="btn btn-secondary" href="/admin/proposals/new">Proposal builder</Link>
+          <Link className="btn btn-secondary" href="/admin/proposals/new">Quote builder</Link>
           <Link className="btn btn-primary" href="/admin/leads/new">New lead</Link>
         </div>
       </header>
@@ -59,11 +62,13 @@ export default async function Pipeline() {
             <span className="a-kpi-label">Quotes in play</span>
             <span className="a-kpi-num">{cad(t.inPlay.sum)}</span>
             <span className="a-kpi-note">{plural(t.inPlay.count, 'quote')} to write or out{t.inPlay.missing ? `, ${t.inPlay.missing} without a total` : ''}</span>
+            {toWrite + quoted > 0 && <SplitBar parts={[{ label: 'To write', value: toWrite, text: String(toWrite), tone: 'soft' }, { label: 'Out', value: quoted, text: String(quoted), tone: 'accent' }]} />}
           </div>
           <div className="a-kpi">
             <span className="a-kpi-label">Win rate, last 90 days</span>
             <span className="a-kpi-num">{t.win ? `${t.win.rate}%` : '—'}</span>
             <span className="a-kpi-note">{t.win ? `${t.win.won} booked, ${t.win.lost} declined` : 'Nothing booked or declined yet'}</span>
+            {t.win && <SplitBar parts={[{ label: 'Booked', value: t.win.won, text: String(t.win.won), tone: 'accent' }, { label: 'Declined', value: t.win.lost, text: String(t.win.lost), tone: 'soft' }]} />}
           </div>
           <div className="a-kpi">
             <span className="a-kpi-label">In production</span>

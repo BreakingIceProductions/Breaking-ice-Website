@@ -20,41 +20,67 @@ const Icon = ({ name }: { name: string }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ICONS[name]}</svg>
 )
 
+type Item = { href: string; label: string; icon: string; on?: boolean; count?: number; /** Opens in a new tab; the note is read out after the label. */ external?: string }
+
 export function AdminNav({ needs = 0 }: { needs?: number }) {
   const path = usePathname()
-  const items = [
-    { href: '/admin', label: 'Today', icon: 'dash', on: path === '/admin', count: needs },
-    { href: '/admin/pipeline', label: 'Pipeline', icon: 'projects', on: path.startsWith('/admin/pipeline') || path.startsWith('/admin/projects') || path.startsWith('/admin/leads') },
-    { href: '/admin/portals', label: 'Client portals', icon: 'portals', on: path.startsWith('/admin/portals') },
-    { href: '/admin/money', label: 'Money', icon: 'money', on: path.startsWith('/admin/money') },
-    { href: '/admin/proposals/new', label: 'Proposals', icon: 'proposals', on: path.startsWith('/admin/proposals') },
-    { href: '/admin/contacts', label: 'Clients', icon: 'clients', on: path.startsWith('/admin/contacts') },
-    { href: '/admin/clients', label: 'Finder', icon: 'finder', on: path.startsWith('/admin/clients') },
-    { href: '/admin/settings', label: 'Settings', icon: 'settings', on: path.startsWith('/admin/settings') },
+  const at = (...roots: string[]) => roots.some((r) => path.startsWith(r))
+  const groups: { label?: string; end?: boolean; items: Item[] }[] = [
+    {
+      items: [
+        { href: '/admin', label: 'Today', icon: 'dash', on: path === '/admin', count: needs },
+        { href: 'https://calendar.google.com', label: 'Calendar', icon: 'calendar', external: 'opens Google Calendar' },
+      ],
+    },
+    {
+      label: 'Work',
+      items: [
+        { href: '/admin/pipeline', label: 'Pipeline', icon: 'projects', on: at('/admin/pipeline', '/admin/projects', '/admin/leads') },
+        { href: '/admin/money', label: 'Money', icon: 'money', on: at('/admin/money') },
+        { href: '/admin/portals', label: 'Client portals', icon: 'portals', on: at('/admin/portals') },
+      ],
+    },
+    {
+      label: 'Studio',
+      items: [
+        { href: '/admin/contacts', label: 'Clients', icon: 'clients', on: at('/admin/contacts') },
+        { href: '/admin/clients', label: 'Finder', icon: 'finder', on: at('/admin/clients') },
+        { href: '/admin/proposals/new', label: 'Quotes', icon: 'proposals', on: at('/admin/proposals') },
+      ],
+    },
+    {
+      end: true,
+      items: [
+        { href: '/admin/settings', label: 'Settings', icon: 'settings', on: at('/admin/settings') },
+        { href: '/studio/portal', label: 'Studio', icon: 'studio', external: 'opens in a new tab' },
+      ],
+    },
   ]
   return (
-    <ul className="a-nav">
-      {items.map((i) => (
-        <li key={i.href}>
-          <Link href={i.href} aria-current={i.on ? 'page' : undefined}>
-            <Icon name={i.icon} />
-            {i.label}
-            {i.count ? <span className="a-badge" aria-label={`${i.count} need you`}>{i.count}</span> : null}
-          </Link>
-        </li>
+    <div className="a-nav">
+      {groups.map((g, n) => (
+        <div key={n} className={`a-nav-group${g.end ? ' a-nav-end' : ''}`}>
+          {g.label && <p className="a-nav-label" id={`a-nav-${n}`}>{g.label}</p>}
+          <ul aria-labelledby={g.label ? `a-nav-${n}` : undefined}>
+            {g.items.map((i) => (
+              <li key={i.href}>
+                {i.external ? (
+                  <a href={i.href} target="_blank" rel="noopener noreferrer">
+                    <Icon name={i.icon} />
+                    {i.label} <span className="sr-only">({i.external})</span><span aria-hidden="true" className="a-ext">↗</span>
+                  </a>
+                ) : (
+                  <Link href={i.href} aria-current={i.on ? 'page' : undefined}>
+                    <Icon name={i.icon} />
+                    {i.label}
+                    {i.count ? <span className="a-badge" aria-label={`${i.count} need you`}>{i.count}</span> : null}
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       ))}
-      <li>
-        <a href="https://calendar.google.com" target="_blank" rel="noopener noreferrer">
-          <Icon name="calendar" />
-          Calendar <span className="sr-only">(opens Google Calendar)</span><span aria-hidden="true" className="a-ext">↗</span>
-        </a>
-      </li>
-      <li>
-        <a href="/studio/portal" target="_blank" rel="noopener noreferrer">
-          <Icon name="studio" />
-          Studio <span className="sr-only">(opens in a new tab)</span><span aria-hidden="true" className="a-ext">↗</span>
-        </a>
-      </li>
-    </ul>
+    </div>
   )
 }

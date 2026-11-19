@@ -9,6 +9,7 @@ import { isContactLog, isSalesStage } from '@/admin/lead'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { nextStage, stageIndex, stageTitle } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
+import { SplitBar } from '@/admin/ui/graphics'
 import { LeadActivity, type LeadLogEntry } from '@/admin/ui/lead'
 import { NoteForm } from '@/admin/ui/note-form'
 import { PaymentsCard } from '@/admin/ui/payments-card'
@@ -108,6 +109,21 @@ function moneySummary(p: OfficeProject) {
   if (total) parts.push(billed < total ? `${cad(total - billed)} not billed yet` : 'all of it billed')
   if (partly) parts.push(`${partly} invoice${partly === 1 ? '' : 's'} partly paid, not counted`)
   return parts.join(' · ')
+}
+
+/** The same figures as the summary line, as the three parts of the quote total. Nothing without a quote total. */
+function moneyParts(p: OfficeProject) {
+  const live = (p.office.invoices ?? []).filter((i) => i.status !== 'void' && i.status !== 'deleted')
+  const total = p.projectType === 'retainer' ? undefined : (p.quote?.signature?.total ?? p.quoteAmount)
+  if (!total) return null
+  const paid = live.filter((i) => i.status === 'paid').reduce((n, i) => n + i.amount, 0)
+  const billed = live.reduce((n, i) => n + i.amount, 0)
+  const left = Math.max(0, total - billed)
+  return [
+    { label: 'Paid', value: paid, text: cad(paid), tone: 'accent' as const },
+    { label: 'Billed, not paid', value: billed - paid, text: cad(billed - paid), tone: 'soft' as const },
+    { label: 'Left to bill', value: left, text: cad(left), tone: 'dashed' as const },
+  ]
 }
 
 export default async function ProjectPage({ params, searchParams }: Props) {
@@ -408,10 +424,12 @@ function Money({ p, si, zohoOrg, children }: { p: OfficeProject; si: number; zoh
   const deposit = invoices.find((i) => i.kind === 'deposit')
   const final = invoices.find((i) => i.kind === 'final' || i.kind === 'retainer')
   const summary = moneySummary(p)
+  const parts = moneyParts(p)
   return (
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
       <div className="stack" style={{ gap: 'var(--space-1)' }}>
         {summary && <p className="pj-sum">{summary}</p>}
+        {parts && <div className="pj-split"><SplitBar parts={parts} /></div>}
         <p className="muted small" style={{ margin: 0 }}>
           {summary ? 'Before GST, from the quote total and the invoices on record from Zoho Books. ' : 'No quote total or invoices yet. '}
           {p.client.noGst ? 'No GST is charged to this client.' : 'GST is added on invoices.'}

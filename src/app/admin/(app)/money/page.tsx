@@ -5,7 +5,8 @@ import { cad } from '@/admin/insights'
 import { moneyView, RANGES, reportView, type GoalLine, type RangeKey } from '@/admin/money'
 import { loadMoney } from '@/admin/money-data'
 import { GoalsForm } from '@/admin/ui/goals-form'
-import { BarList, Meter, PairBars, SplitBar, YearLines } from '@/admin/ui/money-charts'
+import { Bar, DayStrip, Donut, MiniCols, Ring, SplitBar } from '@/admin/ui/graphics'
+import { BarList, PairBars, YearLines } from '@/admin/ui/money-charts'
 import { methodLabel } from '@/portal/pay-methods'
 
 export const metadata = { title: 'Money' }
@@ -67,6 +68,15 @@ function goalProgress(g: GoalLine) {
 function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
   const v = moneyView(data.projects, data.payments, data.goals)
   const shown = v.months.filter((m) => !m.future)
+  // Pictures for the tiles: the last six months collected, and every quoted project's total in its three parts.
+  const sixMonths = reportView(data.projects, data.payments, '12m').moneyByMonth.slice(-6)
+  const quotedWork = v.toBill.rows.filter((r) => r.total !== undefined && r.left !== undefined)
+  const billParts = (paid: number, billed: number, left: number) => [
+    { label: 'Paid', value: paid, text: cad(paid), tone: 'accent' as const },
+    { label: 'Billed, not paid', value: billed, text: cad(billed), tone: 'soft' as const },
+    { label: 'Left to bill', value: left, text: cad(left), tone: 'dashed' as const },
+  ]
+  const sumOf = (pick: (r: (typeof quotedWork)[number]) => number) => quotedWork.reduce((n, r) => n + pick(r), 0)
   return (
     <>
       <section aria-labelledby="mn-goals-h" className="stack mn-section">
@@ -78,7 +88,7 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
               <span className="a-kpi-num">{goalValue(g)}</span>
               <span className="mn-goal-target">{goalTarget(g)}</span>
               {g.goal && g.value !== null ? (
-                g.unit === 'rate' ? <Meter value={g.value / 100} tick={g.goal / 100} tickLabel="The goal" /> : <Meter value={g.share ?? 0} tick={g.paceShare} tickLabel="Even pace to today" />
+                g.unit === 'rate' ? <Bar value={g.value / 100} tick={g.goal / 100} /> : <Bar value={g.share ?? 0} tick={g.paceShare} />
               ) : null}
               {goalProgress(g) && <span className="mn-goal-progress">{goalProgress(g)}</span>}
               <span className="a-kpi-note">{g.note}</span>
@@ -131,11 +141,15 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
           <span className="a-kpi-label">Still to bill</span>
           <span className="a-kpi-num">{v.toBill.counted ? cad(v.toBill.total) : DASH}</span>
           <span className="a-kpi-note">{v.toBill.counted ? `Quote totals less what’s been invoiced, on ${plural(v.toBill.counted, 'active project')}` : 'No active project has a quote total on record'}{v.toBill.rows.length > v.toBill.counted ? `. ${v.toBill.rows.length - v.toBill.counted} more with no quote total.` : ''}</span>
+          {quotedWork.length > 0 && <SplitBar parts={billParts(sumOf((r) => r.paid), sumOf((r) => r.billedNotPaid), sumOf((r) => r.left ?? 0))} />}
         </div>
         <div className="a-kpi">
           <span className="a-kpi-label">Collected in {v.monthLabel}</span>
           <span className="a-kpi-num">{cad(v.collectedMonth.total)}</span>
           <span className="a-kpi-note">{plural(v.collectedMonth.count, 'payment')} recorded as paid this month</span>
+          <span className="gx-wrap" role="img" aria-label={`Collected in the last six months: ${sixMonths.map((m) => `${m.label} ${cad(m.collected)}`).join(', ')}.`}>
+            <MiniCols cols={sixMonths.map((m, i) => ({ label: m.label.slice(0, 1), value: m.collected, current: i === sixMonths.length - 1 }))} />
+          </span>
         </div>
       </div>
 
@@ -172,11 +186,6 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
           <h2 id="mn-bill-h" className="a-h2">Still to bill</h2>
           <span className="muted small">Active projects, Onboarding to Final delivery</span>
         </div>
-        <ul className="mn-legend" aria-hidden="true">
-          <li><span className="mn-key mn-split-paid" />Paid</li>
-          <li><span className="mn-key mn-split-billed" />Billed, not paid</li>
-          <li><span className="mn-key mn-split-left" />Left to bill</li>
-        </ul>
         {v.toBill.rows.length ? (
           <ul className="mn-bill">
             {v.toBill.rows.map((r) => (
@@ -187,8 +196,8 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
                 </span>
                 {r.total !== undefined && r.left !== undefined ? (
                   <>
-                    <SplitBar paid={r.paid} billed={r.billedNotPaid} left={r.left} />
-                    <span className="small muted">Paid {cad(r.paid)} · Billed, not paid {cad(r.billedNotPaid)} · Left to bill {cad(r.left)} · Quote total {cad(r.total)}</span>
+                    <SplitBar parts={billParts(r.paid, r.billedNotPaid, r.left)} />
+                    <span className="gx-caption">Quote total {cad(r.total)}</span>
                   </>
                 ) : (
                   <span className="small muted">{r.reason}. Billed so far: {cad(r.paid + r.billedNotPaid)}, of which {cad(r.paid)} paid.</span>
@@ -220,7 +229,15 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
             <h2 id="mn-how-h" className="a-h2">How clients pay</h2>
             <span className="muted small">Portal payments, {v.year}</span>
           </div>
-          <BarList rows={v.methodRows.map((m) => ({ label: m.label.replace(/^(?!e-)./, (c) => c.toUpperCase()), value: m.amount, text: cad(m.amount), note: plural(m.count, 'payment') }))} empty="No portal payments recorded as paid this year." />
+          {v.methodRows.some((m) => m.amount > 0) ? (
+            <Donut
+              total={cad(v.methodRows.reduce((n, m) => n + m.amount, 0))}
+              totalLabel="Paid"
+              parts={v.methodRows.map((m) => ({ label: m.label.replace(/^(?!e-)./, (c) => c.toUpperCase()), value: m.amount, text: cad(m.amount), note: plural(m.count, 'payment') }))}
+            />
+          ) : (
+            <p className="muted small mn-empty">No portal payments recorded as paid this year.</p>
+          )}
           <p className="small muted" style={{ margin: 0 }}>Only portal payment records say how they were paid. Invoices paid straight in Zoho Books aren’t in this split.</p>
         </section>
 
@@ -313,6 +330,7 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
           <span className="a-kpi-label">Win rate</span>
           <span className="a-kpi-num">{rate(v.win.rate)}</span>
           <span className="a-kpi-note">{v.win.decided ? `${v.win.signed} signed of ${v.win.decided} decided` : 'Nothing signed or declined in this range'}</span>
+          {v.win.decided > 0 && <SplitBar parts={[{ label: 'Signed', value: v.win.signed, text: String(v.win.signed), tone: 'accent' }, { label: 'Declined', value: v.win.decided - v.win.signed, text: String(v.win.decided - v.win.signed), tone: 'soft' }]} />}
         </div>
         <div className="a-kpi">
           <span className="a-kpi-label">Signed</span>
@@ -332,7 +350,15 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
             <h2 id="mn-src-h" className="a-h2">Where leads come from</h2>
             <span className="muted small">Leads, with the win rate for each</span>
           </div>
-          <BarList rows={v.sources.map((s) => ({ label: s.label, value: s.leads, text: plural(s.leads, 'lead'), note: s.decided ? `${s.rate}% won: ${s.signed} signed of ${s.decided} decided` : `${DASH} none decided yet` }))} empty="No leads in this range." />
+          {v.sources.length ? (
+            <Donut
+              total={String(v.leads)}
+              totalLabel={v.leads === 1 ? 'Lead' : 'Leads'}
+              parts={v.sources.map((s) => ({ label: s.label, value: s.leads, text: `${s.leads} · ${v.leads ? Math.round((s.leads / v.leads) * 100) : 0}%`, note: s.decided ? `${s.rate}% won: ${s.signed} signed of ${s.decided} decided` : 'None decided yet' }))}
+            />
+          ) : (
+            <p className="muted small mn-empty">No leads in this range.</p>
+          )}
         </section>
 
         <section className="p-card" aria-labelledby="mn-funnel-h">
@@ -340,7 +366,20 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
             <h2 id="mn-funnel-h" className="a-h2">The funnel</h2>
             <span className="muted small">Leads from this range, by how far they got</span>
           </div>
-          <BarList rows={v.funnel.map((f) => ({ label: f.label, value: f.count, text: String(f.count), note: f.ofBefore === null ? undefined : `${f.ofBefore}% of the step before` }))} empty="No leads in this range." />
+          {v.leads ? (
+            <ol className="gx-steps">
+              {v.funnel.map((f) => (
+                <li key={f.label}>
+                  <Ring value={f.ofBefore ?? f.ofAll} />
+                  <span className="gx-step-num">{f.count}</span>
+                  <span className="gx-step-label">{f.label}</span>
+                  <span className="gx-step-note">{f.ofBefore === null ? 'of all leads' : 'of the step before'}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="muted small mn-empty">No leads in this range.</p>
+          )}
           <p className="small muted" style={{ margin: 0 }}>From stage history: a lead counts for a step when it reached that stage or a later one. “Had a call” is reaching Quote to write.</p>
         </section>
 
@@ -357,7 +396,11 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
             <h2 id="mn-out-h" className="a-h2">What happened to them</h2>
             <span className="muted small">Leads from this range</span>
           </div>
-          <BarList rows={v.outcomes.map((o) => ({ label: o.label, value: o.count, text: String(o.count), note: v.leads ? `${Math.round((o.count / v.leads) * 100)}% of leads` : undefined }))} empty="No leads in this range." />
+          {v.leads ? (
+            <SplitBar parts={v.outcomes.map((o) => ({ label: o.label, value: o.count, text: `${o.count} · ${Math.round((o.count / v.leads) * 100)}%` }))} />
+          ) : (
+            <p className="muted small mn-empty">No leads in this range.</p>
+          )}
         </section>
 
         <section className="p-card" aria-labelledby="mn-day-h">
@@ -365,7 +408,11 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
             <h2 id="mn-day-h" className="a-h2">Which day leads come in</h2>
             <span className="muted small">Mountain time</span>
           </div>
-          <BarList rows={v.weekdays.map((d) => ({ label: d.label, value: d.count, text: String(d.count) }))} empty="No dated leads in this range." />
+          {v.weekdayCount ? (
+            <DayStrip label="Leads by day of the week" cells={v.weekdays.map((d) => ({ key: d.label, label: d.label.slice(0, 3), value: <>{d.count}<span className="sr-only"> on {d.label}s</span></>, level: d.count / Math.max(...v.weekdays.map((x) => x.count), 1) }))} />
+          ) : (
+            <p className="muted small mn-empty">No dated leads in this range.</p>
+          )}
         </section>
 
         <section className="p-card" aria-labelledby="mn-type-h">
@@ -381,7 +428,11 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
             <h2 id="mn-pipe-h" className="a-h2">Open pipeline right now</h2>
             <Link className="text-link small" href="/admin/pipeline">Open the pipeline</Link>
           </div>
-          <BarList rows={v.pipeline.map((s) => ({ label: s.label, value: s.count, text: String(s.count) }))} empty="Nobody in the sales stages right now." />
+          {v.pipeline.some((s) => s.count > 0) ? (
+            <MiniCols showValues cols={v.pipeline.map((s) => ({ label: s.label, value: s.count }))} />
+          ) : (
+            <p className="muted small mn-empty">Nobody in the sales stages right now.</p>
+          )}
           <p className="small muted" style={{ margin: 0 }}>Today’s count in each sales stage, whatever range is picked.</p>
         </section>
       </div>

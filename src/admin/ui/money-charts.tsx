@@ -55,28 +55,6 @@ export function PairBars({ rows, a, b, format, empty }: { rows: { label: string;
   )
 }
 
-/** A value against a goal: the bar fills to the value, and a tick marks where an even pace (or the goal itself) sits. */
-export function Meter({ value, tick, tickLabel }: { value: number; tick?: number; tickLabel?: string }) {
-  return (
-    <span className="mn-meter" aria-hidden="true">
-      <span className="mn-track"><span className="mn-fill" style={{ width: share(value, 1) }} /></span>
-      {tick !== undefined && <span className="mn-tick" style={{ left: share(tick, 1) }} title={tickLabel} />}
-    </span>
-  )
-}
-
-/** One project's quote total in three parts: paid, billed but not paid, and left to bill. */
-export function SplitBar({ paid, billed, left }: { paid: number; billed: number; left: number }) {
-  const total = paid + billed + left
-  return (
-    <span className="mn-split" aria-hidden="true">
-      {paid > 0 && <span className="mn-split-paid" style={{ flexGrow: paid / total }} />}
-      {billed > 0 && <span className="mn-split-billed" style={{ flexGrow: billed / total }} />}
-      {left > 0 && <span className="mn-split-left" style={{ flexGrow: left / total }} />}
-    </span>
-  )
-}
-
 export type YearMonth = { label: string; future: boolean; signedRun: number; collectedRun: number; pace?: number }
 
 /**

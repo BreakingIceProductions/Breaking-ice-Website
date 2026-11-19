@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import type { BoardCard } from '../board-data'
+import { Bar } from './graphics'
 import { StageControl } from './stage-control'
 import { StageDialog, type Stage } from './stage-dialog'
 
@@ -147,7 +148,7 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                             <span className="bd-amount">{!c.amount && c.budget ? `Budget ${c.budget}` : money(c.amount)}</span>
                             <span className="bd-meta"><span>{c.checks.length ? `${done} of ${c.checks.length} done` : ''}</span><span>{inStage(c.days)}</span></span>
                             {c.checks.length > 0 && (
-                              <span className="bd-bar" aria-hidden="true">{c.checks.map((k) => <i key={k.key} className={isDone(c, k.key, k.done) ? 'on' : ''} />)}</span>
+                              <Bar thin value={done / c.checks.length} />
                             )}
                             {c.cold && <span className="bd-flag">Going cold</span>}
                           </button>
