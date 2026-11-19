@@ -10,7 +10,8 @@ import { createHash, createHmac } from 'node:crypto'
  */
 export const r2Env = {
   accountId: process.env.R2_ACCOUNT_ID || '',
-  accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+  // RS_ACCESS_KEY_ID: the key was first saved under that name in Vercel, and sensitive names can't be renamed.
+  accessKeyId: process.env.R2_ACCESS_KEY_ID || process.env.RS_ACCESS_KEY_ID || '',
   secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
   bucket: process.env.R2_BUCKET || '',
 }
