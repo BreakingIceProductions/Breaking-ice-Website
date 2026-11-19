@@ -10,14 +10,14 @@ import { StageControl } from './stage-control'
 const STAGES = PIPELINE_STAGES.map((s) => ({ title: s.title as string, value: s.value as string }))
 
 /** The collapsible Archive bar under a board: completed and declined projects, each with a way back. */
-export function ArchiveBar({ id, list }: { id: string; list: OfficeProject[] }) {
+export function ArchiveBar({ id, list, title = 'Archive', empty = 'Nothing archived yet.' }: { id: string; list: OfficeProject[]; title?: string; empty?: string }) {
   const groups = [
     ['Completed', list.filter((p) => !p.declinedAt)],
     ['Declined', list.filter((p) => p.declinedAt)],
   ] as const
   return (
-    <Bucket id={id} title="Archive" count={list.length} closed>
-      {!list.length && <p className="muted small" style={{ margin: 0 }}>Nothing archived yet.</p>}
+    <Bucket id={id} title={title} count={list.length} closed>
+      {!list.length && <p className="muted small" style={{ margin: 0 }}>{empty}</p>}
       {groups.map(([label, sub]) =>
         sub.length ? (
           <section key={label} className="a-archive-group" aria-label={`${label} projects`}>

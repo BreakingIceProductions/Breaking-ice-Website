@@ -47,7 +47,7 @@ export default async function Contacts() {
       <section aria-label="At a glance" className="a-kpis">
         <div className="a-kpi"><span className="a-kpi-label">Companies</span><span className="a-kpi-num">{clients.length}</span><span className="a-kpi-note">{people.filter((p) => p.email).length} people with an email</span></div>
         <div className="a-kpi"><span className="a-kpi-label">Working with now</span><span className="a-kpi-num">{count('client')}</span><span className="a-kpi-note">Booked through delivered</span></div>
-        <div className="a-kpi"><span className="a-kpi-label">Open leads</span><span className="a-kpi-num">{count('lead')}</span><span className="a-kpi-note">Lead or quoted</span></div>
+        <div className="a-kpi"><span className="a-kpi-label">Open leads</span><span className="a-kpi-num">{count('lead')}</span><span className="a-kpi-note">Not booked yet</span></div>
         <div className="a-kpi"><span className="a-kpi-label">Past clients</span><span className="a-kpi-num">{count('past')}</span><span className="a-kpi-note">Worth a check-in</span></div>
       </section>
 

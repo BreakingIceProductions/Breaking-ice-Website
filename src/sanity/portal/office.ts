@@ -21,7 +21,7 @@ export const officeFields = [
     type: 'string',
     group: G,
     initialValue: 'lead',
-    options: { list: [...PIPELINE_STAGES] },
+    options: { list: PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value })) },
   }),
   defineField({
     name: 'archived',

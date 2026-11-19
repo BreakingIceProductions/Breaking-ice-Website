@@ -112,7 +112,7 @@ export default async function ProjectPage({ params }: Props) {
   return (
     <div className="a-page">
       <nav className="small" aria-label="Breadcrumb">
-        <Link className="text-link-plain muted" href="/admin/projects">Projects</Link> <span aria-hidden="true" className="muted">/</span> <span aria-current="page">{p.title}</span>
+        <Link className="text-link-plain muted" href="/admin/pipeline">Pipeline</Link> <span aria-hidden="true" className="muted">/</span> <span aria-current="page">{p.title}</span>
       </nav>
 
       <header className="a-head">
@@ -332,7 +332,7 @@ export default async function ProjectPage({ params }: Props) {
                 ))}
               </ul>
             )}
-            {!final && <p className="muted small" style={{ margin: 0 }}>The final invoice is drafted when you move the project to Delivered.</p>}
+            {!final && <p className="muted small" style={{ margin: 0 }}>The final invoice is drafted when you move the project to Final delivery.</p>}
           </section>
 
           <PaymentsCard

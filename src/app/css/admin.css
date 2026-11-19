@@ -105,7 +105,7 @@
 
 /* Project page */
 .a-stage-card { padding-block: var(--space-4); overflow-x: auto; }
-.a-stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(9, minmax(84px, 1fr)); gap: 6px; min-width: 820px; }
+.a-stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(11, minmax(84px, 1fr)); gap: 6px; min-width: 1000px; }
 .a-stages li { display: flex; flex-direction: column; gap: 6px; }
 .a-stages .bar { height: 8px; border-radius: var(--radius-pill); background: var(--line); }
 .a-stages .done .bar { background: var(--ink); }
@@ -284,8 +284,21 @@
 .a-kpi.is-hot { border-color: var(--accent-fill); }
 
 /* Board: stage columns of cards. Drag a card to a column to open the move preview. */
-.bd-scroll { overflow-x: auto; padding-bottom: var(--space-2); }
-.bd { display: grid; gap: var(--space-3); align-items: start; min-width: min-content; }
+/* One row of fixed-width columns that scrolls sideways. `position: relative` makes it the columns' offset parent, for the jump buttons. */
+.bd-scroll { position: relative; overflow-x: auto; padding: 2px 2px var(--space-3); scroll-padding-left: 2px; }
+.bd-scroll:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 2px; }
+.bd { display: flex; gap: var(--space-3); align-items: stretch; width: max-content; }
+.bd > .bd-col { flex: 0 0 260px; width: 260px; }
+.bd > .bd-col.is-folded { flex-basis: 150px; width: 150px; }
+/* First column of the next group: a gap with a rule down the middle of it. */
+.bd > .bd-col-starts { position: relative; margin-left: var(--space-8); }
+.bd > .bd-col-starts::before { content: ''; position: absolute; top: 0; bottom: 0; left: calc(var(--space-8) / -2 - var(--space-3) / 2 - 1px); width: 2px; border-radius: 1px; background: var(--line); }
+.bd-jump { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.bd-jump-hint { font-size: 13px; color: var(--ink-muted); }
+.bd-sum { margin: 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bd-on { flex: none; min-height: 28px; padding: 0 10px; border: 1.5px solid var(--accent-fill); border-radius: var(--radius-pill); background: transparent; color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.bd-on:hover { background: var(--warn-bg); }
+.bd-archives { display: flex; flex-direction: column; gap: var(--space-3); }
 .bd-col { display: flex; flex-direction: column; gap: var(--space-2); min-height: 320px; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); transition: border-color .12s, box-shadow .12s; }
 .bd-col.is-over { border-color: var(--accent-fill); box-shadow: 0 0 0 2px var(--accent-fill); }
 .bd-col-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
@@ -307,8 +320,8 @@
 .bd-bar i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
 .bd-bar i.on { background: var(--accent-fill); }
 .bd-flag { align-self: flex-start; margin-top: 4px; padding: 1px 8px; border-radius: var(--radius-pill); background: var(--warn-bg); color: var(--accent); font-size: 12px; font-weight: 600; }
-.bd-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); }
-.bd-next { min-width: 0; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--accent); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bd-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-top: 1px solid var(--line); }
+.bd-next { flex: 1 1 120px; min-width: 0; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--accent); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .bd-move select { min-height: 32px; max-width: 76px; padding: 0 4px; border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--ink-muted); font: inherit; font-size: 12px; cursor: pointer; }
 .bd-move select:hover { color: var(--ink); background: var(--info-bg); }
 .bd-empty { padding: var(--space-5) var(--space-3); border: 1px dashed var(--input-line); border-radius: var(--radius-sm); text-align: center; font-size: 13px; color: var(--ink-muted); }
@@ -362,8 +375,6 @@
 .g-form .g-short { flex: 0 1 140px; }
 .g-form .btn { min-height: 52px; }
 /* Board on two rows: wider columns, each row as tall as its fullest column. */
-.bd.bd-rows { gap: var(--space-4); align-items: stretch; }
-.bd-rows .bd-col { min-height: 240px; padding: var(--space-4); }
 /* Archive bar under a board; also a drop target for cards. */
 .bd-archive { display: flex; flex-direction: column; gap: var(--space-2); border-radius: var(--radius-lg); transition: box-shadow .12s; }
 .bd-archive.is-over { box-shadow: 0 0 0 2px var(--accent-fill); }

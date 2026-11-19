@@ -7,17 +7,18 @@ import type { BoardCard } from '../board-data'
 import { StageControl } from './stage-control'
 import { StageDialog, type Stage } from './stage-dialog'
 
-type Column = Stage & { hint: string; /** Fold the column down to a header until it's opened. */ quiet?: boolean }
+type Column = Stage & { hint: string; /** Fold the column down to a header until it's opened. */ quiet?: boolean; /** Columns sharing a group sit together, with a divider and a jump button per group. */ group?: string }
 
+const total = (n: number) => `$${Math.round(n).toLocaleString('en-CA')}`
 const money = (n?: number) => (n ? `$${Math.round(n).toLocaleString('en-CA')}` : 'No quote total')
 const inStage = (d: number | null) => (d == null ? '' : d === 0 ? 'Today in stage' : `${d} day${d === 1 ? '' : 's'} in stage`)
 
 /**
  * Projects as cards in stage columns. Drag a card to another column (or use its
  * Move menu) and the usual preview opens before anything runs. Click a card for
- * its checklist, money and links.
+ * its checklist, money and links. The columns sit in one row that scrolls sideways.
  */
-export function Board({ columns, cards, stages, empty, perRow, archive }: { columns: Column[]; cards: BoardCard[]; stages: Stage[]; empty: string; /** The archive bar. Dropping a card on it files the project away. */ archive?: React.ReactNode; /** Wrap the columns onto rows of this many, instead of one long row. */ perRow?: number }) {
+export function Board({ columns, cards, stages, empty, archive }: { columns: Column[]; cards: BoardCard[]; stages: Stage[]; empty: string; /** The archive bar. Dropping a card on it files the project away. */ archive?: React.ReactNode }) {
   const router = useRouter()
   const [over, setOver] = useState<string | null>(null)
   const [move, setMove] = useState<{ card: BoardCard; to: Stage } | null>(null)
@@ -31,6 +32,8 @@ export function Board({ columns, cards, stages, empty, perRow, archive }: { colu
   const fileDialog = useRef<HTMLDialogElement>(null)
   const dirty = useRef(false)
   const dialog = useRef<HTMLDialogElement>(null)
+  const scroller = useRef<HTMLDivElement>(null)
+  const groups = columns.filter((c, i) => c.group && c.group !== columns[i - 1]?.group).map((c) => ({ title: c.group!, first: c.value }))
   const openCard = cards.find((c) => c.id === openId) ?? null
 
   useEffect(() => {
@@ -87,6 +90,15 @@ export function Board({ columns, cards, stages, empty, perRow, archive }: { colu
     router.refresh()
   }
 
+  /** Scrolls the board so a group's first column sits at the left edge. */
+  function jump(first: string) {
+    const box = scroller.current
+    const col = box?.querySelector<HTMLElement>(`[data-stage="${first}"]`)
+    if (!box || !col) return
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    box.scrollTo({ left: col.offsetLeft, behavior: calm ? 'auto' : 'smooth' })
+  }
+
   function open(c: BoardCard) {
     setTab('overview')
     setOpenId(c.id)
@@ -94,18 +106,29 @@ export function Board({ columns, cards, stages, empty, perRow, archive }: { colu
 
   return (
     <>
-      <div className="bd-scroll">
-        <div className={`bd${perRow ? ' bd-rows' : ''}`} style={{ gridTemplateColumns: perRow ? `repeat(${perRow}, minmax(220px, 1fr))` : columns.map((c) => (c.quiet && !shown.includes(c.value) ? 'minmax(132px, .5fr)' : 'minmax(204px, 1fr)')).join(' ') }}>
-          {columns.map((col) => {
+      {groups.length > 1 && (
+        <div className="bd-jump">
+          <div className="a-switch" role="group" aria-label="Jump to">
+            {groups.map((g) => <button key={g.first} type="button" onClick={() => jump(g.first)}>{g.title}</button>)}
+          </div>
+          <span className="bd-jump-hint">Scroll sideways, or Shift + scroll</span>
+        </div>
+      )}
+      <div className="bd-scroll" ref={scroller} tabIndex={0} role="group" aria-label="Board, scrolls sideways">
+        <div className="bd">
+          {columns.map((col, ci) => {
             const list = cards.filter((c) => c.stage === col.value)
             const folded = Boolean(col.quiet) && !shown.includes(col.value)
+            const worth = list.reduce((n, c) => n + (c.amount ?? 0), 0)
+            const starts = Boolean(col.group) && ci > 0 && col.group !== columns[ci - 1].group
             return (
-              <section key={col.value} className={`bd-col${over === col.value ? ' is-over' : ''}`} aria-label={`${col.title}, ${list.length}`}
+              <section key={col.value} data-stage={col.value} className={`bd-col${folded ? ' is-folded' : ''}${starts ? ' bd-col-starts' : ''}${over === col.value ? ' is-over' : ''}`} aria-label={`${col.group ? `${col.group}: ` : ''}${col.title}, ${list.length}`}
                 onDragOver={(e) => { e.preventDefault(); setOver(col.value) }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null) }} onDrop={(e) => drop(e, col)}>
                 <header className="bd-col-head">
                   <h2 className="bd-col-title">{col.title}</h2>
                   <span className="bd-count">{list.length}</span>
                 </header>
+                {worth > 0 && <p className="bd-sum">{total(worth)}</p>}
                 <p className="bd-hint">{col.hint}</p>
                 {folded ? (
                   list.length > 0 && <button type="button" className="linklike small" onClick={() => setShown((s) => [...s, col.value])}>Show {list.length}</button>
@@ -113,6 +136,7 @@ export function Board({ columns, cards, stages, empty, perRow, archive }: { colu
                   <ul className="bd-cards">
                     {list.map((c) => {
                       const done = progress(c)
+                      const onward = done === c.checks.length ? stages[stages.findIndex((s) => s.value === c.stage) + 1] : undefined
                       return (
                         <li key={c.id} className={`bd-card${c.cold ? ' is-cold' : ''}`} draggable
                           onDragStart={(e) => { dragId.current = c.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.id) }}
@@ -129,6 +153,7 @@ export function Board({ columns, cards, stages, empty, perRow, archive }: { colu
                           </button>
                           <div className="bd-foot">
                             <span className="bd-next">Next: {nextOf(c)}</span>
+                            {onward && <button type="button" className="bd-on" onClick={() => setMove({ card: c, to: onward })}>Move on<span className="sr-only"> to {onward.title}</span></button>}
                             <label className="bd-move">
                               <span className="sr-only">Move {c.title} to another stage</span>
                               <select value="" onChange={(e) => { const s = stages.find((x) => x.value === e.target.value); if (s) setMove({ card: c, to: s }) }}>

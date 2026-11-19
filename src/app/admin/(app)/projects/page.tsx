@@ -1,13 +1,11 @@
 import { requireAdmin } from '@/admin/auth'
 import Link from 'next/link'
-import { boardCard, nextTwoWeeks } from '@/admin/board-data'
+import { redirect } from 'next/navigation'
 import { listProjects } from '@/admin/data'
 import { fmtDay } from '@/admin/dates'
-import { cad, isActive, needsAction } from '@/admin/insights'
+import { cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { stageIndex } from '@/admin/stages'
-import { ArchiveBar } from '@/admin/ui/archive-bar'
-import { Board } from '@/admin/ui/board'
 import { Bucket } from '@/admin/ui/bucket'
 import { StageControl } from '@/admin/ui/stage-control'
 import { PIPELINE_STAGES, REGIONS } from '@/sanity/portal/office-constants'
@@ -72,39 +70,22 @@ function ClientGroups({ id, list }: { id: string; list: Project[] }) {
   )
 }
 
-const HINTS: Record<string, string> = {
-  booked: 'Contract, deposit, dates',
-  preproduction: 'Shot list, people, travel',
-  shoot: 'On location, then backups',
-  roughcut: 'First cut and round 1',
-  finalcut: 'Final cut and round 2',
-  delivered: 'Finals out, invoice',
-  paid: 'Thank-you, then archive',
-}
-const STAGES = PIPELINE_STAGES.map((s) => ({ title: s.title as string, value: s.value as string }))
-
 export default async function Projects({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   await requireAdmin()
-  const [projects, sp] = await Promise.all([listProjects(), searchParams])
-  const list = sp.view === 'list'
-  const live = projects.filter((p) => !p.archived)
-  const archived = projects.filter((p) => p.archived)
-  const board = live.filter((p) => stageIndex(p.pipelineStage) >= stageIndex('booked'))
-  const active = live.filter(isActive)
-  const soon = nextTwoWeeks(projects)
-  const needs = needsAction(board).length
-  const early = live.length - board.length
+  // The board moved to the Pipeline page; only the list and archive live here now.
+  if ((await searchParams).view !== 'list') redirect('/admin/pipeline')
+  const projects = await listProjects()
   return (
-    <div className={`a-page${list ? '' : ' a-page-wide'}`}>
+    <div className="a-page">
       <header className="a-head">
         <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">Booked to paid</span>
+          <span className="eyebrow">New lead to closed</span>
           <h1 className="a-h1">Projects</h1>
         </div>
         <div className="btn-row">
           <div className="a-switch" role="group" aria-label="View">
-            <Link href="/admin/projects" aria-current={list ? undefined : 'page'}>Board</Link>
-            <Link href="/admin/projects?view=list" aria-current={list ? 'page' : undefined}>List and archive</Link>
+            <Link href="/admin/pipeline">Board</Link>
+            <Link href="/admin/projects?view=list" aria-current="page">List and archive</Link>
           </div>
           <a className="btn btn-primary" href="/studio/portal/intent/create/template=clientProject;type=clientProject" target="_blank" rel="noopener noreferrer">
             New project<span className="sr-only"> (opens the Studio)</span>
@@ -112,44 +93,7 @@ export default async function Projects({ searchParams }: { searchParams: Promise
         </div>
       </header>
 
-      {!list && (
-        <>
-          <section aria-label="At a glance" className="a-kpis">
-            <div className="a-kpi">
-              <span className="a-kpi-label">In production</span>
-              <span className="a-kpi-num">{cad(active.reduce((n, p) => n + (p.quoteAmount ?? 0), 0))}</span>
-              <span className="a-kpi-note">{active.length} active project{active.length === 1 ? '' : 's'}</span>
-            </div>
-            <div className="a-kpi">
-              <span className="a-kpi-label">Shoots, next 14 days</span>
-              <span className="a-kpi-num">{soon.shoots}</span>
-              <span className="a-kpi-note">From the shoot dates you set</span>
-            </div>
-            <div className="a-kpi">
-              <span className="a-kpi-label">Deliveries, next 14 days</span>
-              <span className="a-kpi-num">{soon.deliveries}</span>
-              <span className="a-kpi-note">From the delivery dates you set</span>
-            </div>
-            <div className={`a-kpi${needs ? ' is-hot' : ''}`}>
-              <span className="a-kpi-label">Need you</span>
-              <span className={`a-kpi-num${needs ? ' a-accent' : ''}`}>{needs}</span>
-              <span className="a-kpi-note">{needs ? <Link className="text-link" href="/admin">See them on the dashboard</Link> : 'Nothing waiting on you'}</span>
-            </div>
-          </section>
-          <Board
-            cards={board.map(boardCard)}
-            stages={STAGES}
-            empty="Nothing here"
-            perRow={4}
-            archive={<ArchiveBar id="board-archive" list={archived.filter((p) => stageIndex(p.pipelineStage) >= stageIndex('booked'))} />}
-            columns={STAGES.filter((s) => stageIndex(s.value) >= stageIndex('booked')).map((s) => ({ ...s, hint: HINTS[s.value] ?? ''}))}
-          />
-          {early > 0 && <p className="muted small" style={{ margin: 0 }}>{early} lead{early === 1 ? '' : 's'} and quote{early === 1 ? '' : 's'} not booked yet: <Link className="text-link" href="/admin/leads">open the Leads board</Link>.</p>}
-        </>
-      )}
-
-      {list && [
-
+      {[
         ...PIPELINE_STAGES.map((s) => ({ id: s.value as string, title: s.title as string, list: projects.filter((p) => !p.archived && p.pipelineStage === s.value) })),
         { id: 'archived', title: 'Archived', list: projects.filter((p) => p.archived) },
       ].map(({ id, title, list }) => {

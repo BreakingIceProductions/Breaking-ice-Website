@@ -165,7 +165,7 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
       {!q?.signature && (
         <p className="muted small" style={{ margin: 0 }}>
           {recipients.length
-            ? `Sending emails ${recipients.join(', ')} a link to review and sign it in their portal. Signing moves the project to Booked.`
+            ? `Sending emails ${recipients.join(', ')} a link to review and sign it in their portal. Signing moves the project to Onboarding.`
             : 'Add a contact for this client in the Studio before sending.'}
         </p>
       )}

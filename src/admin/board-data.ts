@@ -17,7 +17,7 @@ export type BoardCard = {
   amount?: number
   deposit?: number
   days: number | null
-  /** Sitting too long without an answer (leads 3+ days, quotes 7+). */
+  /** Sitting too long before booking (new lead 3+ days, call or proposal 5+, proposal out 7+). */
   cold?: boolean
   checks: { key: string; label: string; done: boolean }[]
   next: string
@@ -39,6 +39,9 @@ export function checklist(p: OfficeProject) {
     .filter(({ t }) => !t.when || t.when(p))
     .map(({ t, key }) => ({ key, label: t.title, done: done.has(key) }))
 }
+
+/** Days in a sales stage before a card is flagged as going cold. */
+const COLD_AFTER: Partial<Record<PipelineStage, number>> = { lead: 3, call: 5, proposal: 5, quoted: 7 }
 
 const INVOICE_KIND = { deposit: 'Deposit invoice', final: 'Final invoice', retainer: 'Retainer invoice' }
 
@@ -69,7 +72,7 @@ export function boardCard(p: OfficeProject): BoardCard {
     amount: p.quoteAmount,
     deposit: p.depositAmount,
     days,
-    cold: (p.pipelineStage === 'lead' && (days ?? 0) >= 3) || (p.pipelineStage === 'quoted' && (days ?? 0) >= 7),
+    cold: (days ?? 0) >= (COLD_AFTER[p.pipelineStage] ?? Infinity),
     checks,
     next: open ? open.label : after ? `Ready for ${after.title}` : 'All done',
     ready: after ? `Ready for ${after.title}` : 'All done',
@@ -113,4 +116,23 @@ export function winRate(projects: OfficeProject[]) {
   const won = projects.filter((p) => (p.office.stageHistory ?? []).some((h) => h.to === 'booked' && recent(h.at))).length
   const lost = projects.filter((p) => recent(p.declinedAt)).length
   return won + lost ? { won, lost, rate: Math.round((won / (won + lost)) * 100) } : null
+}
+
+const before = (p: OfficeProject, stage: PipelineStage) => stageIndex(p.pipelineStage) < stageIndex(stage)
+const sum = (list: OfficeProject[]) => list.reduce((n, p) => n + (p.quoteAmount ?? 0), 0)
+
+/** The "How it's going" tiles under the pipeline board. Archived projects only count toward the win rate. */
+export function pipelineTiles(projects: OfficeProject[]) {
+  const live = projects.filter((p) => !p.archived)
+  const inPlay = live.filter((p) => p.pipelineStage === 'proposal' || p.pipelineStage === 'quoted')
+  const production = live.filter((p) => !before(p, 'booked') && before(p, 'paid'))
+  // Onboarding without a paid deposit invoice: none drafted yet counts as waiting too.
+  const noDeposit = live.filter((p) => p.pipelineStage === 'booked' && !(p.office.invoices ?? []).some((i) => i.kind === 'deposit' && i.status === 'paid'))
+  return {
+    inPlay: { sum: sum(inPlay), count: inPlay.length, missing: inPlay.filter((p) => !p.quoteAmount).length },
+    production: { sum: sum(production), count: production.length },
+    waitingOnDeposit: noDeposit.length,
+    win: winRate(projects),
+    shoots: nextTwoWeeks(projects).shoots,
+  }
 }

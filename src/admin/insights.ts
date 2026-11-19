@@ -49,7 +49,11 @@ export function needsAction(projects: OfficeProject[]): Row[] {
     const since = p.office.stageChangedAt ?? ''
     if (p.pipelineStage === 'lead') {
       const d = daysSince(p.office.stageChangedAt) ?? 0
-      add(`lead-${since}`, { detail: 'New lead. Reply and send a quote.', when: d ? `${d} day${d === 1 ? '' : 's'}` : 'Today', urgent: d >= 2, sort: 10 - d })
+      add(`lead-${since}`, { detail: 'New lead. Reply and send a call link.', when: d ? `${d} day${d === 1 ? '' : 's'}` : 'Today', urgent: d >= 2, sort: 10 - d })
+    }
+    if (p.pipelineStage === 'proposal') {
+      const d = daysSince(p.office.stageChangedAt) ?? 0
+      add(`proposal-${since}`, { detail: 'Call done. Write the proposal.', when: d ? `${d} day${d === 1 ? '' : 's'}` : 'Today', urgent: d >= 3, sort: 8 - d })
     }
     for (const d of p.deliverables.filter((x) => x.status === 'changes-requested'))
       add(`fixes-${d._key}-v${d.version}`, { detail: `Notes in on ${d.title}. Start the fixes.`, when: `v${d.version}`, sort: 5 })
@@ -68,7 +72,7 @@ export function needsAction(projects: OfficeProject[]): Row[] {
       if (n <= 3) add(`due-${m.key}-${date}`, { detail: `${m.label} ${n < 0 ? 'was' : ''} ${fmtDay(date, { weekday: 'long' })}.`.replace('  ', ' '), when: n < 0 ? `${-n} days late` : n === 0 ? 'Today' : `In ${n} day${n === 1 ? '' : 's'}`, urgent: n <= 0, sort: n })
     }
     if (si >= idx('roughcut') && si < idx('delivered') && p.deliverables.length && p.deliverables.every((d) => d.status === 'approved'))
-      add(`approved-${since}`, { detail: 'Everything’s approved. Move it to Delivered.', when: 'Ready', sort: 2 })
+      add(`approved-${since}`, { detail: 'Everything’s approved. Move it to Final delivery.', when: 'Ready', sort: 2 })
   }
   return rows.sort((a, b) => a.sort - b.sort)
 }

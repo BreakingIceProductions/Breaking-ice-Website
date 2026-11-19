@@ -20,6 +20,8 @@ type TaskTpl = { title: string; offset: number; anchor?: keyof Milestones; when?
 
 export const STAGE_TASKS: Record<PipelineStage, TaskTpl[]> = {
   lead: [{ title: 'Reply and book a discovery call', offset: 1 }],
+  call: [{ title: 'Prepare for the discovery call', offset: 0 }],
+  proposal: [{ title: 'Write the proposal', offset: 2 }],
   quoted: [{ title: 'Follow up on the quote', offset: 5 }],
   booked: [
     { title: 'Send the contract', offset: 1 },
@@ -111,7 +113,8 @@ export async function planStage(p: OfficeProject, to: PipelineStage): Promise<St
 
   // Google Calendar: how the calendar will look with the new stage.
   const after = { ...p, pipelineStage: to }
-  const wanted = wantedEvents(after)
+  // The two call-and-proposal stages are bookkeeping only: they never touch the calendar.
+  const wanted = to === 'call' || to === 'proposal' ? [] : wantedEvents(after)
   if (wanted.length) {
     const have = new Set((p.office.calendar ?? []).map((r) => r._key))
     const added = wanted.filter((w) => !have.has(w.source)).length
@@ -168,7 +171,7 @@ export async function planStage(p: OfficeProject, to: PipelineStage): Promise<St
     })
   }
   if (ti < stageIndex('booked') && fi >= stageIndex('booked'))
-    warnings.push('Leads and quotes are hidden from clients, so this project disappears from their portal.')
+    warnings.push('Anything before Onboarding is hidden from clients, so this project disappears from their portal.')
 
   if (to === 'delivered') {
     const open = p.deliverables.filter((d) => d.status !== 'approved')

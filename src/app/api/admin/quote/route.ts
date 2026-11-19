@@ -1,7 +1,7 @@
 import { SITE_URL } from '@/lib/site'
 import { adminFromRequest } from '@/admin/auth'
 import { addLog, getProject } from '@/admin/data'
-import { runStage } from '@/admin/stages'
+import { runStage, stageIndex } from '@/admin/stages'
 import { signLinkToken } from '@/portal/auth'
 import { getPortalSettings, portalClient, producerFor } from '@/portal/data'
 import { quoteEmail, sendEmail } from '@/portal/email'
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
   const now = new Date().toISOString()
   const again = Boolean(fresh.sharedAt || fresh.lastSentAt)
   await portalClient.patch(fresh._id).setIfMissing({ sharedAt: now }).set({ lastSentAt: now }).commit()
-  if (p.pipelineStage === 'lead') await runStage(p, 'quoted').catch((e) => console.error('[admin] move to quoted failed', e))
+  if (stageIndex(p.pipelineStage) < stageIndex('quoted')) await runStage(p, 'quoted').catch((e) => console.error('[admin] move to quoted failed', e))
 
   const settings = await getPortalSettings()
   const producer = producerFor({ client }, settings)

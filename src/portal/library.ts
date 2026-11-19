@@ -188,7 +188,8 @@ export const CLIENT_STAGES = [
 /** 1-based position in CLIENT_STAGES. */
 export function clientStage(pipelineStage?: string, status?: string) {
   if (pipelineStage === 'paid' || (!pipelineStage && status === 'delivered')) return CLIENT_STAGES.length
-  if (pipelineStage === 'lead') return 1
+  // Everything before the quote is out (lead, call, proposal) reads as Quote.
+  if (pipelineStage === 'lead' || pipelineStage === 'call' || pipelineStage === 'proposal') return 1
   const i = CLIENT_STAGES.findIndex((s) => s.value === pipelineStage)
   // Projects from before the back office have no stage: they're booked.
   return i >= 0 ? i + 1 : 2
