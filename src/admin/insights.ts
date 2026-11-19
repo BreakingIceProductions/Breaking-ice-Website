@@ -53,7 +53,7 @@ export function needsAction(projects: OfficeProject[]): Row[] {
     }
     if (p.pipelineStage === 'proposal') {
       const d = daysSince(p.office.stageChangedAt) ?? 0
-      add(`proposal-${since}`, { detail: 'Call done. Write the proposal.', when: d ? `${d} day${d === 1 ? '' : 's'}` : 'Today', urgent: d >= 3, sort: 8 - d })
+      add(`proposal-${since}`, { detail: 'Call done. Write the quote.', when: d ? `${d} day${d === 1 ? '' : 's'}` : 'Today', urgent: d >= 3, sort: 8 - d })
     }
     for (const d of p.deliverables.filter((x) => x.status === 'changes-requested'))
       add(`fixes-${d._key}-v${d.version}`, { detail: `Notes in on ${d.title}. Start the fixes.`, when: `v${d.version}`, sort: 5 })

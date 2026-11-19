@@ -79,7 +79,7 @@ export default async function Projects({ searchParams }: { searchParams: Promise
     <div className="a-page">
       <header className="a-head">
         <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">New lead to closed</span>
+          <span className="eyebrow">New lead to paid</span>
           <h1 className="a-h1">Projects</h1>
         </div>
         <div className="btn-row">

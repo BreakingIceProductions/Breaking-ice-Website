@@ -28,7 +28,7 @@ export default async function Pipeline() {
     <div className="a-page a-page-wide">
       <header className="a-head">
         <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">New lead to closed</span>
+          <span className="eyebrow">New lead to paid</span>
           <h1 className="a-h1">Pipeline</h1>
           <p className="muted" style={{ margin: 0 }}>Every lead and every project, left to right. Drag a card to move it.</p>
         </div>
@@ -58,9 +58,9 @@ export default async function Pipeline() {
         <h2 id="going-h" className="a-h2">How it’s going</h2>
         <div className="a-kpis">
           <div className="a-kpi">
-            <span className="a-kpi-label">Proposals in play</span>
+            <span className="a-kpi-label">Quotes in play</span>
             <span className="a-kpi-num">{cad(t.inPlay.sum)}</span>
-            <span className="a-kpi-note">{plural(t.inPlay.count, 'proposal')} to write or out{t.inPlay.missing ? `, ${t.inPlay.missing} without a total` : ''}</span>
+            <span className="a-kpi-note">{plural(t.inPlay.count, 'quote')} to write or out{t.inPlay.missing ? `, ${t.inPlay.missing} without a total` : ''}</span>
           </div>
           <div className="a-kpi">
             <span className="a-kpi-label">Win rate, last 90 days</span>
@@ -80,7 +80,7 @@ export default async function Pipeline() {
           <div className={`a-kpi${cold ? ' is-hot' : ''}`}>
             <span className="a-kpi-label">Going cold</span>
             <span className={`a-kpi-num${cold ? ' a-accent' : ''}`}>{cold}</span>
-            <span className="a-kpi-note">New lead 3+ days, call or proposal 5+, proposal out 7+</span>
+            <span className="a-kpi-note">New lead 3+ days, call or quote to write 5+, quoted 7+</span>
           </div>
           <div className="a-kpi">
             <span className="a-kpi-label">Shoots, next 14 days</span>

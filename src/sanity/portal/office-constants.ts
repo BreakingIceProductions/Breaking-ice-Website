@@ -8,15 +8,15 @@
 export const PIPELINE_STAGES = [
   { title: 'New lead', value: 'lead', group: 'sales', hint: 'Reply and send a call link' },
   { title: 'Call booked', value: 'call', group: 'sales', hint: 'Discovery call on the calendar' },
-  { title: 'Proposal to write', value: 'proposal', group: 'sales', hint: 'Call done, quote to write' },
-  { title: 'Proposal out', value: 'quoted', group: 'sales', hint: 'Out with them' },
+  { title: 'Quote to write', value: 'proposal', group: 'sales', hint: 'Call done, quote to write' },
+  { title: 'Quoted', value: 'quoted', group: 'sales', hint: 'Out with them' },
   { title: 'Onboarding', value: 'booked', group: 'production', hint: 'Contract, deposit, welcome, kickoff' },
   { title: 'Pre-production', value: 'preproduction', group: 'production', hint: 'Brief, script, shoot locked' },
   { title: 'Filming', value: 'shoot', group: 'production', hint: 'On set' },
   { title: 'Editing', value: 'roughcut', group: 'production', hint: 'First cut' },
   { title: 'Revisions', value: 'finalcut', group: 'production', hint: 'Notes in, changes out' },
   { title: 'Final delivery', value: 'delivered', group: 'production', hint: 'Finals and final invoice' },
-  { title: 'Closed', value: 'paid', group: 'production', hint: 'Paid and wrapped' },
+  { title: 'Paid', value: 'paid', group: 'production', hint: 'Paid and wrapped' },
 ] as const
 
 export type PipelineStage = (typeof PIPELINE_STAGES)[number]['value']

@@ -21,7 +21,7 @@ type TaskTpl = { title: string; offset: number; anchor?: keyof Milestones; when?
 export const STAGE_TASKS: Record<PipelineStage, TaskTpl[]> = {
   lead: [{ title: 'Reply and book a discovery call', offset: 1 }],
   call: [{ title: 'Prepare for the discovery call', offset: 0 }],
-  proposal: [{ title: 'Write the proposal', offset: 2 }],
+  proposal: [{ title: 'Write the quote', offset: 2 }],
   quoted: [{ title: 'Follow up on the quote', offset: 5 }],
   booked: [
     { title: 'Send the contract', offset: 1 },
