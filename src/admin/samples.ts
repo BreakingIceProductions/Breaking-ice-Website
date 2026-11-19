@@ -32,7 +32,25 @@ export function sampleOfficeProjects(): OfficeProject[] {
       deliverables: [
         { _key: 'd1', title: 'Rigging', version: 2, status: 'approved' },
         { _key: 'd2', title: 'Soil & water sampling', version: 2, status: 'changes-requested', notifiedAt: at(-3) },
-        { _key: 'd3', title: 'Turbine removal', version: 2, status: 'awaiting-feedback', notifiedAt: at(-3) },
+        {
+          _key: 'd3',
+          title: 'Turbine removal',
+          category: 'video',
+          version: 2,
+          date: d(-3),
+          status: 'awaiting-feedback',
+          notifiedAt: at(-3),
+          // Plays in the review room: the 20-second sample clip, with two open comments.
+          host: 'r2',
+          r2Key: 'sample/review-sample.mp4',
+          r2Size: 1_666_560,
+          durationSec: 20.02,
+          fps: 23.976,
+          width: 1280,
+          height: 720,
+          length: '0:20',
+          openComments: 2,
+        },
         { _key: 'd4', title: 'Air gapping', version: 2, status: 'approved' },
       ],
       activity: [

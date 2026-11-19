@@ -9,6 +9,7 @@ import { syncPaymentsFromZoho } from './payments'
 import { deliveryEmail, fill, sendEmail, versionEmail } from './email'
 import type { ClientProject, Deliverable } from './types'
 import { groupDeliverables, isLatest } from './library'
+import { flushCommentNotices } from './review'
 import { syncVimeo } from './vimeo'
 
 /**
@@ -98,6 +99,7 @@ export async function runScheduler(now = Date.now()) {
     try {
       await syncVimeo(p, log).catch((e) => log.push(`vimeo failed for ${p.title}: ${String(e).slice(0, 120)}`))
       await projectEmails(p, now, settings, log)
+      await flushCommentNotices(p, now, log).catch((e) => log.push(`comment notice failed for ${p.title}: ${String(e).slice(0, 120)}`))
     } catch (e) {
       log.push(`project failed: ${p.title}: ${String(e).slice(0, 160)}`)
     }
@@ -154,7 +156,7 @@ async function projectEmails(p: ClientProject, now: number, settings: Settings, 
 
     const isNew = d.notifiedVersion !== v
     let due = false
-    if (isNew) due = now - Date.parse(d.readyAt) >= HOLD && Boolean(d.shareUrl || d.fileUrl)
+    if (isNew) due = now - Date.parse(d.readyAt) >= HOLD && Boolean(d.shareUrl || d.fileUrl || d.r2Key)
     else if (d.remindedVersion !== v && d.notifiedAt && !d.dontEmail) {
       const notified = Date.parse(d.notifiedAt)
       const at = d.feedbackDue ? Date.parse(`${d.feedbackDue}T09:00:00-06:00`) - 2 * DAY : notified + (settings.reminderDays || 7) * DAY

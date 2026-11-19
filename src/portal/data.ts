@@ -41,6 +41,7 @@ const PROJECT_FIELDS = `_id, _updatedAt, title, "slug": slug.current, startDate,
 export const STATE_FIELDS = [
   'readyVersion', 'readyAt', 'notifiedVersion', 'notifiedAt', 'remindedVersion', 'viewedVersion', 'versionedAt',
   'vimeoThumb', 'vimeoEmbed', 'vimeoLength', 'vimeoVersions', 'vimeoReview', 'vimeoAccess',
+  'share', 'commentsNotifiedAt', 'commentsPending',
 ] as const
 type StateFields = Pick<Deliverable, (typeof STATE_FIELDS)[number]>
 type ProjectStateFields = Pick<ClientProject, 'deliveredSeenAt' | 'deliveredNotifiedAt'>
@@ -206,7 +207,13 @@ export async function allProjects(filter = 'true') {
   return ((await q<ClientProject[]>(`*[_type == "clientProject" && defined(slug.current) && !(pipelineStage in $hidden) && ${filter}]{${PROJECT_FIELDS}}`, { hidden: PRE_PORTAL_STAGES })) ?? []).map(decorate)
 }
 
-export const producerFor = (p: { client: PortalClient }, settings: typeof DEFAULT_PORTAL) =>
+/** One project by its id, as the portal sees it (for share links, which have no signed-in client). */
+export async function getProjectById(id: string) {
+  const p = await q<ClientProject>(`*[_type == "clientProject" && _id == $id][0]{${PROJECT_FIELDS}}`, { id })
+  return p ? decorate(p) : null
+}
+
+export const producerFor =(p: { client: PortalClient }, settings: typeof DEFAULT_PORTAL) =>
   p.client.producer?.name ? p.client.producer : settings.producer
 
 /* ── Sign-in guard: code attempts counted on the server, per email ─────── */

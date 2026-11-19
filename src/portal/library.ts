@@ -69,9 +69,9 @@ export function isLatest(d: Deliverable, all: Deliverable[] = []) {
 export const clientCanOpen = (d: Deliverable, all: Deliverable[] = []) => d.status !== 'in-progress' && (isLatest(d, all) || Boolean(d.clientCanView))
 
 /** Next version number for a title, and the title as already written (so "poster" joins "Poster"). */
-/** Final videos of a delivered project can be downloaded (the file comes from Vimeo). */
+/** Final videos of a delivered project can be downloaded (the file comes from Final Files, Vimeo or the review copy). */
 export const canDownloadVideo = (p: { status?: string; deliverables?: Deliverable[] }, d: Deliverable) =>
-  p.status === 'delivered' && Boolean(d.final) && categoryOf(d) === 'video' && Boolean(d.shareUrl) && clientCanOpen(d, p.deliverables)
+  p.status === 'delivered' && Boolean(d.final) && categoryOf(d) === 'video' && Boolean(d.shareUrl || d.r2Key) && clientCanOpen(d, p.deliverables)
 
 export const isVideoFile = (f: Pick<DriveFile, 'name' | 'mimeType'>) => fileKind({ name: f.name, mime: f.mimeType }) === 'video'
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()

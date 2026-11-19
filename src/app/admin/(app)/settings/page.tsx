@@ -5,6 +5,7 @@ import { listGuests } from '@/admin/guests'
 import { GuestsCard } from '@/admin/ui/guests-card'
 import { SITE_URL } from '@/lib/site'
 import { serviceAccountEmail } from '@/admin/google'
+import { r2Env, r2Ready } from '@/portal/r2'
 import { ticktickConnection, ticktickRedirect } from '@/admin/ticktick'
 import { zohoConnection, zohoNeedsReconnect, zohoRedirect } from '@/admin/zoho'
 
@@ -106,6 +107,23 @@ export default async function Settings({ searchParams }: Props) {
             </li>
             <li>In the Google Cloud project that owns that service account, turn on the Google Calendar API.</li>
             <li>Copy the Calendar ID (Settings → Integrate calendar) into <code>GOOGLE_CALENDAR_ID</code> in Vercel, then redeploy.</li>
+          </ol>
+        )}
+      </section>
+
+      <section className="p-card" aria-labelledby="h-r2">
+        <div className="a-card-head">
+          <h2 id="h-r2" className="a-h2">Review storage (R2)</h2>
+          <span className={`a-conn-state ${r2Ready() ? 'on' : 'off'}`}>{r2Ready() ? 'Ready' : 'Not set up'}</span>
+        </div>
+        <p className="muted small" style={{ margin: 0 }}>Holds the MP4 review copies for the review room (Finder → a video → Upload for review). Clients and guests watch from short-lived private links; Vimeo links keep working as before.</p>
+        {r2Ready() ? (
+          <p className="small" style={{ margin: 0 }}>Bucket <code>{r2Env.bucket}</code>.</p>
+        ) : (
+          <ol className="a-steps small">
+            <li>In Cloudflare, create a private R2 bucket and an R2 API token with Object Read &amp; Write on that bucket only.</li>
+            <li>Set the bucket’s CORS policy (the JSON is in <code>docs/r2-setup.md</code>) so the browser can upload and play.</li>
+            <li>In Vercel, add <code>R2_ACCOUNT_ID</code>, <code>R2_ACCESS_KEY_ID</code>, <code>R2_SECRET_ACCESS_KEY</code> and <code>R2_BUCKET</code>, then redeploy.</li>
           </ol>
         )}
       </section>

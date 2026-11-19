@@ -27,7 +27,8 @@ export default async function PortalProject({ params, searchParams }: Props) {
   const billing = billingStatus(p.billing)
   const dates = (p.keyDates ?? []).filter((k) => k.label).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
   // Invoice details stay on the server; the browser only gets the status above.
-  const forBrowser = { ...p, billing: undefined }
+  // So do guest share links (the back office hands those out).
+  const forBrowser = { ...p, billing: undefined, deliverables: p.deliverables?.map(({ share: _share, commentsPending: _p, ...d }) => d) }
 
   return (
     <div className="wrap p-project">
@@ -78,7 +79,7 @@ export default async function PortalProject({ params, searchParams }: Props) {
       <section id="work" aria-labelledby="work-h" className="p-work p-anchor">
         <h2 id="work-h" className="h3">Your work</h2>
         <Suspense>
-          <ProjectLibrary project={forBrowser} demo={Boolean(session.demo)} uploaderName={me?.name ?? ''} />
+          <ProjectLibrary project={forBrowser} demo={Boolean(session.demo)} uploaderName={me?.name ?? ''} viewOnly={Boolean(session.preview)} />
         </Suspense>
       </section>
     </div>

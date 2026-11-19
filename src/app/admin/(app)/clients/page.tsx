@@ -1,5 +1,7 @@
 import { Suspense } from 'react'
 import { requireAdmin } from '@/admin/auth'
+import { adminSampleMode } from '@/admin/config'
+import { r2Ready } from '@/portal/r2'
 import { listClients } from '@/admin/data'
 import { stageTitle } from '@/admin/stages'
 import { AdminLibrary, type LibProject } from '@/admin/ui/library'
@@ -38,6 +40,7 @@ export default async function Clients() {
         <AdminLibrary
           clients={clients.map((c) => ({ _id: c._id, organizationName: c.organizationName, contacts: c.contacts }))}
           projects={projects}
+          reviewUpload={r2Ready() || adminSampleMode()}
         />
       </Suspense>
     </div>

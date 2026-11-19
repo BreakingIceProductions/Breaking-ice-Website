@@ -254,6 +254,21 @@ export const clientProject = defineType({
               type: 'url',
             }),
             defineField({ name: 'fileName', title: 'File name', type: 'string', hidden: ({ parent }) => !parent?.fileUrl, readOnly: true, description: 'Set automatically when uploaded from the back office.' }),
+            defineField({
+              name: 'host',
+              title: 'Plays from',
+              type: 'string',
+              readOnly: true,
+              hidden: ({ parent }) => parent?.host !== 'r2',
+              options: { list: [{ title: 'Vimeo', value: 'vimeo' }, { title: 'Review room (our storage)', value: 'r2' }] },
+              description: 'Set automatically when a review copy is uploaded from the back office.',
+            }),
+            defineField({ name: 'r2Key', title: 'Review copy (storage key)', type: 'string', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
+            defineField({ name: 'r2Size', title: 'Review copy size (bytes)', type: 'number', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
+            defineField({ name: 'durationSec', title: 'Duration (seconds)', type: 'number', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
+            defineField({ name: 'fps', title: 'Frame rate', type: 'number', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
+            defineField({ name: 'width', type: 'number', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
+            defineField({ name: 'height', type: 'number', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
             defineField({ name: 'thumbnail', type: 'image', options: { hotspot: true } }),
             defineField({ name: 'feedbackDue', title: 'Feedback due', type: 'date' }),
             defineField({ name: 'length', title: 'Length', description: 'e.g. 2:45', type: 'string' }),
@@ -396,4 +411,57 @@ export const portalPayment = defineType({
   preview: { select: { title: 'label', total: 'total', status: 'status' }, prepare: ({ title, total, status }) => ({ title, subtitle: `$${total ?? 0} · ${status ?? ''}` }) },
 })
 
-export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment]
+/** A time-coded note in the review room. Written by the site; read-only here. */
+export const reviewComment = defineType({
+  name: 'reviewComment',
+  title: 'Review comment',
+  type: 'document',
+  readOnly: true,
+  fields: [
+    defineField({ name: 'project', type: 'reference', to: [{ type: 'clientProject' }], weak: true }),
+    defineField({ name: 'deliverableKey', title: 'Version entry (key)', type: 'string' }),
+    defineField({ name: 'version', type: 'number' }),
+    defineField({ name: 't', title: 'At (seconds)', type: 'number' }),
+    defineField({ name: 'tOut', title: 'To (seconds)', type: 'number' }),
+    defineField({ name: 'text', type: 'text', validation: (r) => r.max(2000) }),
+    defineField({
+      name: 'author',
+      type: 'object',
+      fields: [
+        defineField({ name: 'kind', type: 'string', options: { list: ['client', 'guest', 'admin'] } }),
+        defineField({ name: 'name', type: 'string' }),
+        defineField({ name: 'email', type: 'string' }),
+        defineField({ name: 'key', title: 'Guest key (hashed)', type: 'string', hidden: true }),
+      ],
+    }),
+    defineField({ name: 'parent', title: 'Reply to (comment id)', type: 'string' }),
+    defineField({ name: 'done', type: 'boolean' }),
+    defineField({ name: 'doneBy', type: 'string' }),
+    defineField({ name: 'doneAt', type: 'datetime' }),
+    defineField({
+      name: 'drawing',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'shape',
+          fields: [
+            defineField({ name: 'type', type: 'string' }),
+            defineField({ name: 'color', type: 'string' }),
+            // Sanity can't nest arrays, so points are stored flat: x1, y1, x2, y2…
+            defineField({ name: 'points', title: 'Points (x, y pairs, 0–1)', type: 'array', of: [defineArrayMember({ type: 'number' })] }),
+          ],
+        }),
+      ],
+    }),
+    defineField({ name: 'createdAt', type: 'datetime' }),
+    defineField({ name: 'editedAt', type: 'datetime' }),
+  ],
+  orderings: [{ title: 'Newest', name: 'newest', by: [{ field: 'createdAt', direction: 'desc' }] }],
+  preview: {
+    select: { title: 'text', name: 'author.name', version: 'version', t: 't' },
+    prepare: ({ title, name, version, t }) => ({ title, subtitle: `${name ?? ''} · v${version ?? 1} · ${Math.floor((t ?? 0) / 60)}:${String(Math.floor((t ?? 0) % 60)).padStart(2, '0')}` }),
+  },
+})
+
+export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment]

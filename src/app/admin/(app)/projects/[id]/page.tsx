@@ -547,7 +547,7 @@ function Portal({ p, si, lib, viewAs, clientPath, preBooking, to }: { p: OfficeP
                       </td>
                       <td><span className={`pill pill-${d.status}`}>{REVIEW_WORD[d.status] ?? d.status}</span></td>
                       <td>{versionLabel(d)}{d.viewedVersion === d.version && d.status === 'awaiting-feedback' ? ' · opened' : ''}</td>
-                      <td className="num">{d.shareUrl ? <a className="text-link" href={d.shareUrl} target="_blank" rel="noopener noreferrer">Vimeo<span className="sr-only"> (opens in a new tab)</span></a> : d.fileUrl ? <a className="text-link" href={d.fileUrl} target="_blank" rel="noopener noreferrer">{d.fileName ?? 'File'}<span className="sr-only"> (opens in a new tab)</span></a> : <span className="muted">—</span>}</td>
+                      <td className="num">{d.host === 'r2' ? <Link className="text-link" href={`/admin/review/${encodeURIComponent(p._id)}/${encodeURIComponent(d._key)}`}>Review room{d.openComments ? ` · ${d.openComments} open` : ''}</Link> : d.shareUrl ? <a className="text-link" href={d.shareUrl} target="_blank" rel="noopener noreferrer">Vimeo<span className="sr-only"> (opens in a new tab)</span></a> : d.fileUrl ? <a className="text-link" href={d.fileUrl} target="_blank" rel="noopener noreferrer">{d.fileName ?? 'File'}<span className="sr-only"> (opens in a new tab)</span></a> : <span className="muted">—</span>}</td>
                     </tr>
                   ))}
                 </tbody>

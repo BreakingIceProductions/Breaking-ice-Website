@@ -59,6 +59,49 @@ export type Deliverable = {
   vimeoReview?: string
   /** Whether the video's Vimeo links are currently switched on ('on' | 'off'). */
   vimeoAccess?: string
+  /** Where the video plays: Vimeo (a shareUrl), or our own review room (an MP4 in R2). Unset means Vimeo. */
+  host?: 'vimeo' | 'r2'
+  /** The review copy's object key in the R2 bucket. */
+  r2Key?: string
+  r2Size?: number
+  durationSec?: number
+  /** Frame rate of the review copy, for timecode: 23.976, 24, 25, 29.97, 30, 50, 59.94 or 60. */
+  fps?: number
+  width?: number
+  height?: number
+  /** Guest link to the review room. Kept in the state record so publishing an old draft can't bring back a switched-off link. */
+  share?: { token: string; on: boolean; createdAt: string }
+  /** When the owner was last told about new comments on this version, and whether more came in since. */
+  commentsNotifiedAt?: string
+  commentsPending?: boolean
+  /** Worked out on the server (never stored): open comments from the client or guests on this version. */
+  openComments?: number
+}
+
+export const REVIEW_FPS = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60] as const
+
+/** One shape drawn on a paused frame. Coordinates are 0–1 of the picture's width and height. */
+export type ReviewShape = { type: 'arrow' | 'box' | 'pen'; color: string; points: [number, number][] }
+
+/** A time-coded comment in the review room, as the browser sees it. */
+export type ReviewComment = {
+  _id: string
+  deliverableKey: string
+  version: number
+  /** Seconds into the video; tOut makes it a range. */
+  t: number
+  tOut?: number
+  text: string
+  author: { kind: 'client' | 'guest' | 'admin'; name: string }
+  parent?: string
+  done?: boolean
+  doneBy?: string
+  doneAt?: string
+  drawing?: ReviewShape[]
+  createdAt: string
+  editedAt?: string
+  /** Worked out per viewer: they wrote it. */
+  mine?: boolean
 }
 
 export type ActivityItem = { _key: string; at: string; text: string; kind?: string }

@@ -26,6 +26,7 @@ const FIELDS = `_id, _updatedAt, title, "slug": slug.current, startDate, status,
   pipelineStage, archived, hiddenFromClient, declinedAt, projectType, region, quoteAmount, depositAmount, quoteUrl, milestones, schedule, crew, retainer,
   "client": client->{_id, organizationName, contacts[]{_key, name, email, role, getsEmails}, billingEmail, driveFolderId, portalPayments, noGst},
   "portalState": *[_id == "portal-state-" + ^._id][0]{ deliverables, "activity": activity[0...20] },
+  "reviewOpen": *[_type == "reviewComment" && project._ref == ^._id && !defined(parent) && done != true && author.kind != "admin"]{"k": deliverableKey, "v": version},
   "office": *[_id == "bo-state-" + ^._id][0],
   "quote": *[_id == "quote-" + ^._id][0]{version, fileName, summary, note, includes, options, depositPercent, validUntil, updatedAt, sharedAt, lastSentAt, viewedAt, viewedBy,
     "signature": signature{name, title, email, at, method, option, total, deposit, certificateId}}`
@@ -38,10 +39,12 @@ type Raw = Omit<OfficeProject, 'office' | 'activity' | 'milestones' | 'schedule'
   deliverables?: Deliverable[]
   portalState?: { deliverables?: (Partial<Deliverable> & { _key: string })[]; activity?: OfficeProject['activity'] } | null
   office?: OfficeState | null
+  /** Open review-room comments from the client or guests (one row each). */
+  reviewOpen?: { k: string; v: number }[] | null
 }
 
 function normalize(p: Raw): OfficeProject {
-  const { portalState, office, ...rest } = p
+  const { portalState, office, reviewOpen, ...rest } = p
   return {
     ...rest,
     // Projects from before the back office existed count as booked, unless already delivered.
@@ -50,7 +53,8 @@ function normalize(p: Raw): OfficeProject {
     schedule: (p.schedule ?? []).filter((s) => s?.start && s.title),
     deliverables: (p.deliverables ?? []).map((d) => {
       const st = portalState?.deliverables?.find((x) => x._key === d._key)
-      return { ...d, ...Object.fromEntries(STATE_FIELDS.map((f) => [f, st?.[f]])), version: d.version || 1 }
+      const open = (reviewOpen ?? []).filter((r) => r.k === d._key && r.v === (d.version || 1)).length
+      return { ...d, ...Object.fromEntries(STATE_FIELDS.map((f) => [f, st?.[f]])), version: d.version || 1, ...(open ? { openComments: open } : {}) }
     }),
     activity: portalState?.activity ?? [],
     office: office ?? { _id: officeId(p._id) },
@@ -343,14 +347,24 @@ export async function removeLink(projectId: string, linkKey: string) {
  */
 export async function addVersion(
   projectId: string,
-  v: { category: Category; title: string; shareUrl?: string; fileUrl?: string; fileName?: string; notes?: string; send: boolean },
+  v: {
+    category: Category
+    title: string
+    shareUrl?: string
+    fileUrl?: string
+    fileName?: string
+    notes?: string
+    send: boolean
+    /** A review copy uploaded to our storage, under the key chosen when the upload started. */
+    r2?: { key: string; r2Key: string; r2Size?: number; durationSec?: number; fps?: number; width?: number; height?: number; version?: number }
+  },
 ) {
   if (sample()) return
   const p = await getProject(projectId)
   if (!p) throw new Error('project not found')
   const next = nextVersion(p.deliverables, v.category, v.title)
   const entry = {
-    _key: key(),
+    _key: v.r2?.key ?? key(),
     _type: 'deliverable',
     title: next.title,
     category: v.category,
@@ -360,6 +374,8 @@ export async function addVersion(
     ...(v.shareUrl ? { shareUrl: v.shareUrl } : {}),
     ...(v.fileUrl ? { fileUrl: v.fileUrl, fileName: v.fileName } : {}),
     ...(v.notes ? { notes: v.notes } : {}),
+    ...(v.r2?.durationSec ? { length: `${Math.floor(v.r2.durationSec / 60)}:${String(Math.floor(v.r2.durationSec % 60)).padStart(2, '0')}` } : {}),
+    ...(v.r2 ? { host: 'r2', r2Key: v.r2.r2Key, r2Size: v.r2.r2Size, durationSec: v.r2.durationSec, fps: v.r2.fps, width: v.r2.width, height: v.r2.height } : {}),
   }
   await portalClient.patch(projectId).setIfMissing({ deliverables: [] }).append('deliverables', [entry]).commit({ autoGenerateArrayKeys: false })
   return entry

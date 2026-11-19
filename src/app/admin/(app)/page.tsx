@@ -99,6 +99,8 @@ function lately(projects: OfficeProject[], t: string) {
 function rowHref(r: Row) {
   const k = r.key ?? ''
   const page = pageHref(r.project._id, r.project.pipelineStage)
+  const room = /^comments-(.+)-v\d+$/.exec(k)
+  if (room) return `/admin/review/${encodeURIComponent(r.project._id)}/${encodeURIComponent(room[1])}`
   if (!page.startsWith('/admin/projects/')) return page
   return /^(no-invoice|draft)-/.test(k) ? `${page}?tab=money` : /^(fixes|feedback)-/.test(k) ? `${page}?tab=portal` : page
 }
@@ -213,7 +215,7 @@ export default async function Today() {
   const onYou = cards.flatMap((c) => c.onYou.map((w) => ({ c, w })))
   const onClient = cards.flatMap((c) => c.onClient.map((w) => ({ c, w })))
   const asItem = ({ c, w }: (typeof onYou)[number]): Item => ({ key: `${c.id}-${w.key}`, href: w.href && !w.external ? w.href : c.href, title: c.title, text: w.text, side: w.when, urgent: w.urgent })
-  const notes = onYou.filter((x) => x.w.key.startsWith('fixes-')).map(asItem)
+  const notes = onYou.filter((x) => /^(fixes|comments)-/.test(x.w.key)).map(asItem)
   const withClients = onClient.map(asItem)
   const cutsOut = onClient.filter((x) => x.w.key.startsWith('feedback-')).map((x) => ({ ...asItem(x), href: x.c.quoteOnly ? x.c.href : projectTab(x.c.id, 'portal') }))
   const owed: Item[] = money.owed.rows.map((b) => ({ key: b.key, href: projectTab(b.projectId, 'money'), title: b.project, text: `${b.label} · ${b.status}`, side: cad(b.owed) }))

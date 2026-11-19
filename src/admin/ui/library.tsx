@@ -10,6 +10,7 @@ import { fmtSize } from '@/portal/resumable'
 import { FeedbackList, ReviewThumb, VersionHead, WatchTile } from '@/portal/review-ui'
 import type { Deliverable, DriveFile } from '@/portal/types'
 import { Uploader } from '@/portal/uploader'
+import { R2Upload } from './r2-upload'
 
 export type LibClient = { _id: string; organizationName: string; contacts?: { _key: string; name: string; email: string; role?: string }[] }
 export type LibProject = {
@@ -36,7 +37,7 @@ const json = (method: string, url: string, body: unknown) =>
   fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(async (r) => ({ ok: r.ok, ...(await r.json().catch(() => ({}))) }))
 
 /** Every client's projects as Finder-style columns: exactly what each client sees, plus Josh's controls. */
-export function AdminLibrary({ clients, projects }: { clients: LibClient[]; projects: LibProject[] }) {
+export function AdminLibrary({ clients, projects, reviewUpload = false }: { clients: LibClient[]; projects: LibProject[]; reviewUpload?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -73,7 +74,7 @@ export function AdminLibrary({ clients, projects }: { clients: LibClient[]; proj
     panel = <VersionPanel project={at.project} d={at.version} onChange={refresh} onDeleted={() => { setPath(path.slice(0, 3)); refresh() }} />
   } else if (at.group && at.project) {
     title = at.group.title
-    panel = <GroupPanel project={at.project} group={at.group} onChange={refresh} onOpen={(key) => setPath([...path.slice(0, 4), key])} />
+    panel = <GroupPanel project={at.project} group={at.group} reviewUpload={reviewUpload} onChange={refresh} onOpen={(key) => setPath([...path.slice(0, 4), key])} />
   } else if (at.project && at.folder === 'assets') {
     title = REFERENCE
     panel = <AssetsPanel project={at.project} />
@@ -82,7 +83,7 @@ export function AdminLibrary({ clients, projects }: { clients: LibClient[]; proj
     panel = <AssetsPanel project={at.project} folder={FINALS} />
   } else if (at.project && at.category) {
     title = at.category === 'video' ? 'Videos' : 'Documents'
-    panel = <AddVersion project={at.project} category={at.category} onAdded={refresh} />
+    panel = <AddVersion project={at.project} category={at.category} reviewUpload={reviewUpload} onAdded={refresh} />
   } else if (at.project) {
     title = 'Project'
     panel = <ProjectPanel p={at.project} />
@@ -132,8 +133,9 @@ function ProjectPanel({ p }: { p: LibProject }) {
   )
 }
 
-/** Add a version: a Vimeo link for videos, a file for documents. */
-function AddVersion({ project, category, title: fixedTitle, onAdded }: { project: LibProject; category: Category; title?: string; onAdded: () => void }) {
+/** Add a version: a Vimeo link or an upload to the review room for videos, a file for documents. */
+function AddVersion({ project, category, title: fixedTitle, reviewUpload = false, onAdded }: { project: LibProject; category: Category; title?: string; reviewUpload?: boolean; onAdded: () => void }) {
+  const [how, setHow] = useState<'vimeo' | 'upload'>('vimeo')
   const [title, setTitle] = useState(fixedTitle ?? '')
   const [url, setUrl] = useState('')
   const [notes, setNotes] = useState('')
@@ -168,7 +170,32 @@ function AddVersion({ project, category, title: fixedTitle, onAdded }: { project
           <datalist id={listId}>{existing.map((t) => <option key={t} value={t} />)}</datalist>
         </>
       )}
-      {category === 'video' ? (
+      {category === 'video' && reviewUpload && (
+        <div className="a-switch" role="group" aria-label="How to add it">
+          <button type="button" aria-pressed={how === 'vimeo'} onClick={() => setHow('vimeo')}>Vimeo link</button>
+          <button type="button" aria-pressed={how === 'upload'} onClick={() => setHow('upload')}>Upload for review</button>
+        </div>
+      )}
+      {category === 'video' && how === 'upload' && reviewUpload ? (
+        <div className="stack" style={{ gap: 'var(--space-3)' }}>
+          <p className="muted small" style={{ margin: 0 }}>Plays in our own review room: the client (and anyone you share a link with) comments on exact frames and can draw on the picture.</p>
+          <label htmlFor={`n-${listId}`} className="small muted">Note to the client (optional)</label>
+          <textarea id={`n-${listId}`} className="input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What changed and what to look for" />
+          <label className="small a-check"><input type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} /> Send to the client now (emails them)</label>
+          <R2Upload
+            projectId={project._id}
+            title={fixedTitle ?? title}
+            notes={notes}
+            send={send}
+            onAdded={(m) => {
+              setMsg(m)
+              setNotes('')
+              if (!fixedTitle) setTitle('')
+              onAdded()
+            }}
+          />
+        </div>
+      ) : category === 'video' ? (
         <form onSubmit={addVideo} className="stack" style={{ gap: 'var(--space-3)' }}>
           <label htmlFor={`u-${listId}`} className="small muted">Vimeo link (upload the video to Vimeo first)</label>
           <input id={`u-${listId}`} className="input" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://vimeo.com/123456789/abcdef" required />
@@ -208,7 +235,7 @@ function AddVersion({ project, category, title: fixedTitle, onAdded }: { project
   )
 }
 
-function GroupPanel({ project, group, onChange, onOpen }: { project: LibProject; group: DeliverableGroup; onChange: () => void; onOpen: (key: string) => void }) {
+function GroupPanel({ project, group, reviewUpload, onChange, onOpen }: { project: LibProject; group: DeliverableGroup; reviewUpload: boolean; onChange: () => void; onOpen: (key: string) => void }) {
   return (
     <div className="stack" style={{ gap: 'var(--space-5)' }}>
       <ul className="lib-list">
@@ -224,7 +251,7 @@ function GroupPanel({ project, group, onChange, onOpen }: { project: LibProject;
           </li>
         ))}
       </ul>
-      <AddVersion project={project} category={group.category} title={group.title} onAdded={onChange} />
+      <AddVersion project={project} category={group.category} title={group.title} reviewUpload={reviewUpload} onAdded={onChange} />
     </div>
   )
 }
@@ -232,7 +259,7 @@ function GroupPanel({ project, group, onChange, onOpen }: { project: LibProject;
 function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject; d: Deliverable; onChange: () => void; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false)
   const remove = async () => {
-    const what = categoryOf(d) === 'video' ? 'It comes off the project and the client’s portal. The video itself stays on Vimeo.' : 'It comes off the project and the client’s portal, and the file goes to Google Drive’s trash (restorable there for 30 days).'
+    const what = d.host === 'r2' ? 'It comes off the project and the client’s portal, and the review copy is deleted from storage (its comments stay on record).' : categoryOf(d) === 'video' ? 'It comes off the project and the client’s portal. The video itself stays on Vimeo.' : 'It comes off the project and the client’s portal, and the file goes to Google Drive’s trash (restorable there for 30 days).'
     if (!window.confirm(`Delete ${d.title}, ${versionLabel(d)}?\n\n${what}`)) return
     setBusy(true)
     const r = await json('DELETE', '/api/admin/version', { projectId: project._id, key: d._key })
@@ -251,7 +278,14 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
   return (
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
       <VersionHead title={d.title} kind={video ? 'video' : fileKind({ name: d.fileName })} ext={video ? undefined : d.fileName?.split('.').pop()} version={versionLabel(d)} date={d.date} length={d.length} />
-      {video ? (
+      {video && d.host === 'r2' ? (
+        <div className="stack" style={{ gap: 'var(--space-2)' }}>
+          <Link className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} href={`/admin/review/${encodeURIComponent(project._id)}/${encodeURIComponent(d._key)}`}>Open the review room</Link>
+          <p className="muted small" style={{ margin: 0 }}>
+            {[d.openComments ? `${d.openComments} open comment${d.openComments === 1 ? '' : 's'} from the client` : 'No open comments from the client', d.fps && `${d.fps} fps`, d.width && d.height && `${d.width}×${d.height}`].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+      ) : video ? (
         d.vimeoEmbed || d.shareUrl ? (
           <WatchTile href={(d.vimeoEmbed ?? d.shareUrl)!} thumb={d.vimeoThumb} title={`${d.title}, ${versionLabel(d)}`} />
         ) : null
@@ -260,7 +294,7 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
           <ReviewThumb src={`/api/admin/preview?projectId=${encodeURIComponent(project._id)}&key=${encodeURIComponent(d._key)}`} kind={fileKind({ name: d.fileName })} ext={d.fileName?.split('.').pop()} />
         </a>
       ) : null}
-      {video && !d.vimeoThumb && <p className="muted small" style={{ margin: 0 }}>The thumbnail shows up after the next sync with Vimeo.</p>}
+      {video && d.host !== 'r2' && !d.vimeoThumb && <p className="muted small" style={{ margin: 0 }}>The thumbnail shows up after the next sync with Vimeo.</p>}
 
       {d.fileName && <p className="muted small" style={{ margin: 0 }}>{d.fileName}</p>}
       {d.notes && <p className="deliv-note">{d.notes}</p>}

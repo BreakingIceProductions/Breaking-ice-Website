@@ -4,6 +4,7 @@ import { addActivity } from '@/portal/data'
 import { listProjectFiles } from '@/portal/drive'
 import { json, limited, projectAccess, whoIs } from '@/portal/http'
 import { canDownloadVideo, LARGE_FILE, matchFinalFile } from '@/portal/library'
+import { presignGet, r2Ready } from '@/portal/r2'
 import { vimeoDownloadLink } from '@/portal/vimeo'
 
 export const runtime = 'nodejs'
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * A final video of a delivered project. Its file in Final Files when there is one
- * (the exact export, from Drive); otherwise Vimeo's download.
+ * (the exact export, from Drive); otherwise the review copy in our storage, or Vimeo's download.
  */
 export async function GET(req: Request, { params }: { params: Promise<{ key: string }> }) {
   const { key } = await params
@@ -25,6 +26,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ key: str
     const file = matchFinalFile(d.title, files.filter((f) => f.from === 'Final Files'))
     // The Drive download notes it in the activity.
     if (file && (file.size ?? 0) <= LARGE_FILE) return NextResponse.redirect(new URL(`/api/portal/download/${encodeURIComponent(file.id)}?project=${encodeURIComponent(a.project.slug)}`, url), 303)
+  }
+  // A review copy in our own storage: a short-lived link that downloads instead of playing.
+  if (d.host === 'r2' && d.r2Key) {
+    if (!r2Ready()) return json({ ok: false }, 404)
+    if (!limited(`vdl:${a.session.email}:${d._key}`, 1, 10 * 60_000)) await addActivity(a.project._id, `${whoIs(a)} downloaded ${d.title}`, 'download')
+    const name = `${d.title} ${d.final ? 'Final' : `v${d.version || 1}`}.mp4`.replace(/[\\/:*?"<>|]+/g, ' ')
+    return NextResponse.redirect(presignGet(d.r2Key, { expires: 3600, download: name }), 303)
   }
   try {
     const link = await vimeoDownloadLink(d.shareUrl)

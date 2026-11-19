@@ -57,6 +57,9 @@ export function needsAction(projects: OfficeProject[]): Row[] {
     }
     for (const d of p.deliverables.filter((x) => x.status === 'changes-requested'))
       add(`fixes-${d._key}-v${d.version}`, { detail: `Notes in on ${d.title}. Start the fixes.`, when: `v${d.version}`, sort: 5 })
+    // Review-room comments from the client or guests on a version that's still with them.
+    for (const d of p.deliverables.filter((x) => x.openComments && x.status === 'awaiting-feedback'))
+      add(`comments-${d._key}-v${d.version}`, { detail: `${d.openComments} open comment${d.openComments === 1 ? '' : 's'} on ${d.title}.`, when: `v${d.version}`, sort: 4 })
     if (p.pipelineStage === 'delivered' && !hasFinalInvoice(p)) {
       const d = daysSince(p.office.stageChangedAt) ?? 0
       add(`no-invoice-${since}`, { detail: finalAmount(p) ? 'Delivered. No invoice yet.' : 'Delivered. Add the quote total to draft the invoice.', when: `${d} day${d === 1 ? '' : 's'}`, urgent: true, sort: 0 })

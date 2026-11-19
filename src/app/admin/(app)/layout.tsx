@@ -11,6 +11,7 @@ import { AdminSearch, type SearchItem } from '@/admin/ui/search'
 import { ticktickConnection } from '@/admin/ticktick'
 import { AdminNav } from '@/admin/ui/nav'
 import { zohoConnection } from '@/admin/zoho'
+import { r2Ready } from '@/portal/r2'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,7 @@ export default async function AdminApp({ children }: { children: React.ReactNode
     { name: 'Zoho Books', on: Boolean(zoho), setUp: zohoReady() },
     { name: 'TickTick', on: Boolean(tt), setUp: ticktickReady() },
     { name: 'Google Calendar', on: calendarReady(), setUp: calendarReady() },
+    { name: 'Review storage', on: r2Ready(), setUp: r2Ready() },
   ]
   return (
     <div className="a-shell">

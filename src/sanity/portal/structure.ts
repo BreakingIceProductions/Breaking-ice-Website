@@ -6,6 +6,7 @@ export const portalStructure: StructureResolver = (S) =>
     .items([
       S.documentTypeListItem('clientProject').title('Client projects'),
       S.documentTypeListItem('client').title('Clients'),
+      S.documentTypeListItem('reviewComment').title('Review comments'),
       S.divider(),
       S.listItem()
         .title('Portal settings')

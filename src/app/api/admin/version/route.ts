@@ -7,6 +7,7 @@ import type { ClientProject } from '@/portal/types'
 import { addActivity } from '@/portal/data'
 import { json } from '@/portal/http'
 import { versionLabel } from '@/portal/library'
+import { deleteObject, r2Ready } from '@/portal/r2'
 
 export const runtime = 'nodejs'
 
@@ -46,7 +47,7 @@ export async function PATCH(req: Request) {
   return json({ ok: true })
 }
 
-/** Removes a version from the project. Its file, if it's in the project's Drive folder, goes to Drive's trash. A Vimeo video is left alone. */
+/** Removes a version from the project. Its file, if it's in the project's Drive folder, goes to Drive's trash; a review copy in R2 is deleted. A Vimeo video is left alone. */
 export async function DELETE(req: Request) {
   const admin = await adminFromRequest(req)
   if (!admin) return json({ ok: false, error: 'signed-out' }, 401)
@@ -59,6 +60,8 @@ export async function DELETE(req: Request) {
   let trashed = false
   const file = d.fileUrl ? googleFile(d.fileUrl) : null
   if (file && driveReady()) trashed = await trashProjectFile(p as unknown as ClientProject, file.id).catch((e) => (console.error('[admin] trash failed', e), false))
+  // A review copy in our storage goes too (nothing else points at it).
+  if (d.r2Key && !d.r2Key.startsWith('sample/') && r2Ready()) await deleteObject(d.r2Key).catch((e) => console.error('[admin] r2 delete failed', e))
   await addActivity(p._id, `${d.title}: ${versionLabel(d)} deleted`, 'version')
   return json({ ok: true, trashed })
 }

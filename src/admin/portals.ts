@@ -90,6 +90,8 @@ const UNPAID = new Set(['sent', 'viewed', 'overdue', 'unpaid', 'partially_paid']
 function rowHref(r: Row, page: string) {
   const k = r.key ?? ''
   if (!page.startsWith('/admin/projects/')) return page
+  const m = /^comments-(.+)-v\d+$/.exec(k)
+  if (m) return `/admin/review/${encodeURIComponent(r.project._id)}/${encodeURIComponent(m[1])}`
   return /^(no-invoice|draft)-/.test(k) ? `${page}?tab=money` : /^(fixes|feedback)-/.test(k) ? `${page}?tab=portal` : page
 }
 
@@ -131,7 +133,7 @@ function card(p: OfficeProject, mine: Row[], theirs: Row[], payments: OpenPaymen
   const onYou: Waiting[] = []
   for (const r of mine) {
     // Notes on a version that a newer sent version has already answered aren't waiting any more.
-    const d = r.key?.startsWith('fixes-') ? p.deliverables.find((x) => r.key === `fixes-${x._key}-v${x.version}`) : undefined
+    const d = /^(fixes|comments)-/.test(r.key ?? '') ? p.deliverables.find((x) => r.key === `fixes-${x._key}-v${x.version}` || r.key === `comments-${x._key}-v${x.version}`) : undefined
     if (d && !isLatest(d, p.deliverables)) continue
     onYou.push({ key: r.key ?? r.detail, text: r.detail, when: r.when, urgent: r.urgent, href: rowHref(r, page) })
   }

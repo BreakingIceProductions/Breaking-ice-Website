@@ -8,6 +8,7 @@ import { canDownloadVideo, categoryOf, clientCanOpen, FINALS, projectNode, REFER
 import { fmtSize } from './resumable'
 import { FinalFiles } from './delivery'
 import { DocLightbox, FeedbackButtons, FeedbackList, ReviewThumb, VersionHead, WatchTile } from './review-ui'
+import { ReviewRoom } from './review-room'
 import type { ClientProject, Deliverable, DriveFile } from './types'
 import { Uploader } from './uploader'
 
@@ -24,7 +25,7 @@ const day = (iso?: string) => (iso ? new Date(iso.length === 10 ? `${iso}T12:00:
  * title → versions. The selection lives in the address (?at=…) so emails and the back
  * button land in the right place.
  */
-export function ProjectLibrary({ project, demo, uploaderName }: { project: ClientProject; demo: boolean; uploaderName: string }) {
+export function ProjectLibrary({ project, demo, uploaderName, viewOnly = false }: { project: ClientProject; demo: boolean; uploaderName: string; viewOnly?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -75,11 +76,39 @@ export function ProjectLibrary({ project, demo, uploaderName }: { project: Clien
     panel = <p className="muted">Open Videos, Documents or Reference Assets to see everything for this project. The newest version of each is always at the top.</p>
   }
 
-  return <Finder rootTitle="Folders" root={root} path={path} onPath={setPath} panel={panel} panelTitle={panelTitle} />
+  // A video in our own review room plays full width under the columns.
+  const picked = at.version ?? (at.group ? [...at.group.versions].reverse().find((v) => clientCanOpen(v, project.deliverables)) : undefined)
+  const room = picked && picked.host === 'r2' && clientCanOpen(picked, project.deliverables) ? picked : undefined
+
+  return (
+    <>
+      <Finder rootTitle="Folders" root={root} path={path} onPath={setPath} panel={panel} panelTitle={panelTitle} />
+      {room && (
+        <section id="review-room" className="p-room p-anchor" aria-labelledby="room-h">
+          <h3 id="room-h" className="h3">{room.title} <span className="muted">· {versionLabel(room)}</span></h3>
+          <ReviewRoom
+            key={room._key}
+            via="portal"
+            project={project.slug}
+            deliverableKey={room._key}
+            title={room.title}
+            versionLabel={versionLabel(room)}
+            fps={room.fps ?? 23.976}
+            duration={room.durationSec}
+            status={room.status}
+            canDecide={!viewOnly}
+            readOnly={viewOnly}
+            note={room.notes}
+          />
+        </section>
+      )}
+    </>
+  )
 }
 
 function VersionPanel({ project, d, uploaderName = '' }: { project: ClientProject; d: Deliverable; uploaderName?: string }) {
   const video = categoryOf(d) === 'video'
+  const inRoom = video && d.host === 'r2'
   const base = `/api/portal/review/${d._key}?project=${encodeURIComponent(project.slug)}`
   const comments = d.vimeoReview ?? d.shareUrl
   const watch = d.vimeoEmbed ?? d.shareUrl
@@ -91,7 +120,9 @@ function VersionPanel({ project, d, uploaderName = '' }: { project: ClientProjec
     <div className="stack" style={{ gap: 'var(--space-4)' }}>
       <VersionHead title={d.title} kind={video ? 'video' : fileKind({ name: d.fileName })} ext={video ? undefined : docExt} version={versionLabel(d)} date={d.date} length={d.length} />
 
-      {video ? (
+      {inRoom ? (
+        <a className="btn btn-primary btn-sm" href="#review-room">Watch and comment <span aria-hidden="true">↓</span></a>
+      ) : video ? (
         watch && <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={`${d.title}, ${versionLabel(d)}`} />
       ) : d.fileUrl ? (
         <button type="button" className="review-thumb doc-tile" onClick={() => setViewing(true)} aria-label={`View ${d.title}`}>
@@ -108,7 +139,7 @@ function VersionPanel({ project, d, uploaderName = '' }: { project: ClientProjec
         {video
           ? (
               <>
-                {comments && waiting && <a className="btn btn-secondary btn-sm" href={comments} target="_blank" rel="noopener noreferrer">Leave comments on video <span aria-hidden="true">↗</span><span className="sr-only"> (opens Vimeo in a new tab)</span></a>}
+                {comments && waiting && !inRoom && <a className="btn btn-secondary btn-sm" href={comments} target="_blank" rel="noopener noreferrer">Leave comments on video <span aria-hidden="true">↗</span><span className="sr-only"> (opens Vimeo in a new tab)</span></a>}
                 {canDownloadVideo(project, d) && <a className="btn btn-secondary btn-sm" href={`/api/portal/video-download/${d._key}?project=${encodeURIComponent(project.slug)}`}>Download <span aria-hidden="true">↓</span></a>}
               </>
             )
@@ -120,7 +151,8 @@ function VersionPanel({ project, d, uploaderName = '' }: { project: ClientProjec
             )}
       </div>
 
-      {waiting && <FeedbackButtons project={project.slug} deliverable={d._key} title={`${d.title}, ${versionLabel(d)}`} notes={!video} />}
+      {waiting && !inRoom && <FeedbackButtons project={project.slug} deliverable={d._key} title={`${d.title}, ${versionLabel(d)}`} notes={!video} />}
+      {waiting && inRoom && <p className="muted small" style={{ margin: 0 }}>Comment on any frame in the player below, then approve or ask for changes there.</p>}
       <FeedbackList items={d.feedback} title="Notes on this version" you={uploaderName} />
 
       {!video && d.fileUrl && (
