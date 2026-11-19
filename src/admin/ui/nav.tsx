@@ -13,6 +13,8 @@ const ICONS: Record<string, React.ReactNode> = {
   portals: <><rect x="3" y="4" width="18" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></>,
   money: <><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" /></>,
   finder: <><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></>,
+  // Two books standing and one leaning.
+  library: <><path d="M4 4h3.5v16H4zM10 4h3.5v16H10z" /><path d="m15.6 5.2 3.1-.8 3.8 14.6-3.1.8z" /></>,
   studio: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" /></>,
 }
 
@@ -46,6 +48,7 @@ export function AdminNav({ needs = 0 }: { needs?: number }) {
         { href: '/admin/contacts', label: 'Clients', icon: 'clients', on: at('/admin/contacts') },
         { href: '/admin/clients', label: 'Finder', icon: 'finder', on: at('/admin/clients') },
         { href: '/admin/proposals/new', label: 'Quotes', icon: 'proposals', on: at('/admin/proposals') },
+        { href: '/admin/library', label: 'Library', icon: 'library', on: at('/admin/library') },
       ],
     },
     {

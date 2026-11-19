@@ -276,6 +276,28 @@ ${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}
   return { subject: `Signed quote: ${m.projectTitle}`, html, text }
 }
 
+/** A document to sign, sent from the back office when the owner presses "Create and email". */
+export function toSignEmail(m: { name: string; title: string; projectTitle?: string; org?: string; url: string; portal: boolean; signOff: string; producerPhone?: string }) {
+  const headline = `${esc(m.title)} is ready for you to sign`
+  const intro = `Hi ${m.name}, ${m.title} is ready for you to read and sign${m.portal ? ' in your client portal' : ''}. It takes a minute: read it through, fill in anything it asks for, type your name and sign.`
+  const html = layout({
+    eyebrow: 'To sign',
+    preview: m.portal ? 'Read it and sign in your client portal.' : 'Read it and sign online.',
+    body: `
+${m.projectTitle ? `<tr><td style="padding:14px 32px 0;font:600 12px ${FONT};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${esc(m.projectTitle)}${m.org ? ` · ${esc(m.org)}` : ''}</td></tr>` : ''}
+${para(`<span style="font:bold 24px/30px ${FONT}">${headline}</span>`, 'padding-top:8px')}
+${para(esc(intro))}
+<tr><td style="padding:22px 32px 0">${button(m.url, 'Read & sign')}</td></tr>
+${m.portal
+  ? para(`The button works for 7 days. After that, sign in at ${SITE_URL.replace(/^https?:\/\//, '')}/portal with this email address.`, `color:${MUTED};font-size:13px`)
+  : para('The link is just for you, so please don’t forward it. You can download a signed copy as soon as you’ve signed.', `color:${MUTED};font-size:13px`)}
+${para('Questions? Just reply to this email.', `color:${MUTED};font-size:14px`)}
+${para(`${esc(m.signOff)}${m.producerPhone ? ` · ${esc(m.producerPhone)}` : ''}`, 'padding-top:20px;padding-bottom:24px')}`,
+  })
+  const text = `${m.title} is ready for you to sign\n\n${intro}\n\nRead & sign: ${m.url}\n\n${m.signOff}`
+  return { subject: `To sign: ${m.title}`, html, text }
+}
+
 export async function notifyJosh(text: string) {
   if (portalEnv.slackWebhook) {
     await fetch(portalEnv.slackWebhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) }).catch((e) =>

@@ -7,6 +7,8 @@ export const portalStructure: StructureResolver = (S) =>
       S.documentTypeListItem('clientProject').title('Client projects'),
       S.documentTypeListItem('client').title('Clients'),
       S.documentTypeListItem('reviewComment').title('Review comments'),
+      S.documentTypeListItem('docTemplate').title('Document templates'),
+      S.documentTypeListItem('signRequest').title('Sign requests'),
       S.divider(),
       S.listItem()
         .title('Portal settings')

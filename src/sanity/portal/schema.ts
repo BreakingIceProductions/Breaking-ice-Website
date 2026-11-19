@@ -464,4 +464,95 @@ export const reviewComment = defineType({
   },
 })
 
-export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment]
+/** One fill-in on a document template: where it goes ({{key}}) and who fills it in. */
+const docField = defineArrayMember({
+  type: 'object',
+  name: 'docField',
+  fields: [
+    defineField({ name: 'key', type: 'string' }),
+    defineField({ name: 'label', type: 'string' }),
+    defineField({ name: 'type', type: 'string', options: { list: ['text', 'date', 'money', 'choice'] } }),
+    defineField({ name: 'who', title: 'Filled in by', type: 'string', options: { list: ['owner', 'signer'] } }),
+    defineField({ name: 'options', type: 'array', of: [defineArrayMember({ type: 'string' })] }),
+    defineField({ name: 'default', type: 'string' }),
+    defineField({ name: 'minor', title: 'Only when signing for a minor', type: 'boolean' }),
+    defineField({ name: 'optional', type: 'boolean' }),
+  ],
+  preview: { select: { title: 'label', subtitle: 'key' } },
+})
+
+/** A document to sign, kept in the back office's Library (/admin/library). Edited there, read-only here. */
+export const docTemplate = defineType({
+  name: 'docTemplate',
+  title: 'Document template',
+  type: 'document',
+  readOnly: true,
+  fields: [
+    defineField({ name: 'kind', type: 'string' }),
+    defineField({ name: 'title', type: 'string' }),
+    defineField({ name: 'audience', title: 'Signed by', type: 'string', options: { list: [{ title: 'The client, in their portal', value: 'client' }, { title: 'One person, own link', value: 'person' }] } }),
+    defineField({ name: 'body', title: 'Wording', type: 'text', rows: 20 }),
+    defineField({ name: 'fields', title: 'Fill-ins', type: 'array', of: [docField] }),
+    defineField({ name: 'wordingApproved', title: 'Wording approved', type: 'boolean' }),
+    defineField({ name: 'updatedAt', type: 'datetime' }),
+  ],
+  preview: { select: { title: 'title', ok: 'wordingApproved' }, prepare: ({ title, ok }) => ({ title, subtitle: ok ? 'Wording approved' : 'Needs your check' }) },
+})
+
+const pair = defineArrayMember({ type: 'object', name: 'docValue', fields: [defineField({ name: 'key', type: 'string' }), defineField({ name: 'value', type: 'text', rows: 2 })] })
+
+/** One document sent for signing, with its frozen text and the signature record. Written by the site; read-only here. */
+export const signRequest = defineType({
+  name: 'signRequest',
+  title: 'Sign request',
+  type: 'document',
+  readOnly: true,
+  fields: [
+    defineField({ name: 'templateId', type: 'string' }),
+    defineField({ name: 'kind', type: 'string' }),
+    defineField({ name: 'audience', type: 'string' }),
+    defineField({
+      name: 'snapshot',
+      title: 'Text as sent',
+      type: 'object',
+      fields: [defineField({ name: 'title', type: 'string' }), defineField({ name: 'body', type: 'text', rows: 12 }), defineField({ name: 'fields', type: 'array', of: [docField] })],
+    }),
+    defineField({ name: 'projectId', type: 'string' }),
+    defineField({ name: 'projectTitle', type: 'string' }),
+    defineField({ name: 'projectSlug', type: 'string' }),
+    defineField({ name: 'clientId', type: 'string' }),
+    defineField({ name: 'org', type: 'string' }),
+    defineField({ name: 'recipient', type: 'object', fields: [defineField({ name: 'name', type: 'string' }), defineField({ name: 'email', type: 'string' }), defineField({ name: 'contactKey', type: 'string' })] }),
+    defineField({ name: 'values', title: 'Filled in before sending', type: 'array', of: [pair] }),
+    defineField({ name: 'token', title: 'Link token', type: 'string', hidden: true }),
+    defineField({ name: 'status', type: 'string', options: { list: ['out', 'viewed', 'signed', 'void'] } }),
+    defineField({ name: 'createdAt', type: 'datetime' }),
+    defineField({ name: 'emailedAt', type: 'datetime' }),
+    defineField({ name: 'viewedAt', type: 'datetime' }),
+    defineField({ name: 'signedAt', type: 'datetime' }),
+    defineField({ name: 'voidedAt', type: 'datetime' }),
+    defineField({
+      name: 'signature',
+      type: 'object',
+      fields: [
+        defineField({ name: 'name', title: 'Typed name', type: 'string' }),
+        defineField({ name: 'at', type: 'datetime' }),
+        defineField({ name: 'ip', title: 'IP address', type: 'string' }),
+        defineField({ name: 'userAgent', title: 'Device', type: 'string' }),
+        defineField({ name: 'consent', title: 'Agreed to', type: 'text', rows: 2 }),
+        defineField({ name: 'values', title: 'Filled in by the signer', type: 'array', of: [pair] }),
+        defineField({ name: 'forMinor', type: 'boolean' }),
+        defineField({ name: 'via', type: 'string' }),
+        defineField({ name: 'portalEmail', type: 'string' }),
+        defineField({ name: 'docHash', title: 'Fingerprint (SHA-256)', type: 'string' }),
+        defineField({ name: 'certificateId', type: 'string' }),
+        defineField({ name: 'pdf', title: 'Signed PDF', type: 'file' }),
+        defineField({ name: 'driveFileId', title: 'Drive file', type: 'string' }),
+      ],
+    }),
+  ],
+  orderings: [{ title: 'Newest', name: 'newest', by: [{ field: 'createdAt', direction: 'desc' }] }],
+  preview: { select: { title: 'snapshot.title', name: 'recipient.name', status: 'status' }, prepare: ({ title, name, status }) => ({ title, subtitle: `${name ?? ''} · ${status ?? ''}` }) },
+})
+
+export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment, docTemplate, signRequest]

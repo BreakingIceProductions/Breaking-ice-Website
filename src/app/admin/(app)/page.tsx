@@ -8,12 +8,14 @@ import { MILESTONE_LIST } from '@/admin/milestones'
 import { moneyView, reportView, signing } from '@/admin/money'
 import { loadMoney } from '@/admin/money-data'
 import { portalsOverview } from '@/admin/portals'
+import { signCounts } from '@/admin/sign-rows'
 import { STAGE_TASKS, stageIndex, stageTitle } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
 import { DismissableRow } from '@/admin/ui/dismissable-row'
 import { Bar, DayStrip, MiniCols, SplitBar } from '@/admin/ui/graphics'
 import { TodayTasks } from '@/admin/ui/today-tasks'
 import { portalEnv } from '@/portal/config'
+import { listRequests } from '@/portal/sign-store'
 
 export const metadata = { title: 'Today' }
 
@@ -179,7 +181,7 @@ export default async function Today() {
   // Checked here as well as in the layout: a page can be requested on its own.
   const admin = await requireAdmin()
   // One load: the projects, the portal payment records and the goals. Everything below is worked out from it.
-  const { projects: all, payments, goals } = await loadMoney()
+  const [{ projects: all, payments, goals }, signRequests] = await Promise.all([loadMoney(), listRequests().catch(() => [])])
   // Archived projects are filed away: they raise no reminders and aren't listed. The money history
   // (owed, collected, signed) keeps them, so those figures are the Money page's own.
   const projects = all.filter((p) => !p.archived)
@@ -249,6 +251,11 @@ export default async function Today() {
     .filter((x): x is { p: (typeof projects)[number]; s: { on: string; value?: number } } => Boolean(x.s?.on && x.s.on >= since))
     .sort((a, b) => b.s.on.localeCompare(a.s.on))
     .map(({ p, s }) => ({ key: `s-${p._id}`, href: pageHref(p._id, p.pipelineStage), title: p.title, text: `Signed ${fmtDay(s.on)}`, side: s.value ? cad(s.value) : undefined }))
+  // Documents sent from the Library: out for signature, and signed in the same 14 days.
+  const docs = signCounts(signRequests)
+  const docHref = (projectId?: string) => (projectId ? projectTab(projectId, 'documents') : '/admin/library?tab=out')
+  const docsOut: Item[] = docs.out.map((r) => ({ key: `d-${r._id}`, href: docHref(r.projectId), title: r.snapshot.title, text: `Out with ${r.recipient.name}${r.viewedAt ? ', opened' : ''}`, side: r.projectTitle }))
+  const docsSigned: Item[] = docs.signed.map((r) => ({ key: `ds-${r._id}`, href: docHref(r.projectId), title: r.snapshot.title, text: `Signed by ${r.signature?.name ?? r.recipient.name} ${fmtDay(ymd(new Date(r.signedAt!)))}`, side: r.projectTitle }))
   const twoWeeks = nextTwoWeeks(projects)
   const end = addDays(t, 14)
   // The same two things nextTwoWeeks counts: shoots that start in the window, and delivery dates not reached yet.
@@ -415,8 +422,9 @@ export default async function Today() {
           </div>
           <div className="p-card td-card">
             <h3 className="td-h3">Signatures</h3>
-            <p className="td-sum">{plural(quotesOut.length, 'quote')} out, {signedLately.length} signed in the last 14 days</p>
-            <Items list={[...quotesOut, ...signedLately]} empty="No quotes out, and none signed lately." max={5} />
+            <p className="td-sum">{plural(quotesOut.length, 'quote')} and {plural(docsOut.length, 'document')} out for signature, {signedLately.length + docsSigned.length} signed in the last 14 days</p>
+            <Items list={[...quotesOut, ...docsOut, ...signedLately, ...docsSigned]} empty="Nothing out for signature, and nothing signed lately." max={5} />
+            <p className="small a-empty"><Link className="text-link" href="/admin/library?tab=out&show=out">Everything out and signed</Link></p>
           </div>
           <div className="p-card td-card">
             <h3 className="td-h3">Cuts and feedback</h3>

@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { requireAdmin } from '@/admin/auth'
 import { listProjects } from '@/admin/data'
 import { openPayments, portalsOverview, type PortalCard, type Waiting } from '@/admin/portals'
+import { signCounts } from '@/admin/sign-rows'
+import { listRequests } from '@/portal/sign-store'
 
 export const metadata = { title: 'Client portals' }
 
@@ -75,8 +77,9 @@ function Card({ c }: { c: PortalCard }) {
 /** Every project's portal from the back-office side: what each is waiting on, from the client and from Josh. */
 export default async function Portals() {
   await requireAdmin()
-  const [projects, payments] = await Promise.all([listProjects(), openPayments()])
+  const [projects, payments, signRequests] = await Promise.all([listProjects(), openPayments(), listRequests().catch(() => [])])
   const { live, quotes, done, tiles: t } = portalsOverview(projects, payments)
+  const docs = signCounts(signRequests)
 
   return (
     <div className="a-page">
@@ -108,6 +111,11 @@ export default async function Portals() {
           <span className="a-kpi-num">{t.notOpened}</span>
           <span className="a-kpi-note">{t.notOpened ? `${plural(t.notOpened, 'portal')} with no client activity recorded` : 'Every live portal has client activity'}</span>
         </div>
+        <Link className="a-kpi" href="/admin/library?tab=out&show=out">
+          <span className="a-kpi-label">Out for signature</span>
+          <span className="a-kpi-num">{docs.out.length}</span>
+          <span className="a-kpi-note">{plural(docs.signed.length, 'document')} signed in the last 14 days</span>
+        </Link>
       </section>
 
       <section aria-labelledby="cp-live" className="stack" style={{ gap: 'var(--space-4)' }}>

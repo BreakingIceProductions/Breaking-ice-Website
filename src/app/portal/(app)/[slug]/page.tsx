@@ -3,9 +3,11 @@ import { Suspense } from 'react'
 import { requireAccess } from '@/portal/current'
 import { getPortalSettings, producerFor } from '@/portal/data'
 import { Delivery } from '@/portal/delivery'
+import { DocumentsToSign } from '@/portal/documents-to-sign'
 import { billingStatus, CLIENT_STAGES, clientStage } from '@/portal/library'
 import { PaymentList } from '@/portal/payment-list'
 import { ProjectLibrary } from '@/portal/portal-library'
+import { listRequests } from '@/portal/sign-store'
 import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ pay?: string }> }
@@ -22,7 +24,11 @@ export default async function PortalProject({ params, searchParams }: Props) {
   const { projects, session, clients, payments } = await requireAccess()
   const p = projects.find((x) => x.slug === slug)
   if (!p) notFound()
-  const ps = await getPortalSettings()
+  const [ps, toSign] = await Promise.all([
+    getPortalSettings(),
+    // Only the client's own documents: people's releases never show in a portal.
+    listRequests({ projectId: p._id, clientIds: clients.map((c) => c._id) }).then((l) => l.filter((r) => r.audience === 'client')).catch(() => []),
+  ])
   const me = clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === session.email)
   const billing = billingStatus(p.billing)
   const dates = (p.keyDates ?? []).filter((k) => k.label).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
@@ -48,6 +54,7 @@ export default async function PortalProject({ params, searchParams }: Props) {
       </section>
 
       <div className="p-cards">
+        <DocumentsToSign requests={toSign} />
         {p.nextStep && (
           <section className="p-card" aria-labelledby="next-h">
             <h2 id="next-h" className="p-label">Next step</h2>

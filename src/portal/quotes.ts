@@ -124,20 +124,20 @@ export async function markQuoteViewed(projectId: string, who: string) {
 
 /* ── The signed PDF ─────────────────────────────────────────────────── */
 
-const font = (name: string) => readFile(path.join(process.cwd(), 'src/portal/fonts', name))
+export const font = (name: string) => readFile(path.join(process.cwd(), 'src/portal/fonts', name))
 
-const NAVY = rgb(0.094, 0.125, 0.184)
-const MUTED = rgb(0.29, 0.33, 0.41)
-const COPPER = rgb(0.79, 0.47, 0.25)
-const RULE = rgb(0.9, 0.88, 0.85)
+export const NAVY = rgb(0.094, 0.125, 0.184)
+export const MUTED = rgb(0.29, 0.33, 0.41)
+export const COPPER = rgb(0.79, 0.47, 0.25)
+export const RULE = rgb(0.9, 0.88, 0.85)
 
 /** Drops characters a font can't draw, so an unusual name never breaks the PDF. */
-function safeText(f: PDFFont, s: string) {
+export function safeText(f: PDFFont, s: string) {
   const ok = new Set(f.getCharacterSet())
   return [...s.normalize('NFC')].filter((ch) => ok.has(ch.codePointAt(0)!) || ch === ' ').join('')
 }
 
-function wrap(f: PDFFont, size: number, text: string, width: number) {
+export function wrap(f: PDFFont, size: number, text: string, width: number) {
   const lines: string[] = []
   for (const para of text.split('\n')) {
     let line = ''

@@ -29,6 +29,7 @@ export default async function AdminApp({ children }: { children: React.ReactNode
     { group: 'Go to', label: 'Projects list and archive', href: '/admin/projects?view=list' },
     { group: 'Go to', label: 'Clients', sub: 'Everyone in one list', href: '/admin/contacts' },
     { group: 'Go to', label: 'Finder', sub: 'Clients, projects and files', href: '/admin/clients' },
+    { group: 'Go to', label: 'Library', sub: 'Documents to sign, client emails, out and signed', href: '/admin/library' },
     { group: 'Go to', label: 'Settings and connections', href: '/admin/settings' },
     ...projects.map((p) => ({ group: 'Projects' as const, label: p.title, sub: `${p.client.organizationName}${isSalesStage(p.pipelineStage) ? ' · lead' : ''}${p.archived ? ' · archived' : ''}`, href: pageHref(p._id, p.pipelineStage) })),
     ...[...clients].map(([id, name]) => ({ group: 'Clients' as const, label: name, href: `/admin/clients/${id}` })),

@@ -15,6 +15,8 @@ import { NoteForm } from '@/admin/ui/note-form'
 import { PaymentsCard } from '@/admin/ui/payments-card'
 import { CopyButton, NextUp, ProjectMenu, ProjectProgress, StageChecklist, StageStrip, type MenuLink } from '@/admin/ui/project'
 import { QuoteCard } from '@/admin/ui/quote-card'
+import { requestRow, sendProjects, sendTemplates } from '@/admin/sign-rows'
+import { RequestTable, SendDocumentToggle, type RequestRow, type SendTemplate } from '@/admin/ui/sign-requests'
 import { ReviewEmail } from '@/admin/ui/review-email'
 import { StageControl } from '@/admin/ui/stage-control'
 import { SyncButton } from '@/admin/ui/sync-button'
@@ -25,6 +27,7 @@ import { getPortalSettings } from '@/portal/data'
 import { categoryOf, isLatest, versionLabel, versionPath } from '@/portal/library'
 import { paymentsForProject, stripeTestMode } from '@/portal/payments'
 import type { PortalPayment } from '@/portal/types'
+import { listRequests, listTemplates } from '@/portal/sign-store'
 import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS } from '@/sanity/portal/office-constants'
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string | string[] }> }
@@ -127,7 +130,7 @@ function moneyParts(p: OfficeProject) {
 }
 
 export default async function ProjectPage({ params, searchParams }: Props) {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const [{ id }, sp] = await Promise.all([params, searchParams])
   const p = await getProject(id)
   if (!p) notFound()
@@ -172,6 +175,14 @@ export default async function ProjectPage({ params, searchParams }: Props) {
     zohoOrg = zoho?.orgId
     payments = pay
     gstNumber = ps.gstNumber
+  }
+  // And the Documents tab: what's out for signing on this project, and what can be sent.
+  let docRows: RequestRow[] = []
+  let docTemplates: SendTemplate[] = []
+  if (tab === 'documents') {
+    const [reqs, templates] = await Promise.all([listRequests({ projectId: p._id }), listTemplates().catch(() => [])])
+    docRows = reqs.map((r) => requestRow(r))
+    docTemplates = sendTemplates(templates)
   }
 
   return (
@@ -257,7 +268,23 @@ export default async function ProjectPage({ params, searchParams }: Props) {
                 <a className="text-link" href={p.quoteUrl} target="_blank" rel="noopener noreferrer">The quote file on record<span className="sr-only"> (opens in a new tab)</span></a>
               </p>
             )}
-            <p className="muted small" style={{ margin: 0 }}>Releases and other documents to sign will live here.</p>
+            <section className="p-card" aria-labelledby="h-to-sign">
+              <div className="a-card-head">
+                <h2 id="h-to-sign" className="a-h2">Documents to sign</h2>
+                <span className="muted small">
+                  {docRows.length ? `${docRows.filter((r) => r.status === 'out' || r.status === 'viewed').length} out · ${docRows.filter((r) => r.status === 'signed').length} signed` : 'Agreements, sign-offs and releases'}
+                </span>
+              </div>
+              <RequestTable rows={docRows} showProject={false} empty="Nothing sent for signing on this project yet." />
+              {!admin.viewOnly && (
+                <div className="pj-sub">
+                  <SendDocumentToggle templates={docTemplates} projects={sendProjects([{ ...p, archived: false }])} projectId={p._id} />
+                </div>
+              )}
+              <p className="muted small" style={{ margin: 0 }}>
+                Wording lives in the <Link className="text-link" href="/admin/library">Library</Link>. Signed copies are saved to this project’s Drive folder (Contract for the client’s documents, Releases for people’s) when it has one.
+              </p>
+            </section>
           </div>
         )}
       </div>

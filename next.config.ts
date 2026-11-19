@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
     // Fonts for the certificate page on signed quotes.
     '/api/portal/quote/sign': ['./src/portal/fonts/**'],
     '/api/portal/quote/file': ['./src/portal/fonts/**'],
+    // …and on signed documents and blank copies from the Library.
+    '/api/sign': ['./src/portal/fonts/**'],
+    '/api/admin/library/pdf': ['./src/portal/fonts/**'],
   },
   images: {
     remotePatterns: [
@@ -38,6 +41,8 @@ const nextConfig: NextConfig = {
       { source: '/admin/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }, { key: 'Referrer-Policy', value: 'same-origin' }] },
       // Guest review links: private, and the token never leaks in a Referer.
       { source: '/review/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }, { key: 'Referrer-Policy', value: 'no-referrer' }] },
+      // Signing links: the same.
+      { source: '/sign/:path*', headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }, { key: 'Referrer-Policy', value: 'no-referrer' }] },
     ]
   },
 }

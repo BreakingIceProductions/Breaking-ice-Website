@@ -262,6 +262,30 @@ export async function trashProjectFile(p: ClientProject, fileId: string) {
   return true
 }
 
+/**
+ * A signed document, filed in the project's own folder: "Contract" for the client's documents,
+ * "Releases" for people's. Those folders sit beside the three the client sees, so the portal
+ * never lists them. Only when the project already has a Drive folder; returns the file's id.
+ */
+export async function saveSignedCopy(projectFolderId: string, folder: 'Contract' | 'Releases', name: string, bytes: Uint8Array) {
+  if (!driveReady() || !(await getFolder(projectFolderId))) return null
+  const parent = await findOrCreateSub(folder, projectFolderId)
+  const boundary = `bi${Date.now().toString(36)}`
+  const meta = JSON.stringify({ name: safeName(name), parents: [parent], mimeType: 'application/pdf' })
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`),
+    Buffer.from(bytes),
+    Buffer.from(`\r\n--${boundary}--`),
+  ])
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${await accessToken()}`, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  })
+  if (!res.ok) throw new Error(`drive signed copy ${res.status}: ${(await res.text()).slice(0, 300)}`)
+  return ((await res.json()) as { id: string }).id
+}
+
 const EXPORTS: Record<string, [string, string]> = {
   'application/vnd.google-apps.document': ['application/pdf', '.pdf'],
   'application/vnd.google-apps.spreadsheet': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx'],
