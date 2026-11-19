@@ -76,6 +76,8 @@ export type ComposerProps = {
   blocks?: BlockOption[]
   /** Granola is connected, so "Draft from a call" can list recent calls. */
   granola?: boolean
+  /** Wispr Flow is connected, so "Find it for me" can have Claude look for the call there. */
+  wispr?: boolean
   /** Opens straight away (the board's Email link adds ?email=1). */
   startOpen?: boolean
   label?: string
@@ -91,7 +93,7 @@ const BLOCK_KIND: Record<BlockOption['kind'], string> = { portal: 'Sign-in', ver
  * check the branded preview, then press Send. Goes out from Josh's address through the site's sender;
  * replies go to Josh. Nothing is ever sent without the Send press on the confirm step.
  */
-export function EmailComposer({ projectId, to: initialTo = '', stage, templates, vars, blocks = [], granola = false, startOpen = false, label = 'Email', small = true }: ComposerProps) {
+export function EmailComposer({ projectId, to: initialTo = '', stage, templates, vars, blocks = [], granola = false, wispr = false, startOpen = false, label = 'Email', small = true }: ComposerProps) {
   const router = useRouter()
   const uid = useId()
   const panel = useRef<HTMLDialogElement>(null)
@@ -294,7 +296,7 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
                         </select>
                       </div>
 
-                      <DraftFromCall projectId={projectId} granola={granola} onDraft={fillDraft} />
+                      <DraftFromCall projectId={projectId} granola={granola} wispr={wispr} onDraft={fillDraft} />
 
                       {chosen && !chosen.approved && <Warning>{NOT_APPROVED}</Warning>}
                       {drafted && <Warning>Drafted by Claude — read it before sending.{drafted.warning ? ` ${drafted.warning}` : ''}</Warning>}
@@ -438,7 +440,7 @@ function PortalBlocks({ blocks, inBody, onAdd, onRemove }: { blocks: BlockOption
 }
 
 type CallNote = { id: string; title: string; at: string; match?: 'attendee' | 'title' }
-type DraftReply = { ok?: boolean; sample?: boolean; message?: string; notes?: CallNote[]; subject?: string; body?: string; warning?: string }
+type DraftReply = { ok?: boolean; sample?: boolean; message?: string; notes?: CallNote[]; subject?: string; body?: string; warning?: string; meeting?: { title: string; at: string } }
 const call = (url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(async (r) => ({ ok: r.ok, status: r.status, data: (await r.json().catch(() => ({}))) as DraftReply }))
@@ -446,13 +448,16 @@ const call = (url: string, body: unknown) =>
 const callDay = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Edmonton', weekday: 'short', month: 'short', day: 'numeric' })
 
 /**
- * "Draft from a call": Claude writes the first email after a call, from a Granola note or pasted
- * notes (Wispr Flow, an email, anything). It only fills the subject and email; nothing is sent.
+ * "Draft from a call": Claude writes the first email after a call, from a Granola note, pasted notes
+ * (an email, anything), or "Find it for me" (Claude looks for the call in Wispr Flow, or picks the
+ * best-matching Granola note). It only fills the subject and email; nothing is sent.
  */
-function DraftFromCall({ projectId, granola, onDraft }: { projectId: string; granola: boolean; onDraft: (d: { subject: string; body: string; warning?: string }) => boolean }) {
+function DraftFromCall({ projectId, granola, wispr, onDraft }: { projectId: string; granola: boolean; wispr: boolean; onDraft: (d: { subject: string; body: string; warning?: string }) => boolean }) {
   const uid = useId()
   const [shown, setShown] = useState(false)
-  const [from, setFrom] = useState<'granola' | 'paste'>(granola ? 'granola' : 'paste')
+  const canFind = wispr || granola
+  const [from, setFrom] = useState<'find' | 'granola' | 'paste'>(canFind ? 'find' : 'paste')
+  const [used, setUsed] = useState<{ title: string; at: string } | null>(null)
   const [notes, setNotes] = useState<CallNote[] | null>(null)
   const [noteErr, setNoteErr] = useState('')
   const [noteId, setNoteId] = useState('')
@@ -481,24 +486,33 @@ function DraftFromCall({ projectId, granola, onDraft }: { projectId: string; gra
     setBusy(true)
     setError('')
     setNote('')
-    const r = await call('/api/admin/email/draft', { projectId, ...(from === 'granola' ? { noteId } : { text }), goal })
+    setUsed(null)
+    const r = await call('/api/admin/email/draft', { projectId, ...(from === 'find' ? { find: true } : from === 'granola' ? { noteId } : { text }), goal })
     setBusy(false)
     if (!r.ok || !r.data.subject || !r.data.body) return setError(failed(r.status, r.data.message))
+    if (r.data.meeting) setUsed(r.data.meeting)
     if (onDraft({ subject: r.data.subject, body: r.data.body, warning: r.data.warning })) setNote(r.data.sample ? 'Sample data: this is a made-up draft. Nothing was sent to Claude.' : 'Done. It’s in the subject and email below.')
   }
 
-  const canDraft = !busy && (from === 'granola' ? Boolean(noteId) : text.trim().length > 20)
+  const canDraft = !busy && (from === 'find' ? canFind : from === 'granola' ? Boolean(noteId) : text.trim().length > 20)
 
   return (
     <details className="em-draft" open={shown} onToggle={(e) => setShown(e.currentTarget.open)}>
       <summary>Draft from a call</summary>
       <div className="stack em-draft-body">
         <div className="a-switch" role="group" aria-label="Where the call notes come from">
+          {canFind && <button type="button" aria-pressed={from === 'find'} onClick={() => setFrom('find')}>Find it for me</button>}
           <button type="button" aria-pressed={from === 'granola'} onClick={() => setFrom('granola')}>Granola</button>
           <button type="button" aria-pressed={from === 'paste'} onClick={() => setFrom('paste')}>Paste notes</button>
         </div>
 
-        {from === 'granola' ? (
+        {from === 'find' ? (
+          <p className="muted small" style={{ margin: 0 }}>
+            {wispr
+              ? 'Claude looks in Wispr Flow for your latest call with them (by email, name, organization and date), reads it, and writes the email.'
+              : 'Claude picks your latest Granola call with them and writes the email. Connect Wispr Flow in Settings to search there instead.'}
+          </p>
+        ) : from === 'granola' ? (
           !granola ? (
             <p className="small a-urgent" style={{ margin: 0 }}>Connect Granola: add GRANOLA_API_KEY in Vercel. You can paste the notes instead.</p>
           ) : noteErr ? (
@@ -533,10 +547,11 @@ function DraftFromCall({ projectId, granola, onDraft }: { projectId: string; gra
           <input id={`${uid}-goal`} className="input" value={goal} maxLength={500} placeholder="Thank them, reflect what they want, propose the next step" onChange={(e) => setGoal(e.target.value)} />
         </div>
         <div className="row-wrap">
-          <button type="button" className="btn btn-secondary btn-sm" disabled={!canDraft} onClick={draft}>{busy ? 'Drafting… (up to a minute)' : 'Draft it'}</button>
+          <button type="button" className="btn btn-secondary btn-sm" disabled={!canDraft} onClick={draft}>{busy ? (from === 'find' ? 'Finding the call and drafting… (a minute or two)' : 'Drafting… (up to a minute)') : 'Draft it'}</button>
           <span className="muted small">Claude writes it; you read it and send it.</span>
         </div>
         {error && <p className="err small" role="alert" style={{ margin: 0 }}>{error}</p>}
+        {used && <p className="small" style={{ margin: 0 }}>From the call: <strong>{used.title}</strong>{used.at && !Number.isNaN(Date.parse(used.at)) ? `, ${callDay(used.at)}` : ''}. Not the right one? {granola ? 'Pick it from the Granola list or paste the notes.' : 'Paste the notes instead.'}</p>}
         {note && <p className="small" role="status" style={{ margin: 0 }}>{note}</p>}
       </div>
     </details>

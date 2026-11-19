@@ -4,13 +4,14 @@ import { ticktickReady, zohoReady } from '@/admin/config'
 import { startOAuth } from '@/admin/oauth'
 import { ticktickAuthorizeUrl } from '@/admin/ticktick'
 import { zohoAuthorizeUrl } from '@/admin/zoho'
+import { rememberWisprError, wisprAuthorizeUrl, wisprReady, WisprError } from '@/admin/wispr'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 type Props = { params: Promise<{ app: string }> }
 
-/** "Connect" buttons in Settings: off to TickTick or Zoho Books to approve. */
+/** "Connect" buttons in Settings: off to TickTick, Zoho Books or Wispr Flow to approve. */
 export async function GET(req: Request, { params }: Props) {
   const { app } = await params
   const back = (q: string) => NextResponse.redirect(new URL(`/admin/settings?${q}`, req.url), 303)
@@ -20,5 +21,15 @@ export async function GET(req: Request, { params }: Props) {
   if (admin.viewOnly) return back('error=view-only')
   if (app === 'ticktick' && ticktickReady()) return NextResponse.redirect(ticktickAuthorizeUrl(await startOAuth(app)), 303)
   if (app === 'zoho' && zohoReady()) return NextResponse.redirect(zohoAuthorizeUrl(await startOAuth(app)), 303)
+  if (app === 'wispr' && wisprReady()) {
+    // Wispr: find its sign-in server and register this app first (once). Any refusal is shown in Settings.
+    try {
+      return NextResponse.redirect(await wisprAuthorizeUrl(await startOAuth(app)), 303)
+    } catch (e) {
+      console.error('[admin] wispr connect failed', e)
+      await rememberWisprError(e instanceof WisprError ? e.message : 'Wispr Flow didn’t allow this app to connect: something went wrong finding its sign-in page.')
+      return back('error=wispr&app=wispr')
+    }
+  }
   return back(`error=not-set-up&app=${encodeURIComponent(app)}`)
 }

@@ -8,17 +8,18 @@ import { serviceAccountEmail } from '@/admin/google'
 import { r2Env, r2Ready } from '@/portal/r2'
 import { ticktickConnection, ticktickRedirect } from '@/admin/ticktick'
 import { zohoConnection, zohoNeedsReconnect, zohoRedirect } from '@/admin/zoho'
+import { lastWisprError, wisprConnection, wisprReady, wisprRedirect } from '@/admin/wispr'
 
 export const metadata = { title: 'Settings' }
 
 type Props = { searchParams: Promise<Record<string, string | undefined>> }
 
-const NAMES: Record<string, string> = { ticktick: 'TickTick', zoho: 'Zoho Books' }
+const NAMES: Record<string, string> = { ticktick: 'TickTick', zoho: 'Zoho Books', wispr: 'Wispr Flow' }
 
 export default async function Settings({ searchParams }: Props) {
   const admin = await requireAdmin()
   const sp = await searchParams
-  const [tt, zoho, guests] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null), listGuests()])
+  const [tt, zoho, wispr, guests] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null), wisprConnection().catch(() => null), listGuests()])
   const sa = serviceAccountEmail()
   const notice = sp.connected
     ? `${NAMES[sp.connected] ?? sp.connected} is connected.`
@@ -28,6 +29,10 @@ export default async function Settings({ searchParams }: Props) {
         ? 'Connections need the real site settings; this machine is showing sample data.'
         : sp.error === 'view-only'
           ? 'This account is view only, so it can’t connect apps.'
+        : sp.error === 'wispr'
+          ? (await lastWisprError()) || 'Wispr Flow didn’t allow this app to connect. Try again.'
+        : sp.error === 'not-set-up' && sp.app === 'wispr'
+          ? 'Wispr Flow needs WISPR_MCP_URL in Vercel first (steps below).'
         : sp.error === 'not-set-up'
           ? `${NAMES[sp.app ?? ''] ?? 'That app'} needs its client ID and secret in Vercel first (steps below).`
           : sp.error
@@ -88,6 +93,34 @@ export default async function Settings({ searchParams }: Props) {
             <li>In Vercel, add <code>TICKTICK_CLIENT_ID</code> and <code>TICKTICK_CLIENT_SECRET</code>, then redeploy.</li>
             <li>Come back here and press Connect TickTick.</li>
           </ol>
+        )}
+      </section>
+
+      <section className="p-card" aria-labelledby="h-wispr">
+        <div className="a-card-head">
+          <h2 id="h-wispr" className="a-h2">Wispr Flow</h2>
+          <span className={`a-conn-state ${wispr ? 'on' : 'off'}`}>{wispr ? 'Connected' : wisprReady() ? 'Not connected' : 'Not set up'}</span>
+        </div>
+        <p className="muted small" style={{ margin: 0 }}>For “Draft from a call → Find it for me”: Claude looks through your Wispr Flow meetings for the call with a lead, reads the notes and transcript, and drafts the email. Read only; nothing in Wispr Flow is changed.</p>
+        {wispr ? (
+          <>
+            <p className="small" style={{ margin: 0 }}>Connected since {fmtDay(wispr.connectedAt.slice(0, 10))}.</p>
+            <form action="/api/admin/disconnect" method="post"><input type="hidden" name="app" value="wispr" /><button className="btn btn-secondary btn-sm" type="submit">Disconnect</button></form>
+          </>
+        ) : wisprReady() ? (
+          <>
+            <a className="btn btn-primary" href="/api/admin/connect/wispr">Connect Wispr Flow</a>
+            <p className="muted small" style={{ margin: 0 }}>You’ll sign in to Wispr Flow and allow access. If Wispr doesn’t accept this site as an app, the reason shows here and nothing else changes.</p>
+          </>
+        ) : (
+          <>
+            <p className="small a-urgent" style={{ margin: 0 }}>WISPR_MCP_URL isn’t set in Vercel yet.</p>
+            <ol className="a-steps small">
+              <li>In Wispr Flow, open Settings → MCP → “All other apps” and copy the Server URL.</li>
+              <li>In Vercel, add <code>WISPR_MCP_URL</code> with that address (no slash at the end), then redeploy.</li>
+              <li>Come back here and press Connect Wispr Flow, then sign in. It comes back to <code>{wisprRedirect()}</code>.</li>
+            </ol>
+          </>
         )}
       </section>
 

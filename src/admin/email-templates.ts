@@ -5,6 +5,7 @@ import { getPortalSettings, portalClient } from '@/portal/data'
 import { PIPELINE_STAGES, type PipelineStage } from '@/sanity/portal/office-constants'
 import { blockOptions } from './email-blocks'
 import { granolaReady } from './granola'
+import { wisprConnected } from './wispr'
 import { adminSampleMode } from './config'
 import { LIMITS, STARTER_TEMPLATES, type EmailTemplate, type TemplateVars } from './email-templates-shared'
 import type { OfficeProject } from './types'
@@ -119,9 +120,9 @@ export async function composerSetup(p: OfficeProject, person?: { name?: string; 
     signOff: settings.signOff,
     portalUrl: `${SITE_URL}/portal`,
   }
-  // Portal blocks for this project, and whether Granola is connected (for "Draft from a call").
-  const blocks = await blockOptions(p)
-  return { templates, to: who?.email ?? '', vars, stage: p.pipelineStage, blocks, granola: granolaReady() || adminSampleMode() }
+  // Portal blocks for this project, and whether Granola / Wispr Flow are connected (for "Draft from a call").
+  const [blocks, wispr] = await Promise.all([blockOptions(p), wisprConnected()])
+  return { templates, to: who?.email ?? '', vars, stage: p.pipelineStage, blocks, granola: granolaReady() || adminSampleMode(), wispr: wispr || adminSampleMode() }
 }
 
 /**

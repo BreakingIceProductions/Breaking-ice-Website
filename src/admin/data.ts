@@ -461,7 +461,8 @@ function open<T>(sealed?: string): T | null {
   }
 }
 
-export type Connection = 'ticktick' | 'zoho'
+// wisprClient is the app registration Wispr Flow gave us (registered once); wispr is the sign-in.
+export type Connection = 'ticktick' | 'zoho' | 'wispr' | 'wisprClient'
 
 export async function getConnection<T>(name: Connection): Promise<T | null> {
   if (sample() || !portalEnv.secret) return null
