@@ -144,7 +144,7 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                           <button type="button" className="bd-open" onClick={() => open(c)}>
                             <span className="a-client">{c.client}</span>
                             <strong className="bd-title">{c.title}</strong>
-                            <span className="bd-amount">{money(c.amount)}</span>
+                            <span className="bd-amount">{!c.amount && c.budget ? `Budget ${c.budget}` : money(c.amount)}</span>
                             <span className="bd-meta"><span>{c.checks.length ? `${done} of ${c.checks.length} done` : ''}</span><span>{inStage(c.days)}</span></span>
                             {c.checks.length > 0 && (
                               <span className="bd-bar" aria-hidden="true">{c.checks.map((k) => <i key={k.key} className={isDone(c, k.key, k.done) ? 'on' : ''} />)}</span>
@@ -209,7 +209,7 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
               <header className="bd-pop-head">
                 <div className="stack" style={{ gap: 6, minWidth: 0 }}>
                   <span className="a-client">{c.clientId ? <Link className="text-link-plain" href={`/admin/clients/${c.clientId}`}>{c.client}</Link> : c.client}</span>
-                  <h2 id="bd-h" className="a-h2 a-h2-lg">{c.title}</h2>
+                  <h2 id="bd-h" className="a-h2 a-h2-lg"><Link className="text-link-plain" href={c.href}>{c.title}</Link></h2>
                   <div className="row-wrap a-chips">
                     {c.type && <span className="a-chip">{c.type}</span>}
                     {c.region && <span className="a-chip">{c.region}</span>}
@@ -233,7 +233,7 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                   <strong>{nextOf(c)}</strong>
                   <span className="small muted">{c.checks.length ? `${done} of ${c.checks.length} done in ${stages[si]?.title}` : inStage(c.days)}</span>
                 </div>
-                <Link className="btn btn-primary btn-sm" href={`/admin/projects/${c.id}`}>Open the full page</Link>
+                <Link className="btn btn-primary btn-sm" href={c.href}>Open the full page</Link>
               </div>
 
               <div className="bd-tabs" role="tablist" aria-label="Project sections">
@@ -268,6 +268,7 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                 {tab === 'money' && (
                   <dl className="key-dates">
                     <div><dt>Quote total</dt><dd>{c.amount ? money(c.amount) : 'Not set'}</dd></div>
+                    {c.budget && <div><dt>Budget they gave</dt><dd>{c.budget}</dd></div>}
                     <div><dt>Deposit</dt><dd>{c.deposit ? money(c.deposit) : 'Not set'}</dd></div>
                     <div><dt>Quote</dt><dd>{c.quote ?? 'None yet'}</dd></div>
                     {c.invoices.map((i, n) => <div key={n}><dt>{i.label}</dt><dd>{money(i.amount)} · {i.status.replace('_', ' ')}</dd></div>)}

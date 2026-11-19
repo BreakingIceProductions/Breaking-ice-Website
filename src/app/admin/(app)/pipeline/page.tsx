@@ -35,9 +35,7 @@ export default async function Pipeline() {
         <div className="btn-row">
           <Link className="text-link" href="/admin/projects?view=list">List and archive</Link>
           <Link className="btn btn-secondary" href="/admin/proposals/new">Proposal builder</Link>
-          <a className="btn btn-primary" href="/studio/portal/intent/create/template=clientProject;type=clientProject" target="_blank" rel="noopener noreferrer">
-            New lead<span className="sr-only"> (opens the Studio)</span>
-          </a>
+          <Link className="btn btn-primary" href="/admin/leads/new">New lead</Link>
         </div>
       </header>
 

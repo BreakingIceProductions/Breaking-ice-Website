@@ -94,7 +94,8 @@ export function sampleOfficeProjects(): OfficeProject[] {
       projectType: 'social',
       region: 'nwt',
       client: client('sample-canoe', 'Canoe North Adventures'),
-      office: { _id: 'bo-state-sample-canoe', stageChangedAt: at(-9) },
+      quote: { version: 1, sharedAt: at(-9), lastSentAt: at(-9), viewedAt: at(-8) },
+      office: { _id: 'bo-state-sample-canoe', stageChangedAt: at(-9), lead: { source: 'repeat', budget: '5k-10k' } },
     },
     {
       ...base,
@@ -120,7 +121,20 @@ export function sampleOfficeProjects(): OfficeProject[] {
       region: 'alberta',
       client: client('sample-ab', '[Alberta client]'),
       schedule: [{ _key: 'y1', kind: 'meeting', title: 'Kickoff call', start: d(1), time: '10:00' }],
-      office: { _id: 'bo-state-sample-alberta', stageChangedAt: at(-1) },
+      office: {
+        _id: 'bo-state-sample-alberta',
+        stageChangedAt: at(-1),
+        lead: { phone: '780-555-0142', website: 'example.com', source: 'referral', budget: '10k-30k', startDate: d(45), notes: '[Why now, in their words, and what you want to remember for the call.]' },
+        log: [
+          { _key: 'l7', at: at(-0.1), text: 'Phone call: [Short note]', kind: 'contact-phone' },
+          { _key: 'l6', at: at(-0.5), text: 'Email: [Short note]', kind: 'contact-email' },
+          { _key: 'l5', at: at(-0.8), text: 'Text: [Short note]', kind: 'contact-text' },
+          { _key: 'l4', at: `${d(-1)}T19:00:00.000Z`, text: 'In person: [Short note]', kind: 'contact-in-person', day: true },
+          { _key: 'l3', at: at(-1), text: 'Lead added', kind: 'lead' },
+          { _key: 'l2', at: `${d(-2)}T19:00:00.000Z`, text: 'Phone call: [Short note]', kind: 'contact-phone', day: true },
+          { _key: 'l1', at: `${d(-3)}T19:00:00.000Z`, text: 'Other: [Short note]', kind: 'contact-other', day: true },
+        ],
+      },
     },
     {
       ...base,
@@ -130,7 +144,12 @@ export function sampleOfficeProjects(): OfficeProject[] {
       projectType: 'brand-film',
       region: 'nwt',
       client: client('sample-lodge', '[Lodge client]'),
-      office: { _id: 'bo-state-sample-call', stageChangedAt: at(-2) },
+      office: {
+        _id: 'bo-state-sample-call',
+        stageChangedAt: at(-2),
+        lead: { source: 'google', budget: '30k-100k', callDate: d(2), callTime: '10:30' },
+        log: [{ _key: 'l1', at: at(-2), text: 'Moved to Call booked', kind: 'stage' }],
+      },
     },
     {
       ...base,

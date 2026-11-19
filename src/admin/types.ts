@@ -56,11 +56,35 @@ export type OfficeState = {
   calendar?: { _key: string; eventId: string; hash: string }[]
   invoices?: InvoiceRecord[]
   notes?: { _key: string; at: string; text: string }[]
-  log?: { _key: string; at: string; text: string; kind?: string }[]
+  /** `day` marks an entry logged for a date rather than a moment (a call logged afterwards), so no time is shown. */
+  log?: { _key: string; at: string; text: string; kind?: string; day?: boolean }[]
   /** Dashboard reminders Josh dismissed. Each key names one wait (a version, a quote), so a new one shows again. */
   dismissed?: string[]
   /** Stage checklist steps ticked off on the board, as "<stage>:<step number>". */
   checks?: string[]
+  /** Sales details kept while the project is a lead. Filled in on the lead page (/admin/leads/<id>). */
+  lead?: LeadDetails
+}
+
+export type LeadDetails = {
+  /** The person who got in touch, as typed on the New lead form. The client's contact (matched by email) wins when there is one. */
+  name?: string
+  email?: string
+  phone?: string
+  website?: string
+  /** How they found us: a value from LEAD_SOURCES. */
+  source?: string
+  /** A value from LEAD_BUDGETS; empty means not discussed. */
+  budget?: string
+  /** When they'd like to start (YYYY-MM-DD). Not the project's own start date, which names its folders. */
+  startDate?: string
+  callDate?: string
+  /** "HH:MM", 24-hour. */
+  callTime?: string
+  /** Why now, and Josh's notes. */
+  notes?: string
+  /** Why it was archived: a value from LOST_REASONS. */
+  lostReason?: string
 }
 
 export type OfficeClient = {

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { fmtDay } from '@/admin/dates'
 import { cad } from '@/admin/insights'
+import { pageHref } from '@/admin/lead'
 import { stageTitle } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
 import { PIPELINE_STAGES } from '@/sanity/portal/office-constants'
@@ -36,7 +37,7 @@ export function ArchiveBar({ id, list, title = 'Archive', empty = 'Nothing archi
                 <tbody>
                   {sub.map((p) => (
                     <tr key={p._id}>
-                      <td><Link className="a-strong-link" href={`/admin/projects/${p._id}`}>{p.title}</Link></td>
+                      <td><Link className="a-strong-link" href={pageHref(p._id, p.pipelineStage)}>{p.title}</Link></td>
                       <td>{p.client.organizationName}</td>
                       <td>{stageTitle(p.pipelineStage)}{p.declinedAt ? ` · declined ${fmtDay(p.declinedAt.slice(0, 10))}` : ''}</td>
                       <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>

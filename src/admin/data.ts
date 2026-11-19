@@ -7,7 +7,7 @@ import type { Deliverable } from '@/portal/types'
 import type { PipelineStage } from '@/sanity/portal/office-constants'
 import { adminSampleMode } from './config'
 import { sampleOfficeProjects } from './samples'
-import type { InvoiceRecord, OfficeClient, OfficeProject, OfficeState, TaskRecord } from './types'
+import type { InvoiceRecord, LeadDetails, OfficeClient, OfficeProject, OfficeState, TaskRecord } from './types'
 
 /**
  * Back-office reads and writes, all in the private "portal" dataset.
@@ -198,14 +198,111 @@ export async function updateInvoiceRecord(projectId: string, recordKey: string, 
   await portalClient.patch(officeId(projectId)).set(set).commit()
 }
 
-export async function addLog(projectId: string, text: string, kind = 'office') {
+/** Lead details on the office record: each field set on its own, and cleared when it comes in empty. */
+export async function setLead(projectId: string, patch: Partial<Record<keyof LeadDetails, string>>) {
+  if (sample()) return
+  const entries = Object.entries(patch)
+  const set = Object.fromEntries(entries.filter(([, v]) => v).map(([k, v]) => [`lead.${k}`, v]))
+  const unset = entries.filter(([, v]) => !v).map(([k]) => `lead.${k}`)
+  if (!entries.length) return
+  await ensureOffice(projectId)
+  let p = portalClient.patch(officeId(projectId)).setIfMissing({ lead: {} })
+  if (Object.keys(set).length) p = p.set(set)
+  if (unset.length) p = p.unset(unset)
+  await p.commit()
+}
+
+const slugify = (s: string) =>
+  s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70).replace(/-+$/, '') || 'project'
+
+export type NewLead = { name: string; email: string; company: string; title: string; projectType?: string; lead: LeadDetails }
+
+/**
+ * A new lead from the back office: the client (found by a contact's email, then by organization
+ * name, or made new with that one contact), a project in the New lead stage, and its office
+ * record, all in one transaction. Nothing is emailed, and no stage steps run.
+ *
+ * An existing client is never changed: if the person isn't one of its contacts they are kept on
+ * the lead only, so adding a lead can't give anyone a look at that client's projects.
+ */
+export async function createLead(input: NewLead): Promise<{ id: string; clientId: string; newClient: boolean }> {
+  const email = input.email.toLowerCase()
+  // Drafts count too, so a client or address still being written in the Studio isn't doubled up.
+  const raw = { cache: 'no-store' as const, perspective: 'raw' as const }
+  const found = await portalClient.fetch<{ _id: string; byEmail: boolean }[]>(
+    `*[_type == "client" && (count(contacts[lower(email) == $email]) > 0 || lower(organizationName) == $org)]{_id, "byEmail": count(contacts[lower(email) == $email]) > 0}`,
+    { email, org: input.company.toLowerCase() },
+    raw,
+  )
+  const published = found.filter((c) => !c._id.startsWith('drafts.') && !c._id.startsWith('versions.'))
+  const existing = published.find((c) => c.byEmail) ?? published[0]
+  const clientId = existing?._id ?? `client-${randomBytes(8).toString('hex')}`
+  const id = `lead-${randomBytes(8).toString('hex')}`
+
+  const base = slugify(input.title)
+  const taken = new Set(await portalClient.fetch<string[]>(`*[_type == "clientProject" && string::startsWith(slug.current, $base)].slug.current`, { base }, raw))
+  let slug = base
+  for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`
+
+  const at = new Date().toISOString()
+  const lead = Object.fromEntries(Object.entries({ ...input.lead, name: input.name, email }).filter(([, v]) => v))
+  const tx = portalClient.transaction()
+  if (!existing) {
+    tx.create({
+      _id: clientId,
+      _type: 'client',
+      organizationName: input.company,
+      // Being listed lets them sign in to the portal if they ask for a link; nothing is sent to them by this.
+      contacts: [{ _key: key(), _type: 'contact', name: input.name, email, getsEmails: true }],
+      portalPayments: false,
+      noGst: false,
+    })
+  }
+  // The same starting values the Studio gives a new project.
+  tx.create({
+    _id: id,
+    _type: 'clientProject',
+    title: input.title,
+    slug: { _type: 'slug', current: slug },
+    client: { _type: 'reference', _ref: clientId },
+    status: 'in-production',
+    stage: 1,
+    hiddenFromClient: false,
+    dontEmailDelivery: false,
+    pipelineStage: 'lead',
+    archived: false,
+    ...(input.projectType && { projectType: input.projectType }),
+  })
+  tx.create({
+    _id: officeId(id),
+    _type: 'boState',
+    project: id,
+    stageChangedAt: at,
+    stageHistory: [{ _key: key(), at, to: 'lead' }],
+    lead,
+    log: [{ _key: key(), at, text: 'Lead added', kind: 'lead' }],
+  })
+  await tx.commit({ autoGenerateArrayKeys: false })
+  return { id, clientId, newClient: !existing }
+}
+
+/** The project type lives on the project itself (the board and the Studio read it there). */
+export async function setProjectType(projectId: string, projectType: string) {
+  if (sample()) return
+  const change = (id: string) => (projectType ? portalClient.patch(id).set({ projectType }) : portalClient.patch(id).unset(['projectType']))
+  await change(projectId).commit()
+  await change(`drafts.${projectId}`).commit().catch(() => {})
+}
+
+/** `when.day` logs it for a date (a call written up afterwards) rather than for this moment. */
+export async function addLog(projectId: string, text: string, kind = 'office', when?: { at: string; day?: boolean }) {
   if (sample()) return
   try {
     await ensureOffice(projectId)
     await portalClient
       .patch(officeId(projectId))
       .setIfMissing({ log: [] })
-      .insert('before', 'log[0]', [{ _key: key(), at: new Date().toISOString(), text: text.slice(0, 240), kind }])
+      .insert('before', 'log[0]', [{ _key: key(), at: when?.at ?? new Date().toISOString(), text: text.slice(0, 240), kind, ...(when?.day && { day: true }) }])
       .commit({ autoGenerateArrayKeys: false })
     await portalClient.patch(officeId(projectId)).unset(['log[80:]']).commit().catch(() => {})
   } catch (e) {

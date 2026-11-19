@@ -5,6 +5,7 @@ import { requireAdmin } from '@/admin/auth'
 import { calendarReady, ticktickReady, zohoReady } from '@/admin/config'
 import { listProjects } from '@/admin/data'
 import { needsAction } from '@/admin/insights'
+import { isSalesStage, pageHref } from '@/admin/lead'
 import { AdminSearch, type SearchItem } from '@/admin/ui/search'
 import { ticktickConnection } from '@/admin/ticktick'
 import { AdminNav } from '@/admin/ui/nav'
@@ -18,14 +19,15 @@ export default async function AdminApp({ children }: { children: React.ReactNode
   const clients = new Map(projects.filter((p) => p.client._id).map((p) => [p.client._id, p.client.organizationName]))
   const search: SearchItem[] = [
     { group: 'Actions', label: 'New proposal', sub: 'Open the builder', href: '/admin/proposals/new' },
-    { group: 'Actions', label: 'New project or lead', sub: 'Opens the Studio', href: '/studio/portal/intent/create/template=clientProject;type=clientProject', external: true },
+    { group: 'Actions', label: 'New lead', sub: 'Add someone who got in touch', href: '/admin/leads/new' },
+    { group: 'Actions', label: 'New project', sub: 'Opens the Studio', href: '/studio/portal/intent/create/template=clientProject;type=clientProject', external: true },
     { group: 'Go to', label: 'Dashboard', href: '/admin' },
     { group: 'Go to', label: 'Pipeline', sub: 'Leads and projects on one board', href: '/admin/pipeline' },
     { group: 'Go to', label: 'Projects list and archive', href: '/admin/projects?view=list' },
     { group: 'Go to', label: 'Clients', sub: 'Everyone in one list', href: '/admin/contacts' },
     { group: 'Go to', label: 'Finder', sub: 'Clients, projects and files', href: '/admin/clients' },
     { group: 'Go to', label: 'Settings and connections', href: '/admin/settings' },
-    ...projects.map((p) => ({ group: 'Projects' as const, label: p.title, sub: `${p.client.organizationName}${p.archived ? ' · archived' : ''}`, href: `/admin/projects/${p._id}` })),
+    ...projects.map((p) => ({ group: 'Projects' as const, label: p.title, sub: `${p.client.organizationName}${isSalesStage(p.pipelineStage) ? ' · lead' : ''}${p.archived ? ' · archived' : ''}`, href: pageHref(p._id, p.pipelineStage) })),
     ...[...clients].map(([id, name]) => ({ group: 'Clients' as const, label: name, href: `/admin/clients/${id}` })),
   ]
   const links = [

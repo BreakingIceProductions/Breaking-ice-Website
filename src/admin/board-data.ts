@@ -1,6 +1,7 @@
 import 'server-only'
 import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS, type PipelineStage } from '@/sanity/portal/office-constants'
 import { addDays, daysBetween, daysSince, fmtDay, today } from './dates'
+import { budgetTitle, isSalesStage, pageHref } from './lead'
 import { MILESTONE_LIST } from './milestones'
 import { STAGE_TASKS, stageIndex } from './stages'
 import type { OfficeProject } from './types'
@@ -15,6 +16,10 @@ export type BoardCard = {
   type?: string
   region?: string
   amount?: number
+  /** The budget range they gave, for a lead with no quote total yet. */
+  budget?: string
+  /** The full page: the lead page before booking, the project page after. */
+  href: string
   deposit?: number
   days: number | null
   /** Sitting too long before booking (new lead 3+ days, call or proposal 5+, proposal out 7+). */
@@ -45,6 +50,18 @@ const COLD_AFTER: Partial<Record<PipelineStage, number>> = { lead: 3, call: 5, p
 
 const INVOICE_KIND = { deposit: 'Deposit invoice', final: 'Final invoice', retainer: 'Retainer invoice' }
 
+/** Where the portal quote stands, in a few words. Undefined when there's no quote yet. */
+export function quoteStatus(p: OfficeProject) {
+  const sig = p.quote?.signature
+  return sig
+    ? `Signed by ${sig.name} on ${fmtDay(sig.at.slice(0, 10))}`
+    : p.quote?.sharedAt
+      ? `Sent ${fmtDay(p.quote.sharedAt.slice(0, 10))}${p.quote.viewedAt ? ', opened' : ', not opened yet'}`
+      : p.quote
+        ? 'Drafted, not sent'
+        : undefined
+}
+
 export function boardCard(p: OfficeProject): BoardCard {
   const t = today()
   const si = stageIndex(p.pipelineStage)
@@ -57,7 +74,6 @@ export function boardCard(p: OfficeProject): BoardCard {
     .concat(p.schedule.map((x) => ({ label: x.title, date: x.start })))
     .sort((a, b) => a.date.localeCompare(b.date))
   const nextUp = upcoming.find((d) => d.date >= t) ?? upcoming[0]
-  const sig = p.quote?.signature
   const preBooking = si < stageIndex('booked')
   const clientPath = !p.slug ? '/portal' : preBooking ? (p.quote ? `/portal/quotes/${p.slug}` : '/portal') : `/portal/${p.slug}`
   const lib = `/admin/clients?at=${encodeURIComponent(p.client._id)}/${encodeURIComponent(p.slug ?? p._id)}`
@@ -70,6 +86,8 @@ export function boardCard(p: OfficeProject): BoardCard {
     type: PROJECT_TYPES.find((x) => x.value === p.projectType)?.title,
     region: REGIONS.find((r) => r.value === p.region)?.title,
     amount: p.quoteAmount,
+    budget: isSalesStage(p.pipelineStage) ? budgetTitle(p.office.lead?.budget) : undefined,
+    href: pageHref(p._id, p.pipelineStage),
     deposit: p.depositAmount,
     days,
     cold: (days ?? 0) >= (COLD_AFTER[p.pipelineStage] ?? Infinity),
@@ -78,13 +96,7 @@ export function boardCard(p: OfficeProject): BoardCard {
     ready: after ? `Ready for ${after.title}` : 'All done',
     nextDate: nextUp ? `${nextUp.label} · ${fmtDay(nextUp.date)}` : undefined,
     dates: upcoming.map((d) => ({ label: d.label, date: fmtDay(d.date, { weekday: 'short', month: 'short', day: 'numeric' }), past: d.date < t })),
-    quote: sig
-      ? `Signed by ${sig.name} on ${fmtDay(sig.at.slice(0, 10))}`
-      : p.quote?.sharedAt
-        ? `Sent ${fmtDay(p.quote.sharedAt.slice(0, 10))}${p.quote.viewedAt ? ', opened' : ', not opened yet'}`
-        : p.quote
-          ? 'Drafted, not sent'
-          : undefined,
+    quote: quoteStatus(p),
     invoices: (p.office.invoices ?? []).map((i) => ({ label: `${INVOICE_KIND[i.kind]}${i.number ? ` ${i.number}` : ''}`, status: i.status ?? 'draft', amount: i.amount })),
     links: [
       p.client._id && { label: 'Add a document', href: `${lib}/documents` },
