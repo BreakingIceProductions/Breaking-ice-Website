@@ -10,7 +10,7 @@ import { ALBERTA_PLACEHOLDER } from '@/lib/placeholders'
 
 export async function generateMetadata() {
   const a = await getAbout()
-  return seoMeta(a.seo, 'About', 'Founded in Norman Wells, NWT in 2022 and now also based in Stony Plain, Alberta. Meet Josh Ferguson and the patient, people-first way we make films.', { path: '/about', eyebrow: 'About' })
+  return seoMeta(a.seo, 'About', 'We started in Norman Wells, NWT, in 2022. Now we are also in Stony Plain, Alberta. Meet Josh Ferguson and see how we make films.', { path: '/about', eyebrow: 'About' })
 }
 
 export default async function AboutPage() {
@@ -59,7 +59,7 @@ export default async function AboutPage() {
             <Link href="/northwest-territories" className="loc-card">
               <Still image={a.journeyNorthImage} label="Norman Wells" ratio="ratio-169" width={1000} />
               <span className="stack" style={{ gap: 'var(--space-2)' }}>
-                <span className="eyebrow">{pick(a.journeyNorthText, 'Where it began')}</span>
+                <span className="eyebrow">{pick(a.journeyNorthText, 'Where it started')}</span>
                 <span className="h2">Norman Wells · the Sahtú</span>
               </span>
             </Link>

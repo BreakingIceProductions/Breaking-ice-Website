@@ -23,7 +23,7 @@ export function ContactForm({
   submitLabel = 'Send',
   errorHeadline = 'A couple of things need a look:',
   deliveryErrorHeadline,
-  deliveryErrorMessage = 'Nothing you typed is lost.',
+  deliveryErrorMessage = 'Your text is still here.',
 }: {
   services: Opt[]
   budget: string[]
@@ -87,7 +87,7 @@ export function ContactForm({
     const errs: Record<string, string> = {}
     if (!String(f.get('name') || '').trim()) errs.name = 'Please tell us your name.'
     const em = String(f.get('email') || '')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) errs.email = 'That email doesn’t look quite right.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) errs.email = 'Please check your email address.'
     if (!String(f.get('story') || '').trim()) errs.story = 'A sentence or two is plenty.'
     setErrors(errs)
     if (Object.keys(errs).length) {
@@ -126,10 +126,10 @@ export function ContactForm({
             ? 'Something in the form didn’t come through right, so your message wasn’t sent. Check your email address and try again.'
           : data.error === 'too-many'
             ? 'That’s a lot of messages in a short time, so we paused this one.'
-            : 'Something went wrong on our end and your message didn’t send.',
+            : 'We had a problem, and your message did not send.',
       )
     } catch {
-      setFailNote('We couldn’t reach the server, so your message didn’t send.')
+      setFailNote('We could not connect, so your message did not send.')
     }
     track('Contact form failed')
     setState('failed')
@@ -147,7 +147,7 @@ export function ContactForm({
         </ol>
         {bookingLink && (
           <div className="book-card" style={{ width: '100%' }}>
-            <strong>Want to skip the back-and-forth?</strong>
+            <strong>Want to talk now?</strong>
             <a className="btn btn-primary" href={bookingLink} target="_blank" rel="noopener noreferrer">Book a 20-minute call ↗</a>
           </div>
         )}
@@ -214,7 +214,7 @@ export function ContactForm({
           </select>
         </div>
         <div className="field full">
-          <label htmlFor="c-story">What’s the story?</label>
+          <label htmlFor="c-story">What is your story?</label>
           <textarea className="input" id="c-story" name="story" aria-required="true" maxLength={5000} {...inv('story')} />
           {err('story')}
         </div>

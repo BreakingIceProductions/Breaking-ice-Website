@@ -40,7 +40,7 @@ export default async function HomePage() {
         <p className="splash-line">{h.heroEyebrow}</p>
         {/* Phones only: one quiet way in, without scrolling. */}
         <ArrowLink href="/contact" className="splash-cta">{s.primaryCta}</ArrowLink>
-        <a href="#film" className="scroll-cue splash-cue">Scroll to explore <span aria-hidden="true">↓</span></a>
+        <a href="#film" className="scroll-cue splash-cue">Scroll down <span aria-hidden="true">↓</span></a>
       </section>
 
       {/* Hero: the reel, contained in a soft frame */}
@@ -157,9 +157,9 @@ export default async function HomePage() {
       <section className="section calc-band" aria-labelledby="calc-title">
         <div className="wrap wrap-narrow">
           <div className="sec-head center">
-            <Eyebrow>The return</Eyebrow>
-            <SplitHeading as="h2" className="h2" text="A film that earns its keep. See what that could be worth over a year." />
-            <p className="hero-sub" style={{ margin: 0 }}>Move the sliders to your own numbers. It is the same maths we walk through together when we talk.</p>
+            <Eyebrow>The value of a film</Eyebrow>
+            <SplitHeading as="h2" className="h2" text="A good film works for you all year. See what that can be worth." />
+            <p className="hero-sub" style={{ margin: 0 }}>Move the sliders to your own numbers. We use the same maths when we talk with you.</p>
           </div>
           <ReturnCalculator cta={s.primaryCta} />
         </div>

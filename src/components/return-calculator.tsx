@@ -17,7 +17,7 @@ export function ReturnCalculator({ cta }: { cta: string }) {
   return (
     <div className="calc">
       <div className="calc-row">
-        <label htmlFor={`${id}-v`} className="calc-q">What is one new customer, recruit or supporter worth to you?</label>
+        <label htmlFor={`${id}-v`} className="calc-q">What is one new customer, staff member or supporter worth to you?</label>
         <output className="calc-val" htmlFor={`${id}-v`}>{money(value)}</output>
       </div>
       <input
@@ -35,7 +35,7 @@ export function ReturnCalculator({ cta }: { cta: string }) {
       <div className="calc-ends"><span>$500</span><span>$20,000</span></div>
 
       <div className="calc-row" style={{ marginTop: 'var(--space-8)' }}>
-        <label htmlFor={`${id}-c`} className="calc-q">How many more could a stronger film bring in, each month?</label>
+        <label htmlFor={`${id}-c`} className="calc-q">How many more people can a better film bring to you each month?</label>
         <output className="calc-val" htmlFor={`${id}-c`}>{count}</output>
       </div>
       <input
@@ -56,9 +56,9 @@ export function ReturnCalculator({ cta }: { cta: string }) {
         <div className="calc-big">{money(yearly)}<span>/year</span></div>
         <div className="calc-month">{money(monthly)} a month</div>
         <p>
-          That is the twelve-month value of {count} more {count === 1 ? 'person' : 'people'} a month at {money(value)} each. One film, doing that work again and again.
+          This is the value over 12 months of {count} more {count === 1 ? 'person' : 'people'} each month, at {money(value)} each. One film does this work again and again.
         </p>
-        <p className="calc-note">An illustration to make the idea concrete, not a forecast or a promise. Use your own numbers.</p>
+        <p className="calc-note">This is an example to help you see the idea. It is not a forecast or a promise. Use your own numbers.</p>
         <div className="btn-row" style={{ justifyContent: 'center', marginTop: 'var(--space-6)' }}>
           <Btn href="/contact">{cta}</Btn>
         </div>

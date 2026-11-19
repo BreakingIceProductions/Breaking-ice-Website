@@ -71,7 +71,7 @@ export async function LocationPage({ slug }: { slug: string }) {
             <div className="sec-head-row">
               <div className="sec-head">
                 <Eyebrow>{pick(loc.storiesEyebrow, 'Stories from here')}</Eyebrow>
-                <h2 id="local" className="h2">{pick(loc.storiesTitle, `Work in ${loc.title}`)}</h2>
+                <h2 id="local" className="h2">{pick(loc.storiesTitle, `Our work in ${loc.title}`)}</h2>
               </div>
               <ArrowLink href="/stories">All stories</ArrowLink>
             </div>
@@ -83,8 +83,8 @@ export async function LocationPage({ slug }: { slug: string }) {
       <section className="section ruled" aria-labelledby="area">
         <div className={`wrap ${loc.mapImage?.asset ? 'grid-2' : ''}`} style={{ alignItems: 'start' }}>
           <div className="stack" style={{ gap: 16 }}>
-            <Eyebrow>{pick(loc.areaEyebrow, 'Area served')}</Eyebrow>
-            <h2 id="area" className="h2">{pick(loc.areaTitle, `Where we go from ${loc.base?.split(',')[0] ?? loc.title}`)}</h2>
+            <Eyebrow>{pick(loc.areaEyebrow, 'Where we go')}</Eyebrow>
+            <h2 id="area" className="h2">{pick(loc.areaTitle, `From ${loc.base?.split(',')[0] ?? loc.title}, we go to these places`)}</h2>
             <p className={`muted ${loc.travelNote?.startsWith('[') ? 'placeholder-text' : ''}`} style={{ margin: 0 }}>{loc.travelNote}</p>
             <div className="area-groups" style={{ marginTop: 'var(--space-6)' }}>
               {(loc.areaServed ?? []).map((g) => (
@@ -103,7 +103,7 @@ export async function LocationPage({ slug }: { slug: string }) {
 
       {other && (
         <div className="wrap" style={{ paddingBottom: 'var(--space-16)', display: 'flex', justifyContent: 'flex-end' }}>
-          <Link className="link-arrow" href={`/${other.slug}`}>Also: {other.title} <span aria-hidden="true">→</span></Link>
+          <Link className="link-arrow" href={`/${other.slug}`}>We also work in {other.title} <span aria-hidden="true">→</span></Link>
         </div>
       )}
       <ClosingBand s={s} headline={loc.closingHeadline} secondary={false} />

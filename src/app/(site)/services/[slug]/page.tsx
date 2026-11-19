@@ -81,7 +81,7 @@ export default async function ServicePage({ params }: Props) {
           </nav>
           <div className="grid-2" style={{ alignItems: 'center' }}>
             <div className="stack" style={{ gap: 0 }}>
-              <Eyebrow>{sv.title} · Alberta & the NWT</Eyebrow>
+              <Eyebrow>{sv.title} · Alberta and the NWT</Eyebrow>
               <h1 className="h1">{sv.heroHeadline ?? sv.title}</h1>
               <p className="body-lg muted" style={{ margin: '0 0 var(--space-8)' }}>{sv.summary}</p>
               <div className="btn-row">
@@ -115,7 +115,7 @@ export default async function ServicePage({ params }: Props) {
 
       <section className="section ruled" aria-labelledby="who">
         <div className="wrap split">
-          <h2 id="who" className="eyebrow">Who it’s for</h2>
+          <h2 id="who" className="eyebrow">Who it is for</h2>
           <div className="body-lg">
             <RichText value={sv.whoItsFor} fallback="[Who this is for, in plain words: the organizations, the situations, the goals. Written for the people searching for it.]" />
             {industries.length > 0 && (
@@ -134,7 +134,7 @@ export default async function ServicePage({ params }: Props) {
       <section className="section ruled" aria-labelledby="inc">
         <div className="wrap grid-2" style={{ alignItems: 'start' }}>
           <div className="stack" style={{ gap: 'var(--space-5)' }}>
-            <h2 id="inc" className="eyebrow">What’s included</h2>
+            <h2 id="inc" className="eyebrow">What you get</h2>
             <ul className="included">
               {(sv.included ?? []).map((item, i) => (
                 <li key={i} className={item.startsWith('[') ? 'placeholder-text' : undefined}>{item}</li>
@@ -142,7 +142,7 @@ export default async function ServicePage({ params }: Props) {
             </ul>
           </div>
           <div className="panel stack" style={{ gap: 12 }}>
-            <span className="eyebrow">Typical timeline</span>
+            <span className="eyebrow">Usual timeline</span>
             <p className="h2" style={{ margin: 0 }}>{sv.timeline ?? '[Timeline]'}</p>
             {sv.timelineNote && <p className="muted" style={{ margin: 0 }}>{sv.timelineNote}</p>}
           </div>
