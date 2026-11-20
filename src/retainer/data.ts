@@ -6,7 +6,7 @@ import { fileMeta, findClientSubfolder, listFolderFiles, listSubfolders } from '
 import type { DriveFile, PortalClient, Session } from '@/portal/types'
 import { publerPieces, publerReady, type PublerResult } from './publer'
 import { SAMPLE_RETAINER_ID, sampleItems, samplePieces, sampleRetainerClient } from './samples'
-import type { ItemStatus, ItemType, MonthKey, PublerPiece, RetainerItem, RetainerMonth, RetainerMonthView, RetainerSettings } from './types'
+import { BRAND_COLOURS, type BrandImage, type ItemStatus, type ItemType, type MonthKey, type PublerPiece, type RetainerBrand, type RetainerItem, type RetainerMonth, type RetainerMonthView, type RetainerSettings } from './types'
 
 /**
  * Retainer clients, server side. Read by the client's retainer portal and the back office; written
@@ -66,7 +66,9 @@ export type RecapDraft = NonNullable<RetainerMonth['recap']>
 
 /* ── Reading ─────────────────────────────────────────────────────────── */
 
-const RC_FIELDS = `${CLIENT_FIELDS}, retainer, "firstMonth": *[_type == "retainerMonth" && clientId == ^._id] | order(month asc)[0].month`
+/** Brand images carry their raw asset url and type, so SVGs can be used as they are (not rasterized). */
+const BRAND_IMG = (k: string) => `${k}{asset, "url": asset->url, "mimeType": asset->mimeType}`
+const RC_FIELDS = `${CLIENT_FIELDS}, retainer{..., brand{..., ${BRAND_IMG('pattern')}, ${BRAND_IMG('mark')}, ${BRAND_IMG('markSmall')}}}, "firstMonth": *[_type == "retainerMonth" && clientId == ^._id] | order(month asc)[0].month`
 type RawClient = PortalClient & { retainer?: Partial<RetainerSettings> | null; firstMonth?: string | null }
 
 async function q<T>(query: string, params: Record<string, unknown> = {}): Promise<T | null> {
@@ -95,7 +97,40 @@ export function cleanSettings(raw: Partial<RetainerSettings> | null | undefined)
   if (typeof raw?.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(raw.accent.trim())) out.accent = raw.accent.trim().toLowerCase()
   if (isMonthKey(raw?.startMonth)) out.startMonth = raw.startMonth
   if (isMonthKey(raw?.endMonth)) out.endMonth = raw.endMonth
+  const brand = cleanBrand(raw?.brand)
+  if (brand) out.brand = brand
   return out
+}
+
+const HEX = /^#[0-9a-fA-F]{6}$/
+
+function cleanImage(raw: unknown): BrandImage | undefined {
+  const r = raw as BrandImage | null | undefined
+  if (!r || typeof r !== 'object') return undefined
+  const out: BrandImage = {}
+  if (typeof r.asset?._ref === 'string') out.asset = { _ref: r.asset._ref }
+  // Only https urls from Sanity, or a site-relative path (sample files in public/).
+  if (typeof r.url === 'string' && (/^https:\/\/cdn\.sanity\.io\/[\w./-]+$/.test(r.url) || /^\/[\w./-]+$/.test(r.url))) out.url = r.url
+  if (typeof r.mimeType === 'string') out.mimeType = r.mimeType.slice(0, 60)
+  return out.asset || out.url ? out : undefined
+}
+
+/** The brand object made safe: valid #rrggbb colours only, known fonts, images with an asset or a safe url. Undefined when empty. */
+export function cleanBrand(raw: Partial<RetainerBrand> | null | undefined): RetainerBrand | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const out: RetainerBrand = {}
+  const name = typeof raw.displayName === 'string' ? raw.displayName.trim().slice(0, 80) : ''
+  if (name) out.displayName = name
+  for (const k of BRAND_COLOURS) {
+    const v = raw[k]
+    if (typeof v === 'string' && HEX.test(v.trim())) out[k] = v.trim().toLowerCase()
+  }
+  if (raw.fonts === 'geometric' || raw.fonts === 'breaking-ice') out.fonts = raw.fonts
+  for (const k of ['pattern', 'mark', 'markSmall'] as const) {
+    const img = cleanImage(raw[k])
+    if (img) out[k] = img
+  }
+  return Object.keys(out).length ? out : undefined
 }
 
 const shape = (c: RawClient): RetainerClient => ({
@@ -365,14 +400,23 @@ export async function saveRetainerSettings(clientId: string, settings: Partial<R
   const clean = cleanSettings(settings)
   if (!canWrite(clientId)) return clean
   // Optional fields left empty are removed rather than stored as blanks.
-  const unset = (['publerWorkspaceId', 'accent', 'startMonth', 'endMonth'] as const).filter((k) => clean[k] === undefined).map((k) => `retainer.${k}`)
-  await portalClient
-    .patch(clientId)
-    .setIfMissing({ retainer: {} })
-    .set(Object.fromEntries(Object.entries(clean).map(([k, v]) => [`retainer.${k}`, v])))
-    .unset(unset)
-    .commit()
-  return clean
+  const unset: string[] = (['publerWorkspaceId', 'accent', 'startMonth', 'endMonth'] as const).filter((k) => clean[k] === undefined).map((k) => `retainer.${k}`)
+  const { brand, ...flat } = clean
+  const set: Record<string, unknown> = Object.fromEntries(Object.entries(flat).map(([k, v]) => [`retainer.${k}`, v]))
+  // Brand: only the name, colours and type come from the back office, field by field. The images are
+  // set in the Studio and are never touched here. Sent only when the form included `brand`.
+  if (settings.brand !== undefined) {
+    for (const k of ['displayName', ...BRAND_COLOURS, 'fonts'] as const) {
+      if (brand?.[k] !== undefined) set[`retainer.brand.${k}`] = brand[k]
+      else unset.push(`retainer.brand.${k}`)
+    }
+  }
+  let patch = portalClient.patch(clientId).setIfMissing({ retainer: {} })
+  if (settings.brand !== undefined) patch = patch.setIfMissing({ 'retainer.brand': {} })
+  await patch.set(set).unset(unset).commit()
+  // What's stored now: the cleaned form values plus any brand images already there.
+  const after = (await getRetainerClient(clientId, { includeInactive: true }).catch(() => null))?.retainer
+  return after ?? clean
 }
 
 /** Adds the item, or replaces the one with the same _key. Returns what was stored. */

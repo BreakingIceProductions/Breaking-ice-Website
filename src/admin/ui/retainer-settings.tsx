@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import type { RetainerSettings } from '@/retainer/types'
+import { BRAND_COLOURS, type BrandFonts, type RetainerSettings } from '@/retainer/types'
 
 /** POSTs JSON to a back-office route; never throws. */
 export async function postJson(url: string, body: unknown): Promise<{ ok: boolean; message?: string; sample?: boolean; [k: string]: unknown }> {
@@ -11,7 +11,24 @@ export async function postJson(url: string, body: unknown): Promise<{ ok: boolea
   return { ...j, ok: Boolean(r?.ok && j.ok !== false) }
 }
 
-type Form = { active: boolean; perMonth: string; rollover: 'none' | 'next-month'; publerWorkspaceId: string; accent: string; startMonth: string; endMonth: string }
+type BrandColour = (typeof BRAND_COLOURS)[number]
+type Form = {
+  active: boolean; perMonth: string; rollover: 'none' | 'next-month'; publerWorkspaceId: string; accent: string; startMonth: string; endMonth: string
+  displayName: string; fonts: BrandFonts
+  /** Brand colours, kept apart from the retainer's own `accent`. */
+  colours: Record<BrandColour, string>
+}
+
+const HEX = /^#[0-9a-fA-F]{6}$/
+const COLOUR_LABEL: Record<BrandColour, { label: string; hint: string }> = {
+  primary: { label: 'Brand surface', hint: 'Hero band, with white text' },
+  accent: { label: 'Accent', hint: 'Rules and progress fill only' },
+  accentText: { label: 'Accent as small text', hint: 'Eyebrows on white' },
+  ink: { label: 'Text', hint: 'Body and headings' },
+  muted: { label: 'Muted text', hint: 'Captions' },
+  surfaceAlt: { label: 'Alternate surface', hint: 'Cards and tiles' },
+  border: { label: 'Hairlines', hint: 'Card outlines, rules' },
+}
 
 /** The retainer's settings: on/off, deliverables a month, rollover, Publer workspace, brand colour, first and last month. */
 export function RetainerSettingsForm({ clientId, settings, readOnly }: { clientId: string; settings: RetainerSettings; readOnly?: boolean }) {
@@ -24,20 +41,28 @@ export function RetainerSettingsForm({ clientId, settings, readOnly }: { clientI
     accent: settings.accent ?? '',
     startMonth: settings.startMonth ?? '',
     endMonth: settings.endMonth ?? '',
+    displayName: settings.brand?.displayName ?? '',
+    fonts: settings.brand?.fonts ?? 'breaking-ice',
+    colours: Object.fromEntries(BRAND_COLOURS.map((k) => [k, settings.brand?.[k] ?? ''])) as Record<BrandColour, string>,
   })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }))
-  const badAccent = Boolean(f.accent) && !/^#[0-9a-fA-F]{6}$/.test(f.accent)
+  const setColour = (k: BrandColour, v: string) => setF((x) => ({ ...x, colours: { ...x.colours, [k]: v } }))
+  const badAccent = Boolean(f.accent) && !HEX.test(f.accent)
+  const badBrand = BRAND_COLOURS.filter((k) => f.colours[k] && !HEX.test(f.colours[k]))
+  const bad = badAccent || badBrand.length > 0
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    if (badAccent) return setMsg('The colour must look like #1f6feb.')
+    if (bad) return setMsg('Colours must look like #1f6feb.')
     setBusy(true)
     setMsg('')
+    const { displayName, fonts, active, perMonth, rollover, publerWorkspaceId, accent, startMonth, endMonth } = f
+    const brand = { displayName: displayName.trim(), fonts, ...Object.fromEntries(BRAND_COLOURS.map((k) => [k, f.colours[k].trim()])) }
     const r = await postJson('/api/admin/retainer/settings', {
       clientId,
-      settings: { ...f, perMonth: Number(f.perMonth) || 0, publerWorkspaceId: f.publerWorkspaceId.trim(), accent: f.accent.trim() },
+      settings: { active, rollover, startMonth, endMonth, perMonth: Number(perMonth) || 0, publerWorkspaceId: publerWorkspaceId.trim(), accent: accent.trim(), brand },
     })
     setBusy(false)
     if (!r.ok) return setMsg(r.message || 'That didn’t save. Reload the page and try again.')
@@ -84,10 +109,42 @@ export function RetainerSettingsForm({ clientId, settings, readOnly }: { clientI
             </div>
           </div>
         </div>
+        <fieldset className="rt-brand-set" style={{ border: 0, margin: 'var(--space-6) 0 0', padding: 0, minWidth: 0 }}>
+          <legend className="p-label" style={{ padding: 0, marginBottom: 'var(--space-2)' }}>Brand</legend>
+          <p className="small muted" style={{ margin: '0 0 var(--space-4)' }}>
+            Optional. Fill these in and their retainer page wears the client’s own design system, with Breaking Ice as a small credit. Leave them all empty for the Breaking Ice look. Logo files: set in the Studio (Client, Retainer, Brand).
+          </p>
+          <div className="rt-form">
+            <div className="field">
+              <label htmlFor="rt-bname">Name on the page</label>
+              <input id="rt-bname" className="input" autoComplete="off" value={f.displayName} onChange={(e) => set('displayName', e.target.value.slice(0, 80))} placeholder="e.g. North-Wright Air" />
+            </div>
+            <div className="field">
+              <label htmlFor="rt-bfonts">Type</label>
+              <select id="rt-bfonts" className="input" value={f.fonts} onChange={(e) => set('fonts', e.target.value === 'geometric' ? 'geometric' : 'breaking-ice')}>
+                <option value="breaking-ice">Breaking Ice type</option>
+                <option value="geometric">Geometric: Jost headings, Montserrat body</option>
+              </select>
+            </div>
+            {BRAND_COLOURS.map((k) => {
+              const v = f.colours[k]
+              const invalid = Boolean(v) && !HEX.test(v)
+              return (
+                <div className="field" key={k}>
+                  <label htmlFor={`rt-b-${k}`}>{COLOUR_LABEL[k].label} <span className="muted small">({COLOUR_LABEL[k].hint})</span></label>
+                  <div className="rt-color">
+                    <input type="color" aria-label={`Pick: ${COLOUR_LABEL[k].label}`} value={HEX.test(v) ? v : '#ffffff'} onChange={(e) => setColour(k, e.target.value)} />
+                    <input id={`rt-b-${k}`} className="input" autoComplete="off" spellCheck={false} value={v} onChange={(e) => setColour(k, e.target.value.trim().slice(0, 7))} placeholder="#rrggbb" aria-invalid={invalid || undefined} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </fieldset>
       </fieldset>
       {!readOnly && (
         <div className="row-wrap">
-          <button type="submit" className="btn btn-primary btn-sm" disabled={busy || badAccent}>{busy ? 'Saving…' : 'Save settings'}</button>
+          <button type="submit" className="btn btn-primary btn-sm" disabled={busy || bad}>{busy ? 'Saving…' : 'Save settings'}</button>
           <span className="small muted" role="status">{msg}</span>
         </div>
       )}

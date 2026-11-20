@@ -21,6 +21,44 @@
 /** YYYY-MM, in Edmonton time. */
 export type MonthKey = string
 
+/**
+ * A brand image: a Sanity image (resolved with portalImage; SVGs use the raw asset url, which the GROQ
+ * projection adds as `url` + `mimeType`), or a plain `{ url }` (sample mode, files in public/).
+ */
+export type BrandImage = { asset?: { _ref?: string } | null; url?: string; mimeType?: string }
+
+export type BrandFonts = 'breaking-ice' | 'geometric'
+
+/**
+ * The client's own design system for their retainer page. When it's set, the page is dressed in the
+ * client's brand and Breaking Ice is only a small credit. Absent: the Breaking Ice look (`accent` only).
+ * Colours are #rrggbb.
+ */
+export type RetainerBrand = {
+  /** How the client writes their name, e.g. "North-Wright Air". Falls back to organizationName. */
+  displayName?: string
+  /** Brand surface (hero band), e.g. navy. Carries the brand with white text. */
+  primary?: string
+  /** Accent for rules, rings and the progress fill. Never body text. */
+  accent?: string
+  /** The accent as small text on white / surface-alt (4.5:1). */
+  accentText?: string
+  ink?: string
+  muted?: string
+  surfaceAlt?: string
+  border?: string
+  /** 'geometric' = Jost display + Montserrat body. */
+  fonts?: BrandFonts
+  /** Hero pattern, set with background-size: cover. */
+  pattern?: BrandImage
+  /** Full-colour mark for 64px and up. */
+  mark?: BrandImage
+  /** Small mark for under 64px. */
+  markSmall?: BrandImage
+}
+
+export const BRAND_COLOURS = ['primary', 'accent', 'accentText', 'ink', 'muted', 'surfaceAlt', 'border'] as const
+
 export type RetainerSettings = {
   active: boolean
   /** Deliverables included each month. */
@@ -35,6 +73,8 @@ export type RetainerSettings = {
   startMonth?: MonthKey
   /** Last month, if it has ended. */
   endMonth?: MonthKey
+  /** The client's own design system for their page. Absent: Breaking Ice look. */
+  brand?: RetainerBrand
 }
 
 export type ItemStatus = 'planned' | 'in-progress' | 'scheduled' | 'delivered'

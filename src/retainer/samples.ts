@@ -13,7 +13,22 @@ export const SAMPLE_RETAINER_SETTINGS: RetainerSettings = {
   perMonth: 10,
   rollover: 'none',
   publerWorkspaceId: 'sample-workspace',
-  accent: '#1f6feb',
+  accent: '#e65729',
+  // Dressed in the North-Wright Air design system (first client theme), with its master SVGs in public/.
+  brand: {
+    displayName: 'North Sample Air',
+    primary: '#19324a',
+    accent: '#e65729',
+    accentText: '#b83f17',
+    ink: '#0e1e2c',
+    muted: '#4a5d6c',
+    surfaceAlt: '#e8eef2',
+    border: '#dce3e8',
+    fonts: 'geometric',
+    pattern: { url: '/samples/retainer/topo-navy-quiet.svg', mimeType: 'image/svg+xml' },
+    mark: { url: '/samples/retainer/roundel-full-colour.svg', mimeType: 'image/svg+xml' },
+    markSmall: { url: '/samples/retainer/roundel-small.svg', mimeType: 'image/svg+xml' },
+  },
 }
 
 export const sampleRetainerClient = (startMonth: MonthKey) => ({
@@ -42,7 +57,7 @@ export function sampleItems(m: MonthKey, current: boolean): RetainerItem[] {
 }
 
 const POSTS = [
-  { text: 'First light over the Mackenzie. Our 6:40 to Norman Wells, right on time. ✈️', type: 'photo', networks: ['instagram', 'facebook'] as const },
+  { text: 'First light over the Mackenzie. Our 6:40 to Norman Wells, right on time.', type: 'photo', networks: ['instagram', 'facebook'] as const },
   { text: 'Meet Sam, one of our captains. 14 winters flying the North and still loves the morning run.', type: 'video', networks: ['instagram', 'facebook', 'linkedin'] as const },
   { text: 'Cargo tip: book perishables by Thursday noon for weekend delivery to the communities.', type: 'status', networks: ['facebook'] as const },
   { text: 'Behind the scenes: de-icing at −38 °C. It takes a crew of three and about 20 minutes.', type: 'video', networks: ['instagram', 'tiktok'] as const },

@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { requireAccess } from '@/portal/current'
 import { portalImage } from '@/portal/data'
 import { accentVars } from '@/portal/retainer-accent'
+import { resolveBrand } from '@/portal/retainer-brand'
+import { brandFontClass } from '@/portal/retainer-fonts'
 import { Analytics, FileRows, ItemList, MonthSwitcher, PieceList, Progress, Schedule } from '@/portal/retainer-ui'
 import type { DriveFile } from '@/portal/types'
 import {
@@ -33,7 +35,7 @@ export async function generateMetadata({ params }: Props) {
   const { clientId } = await params
   const { session } = await requireAccess()
   const c = (await retainerClientsFor(session).catch(() => [])).find((x) => x._id === clientId)
-  return { title: c ? `${c.organizationName} · monthly content` : 'Monthly content' }
+  return { title: c ? `${c.retainer.brand?.displayName || c.organizationName} · monthly content` : 'Monthly content' }
 }
 
 export default async function RetainerPage({ params, searchParams }: Props) {
@@ -56,7 +58,8 @@ export default async function RetainerPage({ params, searchParams }: Props) {
     retainerDocuments(c).catch(() => null),
   ])
 
-  const logo = portalImage(c.logo, 240)
+  const brand = resolveBrand(c)
+  const logo = brand ? undefined : portalImage(c.logo, 240)
   const total = view.perMonth + view.carried
   const open = view.items.filter((it) => it.status !== 'delivered')
   const toCome = Math.max(0, total - view.done)
@@ -64,27 +67,36 @@ export default async function RetainerPage({ params, searchParams }: Props) {
   const items = view.items
   const byMonth = groupByMonth(library ?? [])
 
-  return (
-    <div className="wrap rt-page" style={accentVars(c.retainer.accent) as React.CSSProperties}>
-      <header className="rt-head">
-        {logo && (
-          <span className="rt-logo">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={logo} alt={`${c.organizationName} logo`} />
-          </span>
-        )}
-        <div className="stack" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
-          <span className="eyebrow">Monthly content</span>
-          <h1 className="h1 rt-h1">{c.organizationName}<span className="rt-with">, with Breaking Ice</span></h1>
-        </div>
-      </header>
+  const progress = <Progress done={view.done} perMonth={view.perMonth} carried={view.carried} carriedFrom={monthName(shiftMonth(month, -1))} current={current} label={label} />
+  /** Small uppercase label above a section heading: brand pages only. */
+  const eb = (text: string) => (brand ? <span className="nb-eyebrow" aria-hidden="true">{text}</span> : null)
+
+  const body = (
+    <div className={`wrap rt-page${brand ? ' nb-body' : ''}`} style={brand ? undefined : (accentVars(c.retainer.accent) as React.CSSProperties)}>
+      {!brand && (
+        <header className="rt-head">
+          {logo && (
+            <span className="rt-logo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logo} alt={`${c.organizationName} logo`} />
+            </span>
+          )}
+          <div className="stack" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
+            <span className="eyebrow">Monthly content</span>
+            <h1 className="h1 rt-h1">{c.organizationName}<span className="rt-with">, with Breaking Ice</span></h1>
+          </div>
+        </header>
+      )}
 
       <section className="rt-card rt-month-card" aria-labelledby="rt-month-h">
         <div className="rt-month-top">
-          <h2 id="rt-month-h" className="p-label">{current ? 'This month' : label}</h2>
+          <div className="nb-head">
+            {eb('Deliverables')}
+            <h2 id="rt-month-h" className="p-label">{current ? 'This month' : label}</h2>
+          </div>
           <MonthSwitcher base={base} month={month} months={months.map((k) => ({ key: k, label: monthLabel(k) }))} label={monthLabel} />
         </div>
-        <Progress done={view.done} perMonth={view.perMonth} carried={view.carried} carriedFrom={monthName(shiftMonth(month, -1))} current={current} label={label} />
+        {!brand && progress}
 
         {items.length + pieces.length === 0 ? (
           <p className="muted" style={{ margin: 0 }}>Nothing is listed for {label} yet.</p>
@@ -108,7 +120,10 @@ export default async function RetainerPage({ params, searchParams }: Props) {
 
       {current && (
         <section className="rt-sec" aria-labelledby="rt-out-h">
-          <h2 id="rt-out-h" className="p-label">Still to come this month</h2>
+          <div className="nb-head">
+            {eb('Open items')}
+            <h2 id="rt-out-h" className="p-label">Still to come this month</h2>
+          </div>
           {toCome === 0 && !open.length ? (
             <p style={{ margin: 0 }}>Everything for {label} is done or scheduled.</p>
           ) : (
@@ -130,7 +145,10 @@ export default async function RetainerPage({ params, searchParams }: Props) {
       )}
 
       <section className="rt-sec" aria-labelledby="rt-sched-h">
-        <h2 id="rt-sched-h" className="p-label">Posting schedule</h2>
+        <div className="nb-head">
+          {eb('Coming up')}
+          <h2 id="rt-sched-h" className="p-label">Posting schedule</h2>
+        </div>
         {upcoming.pieces.length ? (
           <Schedule pieces={upcoming.pieces} />
         ) : (
@@ -140,13 +158,19 @@ export default async function RetainerPage({ params, searchParams }: Props) {
       </section>
 
       <section className="rt-sec" aria-labelledby="rt-stats-h">
-        <h2 id="rt-stats-h" className="p-label">How {current ? 'this month’s' : `${label}`} posts did</h2>
+        <div className="nb-head">
+          {eb('Results')}
+          <h2 id="rt-stats-h" className="p-label">How {current ? 'this month’s' : `${label}`} posts did</h2>
+        </div>
         <Analytics pieces={view.pieces} label={label} />
         {view.publerNote && <p className="rt-note">{view.publerNote}</p>}
       </section>
 
       <section className="rt-sec" aria-labelledby="rt-lib-h">
-        <h2 id="rt-lib-h" className="p-label">Library</h2>
+        <div className="nb-head">
+          {eb('Files')}
+          <h2 id="rt-lib-h" className="p-label">Library</h2>
+        </div>
         {library === null ? (
           <p className="muted" style={{ margin: 0 }}>We couldn’t load your files just now. Try again in a minute.</p>
         ) : !library.length ? (
@@ -164,7 +188,10 @@ export default async function RetainerPage({ params, searchParams }: Props) {
       </section>
 
       <section className="rt-sec" aria-labelledby="rt-docs-h">
-        <h2 id="rt-docs-h" className="p-label">Documents</h2>
+        <div className="nb-head">
+          {eb('Paperwork')}
+          <h2 id="rt-docs-h" className="p-label">Documents</h2>
+        </div>
         {documents === null ? (
           <p className="muted" style={{ margin: 0 }}>We couldn’t load your documents just now. Try again in a minute.</p>
         ) : documents.length ? (
@@ -174,7 +201,40 @@ export default async function RetainerPage({ params, searchParams }: Props) {
         )}
       </section>
 
-      <p className="muted rt-foot">Something not right with a post? Just reply to any of our emails.</p>
+      <footer className="rt-foot-row">
+        <p className="muted rt-foot">Something not right with a post? Just reply to any of our emails.</p>
+        {brand && <p className="nb-credit">Content by Breaking Ice Productions</p>}
+      </footer>
+    </div>
+  )
+
+  if (!brand) return body
+
+  // The client's own world: their tokens on the wrapper, the hero band in their brand surface and pattern.
+  const vars = { ...brand.vars, ...(brand.pattern ? { '--nb-pattern': `url("${brand.pattern}")` } : {}) }
+  return (
+    <div className={`rt-brand ${brandFontClass(brand.fonts)}`.trim()} style={vars as React.CSSProperties}>
+      <header className={`nb-hero${brand.pattern ? ' has-pattern' : ''}`}>
+        <div className="wrap nb-hero-in">
+          <div className="nb-lockup">
+            {brand.mark && (
+              <span className="nb-mark">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={brand.mark} alt="" width={96} height={96} />
+              </span>
+            )}
+            <div className="nb-words">
+              <h1 className="nb-wordmark">{brand.name}<span className="sr-only">: monthly content</span></h1>
+              <span className="nb-descriptor" aria-hidden="true">Monthly content</span>
+            </div>
+          </div>
+          <div className="nb-panel">
+            <span className="nb-panel-eb">{current ? `This month · ${label}` : label}</span>
+            {progress}
+          </div>
+        </div>
+      </header>
+      {body}
     </div>
   )
 }

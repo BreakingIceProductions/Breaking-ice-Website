@@ -78,3 +78,36 @@ export function accentVars(accent?: string): Record<string, string> {
     '--rt-on-d': toHex(dark.on),
   }
 }
+
+/* ── Client brand (design system) ───────────────────────── */
+
+type BrandColours = { primary?: string; accent?: string; accentText?: string; ink?: string; muted?: string; surfaceAlt?: string; border?: string }
+
+/**
+ * CSS custom properties for a client's own design system (the `.rt-brand` page). Missing colours are
+ * derived from the ones given, and every text colour is nudged until it reads: primary carries white
+ * text (4.5:1), ink / muted / accent-as-text reach 4.5:1 on white and on surface-alt, the accent fill
+ * reaches 3:1 on white.
+ */
+export function brandVars(b: BrandColours, fallbackAccent?: string): Record<string, string> {
+  const primary = reach(parse(b.primary) ?? parse(fallbackAccent) ?? NAVY, BLACK, [WHITE], 4.5)
+  const surfaceAlt = parse(b.surfaceAlt) ?? mix(primary, WHITE, 0.9)
+  const grounds = [WHITE, surfaceAlt]
+  const ink = reach(parse(b.ink) ?? mix(primary, BLACK, 0.55), BLACK, grounds, 4.5)
+  const muted = reach(parse(b.muted) ?? mix(ink, WHITE, 0.35), BLACK, grounds, 4.5)
+  const accent = reach(parse(b.accent) ?? parse(fallbackAccent) ?? primary, BLACK, [WHITE], 3)
+  const accentText = reach(parse(b.accentText) ?? accent, BLACK, grounds, 4.5)
+  const border = parse(b.border) ?? mix(primary, WHITE, 0.85)
+  const onAccent = contrast(accent, ink) >= contrast(accent, WHITE) ? ink : WHITE
+  return {
+    '--nb-primary': toHex(primary),
+    '--nb-primary-rgb': primary.map((v) => Math.round(v)).join(' '),
+    '--nb-accent': toHex(accent),
+    '--nb-on-accent': toHex(onAccent),
+    '--nb-accent-text': toHex(accentText),
+    '--nb-ink': toHex(ink),
+    '--nb-muted': toHex(muted),
+    '--nb-surface-alt': toHex(surfaceAlt),
+    '--nb-border': toHex(border),
+  }
+}

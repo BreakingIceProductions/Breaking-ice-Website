@@ -4,7 +4,7 @@
    src/portal/retainer-accent.ts, already contrast-checked); copper is the fallback.
    ═════════════════════════════════════════════════════════ */
 
-.rt-page, .rt-home-card {
+.rt-page:not(.nb-body), .rt-home-card {
   --rt-ink: #a85f2e;
   --rt-ink-d: #e2a273;
   --rt-fill: #c9773f;
@@ -16,7 +16,7 @@
   --on-accent: var(--rt-on);
   --focus: var(--rt-ink);
 }
-:root[data-theme='dark'] :is(.rt-page, .rt-home-card) {
+:root[data-theme='dark'] :is(.rt-page:not(.nb-body), .rt-home-card) {
   --accent: var(--rt-ink-d);
   --accent-fill: var(--rt-fill-d);
   --on-accent: var(--rt-on-d);
@@ -39,11 +39,14 @@
 /* Cards and sections */
 .rt-card { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
 .rt-sec { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.rt-sec > .p-label { padding-bottom: var(--space-3); border-bottom: 2px solid var(--ink); }
+.rt-sec > .p-label, .rt-sec > .nb-head > .p-label { padding-bottom: var(--space-3); border-bottom: 2px solid var(--ink); }
 .rt-sub { margin: 0; font-family: var(--font-display); font-stretch: 125%; font-size: 17px; line-height: 24px; font-weight: 700; }
 .rt-note { margin: 0; font-size: 13px; line-height: 18px; color: var(--ink-muted); }
 .rt-big { margin: 0; font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: 26px; line-height: 1.2; }
 .rt-foot { margin: 0; font-size: 15px; }
+.rt-foot-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-3) var(--space-6); }
+/* Section heading wrapper: invisible on the Breaking Ice look, a stack on client-branded pages. */
+.nb-head { display: contents; }
 @media (max-width: 560px) { .rt-card { padding: var(--space-6) var(--space-4); border-radius: var(--radius-md); } }
 
 /* Month header + switcher */
@@ -63,7 +66,7 @@
   .rt-months-pick { width: 100%; }
   .rt-select { flex: 1; }
 }
-@media (max-width: 420px) { .rt-months-step .chip { font-size: 0; } .rt-months-step .chip span { font-size: 16px; } }
+@media (max-width: 420px) { .rt-months-step .chip { font-size: 0; } .rt-months-step .chip span, .rt-months-step .rt-chip-off { font-size: 16px; } }
 
 /* Progress */
 .rt-progress { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; column-gap: var(--space-3); row-gap: var(--space-3); }
@@ -149,3 +152,185 @@ a.rt-net:hover { border-color: var(--accent); color: var(--accent); }
   .rt-home-logo { display: none; }
 }
 .rt-home-card.no-logo { grid-template-columns: minmax(0, 1fr) auto; }
+
+/* ═════════════════════════════════════════════════════════
+   Client-branded retainer page (.rt-brand): the client's own design system.
+   Their colours arrive as --nb-* custom properties on the wrapper (src/portal/retainer-accent.ts
+   brandVars, contrast-checked); the "geometric" type adds .rt-geo and the Jost / Montserrat variables
+   (src/portal/retainer-fonts.ts). Everything is scoped under .rt-brand. The page stays light in both
+   site themes: the site tokens are remapped to the client's here, so shared components follow.
+   Rules from the North-Wright Air system: the brand surface carries the brand with white; the accent
+   is for rules, rings and the progress fill only, never body text; small accent text uses
+   --nb-accent-text; text sits on a solid panel or a scrim, never straight on the pattern.
+   ═════════════════════════════════════════════════════════ */
+
+.rt-brand {
+  /* Defaults, replaced by the inline brand variables */
+  --nb-primary: #19324a; --nb-primary-rgb: 25 50 74; --nb-accent: #e65729; --nb-on-accent: #0e1e2c; --nb-accent-text: #b83f17;
+  --nb-ink: #0e1e2c; --nb-muted: #4a5d6c; --nb-surface-alt: #e8eef2; --nb-border: #dce3e8;
+  /* Breaking Ice type unless the brand asks for its own (.rt-geo). Literal, not var(--font-*): those are remapped below. */
+  --nb-display: var(--font-archivo), 'Helvetica Neue', Arial, sans-serif;
+  --nb-body: var(--font-archivo), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* The client's spacing scale */
+  --nb-1: 4px; --nb-2: 8px; --nb-3: 12px; --nb-4: 16px; --nb-5: 24px; --nb-6: 32px; --nb-7: 48px; --nb-8: 64px; --nb-9: 80px;
+
+  /* Site tokens, remapped so shared portal components (chips, buttons, pills, file rows) follow the brand */
+  --surface: #ffffff;
+  --surface-raised: var(--nb-surface-alt);
+  --ink: var(--nb-ink);
+  --ink-muted: var(--nb-muted);
+  --line: var(--nb-border);
+  --input-line: var(--nb-muted);
+  --accent: var(--nb-primary);
+  --accent-fill: var(--nb-accent);
+  --on-accent: var(--nb-on-accent);
+  --focus: var(--nb-primary);
+  --solid: var(--nb-primary);
+  --on-solid: #ffffff;
+  --info-bg: var(--nb-surface-alt);
+  --ok-bg: var(--nb-surface-alt);
+  --ok: var(--nb-ink);
+  --radius-xs: 4px; --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px;
+  --font-display: var(--nb-display);
+  --font-sans: var(--nb-body);
+
+  color-scheme: light;
+  background: #ffffff;
+  color: var(--nb-ink);
+  font-family: var(--nb-body);
+  font-stretch: normal;
+  min-width: 0;
+}
+.rt-brand.rt-geo {
+  --nb-display: 'Futura PT', var(--rt-font-jost), 'Century Gothic', sans-serif;
+  --nb-body: var(--rt-font-montserrat), 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  line-height: 26px;
+}
+.rt-brand :is(h1, h2, h3, .h1, .h2, .h3, strong, b) { font-stretch: normal; }
+.rt-brand :focus-visible { outline-color: var(--nb-primary); }
+
+/* Hero band: brand surface + pattern, the mark and a horizontal lockup. Full width of the content area. */
+.nb-hero { background-color: var(--nb-primary); color: #ffffff; }
+.nb-hero.has-pattern {
+  /* A brand-surface scrim behind the lockup side; the pattern stays quiet (contours ≤22% in the file). */
+  background-image:
+    linear-gradient(90deg, rgb(var(--nb-primary-rgb) / .88) 0%, rgb(var(--nb-primary-rgb) / .55) 45%, rgb(var(--nb-primary-rgb) / .1) 100%),
+    var(--nb-pattern);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat;
+}
+.nb-hero-in { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); align-items: center; gap: var(--nb-7); padding-top: var(--nb-8); padding-bottom: var(--nb-8); }
+
+.nb-lockup { --mk: 96px; --wm: clamp(28px, 3.3vw, 44px); display: flex; align-items: center; gap: calc(var(--mk) * .25); min-width: 0; }
+.nb-mark { flex: none; display: block; width: var(--mk); height: var(--mk); border-radius: 50%; }
+.nb-mark img { display: block; width: 100%; height: 100%; }
+.nb-words { display: inline-flex; flex-direction: column; align-items: stretch; gap: calc(var(--wm) * .24); min-width: 0; max-width: 100%; }
+.nb-wordmark { margin: 0; font-family: var(--nb-display); font-weight: 700; font-size: var(--wm); line-height: 1.05; letter-spacing: .06em; text-transform: uppercase; color: #ffffff; overflow-wrap: anywhere; text-wrap: balance; }
+.nb-descriptor { font-family: var(--nb-display); font-weight: 500; font-size: calc(var(--wm) * .4); line-height: 1; letter-spacing: .5em; text-transform: uppercase; color: #ffffff; white-space: nowrap; }
+/* The accent underline: rounded ends, 5px at a 44px wordmark, running to the wordmark's right edge */
+.nb-descriptor::after { content: ''; display: block; height: max(3px, calc(var(--wm) * 5 / 44)); margin-top: calc(var(--wm) * .24); border-radius: 999px; background: var(--nb-accent); }
+
+/* Month progress, on a solid brand panel (never straight on the contours) */
+.nb-panel { display: flex; flex-direction: column; gap: var(--nb-3); padding: var(--nb-5); border-radius: 6px; background: var(--nb-primary); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16); color: #ffffff; min-width: 0; }
+.nb-panel-eb { font-family: var(--nb-display); font-weight: 600; font-size: 13px; line-height: 16px; letter-spacing: .18em; text-transform: uppercase; color: rgb(255 255 255 / .85); }
+.nb-panel .rt-progress { row-gap: var(--nb-3); }
+.nb-panel .rt-progress-num { font-family: var(--nb-display); font-weight: 700; font-size: 48px; color: #ffffff; }
+.nb-panel .rt-progress-num .muted { font-size: 22px; font-weight: 500; color: rgb(255 255 255 / .85); }
+.nb-panel .rt-progress-text { font-size: 15px; line-height: 22px; color: #ffffff; }
+.nb-panel .muted { color: rgb(255 255 255 / .85); }
+.nb-panel .rt-bar { height: 10px; border-radius: 999px; background: rgb(255 255 255 / .22); box-shadow: none; }
+.nb-panel .rt-bar > span { background: var(--nb-accent); }
+
+@media (max-width: 960px) {
+  .nb-hero-in { grid-template-columns: minmax(0, 1fr); gap: var(--nb-6); padding-top: var(--nb-7); padding-bottom: var(--nb-7); }
+  .nb-hero.has-pattern { background-image: linear-gradient(180deg, rgb(var(--nb-primary-rgb) / .8) 0%, rgb(var(--nb-primary-rgb) / .35) 100%), var(--nb-pattern); }
+}
+@media (max-width: 560px) {
+  .nb-lockup { --mk: 72px; --wm: clamp(22px, 7vw, 30px); }
+  .nb-panel { padding: var(--nb-4); }
+  .nb-panel .rt-progress-num { font-size: 40px; }
+}
+
+/* Body: white surface, generous spacing */
+.rt-brand .nb-body { gap: var(--nb-8); padding-top: var(--nb-8); padding-bottom: var(--nb-9); }
+.rt-brand .nb-head { display: flex; flex-direction: column; gap: var(--nb-2); min-width: 0; }
+.nb-eyebrow { font-family: var(--nb-display); font-weight: 600; font-size: 13px; line-height: 16px; letter-spacing: .18em; text-transform: uppercase; color: var(--nb-accent-text); }
+.rt-brand h2.p-label { margin: 0; font-family: var(--nb-display); font-weight: 700; font-size: 28px; line-height: 34px; letter-spacing: .04em; text-transform: none; color: var(--nb-ink); }
+.rt-brand .rt-sec { gap: var(--nb-5); }
+.rt-brand .rt-sec > .nb-head { padding-bottom: var(--nb-4); border-bottom: 1px solid var(--nb-border); }
+.rt-brand .rt-sec > .nb-head > .p-label { padding-bottom: 0; border-bottom: 0; }
+.rt-brand .rt-card { gap: var(--nb-6); padding: var(--nb-6); border: 1px solid var(--nb-border); border-radius: 6px; background: #ffffff; }
+.rt-brand .rt-sub { font-family: var(--nb-display); font-weight: 600; font-size: 20px; line-height: 26px; letter-spacing: .02em; color: var(--nb-ink); }
+.rt-brand .rt-big { font-family: var(--nb-display); font-weight: 700; font-size: 28px; line-height: 34px; letter-spacing: .04em; color: var(--nb-ink); }
+.rt-brand .rt-note { color: var(--nb-muted); }
+.rt-brand .small { font-size: 13px; line-height: 20px; }
+.rt-brand .text-link { color: var(--nb-primary); font-weight: 600; }
+.rt-brand .text-link:hover { color: var(--nb-ink); }
+@media (max-width: 560px) {
+  .rt-brand .nb-body { gap: var(--nb-7); padding-top: var(--nb-7); padding-bottom: var(--nb-8); }
+  .rt-brand h2.p-label { font-size: 22px; line-height: 28px; }
+  .rt-brand .rt-card { padding: var(--nb-5) var(--nb-4); }
+}
+
+/* Month switcher */
+.rt-brand .rt-months .chip { border: 1px solid var(--nb-border); color: var(--nb-ink); font-family: var(--nb-body); }
+.rt-brand .rt-months .chip:hover { border-color: var(--nb-primary); }
+.rt-brand .rt-months-now { background: var(--nb-primary); color: #ffffff; font-family: var(--nb-body); font-weight: 600; }
+.rt-brand .rt-select { border: 1px solid var(--nb-muted); border-radius: 4px; background: #ffffff; color: var(--nb-ink); font-family: var(--nb-body); }
+.rt-brand .btn { border-radius: 4px; font-family: var(--nb-body); font-stretch: normal; }
+
+/* Lists */
+.rt-brand .rt-kicker { font-family: var(--nb-body); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--nb-muted); }
+.rt-brand .rt-title { font-weight: 600; color: var(--nb-ink); }
+.rt-brand .rt-text { font-size: 15px; line-height: 24px; }
+.rt-brand .rt-net { border-color: var(--nb-border); font-family: var(--nb-body); }
+.rt-brand a.rt-net:hover { border-color: var(--nb-primary); color: var(--nb-primary); }
+.rt-brand .rt-net-ico { background: var(--nb-primary); color: #ffffff; }
+
+/* Status chips: brand surface / ice / neutral. No accent colour here. */
+.rt-brand .rt-pill { font-family: var(--nb-body); font-weight: 600; }
+.rt-brand .rt-pill-delivered, .rt-brand .rt-pill-published { background: var(--nb-primary); color: #ffffff; }
+.rt-brand .rt-pill-scheduled { background: #ffffff; color: var(--nb-primary); box-shadow: inset 0 0 0 1px var(--nb-primary); }
+.rt-brand .rt-pill-scheduled::before { background: currentColor; opacity: .7; }
+.rt-brand .rt-pill-in-progress { background: var(--nb-surface-alt); color: var(--nb-ink); }
+.rt-brand .rt-pill-planned { background: transparent; color: var(--nb-muted); box-shadow: inset 0 0 0 1px var(--nb-border); }
+
+/* Still to come */
+.rt-brand .rt-out li { font-size: 15px; }
+
+/* Posting schedule: each day a light card */
+.rt-brand .rt-days { gap: var(--nb-3); }
+.rt-brand .rt-day { padding: var(--nb-4) var(--nb-5); border-radius: 6px; background: var(--nb-surface-alt); }
+.rt-brand .rt-day-h { font-family: var(--nb-display); font-weight: 600; font-size: 16px; line-height: 22px; letter-spacing: .02em; color: var(--nb-ink); }
+.rt-brand .rt-day-list li { border-bottom-color: var(--nb-border); }
+.rt-brand .rt-day-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+.rt-brand .rt-day-time { color: var(--nb-primary); }
+@media (max-width: 560px) { .rt-brand .rt-day { padding: var(--nb-4); } }
+
+/* Analytics: stat tiles on ice, table with hairlines */
+.rt-brand .rt-totals { gap: var(--nb-3); }
+.rt-brand .rt-totals > div { padding: var(--nb-4) var(--nb-5); border: 0; border-radius: 6px; background: var(--nb-surface-alt); }
+.rt-brand .rt-totals dt { font-family: var(--nb-display); font-size: 12px; line-height: 16px; letter-spacing: .14em; font-weight: 600; color: var(--nb-muted); }
+.rt-brand .rt-totals dd { font-family: var(--nb-display); font-weight: 700; font-size: 28px; line-height: 34px; color: var(--nb-ink); }
+@media (max-width: 420px) { .rt-brand .rt-totals > div { padding: var(--nb-3) var(--nb-4); } }
+.rt-brand .rt-table-wrap { border-color: var(--nb-border); border-radius: 6px; }
+.rt-brand .rt-table { font-size: 14px; }
+.rt-brand .rt-table thead th { font-family: var(--nb-body); font-size: 12px; letter-spacing: .08em; color: var(--nb-muted); background: var(--nb-surface-alt); }
+.rt-brand .rt-table th, .rt-brand .rt-table td { border-bottom-color: var(--nb-border); }
+
+/* Files: one quiet icon style in brand colours */
+.rt-brand .rt-files .ficon.ficon { background: var(--nb-surface-alt); color: var(--nb-primary); }
+.rt-brand .rt-files li { border-bottom-color: var(--nb-border); }
+.rt-brand .rt-files .fname { font-family: var(--nb-body); font-weight: 600; font-size: 15px; line-height: 22px; color: var(--nb-ink); }
+
+/* Foot: the reply line and the small Breaking Ice credit */
+.rt-brand .rt-foot-row { padding-top: var(--nb-5); border-top: 1px solid var(--nb-border); }
+.rt-brand .rt-foot { font-size: 15px; color: var(--nb-muted); }
+.nb-credit { margin: 0; font-size: 13px; line-height: 20px; color: var(--nb-muted); letter-spacing: .02em; }
+
+/* Portal home card: the client's small mark as a plain circle */
+.rt-home-mark { flex: none; display: block; width: 48px; height: 48px; border-radius: 50%; }
+.rt-home-mark img { display: block; width: 100%; height: 100%; }
+@media (max-width: 560px) { .rt-home-mark { display: none; } }

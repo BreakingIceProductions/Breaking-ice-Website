@@ -1,6 +1,7 @@
 import { adminFromRequest } from '@/admin/auth'
 import { json } from '@/portal/http'
 import { canWrite, getRetainerClient, saveRetainerSettings } from '@/retainer/data'
+import { BRAND_COLOURS } from '@/retainer/types'
 
 export const runtime = 'nodejs'
 
@@ -13,6 +14,10 @@ export async function POST(req: Request) {
   if (!c) return json({ ok: false, error: 'not-found', message: 'That client isn’t there any more. Reload the page.' }, 404)
   const s = b.settings ?? {}
   if (s.accent && !/^#[0-9a-fA-F]{6}$/.test(String(s.accent))) return json({ ok: false, error: 'accent', message: 'The colour must look like #1f6feb.' }, 400)
+  if (s.brand !== undefined && (typeof s.brand !== 'object' || s.brand === null)) return json({ ok: false, error: 'brand', message: 'The brand settings didn’t come through. Reload the page.' }, 400)
+  const badColour = s.brand && BRAND_COLOURS.find((k) => s.brand[k] && !/^#[0-9a-fA-F]{6}$/.test(String(s.brand[k])))
+  if (badColour) return json({ ok: false, error: 'brand-colour', message: 'Brand colours must look like #19324a.' }, 400)
+  // Brand images are set in the Studio only; anything else sent for them is ignored when saving.
   if (s.startMonth && s.endMonth && String(s.endMonth) < String(s.startMonth)) return json({ ok: false, error: 'months', message: 'The last month can’t be before the first.' }, 400)
   if (admin.sample || !canWrite(c._id)) return json({ ok: true, sample: true })
   try {

@@ -2,11 +2,13 @@ import 'server-only'
 import Link from 'next/link'
 import { portalImage } from './data'
 import { accentVars } from './retainer-accent'
+import { resolveBrand } from './retainer-brand'
 import type { Session } from './types'
 import { buildMonthView, monthKey, retainerClientsFor } from '@/retainer/data'
 import '@/app/css/retainer.css'
 
-export type RetainerCard = { id: string; organizationName: string; logo?: string; accent?: string; done: number; total: number }
+/** `mark` is the client's small brand mark (a plain circle); when set it replaces the logo tile and `organizationName` is their display name. */
+export type RetainerCard = { id: string; organizationName: string; logo?: string; mark?: string; accent?: string; done: number; total: number }
 
 /** This month's progress for each retainer client the person is on. Never breaks the home page. */
 export async function retainerCardsFor(session: Session): Promise<RetainerCard[]> {
@@ -18,11 +20,13 @@ export async function retainerCardsFor(session: Session): Promise<RetainerCard[]
   return Promise.all(
     clients.map(async (c) => {
       const v = await buildMonthView(c, now).catch(() => null)
+      const brand = resolveBrand(c)
       return {
         id: c._id,
-        organizationName: c.organizationName,
-        logo: portalImage(c.logo, 120),
-        accent: c.retainer.accent,
+        organizationName: brand?.name ?? c.organizationName,
+        logo: brand?.markSmall ? undefined : portalImage(c.logo, 120),
+        mark: brand?.markSmall,
+        accent: c.retainer.brand?.accent ?? c.retainer.accent,
         done: v?.done ?? 0,
         total: v ? v.perMonth + v.carried : c.retainer.perMonth,
       }
@@ -40,15 +44,21 @@ export function RetainerCards({ cards }: { cards: RetainerCard[] }) {
           const pct = c.total > 0 ? Math.min(100, Math.round((c.done / c.total) * 100)) : 0
           return (
             <li key={c.id}>
-              <Link className={`rt-home-card${c.logo ? '' : ' no-logo'}`} href={`/portal/retainer/${encodeURIComponent(c.id)}`} style={accentVars(c.accent) as React.CSSProperties}>
-                {c.logo && (
+              <Link className={`rt-home-card${c.logo || c.mark ? '' : ' no-logo'}`} href={`/portal/retainer/${encodeURIComponent(c.id)}`} style={accentVars(c.accent) as React.CSSProperties}>
+                {c.mark && (
+                  <span className="rt-home-mark" aria-hidden="true">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={c.mark} alt="" width={48} height={48} />
+                  </span>
+                )}
+                {!c.mark && c.logo && (
                   <span className="rt-home-logo" aria-hidden="true">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={c.logo} alt="" />
                   </span>
                 )}
                 <span className="rt-home-body">
-                  <span className="rt-home-title">{multi ? c.organizationName : 'Your monthly content'}</span>
+                  <span className="rt-home-title">{multi || c.mark ? c.organizationName : 'Your monthly content'}</span>
                   <span className="muted small">{c.done} of {c.total} done this month</span>
                   <span className="rt-bar" aria-hidden="true"><span style={{ width: `${pct}%` }} /></span>
                 </span>
