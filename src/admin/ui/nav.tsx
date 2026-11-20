@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSideCollapsed } from './side-toggle'
 
 const ICONS: Record<string, React.ReactNode> = {
   dash: <><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></>,
@@ -26,6 +27,8 @@ type Item = { href: string; label: string; icon: string; on?: boolean; count?: n
 
 export function AdminNav({ needs = 0 }: { needs?: number }) {
   const path = usePathname()
+  // In the icon rail the labels are visually hidden (still read out); a title gives sighted users a tooltip.
+  const rail = useSideCollapsed()
   const at = (...roots: string[]) => roots.some((r) => path.startsWith(r))
   const groups: { label?: string; end?: boolean; items: Item[] }[] = [
     {
@@ -68,14 +71,14 @@ export function AdminNav({ needs = 0 }: { needs?: number }) {
             {g.items.map((i) => (
               <li key={i.href}>
                 {i.external ? (
-                  <a href={i.href} target="_blank" rel="noopener noreferrer">
+                  <a href={i.href} target="_blank" rel="noopener noreferrer" title={rail ? `${i.label} (${i.external})` : undefined}>
                     <Icon name={i.icon} />
-                    {i.label} <span className="sr-only">({i.external})</span><span aria-hidden="true" className="a-ext">↗</span>
+                    <span className="a-nav-text">{i.label}</span> <span className="sr-only">({i.external})</span><span aria-hidden="true" className="a-ext">↗</span>
                   </a>
                 ) : (
-                  <Link href={i.href} aria-current={i.on ? 'page' : undefined}>
+                  <Link href={i.href} aria-current={i.on ? 'page' : undefined} title={rail ? (i.count ? `${i.label} (${i.count} need you)` : i.label) : undefined}>
                     <Icon name={i.icon} />
-                    {i.label}
+                    <span className="a-nav-text">{i.label}</span>
                     {i.count ? <span className="a-badge" aria-label={`${i.count} need you`}>{i.count}</span> : null}
                   </Link>
                 )}

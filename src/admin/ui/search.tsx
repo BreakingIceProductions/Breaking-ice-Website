@@ -47,9 +47,9 @@ export function AdminSearch({ items }: { items: SearchItem[] }) {
 
   return (
     <>
-      <button type="button" className="a-search-btn" onClick={open}>
+      <button type="button" className="a-search-btn" onClick={open} title="Search (⌘K)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-        <span>Search</span>
+        <span className="a-search-text">Search</span>
         <kbd aria-hidden="true">⌘K</kbd>
         <span className="sr-only">. Command K or Control K</span>
       </button>

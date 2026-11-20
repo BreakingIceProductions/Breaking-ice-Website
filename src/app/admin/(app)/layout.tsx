@@ -1,5 +1,6 @@
+import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { Logo } from '@/components/brand'
+import { Logo, Mark } from '@/components/brand'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { requireAdmin } from '@/admin/auth'
 import { calendarReady, ticktickReady, zohoReady } from '@/admin/config'
@@ -10,6 +11,7 @@ import { getPeople } from '@/admin/people'
 import { AdminSearch, type SearchItem } from '@/admin/ui/search'
 import { ticktickConnection } from '@/admin/ticktick'
 import { AdminNav } from '@/admin/ui/nav'
+import { SIDE_KEY, SideShell, SideToggle } from '@/admin/ui/side-toggle'
 import { zohoConnection } from '@/admin/zoho'
 import { r2Ready } from '@/portal/r2'
 
@@ -17,6 +19,8 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminApp({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin()
+  // Collapsed sidebar is remembered in a cookie so the server renders the right width on first paint.
+  const collapsed = (await cookies()).get(SIDE_KEY)?.value === 'collapsed'
   const [tt, zoho, projects, people] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null), listProjects().catch(() => []), getPeople().catch(() => null)])
   const clients = new Map(projects.filter((p) => p.client._id).map((p) => [p.client._id, p.client.organizationName]))
   const search: SearchItem[] = [
@@ -43,12 +47,16 @@ export default async function AdminApp({ children }: { children: React.ReactNode
     { name: 'Review storage', on: r2Ready(), setUp: r2Ready() },
   ]
   return (
-    <div className="a-shell">
+    <SideShell initial={collapsed}>
       <a href="#main" className="skip">Skip to content</a>
-      <nav className="a-side" aria-label="Back office">
-        <Link href="/admin" className="a-logo" aria-label="Back office home">
-          <Logo tone="dark" height={28} />
-        </Link>
+      <nav className="a-side" id="a-side" aria-label="Back office">
+        <div className="a-side-head">
+          <Link href="/admin" className="a-logo" aria-label="Back office home" title="Back office home">
+            <Logo tone="dark" height={28} className="a-logo-full" />
+            <Mark size={26} left="var(--copper)" right="var(--warm-white)" className="a-logo-mark" />
+          </Link>
+          <SideToggle />
+        </div>
         <AdminSearch items={search} />
         <AdminNav needs={needsAction(projects.filter((p) => !p.archived)).length} />
         <div className="a-side-foot">
@@ -64,7 +72,10 @@ export default async function AdminApp({ children }: { children: React.ReactNode
           <div className="a-side-tools">
             <ThemeToggle />
             <form action="/api/admin/sign-out" method="post">
-              <button type="submit" className="a-signout">Sign out</button>
+              <button type="submit" className="a-signout" title="Sign out">
+                <svg className="a-signout-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5M21 12H9" /></svg>
+                <span className="a-signout-text">Sign out</span>
+              </button>
             </form>
           </div>
         </div>
@@ -78,6 +89,6 @@ export default async function AdminApp({ children }: { children: React.ReactNode
         )}
         {children}
       </main>
-    </div>
+    </SideShell>
   )
 }
