@@ -1,0 +1,139 @@
+/* ═════════════════════════════════════════════════════════
+   Photo galleries in the back office (/admin/galleries).
+   Built on admin.css: its tokens (--a-card, --a-text, --a-muted, --a-hairline, --a-accent…) already
+   switch for the dark theme, so nothing here needs its own dark rules except the photo overlays,
+   which sit on pictures and stay dark in both themes. Everything is prefixed ga-.
+   ═════════════════════════════════════════════════════════ */
+
+.ga-page { gap: var(--space-6); }
+.ga-fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.ga-h3 { margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; color: var(--a-text); }
+.ga-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; overflow-wrap: anywhere; }
+.ga-textarea { min-height: 88px; resize: vertical; }
+
+/* Tags: quiet outline; Live solid; expiring/closed in the accent. */
+.ga-tags { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ga-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border: 1px solid var(--a-hairline-strong); border-radius: var(--radius-pill); font-size: 12px; line-height: 16px; font-weight: 600; color: var(--a-strong); white-space: nowrap; }
+.ga-tag-on { background: var(--solid); border-color: var(--solid); color: var(--on-solid); }
+.ga-tag-warn { border-color: var(--a-accent); color: var(--a-accent-text); }
+
+/* ── List page ──────────────────────────────────────────── */
+.ga-new { display: flex; flex-direction: column; gap: var(--space-4); }
+.ga-new-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--space-4); }
+.ga-new .input, .ga-details .input { min-height: 44px; }
+.ga-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: var(--a-gap); }
+.admin .ga-item { padding: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0; }
+.ga-item-cover { display: block; aspect-ratio: 3 / 2; background: var(--a-tint); border-bottom: 1px solid var(--a-hairline); }
+.ga-item-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ga-item-empty { display: flex; height: 100%; align-items: center; justify-content: center; font-size: 13px; color: var(--a-faint); }
+.ga-item-body { display: flex; flex-direction: column; gap: 6px; padding: var(--space-4) var(--a-pad) var(--a-pad); min-width: 0; }
+.ga-item-title { margin: 0; font-size: 17px; line-height: 22px; overflow-wrap: anywhere; }
+.ga-item-meta { margin: 0; }
+
+/* ── Gallery page: header ───────────────────────────────── */
+.ga-head { display: flex; flex-direction: column; gap: var(--space-3); }
+.ga-crumb { margin: 0; }
+.ga-title { overflow-wrap: anywhere; }
+.ga-head-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); }
+.ga-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+.ga-head-links { justify-content: flex-end; gap: var(--space-2) var(--space-5); font-size: 14px; }
+.ga-details { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* Two columns: photos, then settings. One column on narrow screens. */
+.ga-layout { display: flex; flex-wrap: wrap; gap: var(--a-gap); align-items: flex-start; }
+.ga-main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: var(--space-6); }
+.ga-aside { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: var(--a-gap); }
+.ga-panel { display: flex; flex-direction: column; }
+.ga-sub { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--a-hairline); }
+.ga-copy-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; }
+.ga-copy-row .input { flex: 1 1 180px; width: auto; min-width: 0; min-height: 40px; padding: 8px 12px; font-size: 14px; }
+.ga-copy-row .input[readonly] { color: var(--a-strong); }
+.ga-toggles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: 14px; }
+.ga-toggles .a-check, .ga-panel > .a-check { align-items: flex-start; font-size: 14px; line-height: 20px; }
+.ga-toggles input, .ga-panel > .a-check input { margin-top: 3px; accent-color: var(--a-accent); }
+.ga-panel .a-check input[type='checkbox'] { width: 16px; height: 16px; flex: none; }
+
+/* Sets */
+.ga-sets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.ga-set-row { display: flex; align-items: center; gap: var(--space-2); }
+.admin .ga-set-name { flex: 1; min-width: 0; min-height: 38px; padding: 6px 10px; font-size: 14px; }
+.ga-set-count { min-width: 2.5ch; text-align: right; font-variant-numeric: tabular-nums; }
+.ga-set-tools { display: inline-flex; gap: 2px; }
+.ga-icon-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--a-hairline); border-radius: var(--a-radius-in); background: transparent; color: var(--a-text); font: inherit; font-size: 15px; cursor: pointer; }
+.ga-icon-btn:hover:not(:disabled) { background: var(--a-tint); border-color: var(--a-hairline-strong); }
+.ga-icon-btn:disabled { opacity: .35; cursor: default; }
+.ga-set-remove { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-3); border: 1px solid var(--a-accent); border-radius: var(--a-radius-in); }
+.ga-set-remove .a-select { margin-left: 0; }
+
+/* ── Uploader ───────────────────────────────────────────── */
+.ga-up-target { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.ga-up-target .a-select { margin-left: 0; }
+.ga-drop { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-8) var(--space-4); border: 1.5px dashed var(--a-hairline-strong); border-radius: var(--a-radius-in); text-align: center; font-size: 15px; transition: background-color .15s, border-color .15s; }
+.ga-drop.over { border-color: var(--a-accent); background: var(--a-tint); }
+.ga-drop.busy { opacity: .6; }
+.ga-progress { display: flex; flex-direction: column; gap: var(--space-2); }
+.ga-progress progress { width: 100%; height: 8px; appearance: none; border: 0; border-radius: var(--radius-pill); background: var(--a-track); overflow: hidden; accent-color: var(--a-accent); }
+.ga-progress progress::-webkit-progress-bar { background: var(--a-track); border-radius: var(--radius-pill); }
+.ga-progress progress::-webkit-progress-value { background: var(--a-accent); border-radius: var(--radius-pill); }
+.ga-progress progress::-moz-progress-bar { background: var(--a-accent); border-radius: var(--radius-pill); }
+.ga-fails summary { cursor: pointer; color: var(--a-accent-text); font-weight: 600; }
+.ga-fails ul { margin: var(--space-2) 0 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 2px; max-height: 240px; overflow-y: auto; }
+
+/* ── Photo grid ─────────────────────────────────────────── */
+.ga-grid-wrap { display: flex; flex-direction: column; gap: var(--space-4); }
+.ga-set-block { display: flex; flex-direction: column; gap: var(--space-3); }
+.ga-set-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); padding-bottom: var(--space-2); border-bottom: 1px solid var(--a-hairline); }
+.ga-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.ga-thumb { position: relative; display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 0; border-radius: var(--a-radius-in); background: var(--a-tint); overflow: hidden; cursor: pointer; outline-offset: 2px; }
+.ga-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s; }
+.ga-thumb:hover img { transform: scale(1.02); }
+.ga-thumb.on { box-shadow: 0 0 0 3px var(--a-accent); }
+.ga-thumb.on img { opacity: .82; }
+.ga-thumb-missing { display: flex; height: 100%; align-items: center; justify-content: center; padding: 6px; font-size: 12px; color: var(--a-faint); overflow-wrap: anywhere; }
+/* Overlays sit on photos, so they keep a dark scrim in both themes. */
+.ga-thumb-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 8px 5px; background: linear-gradient(transparent, rgb(15 21 32 / .72)); color: #faf7f2; font-size: 11px; line-height: 14px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity .15s; }
+.ga-thumb:hover .ga-thumb-name, .ga-thumb:focus-visible .ga-thumb-name, .ga-thumb.on .ga-thumb-name { opacity: 1; }
+.ga-badge { position: absolute; top: 6px; padding: 2px 8px; border-radius: var(--radius-pill); background: rgb(15 21 32 / .74); color: #faf7f2; font-size: 11px; line-height: 16px; font-weight: 600; }
+.ga-badge-cover { left: 6px; background: var(--a-accent); color: #18202f; }
+.ga-badge-fav { right: 34px; }
+.ga-tick { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #faf7f2; background: rgb(15 21 32 / .35); opacity: 0; transition: opacity .15s; }
+.ga-thumb:hover .ga-tick, .ga-thumb:focus-visible .ga-tick { opacity: 1; }
+.ga-thumb.on .ga-tick { opacity: 1; background: var(--a-accent); border-color: var(--a-accent); }
+.ga-thumb.on .ga-tick::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid #18202f; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+/* Selection bar: sticks to the bottom of the screen while photos are selected. */
+.ga-selbar { position: sticky; bottom: var(--space-4); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); background: var(--a-card); border: 1px solid var(--a-hairline-strong); border-radius: var(--a-radius); box-shadow: 0 10px 30px rgb(15 21 32 / .18); }
+.ga-selbar-n { margin-right: auto; font-size: 14px; }
+.ga-selbar-move { display: inline-flex; align-items: center; gap: var(--space-2); }
+.ga-selbar .a-select { margin-left: 0; max-width: 180px; }
+.admin .ga-danger-btn { border-color: var(--danger); color: var(--danger); }
+.admin .ga-danger-btn:hover:not(:disabled) { background: var(--danger-bg); border-color: var(--danger); color: var(--danger); }
+.admin .ga-danger-btn:disabled { opacity: .45; }
+
+/* ── Favourites and activity ────────────────────────────── */
+.ga-insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: var(--a-gap); align-items: start; }
+.ga-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ga-person { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--a-hairline); }
+.ga-person:first-child { border-top: 0; padding-top: 0; }
+.ga-person-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); font-size: 14px; }
+.ga-strip { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.ga-strip li { width: 52px; height: 52px; border-radius: 6px; overflow: hidden; background: var(--a-tint); }
+.ga-strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ga-strip .ga-strip-more { display: flex; align-items: center; justify-content: center; }
+.ga-dl-list { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 2px; }
+
+.ga-danger { border-color: var(--danger); }
+
+/* ── Phones ─────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .ga-head-side, .ga-status, .ga-head-links { align-items: flex-start; justify-content: flex-start; }
+  .ga-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+  .ga-badge-fav { display: none; }
+  .ga-selbar { bottom: var(--space-2); padding: var(--space-3); }
+  .ga-selbar-n { flex-basis: 100%; }
+  .ga-drop { padding: var(--space-6) var(--space-3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ga-thumb img, .ga-thumb-name, .ga-tick, .ga-drop { transition: none; }
+  .ga-thumb:hover img { transform: none; }
+}

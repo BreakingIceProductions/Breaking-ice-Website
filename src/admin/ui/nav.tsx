@@ -15,6 +15,8 @@ const ICONS: Record<string, React.ReactNode> = {
   money: <><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" /></>,
   // A month with a repeat arrow: work that comes round every month.
   retainers: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /><path d="M15 15.5a3 3 0 1 1-1-2.2M15 12.5v1.8h-1.8" /></>,
+  // A photo: frame, sun, hills.
+  galleries: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="m21 16-5-5L5 20" /></>,
   finder: <><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></>,
   // Two books standing and one leaning.
   library: <><path d="M4 4h3.5v16H4zM10 4h3.5v16H10z" /><path d="m15.6 5.2 3.1-.8 3.8 14.6-3.1.8z" /></>,
@@ -46,6 +48,7 @@ export function AdminNav({ needs = 0 }: { needs?: number }) {
         { href: '/admin/money', label: 'Money', icon: 'money', on: at('/admin/money') },
         { href: '/admin/portals', label: 'Client portals', icon: 'portals', on: at('/admin/portals') },
         { href: '/admin/retainers', label: 'Retainers', icon: 'retainers', on: at('/admin/retainers') },
+        { href: '/admin/galleries', label: 'Galleries', icon: 'galleries', on: at('/admin/galleries') },
       ],
     },
     {

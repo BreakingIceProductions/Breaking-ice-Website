@@ -20,13 +20,13 @@ export type NavProject = {
 export type NavQuote = { slug: string; title: string; signed: boolean }
 export type NavProducer = { name: string; role?: string; email?: string; phone?: string; photo?: string }
 
-type Props = { projects: NavProject[]; quotes: NavQuote[]; waiting: number; producer?: NavProducer }
+type Props = { projects: NavProject[]; quotes: NavQuote[]; waiting: number; producer?: NavProducer; /** Live photo galleries this client has. */ galleries?: number }
 
 /**
  * The portal's map: Home, Quotes, each project and its sections, and who to ask.
  * A column on wide screens; on phones, a Menu button slides the same list in.
  */
-export function PortalSidebar({ projects, quotes, waiting, producer }: Props) {
+export function PortalSidebar({ projects, quotes, waiting, producer, galleries = 0 }: Props) {
   const pathname = usePathname()
   const params = useSearchParams()
   const [open, setOpen] = useState(false)
@@ -99,7 +99,7 @@ export function PortalSidebar({ projects, quotes, waiting, producer }: Props) {
           Menu
           {toSign + waiting > 0 && <span className="ps-badge">{toSign + waiting}</span>}
         </button>
-        <span className="ps-bar-where">{current?.title ?? (pathname.startsWith('/portal/quotes') ? 'Quotes' : 'Home')}</span>
+        <span className="ps-bar-where">{current?.title ?? (pathname.startsWith('/portal/quotes') ? 'Quotes' : pathname.startsWith('/portal/galleries') ? 'Photos' : 'Home')}</span>
       </div>
       {open && <div className="ps-scrim" onClick={() => setOpen(false)} aria-hidden="true" />}
       <aside id="portal-nav" className={`ps${open ? ' open' : ''}`} aria-label="Client portal">
@@ -119,6 +119,14 @@ export function PortalSidebar({ projects, quotes, waiting, producer }: Props) {
                   <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 2.5h7l3.5 3.5v11.5H5zM12 2.5V6h3.5M7.5 10h5M7.5 13h5" /></svg>
                   Quotes
                   {toSign > 0 && <span className="ps-dot" aria-label="Waiting for your signature" />}
+                </Link>
+              </li>
+            )}
+            {galleries > 0 && (
+              <li>
+                <Link href="/portal/galleries" className={`ps-link${pathname.startsWith('/portal/galleries') ? ' on' : ''}`} aria-current={pathname.startsWith('/portal/galleries') ? 'page' : undefined}>
+                  <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14v12H3zM3 13l4-4 4 4 2-2 4 4" /><circle cx="13" cy="7.5" r="1.3" /></svg>
+                  Photos
                 </Link>
               </li>
             )}

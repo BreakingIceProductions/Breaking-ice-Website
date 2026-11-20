@@ -4,12 +4,13 @@ import { getPortalSettings, portalImage, producerFor } from '@/portal/data'
 import { billingStatus, byStart, CLIENT_STAGES, clientCanOpen, clientStage } from '@/portal/library'
 import { PortalSidebar, type NavProject } from '@/portal/sidebar'
 import { PortalFooter, PortalHeader } from '@/portal/ui'
+import { countGalleriesForClients } from '@/galleries/store'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PortalAppLayout({ children }: { children: React.ReactNode }) {
   const { session, name, quotes, clients, projects, payments } = await requireAccess()
-  const ps = await getPortalSettings()
+  const [ps, galleries] = await Promise.all([getPortalSettings(), countGalleriesForClients(clients.map((c) => c._id)).catch(() => 0)])
   const nav: NavProject[] = [...projects].sort(byStart).map((p) => ({
     slug: p.slug,
     title: p.title,
@@ -30,6 +31,7 @@ export default async function PortalAppLayout({ children }: { children: React.Re
           <PortalSidebar
             projects={nav}
             quotes={quotes.map((q) => ({ slug: q.slug, title: q.title, signed: Boolean(q.signature) }))}
+            galleries={galleries}
             waiting={nav.reduce((n, p) => n + p.waiting, 0) + payments.filter((x) => x.status === 'due').length}
             producer={producer?.name ? { name: producer.name, role: producer.role, email: producer.email, phone: producer.phone, photo: portalImage(producer.portrait, 80, 80) } : undefined}
           />
