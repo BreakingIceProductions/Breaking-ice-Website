@@ -6,6 +6,7 @@ import { QuoteList } from '@/portal/quote-list'
 import { quoteExpired } from '@/portal/quotes'
 import type { ClientProject } from '@/portal/types'
 import { EmptyMark } from '@/portal/ui'
+import { RetainerCards, retainerCardsFor } from '@/portal/retainer-home'
 
 export const metadata = { title: 'Your projects' }
 
@@ -26,7 +27,10 @@ export default async function Home({ searchParams }: Props) {
     }
   }
 
-  if (!clients.length) {
+  // Retainer clients (monthly content) get a card near the top; for some people it's the only thing here.
+  const retainers = await retainerCardsFor(session)
+
+  if (!clients.length && !retainers.length) {
     return (
       <div className="wrap p-empty-page">
         <EmptyMark />
@@ -51,7 +55,7 @@ export default async function Home({ searchParams }: Props) {
   return (
     <div className="wrap p-home">
       <section className="p-hello">
-        <span className="eyebrow">{clients.map((c) => c.organizationName).join(' · ')}</span>
+        <span className="eyebrow">{(clients.length ? clients : retainers).map((c) => c.organizationName).join(' · ')}</span>
         <h1 className="h1">Hi {name ?? 'there'}, welcome to your client portal.</h1>
         <p className="body-lg muted" style={{ margin: 0 }}>
           {toSign.length
@@ -60,6 +64,8 @@ export default async function Home({ searchParams }: Props) {
               : due.length ? `${due.length === 1 ? 'One payment is' : `${due.length} payments are`} ready when you are.` : 'You’re all caught up.'}
         </p>
       </section>
+
+      {retainers.length > 0 && <RetainerCards cards={retainers} />}
 
       {toSign.length > 0 && <QuoteList id="quotes-h" label="Ready for your signature" quotes={toSign} t={today()} />}
 
@@ -95,7 +101,7 @@ export default async function Home({ searchParams }: Props) {
         </section>
       )}
 
-      {(active.length > 0 || !toSign.length) && (
+      {(active.length > 0 || (!toSign.length && !retainers.length)) && (
       <section aria-labelledby="projects-h" className="p-home-sec">
         <h2 id="projects-h" className="p-label">{active.length ? 'Your projects' : 'No projects on the go right now'}</h2>
         {active.length > 0 && (

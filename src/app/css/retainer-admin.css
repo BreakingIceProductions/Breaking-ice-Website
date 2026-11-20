@@ -1,0 +1,40 @@
+/* Back office: retainer clients (/admin/retainers). Uses the admin tokens; everything is prefixed rt-. */
+
+.rt-meter { display: flex; align-items: center; gap: var(--space-3); min-width: 160px; }
+.rt-meter-bar { flex: 1; height: 8px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
+.rt-meter-bar span { display: block; height: 100%; background: var(--rt-accent, var(--copper)); border-radius: inherit; }
+.rt-meter-num { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 14px; }
+
+.rt-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--rt-accent, var(--copper)); border: 1px solid var(--line); vertical-align: -1px; margin-right: 6px; }
+
+.rt-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: var(--space-4); align-items: end; }
+.rt-form .input { min-height: 44px; font-size: 15px; }
+.rt-form .rt-wide { grid-column: 1 / -1; }
+.rt-color { display: flex; gap: var(--space-2); align-items: center; }
+.rt-color input[type='color'] { width: 44px; height: 44px; padding: 2px; border: 1.5px solid var(--input-line); border-radius: var(--radius-sm); background: var(--surface-raised); }
+
+.rt-months { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
+.rt-months a { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--radius-pill); text-decoration: none; color: var(--ink); font-size: 14px; }
+.rt-months a[aria-current='page'] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+
+.rt-items { list-style: none; margin: 0; padding: 0; }
+.rt-items > li { padding: var(--space-4) 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--space-2); }
+.rt-items > li:first-child { border-top: 0; padding-top: 0; }
+.rt-item-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2) var(--space-4); align-items: baseline; }
+.rt-item-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.rt-item-controls select, .rt-add select { min-height: 36px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1.5px solid var(--input-line); background: var(--surface-raised); color: var(--ink); font: inherit; font-size: 14px; }
+.rt-files { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: 13px; }
+.rt-files li { padding: 2px 10px; border: 1px solid var(--line); border-radius: var(--radius-pill); }
+.rt-add { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-2); align-items: center; }
+.rt-add .input { min-height: 40px; font-size: 15px; }
+@media (max-width: 560px) { .rt-add { grid-template-columns: 1fr 1fr; } .rt-add .input { grid-column: 1 / -1; } }
+
+.rt-piece { display: flex; flex-direction: column; gap: 4px; }
+.rt-piece-text { margin: 0; overflow-wrap: anywhere; }
+.rt-tag { display: inline-block; padding: 1px 8px; border-radius: var(--radius-pill); font-size: 12px; border: 1px solid var(--line); }
+.rt-tag-published { background: var(--ok-bg); border-color: transparent; }
+.rt-tag-scheduled { background: var(--info-bg); border-color: transparent; }
+
+.rt-recap textarea { min-height: 320px; font-family: inherit; line-height: 1.5; }
+.rt-preview { width: 100%; min-height: 560px; border: 1px solid var(--line); border-radius: var(--radius-md); background: #fff; }
+.rt-confirm { padding: var(--space-4); border: 1.5px solid var(--copper); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-3); }

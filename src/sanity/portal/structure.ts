@@ -6,6 +6,20 @@ export const portalStructure: StructureResolver = (S) =>
     .items([
       S.documentTypeListItem('clientProject').title('Client projects'),
       S.documentTypeListItem('client').title('Clients'),
+      S.listItem()
+        .title('Retainers')
+        .id('retainers')
+        .child(
+          S.list()
+            .title('Retainers')
+            .items([
+              S.listItem()
+                .title('Retainer clients')
+                .id('retainerClients')
+                .child(S.documentList().title('Retainer clients').schemaType('client').filter('_type == "client" && defined(retainer)')),
+              S.documentTypeListItem('retainerMonth').title('Retainer months'),
+            ]),
+        ),
       S.documentTypeListItem('reviewComment').title('Review comments'),
       S.documentTypeListItem('docTemplate').title('Document templates'),
       S.documentTypeListItem('signRequest').title('Sign requests'),

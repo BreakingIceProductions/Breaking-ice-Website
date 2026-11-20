@@ -303,3 +303,82 @@ export async function downloadStream(f: { id: string; name: string; mimeType: st
   const name = exp ? f.name.replace(/\.[^.]+$/, '') + exp[1] : f.name
   return { res, name, type: exp ? exp[0] : f.mimeType }
 }
+
+/* ── Client-level folders (retainer clients) ─────────────────────────────
+ *   BI Clients / [Client] / Retainer / YYYY-MM   (files handed over on retainer items)
+ *                         / Documents            (contracts, the retainer agreement; read-only for the client)
+ * They sit beside the project folders, which are named "YYYY-MM-DD Title", so the names can't clash.
+ */
+
+export type FolderFile = { id: string; name: string; size?: number; mimeType: string; modifiedTime: string; uploadedBy?: string }
+
+/** The client's own folder, created (and tagged with the client's id) if it isn't there yet. */
+export function ensureClientRootFolder(c: { _id: string; organizationName: string; driveFolderId?: string }) {
+  return ensureClientFolder(c as ClientProject['client'])
+}
+
+/** A folder path under the client's folder (e.g. ['Retainer', '2026-11']), created as needed. */
+export async function ensureClientSubfolder(c: { _id: string; organizationName: string; driveFolderId?: string }, path: string[]) {
+  let parent = await ensureClientRootFolder(c)
+  for (const name of path) parent = await findOrCreateSub(safeName(name), parent)
+  return parent
+}
+
+/** The same path, found only: null when the client or any folder on the way doesn't exist yet. Never creates anything. */
+export async function findClientSubfolder(c: { driveFolderId?: string }, path: string[]) {
+  if (!c.driveFolderId || !(await getFolder(c.driveFolderId))) return null
+  let parent = c.driveFolderId
+  for (const name of path) {
+    const hit = (await children(parent, true)).find((f) => f.name === name)
+    if (!hit) return null
+    parent = hit.id
+  }
+  return parent
+}
+
+/** Subfolders of a folder (id and name). */
+export async function listSubfolders(folderId: string) {
+  return (await children(folderId, true)).map((f) => ({ id: f.id, name: f.name }))
+}
+
+/** Files (not folders) directly in a folder, newest first. */
+export async function listFolderFiles(folderId: string): Promise<FolderFile[]> {
+  return (await children(folderId)).map((f) => ({
+    id: f.id,
+    name: f.name,
+    size: f.size ? Number(f.size) : undefined,
+    mimeType: f.mimeType,
+    modifiedTime: f.modifiedTime,
+    uploadedBy: f.appProperties?.uploadedBy,
+  }))
+}
+
+/** A file's details and parent folders, or null if it's missing or in the trash. */
+export async function fileMeta(fileId: string) {
+  try {
+    const f = await drive<{ id: string; name: string; mimeType: string; size?: string; parents?: string[]; trashed: boolean; modifiedTime?: string }>(
+      `/files/${encodeURIComponent(fileId)}?supportsAllDrives=true&fields=id,name,mimeType,size,parents,trashed,modifiedTime`,
+    )
+    return f.trashed ? null : f
+  } catch {
+    return null
+  }
+}
+
+/** Like startUpload, into any folder we've already worked out (a client-level folder). */
+export async function startUploadToFolder(folderId: string, file: { name: string; size: number; type: string }, origin: string, uploadedBy: string) {
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${await accessToken()}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+      'X-Upload-Content-Type': file.type || 'application/octet-stream',
+      'X-Upload-Content-Length': String(file.size),
+      Origin: origin,
+    },
+    body: JSON.stringify({ name: safeName(file.name), parents: [folderId], appProperties: { uploadedBy: uploadedBy.slice(0, 100) } }),
+  })
+  const location = res.headers.get('location')
+  if (!res.ok || !location) throw new Error(`drive upload start ${res.status}: ${(await res.text()).slice(0, 300)}`)
+  return location
+}

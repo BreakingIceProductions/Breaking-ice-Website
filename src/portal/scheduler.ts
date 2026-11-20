@@ -29,6 +29,8 @@ import { syncVimeo } from './vimeo'
  *  Back office   calendar events, TickTick due dates and Zoho Books invoice statuses
  *                catch up with the projects (src/admin/sync.ts).
  *  Payments      portal payments whose Zoho Books invoice is paid show as paid.
+ *  Retainers     from the 1st, last month's recap is drafted for each retainer client (src/retainer/recap.ts).
+ *                Josh reads and sends it from the back office; it is never sent from here.
  *
  *  Each email is claimed before it's sent (a write that only succeeds if nothing changed
  *  since we read the project), so a run that's cut short or overlaps another can never
@@ -134,6 +136,14 @@ export async function runScheduler(now = Date.now()) {
     log.push(...(await syncPaymentsFromZoho()))
   } catch (e) {
     log.push(`payment sync failed: ${String(e).slice(0, 160)}`)
+  }
+
+  // 3c. Retainer recaps: from the 1st, last month's recap is drafted for Josh to read. Never sent from here.
+  try {
+    const { draftDueRecaps } = await import('@/retainer/recap')
+    log.push(...(await draftDueRecaps(started + 56_000)))
+  } catch (e) {
+    log.push(`retainer recaps failed: ${String(e).slice(0, 160)}`)
   }
 
   await cleanSignInGuards()

@@ -1,3 +1,4 @@
+import { CalendarIcon } from '@sanity/icons/Calendar'
 import { CaseIcon } from '@sanity/icons/Case'
 import { CogIcon } from '@sanity/icons/Cog'
 import { UsersIcon } from '@sanity/icons/Users'
@@ -24,6 +25,7 @@ export const DELIVERABLE_STATUSES = [
 ]
 
 const auto = { readOnly: true, description: 'Set automatically.' }
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/
 
 const producerFields = [
   defineField({ name: 'name', type: 'string' }),
@@ -94,6 +96,34 @@ export const client = defineType({
       description: 'For GST-exempt clients. Quotes, emails and portal payments show no GST, and Zoho Books invoices add no tax.',
       type: 'boolean',
       initialValue: false,
+    }),
+    defineField({
+      name: 'retainer',
+      title: 'Retainer',
+      description: 'For clients on a monthly retainer: a set number of deliverables a month, shown in their retainer portal. Easier to set in the back office (Retainers).',
+      type: 'object',
+      options: { collapsible: true, collapsed: true },
+      fields: [
+        defineField({ name: 'active', title: 'Retainer is on', type: 'boolean', initialValue: false }),
+        defineField({ name: 'perMonth', title: 'Deliverables a month', type: 'number', validation: (r) => r.min(0).max(500).integer() }),
+        defineField({
+          name: 'rollover',
+          title: 'Unused deliverables',
+          type: 'string',
+          initialValue: 'none',
+          options: { list: [{ title: 'Start fresh each month', value: 'none' }, { title: 'Carry into the next month only', value: 'next-month' }], layout: 'radio' },
+        }),
+        defineField({ name: 'publerWorkspaceId', title: 'Publer workspace ID', description: 'Their Publer workspace. Empty: no social posts are counted.', type: 'string' }),
+        defineField({
+          name: 'accent',
+          title: 'Brand colour',
+          description: 'The client’s main colour, #rrggbb. Used as the accent in their retainer portal.',
+          type: 'string',
+          validation: (r) => r.regex(/^#[0-9a-fA-F]{6}$/, { name: 'colour like #1f6feb' }),
+        }),
+        defineField({ name: 'startMonth', title: 'First month (YYYY-MM)', type: 'string', validation: (r) => r.regex(MONTH_RE, { name: 'YYYY-MM' }) }),
+        defineField({ name: 'endMonth', title: 'Last month (YYYY-MM, if it has ended)', type: 'string', validation: (r) => r.regex(MONTH_RE, { name: 'YYYY-MM' }) }),
+      ],
     }),
   ],
   preview: { select: { title: 'organizationName', media: 'logo', contacts: 'contacts' }, prepare: ({ title, media, contacts }) => ({ title, media, subtitle: `${contacts?.length ?? 0} contact(s)` }) },
@@ -555,4 +585,85 @@ export const signRequest = defineType({
   preview: { select: { title: 'snapshot.title', name: 'recipient.name', status: 'status' }, prepare: ({ title, name, status }) => ({ title, subtitle: `${name ?? ''} · ${status ?? ''}` }) },
 })
 
-export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment, docTemplate, signRequest]
+export const retainerMonth = defineType({
+  name: 'retainerMonth',
+  title: 'Retainer month',
+  type: 'document',
+  icon: CalendarIcon,
+  description: 'One per retainer client per month (id retainer-<client id>-<YYYY-MM>). Social posts come from Publer and aren’t stored here.',
+  fields: [
+    defineField({ name: 'client', type: 'reference', to: [{ type: 'client' }], weak: true, readOnly: true }),
+    defineField({ name: 'clientId', title: 'Client ID', type: 'string', ...auto }),
+    defineField({ name: 'month', title: 'Month (YYYY-MM)', type: 'string', readOnly: true, validation: (r) => r.required().regex(MONTH_RE, { name: 'YYYY-MM' }) }),
+    defineField({
+      name: 'items',
+      title: 'Items',
+      description: 'Planned and hand-made pieces (videos, photos, designs…). Delivered ones count toward the month.',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'retainerItem',
+          fields: [
+            defineField({ name: 'title', type: 'string', validation: (r) => r.required() }),
+            defineField({
+              name: 'type',
+              type: 'string',
+              initialValue: 'other',
+              options: { list: [{ title: 'Social', value: 'social' }, { title: 'Video', value: 'video' }, { title: 'Photo', value: 'photo' }, { title: 'Design', value: 'design' }, { title: 'Other', value: 'other' }] },
+            }),
+            defineField({
+              name: 'status',
+              type: 'string',
+              initialValue: 'planned',
+              options: { list: [{ title: 'Planned', value: 'planned' }, { title: 'In progress', value: 'in-progress' }, { title: 'Scheduled', value: 'scheduled' }, { title: 'Delivered', value: 'delivered' }] },
+            }),
+            defineField({ name: 'deliveredAt', title: 'Delivered on', type: 'date' }),
+            defineField({ name: 'note', type: 'text', rows: 2 }),
+            defineField({
+              name: 'files',
+              description: 'Google Drive files in the client’s Retainer folder. Added from the back office.',
+              type: 'array',
+              readOnly: true,
+              of: [
+                defineArrayMember({
+                  type: 'object',
+                  name: 'retainerFile',
+                  fields: [
+                    defineField({ name: 'id', type: 'string' }),
+                    defineField({ name: 'name', type: 'string' }),
+                    defineField({ name: 'mimeType', type: 'string' }),
+                    defineField({ name: 'size', type: 'number' }),
+                  ],
+                  preview: { select: { title: 'name', subtitle: 'mimeType' } },
+                }),
+              ],
+            }),
+          ],
+          preview: { select: { title: 'title', type: 'type', status: 'status' }, prepare: ({ title, type, status }) => ({ title, subtitle: [type, status].filter(Boolean).join(' · ') }) },
+        }),
+      ],
+    }),
+    defineField({
+      name: 'recap',
+      title: 'Month-end recap',
+      description: 'Drafted automatically on the 1st for the month before. Sent only when you press Send in the back office.',
+      type: 'object',
+      options: { collapsible: true, collapsed: true },
+      fields: [
+        defineField({ name: 'draftedAt', type: 'datetime', ...auto }),
+        defineField({ name: 'subject', type: 'string' }),
+        defineField({ name: 'body', type: 'text', rows: 12 }),
+        defineField({ name: 'sentAt', type: 'datetime', ...auto }),
+        defineField({ name: 'sentTo', type: 'array', of: [{ type: 'string' }], ...auto }),
+      ],
+    }),
+  ],
+  orderings: [{ title: 'Month, newest first', name: 'monthDesc', by: [{ field: 'month', direction: 'desc' }] }],
+  preview: {
+    select: { org: 'client.organizationName', month: 'month', clientId: 'clientId' },
+    prepare: ({ org, month, clientId }) => ({ title: `${org ?? clientId ?? 'Client'} · ${month ?? ''}` }),
+  },
+})
+
+export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment, docTemplate, signRequest, retainerMonth]
