@@ -382,3 +382,10 @@ export async function startUploadToFolder(folderId: string, file: { name: string
   if (!res.ok || !location) throw new Error(`drive upload start ${res.status}: ${(await res.text()).slice(0, 300)}`)
   return location
 }
+
+/** A folder path at the top of the Shared Drive (e.g. ['Galleries without a client', '2026-11-20 Shoot']), created as needed. */
+export async function ensureSharedSubfolder(path: string[]) {
+  let parent = portalEnv.sharedDriveId
+  for (const name of path) parent = await findOrCreateSub(safeName(name), parent)
+  return parent
+}

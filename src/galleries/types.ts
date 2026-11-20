@@ -27,8 +27,13 @@ export type GalleryPhoto = {
   webSize?: number
   /** Original file extension (jpg, png, webp). */
   ext: string
+  /** Google Drive file id of the original, when originals live in Drive (the R2 copy is then only the previews). */
+  driveId?: string
   uploadedAt: string
 }
+
+/** The gallery's folders in the Shared Drive: BI Clients / [Client] / Photos / [date title] / [set]. */
+export type GalleryDrive = { folderId: string; sets: { _key: string; folderId: string }[] }
 
 export type GalleryShare = {
   on: boolean
@@ -72,6 +77,9 @@ export type Gallery = {
   expiresOn?: string
   /** A short note shown under the title. */
   message?: string
+  /** Where full-size originals go: Google Drive (new galleries, when Drive is set up) or R2 (the first galleries). */
+  originals?: 'drive' | 'r2'
+  drive?: GalleryDrive
   createdAt: string
   /** Sample galleries never touch Sanity or R2. */
   sample?: boolean

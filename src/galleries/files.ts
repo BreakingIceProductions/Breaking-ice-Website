@@ -88,6 +88,8 @@ export const downloadName = (p: GalleryPhoto, size: PhotoSize) => (size === 'ful
 /** Short-lived address that downloads one photo with its proper name. */
 export function downloadUrl(g: Pick<Gallery, '_id' | 'sample'>, p: GalleryPhoto, size: PhotoSize) {
   const kind: FileKind = size === 'full' ? 'orig' : 'web'
+  // Originals in Drive are streamed by the download route instead.
+  if (kind === 'orig' && p.driveId) return null
   if (g.sample) return sampleFile(p, kind)
   const key = fileKey(g._id, p, kind)
   if (localFiles()) return localUrl('GET', key, 600, downloadName(p, size))
@@ -111,6 +113,12 @@ export async function storedSize(galleryId: string, p: Pick<GalleryPhoto, '_key'
 
 /** The bytes of one file, as a stream, for zips. */
 export async function readStream(g: Pick<Gallery, '_id' | 'sample'>, p: GalleryPhoto, kind: FileKind): Promise<ReadableStream<Uint8Array>> {
+  if (kind === 'orig' && p.driveId) {
+    const { originalStream } = await import('./drive')
+    const o = await originalStream(p)
+    if (!o) throw new Error(`original missing from Drive: ${p.name}`)
+    return o.body
+  }
   if (g.sample) {
     const buf = await readFile(path.join(process.cwd(), 'public', sampleFile(p, kind)))
     return new Blob([new Uint8Array(buf)]).stream()

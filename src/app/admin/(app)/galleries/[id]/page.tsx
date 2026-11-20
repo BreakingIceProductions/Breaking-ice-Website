@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { requireAdmin } from '@/admin/auth'
 import { listClients, listProjects } from '@/admin/data'
+import { folderUrl } from '@/galleries/drive'
 import { viewUrl } from '@/galleries/files'
 import { galleriesSampleMode, getGallery, listFavourites, listVisits } from '@/galleries/store'
 import { formatBytes } from '@/galleries/types'
@@ -75,6 +76,7 @@ export default async function GalleryPage({ params }: { params: Promise<{ id: st
           <DownloadsPanel id={g._id} downloads={g.downloads} ro={ro} />
           <MessagePanel id={g._id} message={g.message} ro={ro} />
           <SetsPanel id={g._id} sets={g.sets} counts={counts} ro={ro} />
+          {!g.sample && <StoragePanel originals={g.originals === 'drive' ? 'drive' : 'r2'} folder={g.drive?.folderId} client={g.clientName} />}
         </aside>
       </div>
 
@@ -85,5 +87,33 @@ export default async function GalleryPage({ params }: { params: Promise<{ id: st
 
       {!ro && <DangerZone id={g._id} title={g.title} />}
     </div>
+  )
+}
+
+/** Where this gallery's files live, so Josh can find the originals. */
+function StoragePanel({ originals, folder, client }: { originals: 'drive' | 'r2'; folder?: string; client?: string }) {
+  const url = folder ? folderUrl(folder) : ''
+  return (
+    <section className="p-card ga-panel" aria-labelledby="ga-store-h">
+      <div className="a-card-head">
+        <h2 id="ga-store-h" className="a-h2">Where the files are</h2>
+      </div>
+      {originals === 'drive' ? (
+        <>
+          <p className="small" style={{ margin: 0 }}>
+            Full-size originals go to Google Drive: BI Clients / {client ?? 'Galleries without a client'}
+            {client ? ' / Photos' : ''} / this gallery, one folder per set. Previews for browsing are kept in Cloudflare.
+          </p>
+          {url ? (
+            <a className="text-link small" href={url} target="_blank" rel="noopener noreferrer">Open the Drive folder<span className="sr-only"> (opens in a new tab)</span></a>
+          ) : (
+            <p className="muted small" style={{ margin: 0 }}>{folder ? 'Local test folder (no Google Drive on this machine).' : 'The folder is made with the first upload.'}</p>
+          )}
+          <p className="muted small" style={{ margin: 0 }}>Removing photos or the gallery here never deletes anything from Drive.</p>
+        </>
+      ) : (
+        <p className="small" style={{ margin: 0 }}>Originals and previews are both kept in Cloudflare R2 (an older gallery, made before originals moved to Drive).</p>
+      )}
+    </section>
   )
 }

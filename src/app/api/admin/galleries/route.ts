@@ -1,4 +1,5 @@
 import { adminFromRequest } from '@/admin/auth'
+import { driveOriginalsReady } from '@/galleries/drive'
 import { day, docId, str } from '@/galleries/admin-input'
 import { createGallery } from '@/galleries/store'
 import { json } from '@/portal/http'
@@ -15,6 +16,6 @@ export async function POST(req: Request) {
   const clientId = body.clientId ? docId(body.clientId) : ''
   const projectId = body.projectId ? docId(body.projectId) : ''
   if (!title || date === undefined || clientId === undefined || projectId === undefined) return json({ ok: false, error: 'invalid' }, 400)
-  const g = await createGallery({ title, date: date || undefined, clientId: clientId || undefined, projectId: projectId || undefined })
+  const g = await createGallery({ title, date: date || undefined, clientId: clientId || undefined, projectId: projectId || undefined, originals: driveOriginalsReady() ? 'drive' : 'r2' })
   return json({ ok: true, id: g._id })
 }

@@ -68,7 +68,7 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
   }
 
   function removeSel() {
-    if (!window.confirm(`Remove ${words(n)} from the gallery? Their files are deleted too, and this can’t be undone.`)) return
+    if (!window.confirm(`Remove ${words(n)} from the gallery? Their copies on the website are deleted and this can’t be undone. Originals in Google Drive stay where they are.`)) return
     void run({ action: 'remove-photos', keys: selected }, `Removed ${words(n)}.`)
   }
 

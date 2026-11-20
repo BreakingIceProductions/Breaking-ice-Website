@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { sendResumable } from '@/portal/resumable'
 import { formatBytes, MAX_PHOTO_BYTES, PHOTO_TYPES, THUMB_EDGE, WEB_EDGE, type GallerySet } from '../types'
 
 /**
@@ -21,8 +22,8 @@ const PARALLEL = 3
 const QUALITY = 0.82
 const EXT_TYPE: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }
 
-type Signed = { ok: true; key: string; ext: string; urls: { orig: string; web: string; thumb: string } } | { ok: false; error: string }
-type Reg = { key: string; ext: string; name: string; set: string; w: number; h: number; size: number; webSize: number; order: number }
+type Signed = { ok: true; key: string; ext: string; urls: { orig: string; web: string; thumb: string }; /** Resumable upload address in Google Drive for the original. */ drive?: string } | { ok: false; error: string }
+type Reg = { key: string; ext: string; name: string; set: string; w: number; h: number; size: number; webSize: number; order: number; driveId?: string }
 type Failure = { name: string; why: string }
 type Progress = { total: number; done: number; failed: number; bytesTotal: number; bytesDone: number }
 
@@ -92,6 +93,21 @@ async function copies(file: File) {
     }
   } finally {
     bmp.close()
+  }
+}
+
+/** The original, straight to Google Drive in chunks (resumes after a dropped connection). Returns its Drive file id. */
+async function toDrive(session: string, file: File, signal: AbortSignal, onBytes: (n: number) => void) {
+  let xhr: XMLHttpRequest | null = null
+  const stop = () => xhr?.abort()
+  signal.addEventListener('abort', stop)
+  try {
+    const r = await sendResumable({ file, session, from: 0, cancelled: () => signal.aborted, onProgress: onBytes, onPause: () => {}, onXhr: (x) => (xhr = x) })
+    if (signal.aborted) throw new DOMException('cancelled', 'AbortError')
+    if (!r.ok || !r.id) throw new Error(r.ok ? 'Google Drive didn’t return the file' : r.reason === 'unsteady' ? 'connection kept dropping' : 'Google Drive upload failed')
+    return r.id
+  } finally {
+    signal.removeEventListener('abort', stop)
   }
 }
 
@@ -213,7 +229,7 @@ export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySe
     try {
       for (let i = 0; i < photos.length && !ctl.signal.aborted && !fatal; i += SIGN_BATCH) {
         const chunk = photos.slice(i, i + SIGN_BATCH)
-        const signed = await api(id, { action: 'sign', files: chunk.map((f) => ({ name: f.name, type: typeOf(f), size: f.size })) }).catch(() => null)
+        const signed = await api(id, { action: 'sign', set, files: chunk.map((f) => ({ name: f.name, type: typeOf(f), size: f.size })) }).catch(() => null)
         if (!signed?.ok || !Array.isArray(signed.items)) {
           const err = String(signed?.error ?? '')
           fatal =
@@ -221,6 +237,8 @@ export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySe
               ? 'This is the made-up sample shoot, so uploads can’t show here. Make a new gallery to try the uploader.'
               : err === 'not-configured'
                 ? 'Photo storage isn’t set up on this server yet (R2 settings are missing).'
+                : err === 'drive-not-configured' || err === 'drive'
+                  ? 'Couldn’t reach Google Drive for the originals. Check the Drive connection in Settings, then try again.'
                 : signed?.status === 401
                   ? 'This sign-in can’t upload, or it has expired.'
                   : 'Couldn’t get upload addresses from the server.'
@@ -241,19 +259,19 @@ export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySe
               }
               try {
                 const c = await copies(file)
-                await Promise.all([
-                  put(s.urls.orig, file, typeOf(file), ctl.signal),
+                const [driveId] = await Promise.all([
+                  s.drive ? toDrive(s.drive, file, ctl.signal, () => {}) : put(s.urls.orig, file, typeOf(file), ctl.signal).then(() => undefined),
                   put(s.urls.web, c.web, 'image/jpeg', ctl.signal),
                   put(s.urls.thumb, c.thumb, 'image/jpeg', ctl.signal),
                 ])
                 prog.bytesDone += file.size
                 show()
                 names.set(s.key, file.name)
-                pending.push({ key: s.key, ext: s.ext, name: file.name, set, w: c.w, h: c.h, size: file.size, webSize: c.web.size, order: i + at })
+                pending.push({ key: s.key, ext: s.ext, name: file.name, set, w: c.w, h: c.h, size: file.size, webSize: c.web.size, order: i + at, ...(driveId ? { driveId } : {}) })
                 flush()
               } catch (e) {
                 if (ctl.signal.aborted) return
-                const why = e instanceof Error && e.message.startsWith('storage') ? e.message : e instanceof Error && /decode|InvalidState|no-/i.test(`${e.name} ${e.message}`) ? 'couldn’t read the image' : e instanceof Error ? e.message : 'failed'
+                const why = e instanceof Error && (e.message.startsWith('storage') || /Drive|connection/.test(e.message)) ? e.message : e instanceof Error && /decode|InvalidState|no-/i.test(`${e.name} ${e.message}`) ? 'couldn’t read the image' : e instanceof Error ? e.message : 'failed'
                 fail(file.name, why)
               }
             }

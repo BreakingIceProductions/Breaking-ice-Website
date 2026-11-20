@@ -37,7 +37,7 @@ export function DangerZone({ id, title }: { id: string; title: string }) {
   return (
     <section className="p-card ga-danger" aria-labelledby="ga-danger-h">
       <h2 id="ga-danger-h" className="a-h2">Delete this gallery</h2>
-      <p className="muted small" style={{ margin: 0 }}>Deletes every photo file, the favourites and the activity. The link and the portal stop showing it. This can’t be undone.</p>
+      <p className="muted small" style={{ margin: 0 }}>Deletes the website’s copies of every photo, the favourites and the activity. The link and the portal stop showing it. This can’t be undone. Originals in Google Drive are left where they are.</p>
       <form
         className="ga-copy-row"
         onSubmit={async (e) => {

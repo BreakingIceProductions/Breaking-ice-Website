@@ -1,5 +1,6 @@
 import { adminFromRequest } from '@/admin/auth'
 import { KEY_RE, str } from '@/galleries/admin-input'
+import { checkOriginal, driveOriginalsReady, setFolder, startOriginal } from '@/galleries/drive'
 import { localFiles, storedSize, uploadUrl } from '@/galleries/files'
 import { addPhotos, getGallery, newKey } from '@/galleries/store'
 import { extOf, MAX_PHOTO_BYTES, PHOTO_TYPES, type GalleryPhoto } from '@/galleries/types'
@@ -10,7 +11,9 @@ export const runtime = 'nodejs'
 
 /**
  * The photo uploader's two calls. Files go straight from Josh's browser to storage, never through here:
- *   sign      → for up to 50 photos, a new key each and three PUT addresses (original, web copy, thumbnail)
+ *   sign      → for up to 50 photos, a new key each and upload addresses: the web copy and thumbnail
+ *               always go to R2; the original goes to Google Drive (a resumable upload address,
+ *               galleries with originals: 'drive') or to R2 (the first galleries)
  *   register  → once a batch has landed, checks the files really are there and adds the photos to the gallery
  */
 
@@ -44,11 +47,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!g) return json({ ok: false, error: 'not-found' }, 404)
   // The made-up sample shoot shows pictures from /public, so new uploads to it would never appear.
   if (g.sample) return json({ ok: false, error: 'sample' }, 400)
+  const toDrive = g.originals === 'drive'
+  if (toDrive && !driveOriginalsReady()) return json({ ok: false, error: 'drive-not-configured' }, 503)
 
   if (body.action === 'sign') {
     const files = Array.isArray(body.files) ? (body.files as unknown[]) : null
     if (!files || !files.length || files.length > MAX_BATCH) return json({ ok: false, error: 'invalid' }, 400)
-    const items = files.map((raw) => {
+    const setKey = typeof body.set === 'string' && g.sets.some((x) => x._key === body.set) ? body.set : g.sets[0]?._key ?? ''
+    let folder = ''
+    if (toDrive) {
+      try {
+        folder = await setFolder(g, setKey)
+      } catch (e) {
+        console.error('[galleries] drive folder failed', e)
+        return json({ ok: false, error: 'drive' }, 502)
+      }
+    }
+    const origin = req.headers.get('origin') || new URL(req.url).origin
+    const prepared = files.map((raw) => {
       const f = raw as { name?: unknown; type?: unknown; size?: unknown }
       const name = str(f?.name, 200) ?? ''
       const type = String(f?.type ?? '')
@@ -59,7 +75,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const ext = EXTS.includes(fromName) && TYPE_EXT[type] === fromName ? fromName : TYPE_EXT[type]
       const key = newKey()
       const p = { _key: key, ext }
-      return { ok: true as const, key, ext, urls: { orig: uploadUrl(g._id, p, 'orig'), web: uploadUrl(g._id, p, 'web'), thumb: uploadUrl(g._id, p, 'thumb') } }
+      return { ok: true as const, key, ext, name, type, size, urls: { orig: toDrive ? '' : uploadUrl(g._id, p, 'orig'), web: uploadUrl(g._id, p, 'web'), thumb: uploadUrl(g._id, p, 'thumb') } }
+    })
+    // Drive upload addresses, a few at a time so Google doesn't throttle us.
+    const items = await pool(prepared, 5, async (it) => {
+      if (!it.ok || !toDrive) return it.ok ? { ok: true as const, key: it.key, ext: it.ext, urls: it.urls } : it
+      try {
+        const drive = await startOriginal(folder, { name: it.name, size: it.size, type: it.type }, origin)
+        return { ok: true as const, key: it.key, ext: it.ext, urls: it.urls, drive }
+      } catch (e) {
+        console.error('[galleries] drive upload start failed', e)
+        return { ok: false as const, error: 'drive' }
+      }
     })
     return json({ ok: true, items })
   }
@@ -86,11 +113,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       }
       if (have.has(key) || candidates.some((c) => c._key === key)) continue
       const set = typeof p.set === 'string' && sets.has(p.set) ? p.set : g.sets[0]?._key
-      candidates.push({ _key: key, set, name, w, h, size, webSize: posInt(p?.webSize, MAX_PHOTO_BYTES) ?? undefined, ext, uploadedAt: now })
+      const driveId = toDrive && typeof p.driveId === 'string' && /^[\w-]{10,100}$/.test(p.driveId) ? p.driveId : undefined
+      if (toDrive && !driveId) {
+        invalid.push(key)
+        continue
+      }
+      candidates.push({ _key: key, set, name, w, h, size, webSize: posInt(p?.webSize, MAX_PHOTO_BYTES) ?? undefined, ext, ...(driveId ? { driveId } : {}), uploadedAt: now })
     }
     // Only photos whose original and thumbnail actually landed get listed; the browser retries or reports the rest.
     const checked = await pool(candidates, 10, async (c): Promise<GalleryPhoto | null> => {
-      const [orig, thumb, web] = await Promise.all([storedSize(g._id, c, 'orig'), storedSize(g._id, c, 'thumb'), storedSize(g._id, c, 'web')])
+      const [orig, thumb, web] = await Promise.all([
+        c.driveId ? checkOriginal(g, c.driveId).catch(() => null) : storedSize(g._id, c, 'orig'),
+        storedSize(g._id, c, 'thumb'),
+        storedSize(g._id, c, 'web'),
+      ])
       return orig && thumb ? { ...c, size: orig, webSize: web || c.webSize } : null
     })
     const ready = checked.filter((c): c is GalleryPhoto => Boolean(c))

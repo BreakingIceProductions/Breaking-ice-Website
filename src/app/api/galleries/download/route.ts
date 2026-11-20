@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server'
 import { isDenied, resolveGallery, statsWho } from '@/galleries/access'
+import { mimeOf, originalStream } from '@/galleries/drive'
 import { downloadName, downloadUrl } from '@/galleries/files'
 import { recordDownload } from '@/galleries/store'
 import { json } from '@/portal/http'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 300
 
 /**
  * One photo: checks the viewer may download that size, notes it in the gallery's stats, then
  * sends the browser to a short-lived file address that saves under the photo's own name.
+ * Originals kept in Google Drive are streamed through from Drive instead.
  */
 export async function GET(req: Request) {
   const q = new URL(req.url).searchParams
@@ -29,6 +32,21 @@ export async function GET(req: Request) {
     } catch (e) {
       console.error('[galleries] download not recorded', e)
     }
+  }
+
+  if (size === 'full' && photo.driveId) {
+    const o = await originalStream(photo)
+    if (!o) return json({ error: 'original-missing' }, 410)
+    const name = downloadName(photo, size)
+    const ascii = name.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '')
+    return new Response(o.body, {
+      headers: {
+        'Content-Type': mimeOf(photo),
+        'Content-Disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+        ...(o.size ? { 'Content-Length': String(o.size) } : {}),
+        'Cache-Control': 'no-store',
+      },
+    })
   }
 
   // Sample galleries point at /public; real ones at a signed R2 (or local dev) address.

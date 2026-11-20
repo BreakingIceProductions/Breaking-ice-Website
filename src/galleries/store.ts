@@ -31,7 +31,7 @@ function mem(): Mem {
 }
 
 const FIELDS = `_id, title, slug, date, clientId, "clientName": *[_type == "client" && _id == ^.clientId][0].organizationName, projectId,
-  "projectTitle": *[_type == "clientProject" && _id == ^.projectId][0].title, status, coverKey, sets, photos, share, downloads, expiresOn, message, createdAt`
+  "projectTitle": *[_type == "clientProject" && _id == ^.projectId][0].title, status, coverKey, sets, photos, share, downloads, expiresOn, message, originals, drive, createdAt`
 const LIST_FIELDS = `_id, title, slug, date, clientId, "clientName": *[_type == "client" && _id == ^.clientId][0].organizationName, projectId,
   "projectTitle": *[_type == "clientProject" && _id == ^.projectId][0].title, status, coverKey, sets, "photos": photos[_key == ^.coverKey], "count": count(photos),
   "bytes": math::sum(photos[].size), share, downloads, expiresOn, createdAt`
@@ -53,6 +53,8 @@ const normalize = (x: Partial<Gallery> & { _id: string }): Gallery => ({
   downloads: { full: true, web: true, all: true, ...x.downloads },
   expiresOn: x.expiresOn || undefined,
   message: x.message || undefined,
+  originals: x.originals === 'drive' ? 'drive' : 'r2',
+  drive: x.drive?.folderId ? { folderId: x.drive.folderId, sets: x.drive.sets ?? [] } : undefined,
   createdAt: x.createdAt || new Date().toISOString(),
   sample: x.sample || x._id.startsWith('sample-') || undefined,
 })
@@ -122,7 +124,7 @@ export const slugify = (s: string) =>
 /** Readable, and random enough that nobody guesses another client's address. */
 export const newSlug = (title: string) => `${slugify(title)}-${randomBytes(5).toString('base64url').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) || rand(3)}`
 
-export type NewGallery = { title: string; date?: string; clientId?: string; projectId?: string }
+export type NewGallery = { title: string; date?: string; clientId?: string; projectId?: string; originals?: 'drive' | 'r2' }
 
 export async function createGallery(input: NewGallery): Promise<Gallery> {
   const doc: Gallery = normalize({
@@ -138,6 +140,7 @@ export async function createGallery(input: NewGallery): Promise<Gallery> {
     photos: [],
     share: { on: false, version: 1 },
     downloads: { full: true, web: true, all: true },
+    originals: input.originals ?? 'r2',
     createdAt: new Date().toISOString(),
   })
   if (useMemory()) {
@@ -207,6 +210,16 @@ export async function checkPassword(gal: Gallery, password: string) {
   const got = await scrypt(password, salt, 32)
   const want = Buffer.from(hex, 'hex')
   return got.length === want.length && timingSafeEqual(got, want)
+}
+
+/** Remembers the gallery's Drive folders (made on its first upload). */
+export async function setDrive(id: string, drive: Gallery['drive']) {
+  if (useMemory()) {
+    const cur = mem().galleries.get(id)
+    if (cur) mem().galleries.set(id, { ...cur, drive })
+    return
+  }
+  await portalClient.patch(id).set({ drive }).commit({ autoGenerateArrayKeys: false })
 }
 
 export async function setSets(id: string, sets: GallerySet[]) {
