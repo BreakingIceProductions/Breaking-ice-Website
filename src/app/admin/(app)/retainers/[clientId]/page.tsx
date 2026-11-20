@@ -60,6 +60,8 @@ export default async function RetainerClientPage({ params, searchParams }: Props
   const month = isMonthKey(asked) && asked <= now ? asked : months[0] ?? now
   // The recap is for a month that has ended: the one picked, or last month.
   const recapMonth = month < now ? month : shiftMonth(now, -1)
+  // No recap for months before the retainer began (or after it ended).
+  const recapBefore = Boolean(c.retainer.startMonth && recapMonth < c.retainer.startMonth) || Boolean(c.retainer.endMonth && recapMonth > c.retainer.endMonth)
   const [view, recapDoc] = await Promise.all([buildMonthView(c, month), getRetainerMonth(c._id, recapMonth)])
   const to = recapRecipients(c).map((x) => x.email)
   const shownMonths = months.includes(month) ? months : [month, ...months]
@@ -132,6 +134,9 @@ export default async function RetainerClientPage({ params, searchParams }: Props
         </section>
       </div>
 
+      {recapBefore ? (
+        <p className="small muted" role="note" style={{ margin: 0 }}>No recap for {monthLabel(recapMonth)}: it’s outside this client’s retainer months. The first one is drafted on the 1st after a retainer month ends.</p>
+      ) : (
       <section className="p-card" aria-labelledby="h-recap">
         <div className="a-card-head">
           <h2 id="h-recap" className="a-h2">Recap: {monthLabel(recapMonth)}</h2>
@@ -139,6 +144,7 @@ export default async function RetainerClientPage({ params, searchParams }: Props
         </div>
         <RetainerRecap key={recapMonth} clientId={c._id} month={recapMonth} monthName={monthLabel(recapMonth).split(' ')[0]} recap={recapDoc?.recap} to={to} readOnly={readOnly} />
       </section>
+      )}
     </div>
   )
 }
