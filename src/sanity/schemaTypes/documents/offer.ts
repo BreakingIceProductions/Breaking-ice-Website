@@ -36,6 +36,7 @@ export const offer = defineType({
     defineField({ name: 'heroHeadline', title: 'Hero headline', type: 'string', group: 'content' }),
     defineField({ name: 'oneLiner', title: 'One-liner (under the headline)', type: 'string', group: 'content' }),
     defineField({ name: 'description', type: 'portableText', group: 'content' }),
+    defineField({ name: 'descriptionNote', title: 'Line under the description (optional)', type: 'string', group: 'content', description: 'One short line, e.g. the retainers note on the Brand Engine. Leave empty to use the built-in line, if any.' }),
     defineField({ name: 'includedTitle', title: 'List heading', type: 'string', group: 'content', description: 'e.g. “What you get” or “A typical kit includes”.' }),
     defineField({ name: 'included', title: 'What’s included', description: 'Start an item with a short sentence ending in a full stop to show it in bold.', type: 'array', group: 'content', of: [defineArrayMember({ type: 'string' })] }),
     defineField({ name: 'idealFor', title: 'Ideal for', type: 'array', group: 'content', of: [defineArrayMember({ type: 'string' })] }),

@@ -79,7 +79,9 @@ export const homePage = defineType({
   groups: [
     { name: 'hero', title: 'Hero', default: true },
     { name: 'sections', title: 'Sections' },
-    { name: 'proof', title: 'Proof' },
+    { name: 'filmstrip', title: 'Story Kit filmstrip' },
+    { name: 'fit', title: 'Is this you?' },
+    { name: 'proof', title: 'Testimonials & proof' },
     { name: 'seo', title: 'SEO' },
     { name: 'retired', title: 'Old sections (not shown)' },
   ],
@@ -91,13 +93,15 @@ export const homePage = defineType({
     copy('heroTitle', 'Hero title (big headline)', COPY.home.heroTitle, 'hero'),
     defineField({ ...text('heroHeadline', 'Hero line under the title'), group: 'hero' }),
     defineField({ ...longText('heroSubline', 'Meta description fallback'), group: 'hero', description: 'Not shown on the page; used for Google when the SEO tab is empty.' }),
+    copy('splashCue', 'Splash scroll cue', COPY.home.splashCue, 'hero'),
+    copy('reelButton', 'Full reel button', COPY.home.reelButton, 'hero'),
     // The problem
     copy('problemEyebrow', 'Problem eyebrow', COPY.home.problemEyebrow, 'sections'),
     copy('problemTitle', 'Problem title', COPY.home.problemTitle, 'sections'),
     defineField({ ...longText('problemBody', 'Problem text'), group: 'sections', description: `Leave empty to use “${COPY.home.problemBody}”` }),
     defineField({ name: 'hookVideo', title: 'Hook video (optional)', type: 'videoUrl', group: 'sections', description: 'Shown beside the problem section only when set.' }),
     defineField({ name: 'hookPoster', title: 'Hook video still', type: 'altImage', group: 'sections', description: 'Optional. Defaults to the Vimeo thumbnail.' }),
-    // What we believe
+    // What we believe (not shown on Home since the Nov 21 wireframe; the who-we-are line now sits under How we film)
     copy('beliefEyebrow', 'Belief eyebrow', COPY.home.beliefEyebrow, 'sections'),
     copy('beliefTitle', 'Belief title', COPY.home.beliefTitle, 'sections'),
     defineField({ ...longText('beliefBody', 'Belief text'), group: 'sections', description: `Leave empty to use “${COPY.home.beliefBody}”` }),
@@ -108,8 +112,73 @@ export const homePage = defineType({
     defineField({ ...longText('ladderIntro', 'Offers intro'), group: 'sections', description: `Leave empty to use “${COPY.home.ladderIntro}”` }),
     // Featured stories
     copy('storiesEyebrow', 'Stories eyebrow', 'Our work', 'sections'),
-    copy('storiesTitle', 'Stories title', 'Stories we have told', 'sections'),
+    copy('storiesTitle', 'Stories title', COPY.home.storiesTitle, 'sections'),
+    copy('storiesLine', 'Stories second line', COPY.home.storiesLine, 'sections'),
+    copy('storiesJobLabel', 'Stories “The job” label', COPY.home.storiesJobLabel, 'sections'),
+    // How we film: the low-profile crew (also shown on About)
+    copy('crewEyebrow', 'How we film eyebrow', COPY.home.crewEyebrow, 'sections'),
+    copy('crewTitle', 'How we film title', COPY.home.crewTitle, 'sections'),
+    defineField({ ...longText('crewBody', 'How we film text'), group: 'sections', description: `Also shown on the About page. Leave empty to use “${COPY.home.crewBody}”` }),
+    defineField({ name: 'crewImage', title: 'How we film picture', type: 'altImage', group: 'sections', description: 'A real behind-the-scenes photo. Leave empty to use the founder’s on-location photo from the About page.' }),
+    // Story Kit filmstrip (also shown on the Story Kit page)
+    defineField({
+      name: 'filmstrip',
+      title: 'Story Kit filmstrip',
+      description: 'Shown on Home and on the Story Kit page. Leave any part empty to use the built-in words.',
+      type: 'object',
+      group: 'filmstrip',
+      fields: [
+        copy('title', 'Heading', COPY.filmstrip.title),
+        defineField({ ...longText('intro', 'Intro'), description: `Leave empty to use “${COPY.filmstrip.intro}”` }),
+        copy('lead', 'Lead frame', COPY.filmstrip.lead),
+        copy('note', 'Small note under the strip', COPY.filmstrip.note),
+        defineField({
+          name: 'frames',
+          title: 'Frames',
+          description: `Numbered in order. Leave empty to use the six built-in frames (${COPY.filmstrip.frames.map((f) => f.title).join(', ')}).`,
+          type: 'array',
+          validation: (r) => r.max(8),
+          of: [
+            defineArrayMember({
+              type: 'object',
+              name: 'filmstripFrame',
+              fields: [
+                defineField({ name: 'title', type: 'string', validation: (r) => r.required() }),
+                defineField({ name: 'line', title: 'One line', type: 'string' }),
+                defineField({ name: 'image', title: 'Still', type: 'altImage', description: 'Optional. Leave empty to use a still from a featured story.' }),
+              ],
+              preview: { select: { title: 'title', subtitle: 'line', media: 'image' } },
+            }),
+          ],
+        }),
+      ],
+    }),
+    // Is this you? checklist
+    copy('fitEyebrow', 'Checklist eyebrow', COPY.home.fitEyebrow, 'fit'),
+    copy('fitTitle', 'Checklist heading', COPY.home.fitTitle, 'fit'),
+    copy('fitHelper', 'Checklist helper line', COPY.home.fitHelper, 'fit'),
+    defineField({
+      name: 'fitItems',
+      title: 'Checklist items',
+      description: 'A bold line and a short line under it. Leave empty to use the five built-in items.',
+      type: 'array',
+      group: 'fit',
+      validation: (r) => r.max(8),
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'fitItem',
+          fields: [
+            defineField({ name: 'line', title: 'Bold line', type: 'string', validation: (r) => r.required() }),
+            defineField({ name: 'subline', title: 'Line under it', type: 'string' }),
+          ],
+          preview: { select: { title: 'line', subtitle: 'subline' } },
+        }),
+      ],
+    }),
+    copy('fitClosing', 'Checklist closing line', COPY.home.fitClosing, 'fit'),
     // Proof
+    // Proof numbers and the logo strip are not shown on Home since the Nov 21 wireframe; kept for later.
     copy('proofEyebrow', 'Proof eyebrow', COPY.home.proofEyebrow, 'proof'),
     copy('proofTitle', 'Proof title', COPY.home.proofTitle, 'proof'),
     defineField({ ...longText('proofBody', 'Proof text'), group: 'proof', description: 'Approved figures only. Leave empty to use the North-Wright Airways paragraph.' }),

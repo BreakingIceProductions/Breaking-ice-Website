@@ -13,7 +13,7 @@
  *
  * Pure data (no Sanity client), so the Studio schema can import from here too.
  */
-import type { FaqItem, Offer } from './types'
+import type { FaqItem, Offer, Service } from './types'
 
 export const OFFER_SLUGS = ['one-off-film', 'story-kit', 'brand-engine'] as const
 
@@ -54,7 +54,7 @@ export const FALLBACK_OFFERS: Offer[] = [
     included: [
       'A first conversation and a written goal for the film',
       'A story plan, a shot plan and interview questions',
-      'Filming with a crew of two, with drone shots where they help',
+      'Filming on location, planned around your day, with drone shots where they help',
       'Edit, colour, sound mix and licensed music',
       'Captions and name titles',
       'Two rounds of review',
@@ -171,6 +171,7 @@ export const FALLBACK_OFFERS: Offer[] = [
       'Clients who already have a Story Kit and want to keep going',
     ],
     timeline: '12-month minimum term',
+    descriptionNote: 'Looking for our retainers? They are now the Brand Engine.',
     faq: [
       q(
         'be1',
@@ -308,6 +309,58 @@ export const COPY = {
     proofStoryLink: 'See the North-Wright story',
     proofAllLink: 'See our stories',
     closingLine: 'Tell us about your goals and your timing. We’ll help you find the right place to start.',
+    // ── Wireframe sections (Nov 21). Source: Website_Copy_Revision/261121_wireframe_sections_copy_v1.md, with Josh's answers. ──
+    /** Logo splash: the scroll cue under the logo (the small line under the logo is heroEyebrow). */
+    splashCue: 'Discover more',
+    /** Hero buttons under the reel (the first two come from Site settings). */
+    reelButton: 'Watch the full reel',
+    /** Featured stories carousel. */
+    storiesTitle: 'People trust what they can see for themselves.',
+    storiesLine: 'So we show them the real work.',
+    storiesJobLabel: 'The job',
+    /** “The job” line per featured story, keyed by project slug. A project's own “The job” field in Sanity wins. */
+    storyJobs: {
+      'keele-river-with-canoe-north-adventures': 'Sell remote river trips through real guests.',
+      'imperial-oil-northern-development-program': 'Help Sahtú residents see themselves in the job.',
+      // The alt line (Josh, Nov 21): no “road-ready”, the highway is not built yet.
+      'this-is-the-sahtu': 'Make the Sahtú proud, not sorry.',
+      'fly-north-pilot-recruitment': 'Find pilots who want real bush flying.',
+      'growing-through-the-sahtu': 'Honour graduates in every Sahtú community.',
+      'ten-stone-mountain-lodge-into-the-mackenzie-mountains': 'Show why people go, and what it takes.',
+    } as Record<string, string>,
+    /** “Is this you?” checklist. */
+    fitEyebrow: 'Is this you?',
+    fitTitle: 'This is a good fit if…',
+    fitHelper: 'Tick the ones that sound like you.',
+    fitItems: [
+      { line: 'Something big is coming.', subline: 'A launch, a rebrand, a funding drive, an enrolment push or an anniversary.' },
+      { line: 'You want a crew that stays.', subline: 'Not a file and a goodbye. We plan it, film it and help you use it.' },
+      { line: 'Your film has a job to do.', subline: 'Win customers, earn funding, enrol students or hire people.' },
+      { line: 'One shoot has to cover a lot.', subline: 'Your website, social media, events, recruiting and your board.' },
+      { line: 'Your work is better than people know.', subline: 'We show what really happens inside.' },
+    ],
+    fitClosing: 'Ticked two or more? Let’s talk.',
+    /** On site (Home and About). Josh, Nov 21: no crew size in this section. */
+    crewEyebrow: 'How we film',
+    crewTitle: 'Full production. Light footprint.',
+    crewBody:
+      'You get professional cameras, sound and lighting, without a film set taking over your floor. We plan around your schedule and work quietly, so your people keep doing their jobs. That is how we capture the work as it really happens.',
+  },
+  /** Story Kit filmstrip (Home and the Story Kit page). */
+  filmstrip: {
+    title: 'One shoot. A whole kit of stories.',
+    intro: 'We plan the story with you, film it once and turn it into everything below.',
+    // “One shoot”, not “1 shoot day”: no single-day promise.
+    lead: 'One shoot',
+    note: 'A typical kit includes these pieces. We build each kit around your goals.',
+    frames: [
+      { title: 'The main film', line: 'The full story, for your biggest moments.' },
+      { title: 'Short cuts', line: 'Shorter versions for talks, emails and ads.' },
+      { title: 'Social clips', line: 'Vertical clips for the feeds you use.' },
+      { title: 'Photos', line: 'Stills from the same shoot, ready to publish.' },
+      { title: 'Website banner', line: 'A short loop for the top of your site.' },
+      { title: 'The rollout plan', line: 'What to post, where and when.' },
+    ],
   },
   services: {
     intro: 'We make films about real people and real work. We also plan how you use each film after we deliver it. That way, your story keeps working long after the shoot.',
@@ -318,9 +371,6 @@ export const COPY = {
     kindsEyebrow: 'Kinds of film we make',
     kindsTitle: 'The films inside every plan',
     kindsIntro: 'Each plan can use any of these. Pick one to see how we make it.',
-    /** Shown on the Retainers service page (draft option A). Code only: service pages have no field for it. */
-    retainersNote: 'Want us to plan, post and measure the work too?',
-    retainersNoteLink: 'See the Brand Engine',
   },
   offer: {
     includedTitle: 'What you get',
@@ -346,5 +396,82 @@ export const COPY = {
     offerHelp: 'Not sure yet? That is fine. Pick “Not sure yet” and we will help you choose.',
     storyLabel: 'What is your story, and what do you want it to do?',
     storyPlaceholder: 'For example: we want more people to apply for jobs, and we need content by spring.',
+  },
+}
+
+/** Service slugs that no longer show on the site (/services/retainers redirects to the Brand Engine in next.config.ts). */
+export const RETIRED_SERVICE_SLUGS = ['retainers']
+
+/** Plain paragraphs as Portable Text blocks, for code fallbacks of rich-text fields. */
+const blocks = (key: string, lines: string[], bullet = false) =>
+  lines.map((text, n) => ({
+    _type: 'block',
+    _key: `${key}${n}`,
+    style: 'normal',
+    ...(bullet ? { listItem: 'bullet', level: 1 } : {}),
+    markDefs: [],
+    children: [{ _type: 'span', _key: `${key}${n}s`, text, marks: [] }],
+  }))
+
+/**
+ * Training videos, a kind of film with no Sanity document yet. Approved copy (261121 draft + Josh's answers).
+ * Shows at /services/training-videos and in “Kinds of film” until a Sanity service with the slug
+ * `training-videos` is published; that document then replaces this one entirely.
+ * Target search phrase: “training videos Alberta” (secondary: safety training video production, onboarding video NWT).
+ */
+export const FALLBACK_TRAINING_SERVICE: Service = {
+  _id: 'service-training-videos-fallback',
+  slug: 'training-videos',
+  title: 'Training videos',
+  summary: 'Clear training videos, filmed on your site with your own people.',
+  heroHeadline: 'Show the job the way it is really done.',
+  showAsFullCard: true,
+  description: blocks('tvd', [
+    'New people learn best when they see the real job. We film your own team doing the work, on your site, in the way that your organization does it. Then we cut it into clear, short videos that are easy to follow.',
+    'We plan around your schedule and keep out of the way, so the work carries on while we film. On an industrial site, we do your orientation, wear your PPE and film only where your safety team approves. We plan each video with the people who teach the job, so the steps are correct before we film.',
+  ]),
+  whoItsFor: blocks('tvw', [
+    'Energy and industry operators with safety and site orientation needs',
+    'Airlines and other teams with set procedures to teach',
+    'Schools, health and community organizations that onboard new staff',
+    'Any organization that teaches the same job again and again',
+  ], true),
+  included: [
+    'A first conversation and a written goal for each video',
+    'A plan for each video, made with the people who teach the job',
+    'Planning with your safety and operations teams',
+    'Filming on your site, planned around your work',
+    'Edit, captions and on-screen titles for key steps',
+    'Two rounds of review for each video',
+    'MP4 video files, ready for any platform or learning system',
+  ],
+  timeline: 'About 4 to 8 weeks',
+  timelineNote: 'From the first conversation to delivery.',
+  faq: [
+    {
+      _key: 'tv1',
+      question: 'Can you film on an active industrial site?',
+      answer: 'Yes. We do your site orientation and wear the PPE you require. We film in live areas only when your safety team approves. We fit around your operations.',
+    },
+    {
+      _key: 'tv2',
+      question: 'What if some of our people do not want to be on camera?',
+      answer: 'That is usual, and it is fine. Interviews are optional. We can record a person’s voice and show photos of them at work. Or they can stay in the background. We never push anyone.',
+    },
+    {
+      _key: 'tv3',
+      question: 'Who owns the training videos?',
+      answer: 'You get full rights to all that we deliver. You can use the videos in your training as often as you need. You can also add the raw footage, or a sorted, colour-corrected archive of all that we filmed.',
+    },
+    {
+      _key: 'tv4',
+      question: 'Can you update the videos when a procedure changes?',
+      answer: 'Yes. When a step changes, we can update that part of the video at a reduced rate.',
+    },
+  ],
+  closingHeadline: 'Have a job that people need to learn? Let’s film it.',
+  seo: {
+    title: 'Training videos in Alberta and the NWT | Breaking Ice',
+    description: 'Training, safety and onboarding videos filmed on your site with your own people. Clear, plain and made to be watched. Alberta and the NWT.',
   },
 }

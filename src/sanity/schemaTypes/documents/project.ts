@@ -92,6 +92,13 @@ export const project = defineType({
       group: 'content',
     }),
     defineField({ name: 'featuredOnHome', title: 'Featured on home', type: 'boolean', group: 'listing', initialValue: false }),
+    defineField({
+      name: 'jobLine',
+      title: 'The job (home carousel)',
+      type: 'string',
+      group: 'listing',
+      description: 'One line on what the film had to do, shown under “The job” when this story is featured on Home. Leave empty to use the start of the summary.',
+    }),
     defineField({ name: 'order', type: 'number', group: 'listing' }),
     seoFieldTab,
   ],

@@ -5,13 +5,13 @@ import { StoryCard } from '@/components/cards'
 import { ClosingBand, RichText } from '@/components/sections'
 import { SingleStill, Stills } from '@/components/stills'
 import { PlayerButton, VideoLoop } from '@/components/video'
-import { getNextProject, getProjectBySlug, getProjects, getSettings } from '@/lib/data'
+import { getProjectBySlug, getProjects, getSettings } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
 import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
 import { SITE_URL } from '@/lib/site'
 import { CATEGORY_LABELS, embedUrl } from '@/lib/video'
 import { urlFor } from '@/sanity/client'
-import type { Img } from '@/lib/types'
+import type { Img, ProjectCard } from '@/lib/types'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -40,7 +40,11 @@ export default async function ProjectPage({ params }: Props) {
   const [p, s] = await Promise.all([getProjectBySlug(slug), getSettings()])
   if (!p) notFound()
   const cs = p.caseStudy ?? {}
-  const next = cs.nextProject ?? (await getNextProject(slug))
+  // More stories: the chosen next story first, then the ones after this story in the list.
+  const all = await getProjects()
+  const at = all.findIndex((x) => x.slug === slug)
+  const after = [...all.slice(at + 1), ...all.slice(0, Math.max(at, 0))].filter((x) => x.slug !== slug)
+  const more = [cs.nextProject, ...after].filter((x, i, arr): x is ProjectCard => Boolean(x?.slug) && arr.findIndex((y) => y?.slug === x?.slug) === i).slice(0, 3)
   const isPhoto = p.storyType === 'photo'
   // Real projects without a case study get the short version (hero, title, summary, meta).
   // Samples keep every section, with placeholders, so the layout can be judged.
@@ -149,18 +153,6 @@ export default async function ProjectPage({ params }: Props) {
                   </aside>
                 )}
 
-                {cs.pullQuote && (
-                  <figure className="pull story-pull">
-                    <Mark size={40} right="var(--ink)" />
-                    <blockquote>{cs.pullQuote.quote}</blockquote>
-                    {/* Never a person's name on the site: role and organization only. */}
-                    <figcaption className="stack" style={{ gap: 2 }}>
-                      <span className="eyebrow">{cs.pullQuote.role ?? cs.pullQuote.organization}</span>
-                      {cs.pullQuote.role && cs.pullQuote.organization && <span className="muted">{cs.pullQuote.organization}</span>}
-                    </figcaption>
-                  </figure>
-                )}
-
                 {(whatItDid || oldResults.length > 0 || cs.resultsIntro || p.sample) && (
                   <div className="story-part">
                     <h2 className="story-h">What it did</h2>
@@ -186,6 +178,19 @@ export default async function ProjectPage({ params }: Props) {
                     <h2 className="story-h">Stills</h2>
                     <Stills images={moreShots} variant="film" />
                   </div>
+                )}
+
+                {/* The quote from this project, after the stills (Nov 21 wireframe). */}
+                {cs.pullQuote && (
+                  <figure className="pull story-pull">
+                    <Mark size={40} right="var(--ink)" />
+                    <blockquote>{cs.pullQuote.quote}</blockquote>
+                    {/* Never a person's name on the site: role and organization only. */}
+                    <figcaption className="stack" style={{ gap: 2 }}>
+                      <span className="eyebrow">{cs.pullQuote.role ?? cs.pullQuote.organization}</span>
+                      {cs.pullQuote.role && cs.pullQuote.organization && <span className="muted">{cs.pullQuote.organization}</span>}
+                    </figcaption>
+                  </figure>
                 )}
               </>
             )}
@@ -231,14 +236,14 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       </section>
 
-      {next && (
+      {more.length > 0 && (
         <section className="section ruled" aria-labelledby="next">
           <div className="wrap">
             <div className="sec-head-row">
-              <h2 id="next" className="eyebrow">Next story</h2>
+              <h2 id="next" className="eyebrow">More stories</h2>
               <ArrowLink href="/stories">All stories</ArrowLink>
             </div>
-            <div style={{ maxWidth: 640 }}><StoryCard p={next} /></div>
+            <div className="grid-3">{more.map((x) => <StoryCard key={x._id} p={x} />)}</div>
           </div>
         </section>
       )}

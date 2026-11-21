@@ -3,11 +3,12 @@ import { Btn, Eyebrow, ArrowLink, Still } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
 import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
 import { LeadItem } from '@/components/offers'
+import { Filmstrip } from '@/components/home'
 import { ClosingBand, RichText } from '@/components/sections'
 import { PlayerButton, VideoLoop } from '@/components/video'
 import { COPY } from '@/lib/offers'
 import { SITE_URL } from '@/lib/site'
-import type { Offer, ProjectCard, Settings } from '@/lib/types'
+import type { Filmstrip as FilmstripData, Offer, ProjectCard, Settings } from '@/lib/types'
 import { vimeoPoster } from '@/lib/vimeo'
 import { urlFor } from '@/sanity/client'
 
@@ -15,19 +16,25 @@ import { urlFor } from '@/sanity/client'
 const plain = (v?: Offer['description']) =>
   (v ?? []).map((b: { children?: { text?: string }[] }) => (b.children ?? []).map((c) => c.text ?? '').join('')).join(' ').trim()
 
-/** One offer at /services/[slug]: hero, optional hook video, description, what's included, ideal for, stories, questions. */
+/**
+ * One offer at /services/[slug]: hero, filmstrip (Story Kit only), optional hook video, description, what's included,
+ * ideal for, stories, questions, other offers, closing.
+ */
 export async function OfferPage({
   offer: o,
   others,
   projects,
   faq,
   s,
+  filmstrip,
 }: {
   offer: Offer
   others: Offer[]
   projects: ProjectCard[]
   faq: { _key: string; question?: string; answer?: string }[]
   s: Settings
+  /** The Story Kit filmstrip, shown under the hero when given (the Story Kit page passes it). */
+  filmstrip?: FilmstripData | null
 }) {
   const c = COPY.offer
   // No stories picked in the Studio: borrow three, starting at a different point for each offer so the pages don't repeat.
@@ -90,6 +97,8 @@ export async function OfferPage({
         </div>
       </section>
 
+      {filmstrip && <Filmstrip data={filmstrip} id="offer-filmstrip-title" />}
+
       {o.hookVideo && (
         <section className="section ruled" aria-labelledby="hook">
           <div className="wrap hook-film">
@@ -112,6 +121,7 @@ export async function OfferPage({
           <h2 id="about-offer" className="eyebrow">{o.name}</h2>
           <div className="body-lg">
             <RichText value={o.description} fallback={o.descriptionText} />
+            {o.descriptionNote && <p className="offer-desc-note">{o.descriptionNote}</p>}
           </div>
         </div>
       </section>

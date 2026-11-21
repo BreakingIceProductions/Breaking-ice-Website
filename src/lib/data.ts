@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { sanityFetch } from '@/sanity/client'
 import { DEFAULT_SETTINGS, SAMPLE_LOCATIONS, SAMPLE_PROJECTS, SAMPLE_SERVICES, SAMPLE_TESTIMONIALS } from './samples'
-import { COPY, FALLBACK_FAQ, FALLBACK_OFFERS, OFFER_FAQ_CATEGORY, WHO_WE_ARE } from './offers'
-import type { FaqItem, Location, Offer, ProjectCard, Service, Settings, Testimonial } from './types'
+import { COPY, FALLBACK_FAQ, FALLBACK_OFFERS, FALLBACK_TRAINING_SERVICE, OFFER_FAQ_CATEGORY, RETIRED_SERVICE_SLUGS, WHO_WE_ARE } from './offers'
+import type { FaqItem, FeaturedStory, Filmstrip, Img, Location, Offer, ProjectCard, Service, Settings, Testimonial } from './types'
 
 /** Use the Sanity value when it has content, otherwise the fallback. */
 const pick = <T,>(value: T | null | undefined, fallback: T): T => {
@@ -13,6 +13,8 @@ const pick = <T,>(value: T | null | undefined, fallback: T): T => {
 }
 
 const CARD = `_id, _updatedAt, title, "slug": slug.current, storyType, client, location, category, cardVideo, thumbnail`
+/** Featured stories on Home: the card fields plus what the carousel shows (the job line, a summary, the film, a spare still). */
+const FEATURED = `${CARD}, year, heroVideo, jobLine, "summary": caseStudy->summary, "still": caseStudy->gallery[1]`
 const TESTIMONIAL = `_id, quote, name, role, organization, "projectSlug": project->slug.current`
 
 export async function getSettings(): Promise<Settings> {
@@ -56,12 +58,12 @@ export async function getHome() {
   const data = await sanityFetch<any>(`{
     "page": *[_id == "homePage"][0]{ ..., testimonials[]->{ ${TESTIMONIAL} }, "proofProject": proofProject->{ title, "slug": slug.current } },
     "nwProject": *[_type == "project" && client match "North-Wright*" && defined(slug.current)] | order(coalesce(order, 999) asc)[0]{ title, "slug": slug.current },
-    "featured": *[_type == "project" && featuredOnHome == true && defined(slug.current)] | order(coalesce(order, 999) asc)[0...6]{ ${CARD} },
-    "latest": *[_type == "project" && defined(slug.current)] | order(coalesce(order, 999) asc, _createdAt desc)[0...6]{ ${CARD} },
+    "featured": *[_type == "project" && featuredOnHome == true && defined(slug.current)] | order(coalesce(order, 999) asc)[0...6]{ ${FEATURED} },
+    "latest": *[_type == "project" && defined(slug.current)] | order(coalesce(order, 999) asc, _createdAt desc)[0...6]{ ${FEATURED} },
     "logos": *[_type == "clientLogo" && showInStrip != false] | order(coalesce(order, 999) asc){ _id, name, logo, "ar": logo.asset->metadata.dimensions.aspectRatio }
   }`)
   const page = data?.page ?? {}
-  const projects: ProjectCard[] = pick(data?.featured, pick(data?.latest, SAMPLE_PROJECTS))
+  const projects: FeaturedStory[] = pick(data?.featured, pick(data?.latest, SAMPLE_PROJECTS))
   const testimonials: Testimonial[] = pick(page.testimonials?.filter(Boolean), SAMPLE_TESTIMONIALS)
   const h = COPY.home
   return {
@@ -71,6 +73,8 @@ export async function getHome() {
     heroEyebrow: pick(page.heroEyebrow, 'Video production · Alberta and the Northwest Territories'),
     heroTitle: pick(page.heroTitle, h.heroTitle),
     heroHeadline: pick(page.heroHeadline, 'We use film to go past the surface and show people what your organization is about.'),
+    splashCue: pick(page.splashCue, h.splashCue),
+    reelButton: pick(page.reelButton, h.reelButton),
     heroSubline: pick(page.heroSubline, 'We make films for companies, communities and other organizations. Our crew takes the time to know your people. That is how the real story comes out.'),
     problemEyebrow: pick(page.problemEyebrow, h.problemEyebrow),
     problemTitle: pick(page.problemTitle, h.problemTitle),
@@ -85,7 +89,14 @@ export async function getHome() {
     ladderTitle: pick(page.ladderTitle, h.ladderTitle),
     ladderIntro: pick(page.ladderIntro, h.ladderIntro),
     storiesEyebrow: pick(page.storiesEyebrow, 'Our work'),
-    storiesTitle: pick(page.storiesTitle, 'Stories we have told'),
+    storiesTitle: pick(page.storiesTitle, h.storiesTitle),
+    storiesLine: pick(page.storiesLine, h.storiesLine),
+    storiesJobLabel: pick(page.storiesJobLabel, h.storiesJobLabel),
+    fitEyebrow: pick(page.fitEyebrow, h.fitEyebrow),
+    fitTitle: pick(page.fitTitle, h.fitTitle),
+    fitHelper: pick(page.fitHelper, h.fitHelper),
+    fitItems: pick<{ _key?: string; line: string; subline?: string }[]>(page.fitItems?.filter((x: { line?: string }) => x?.line), h.fitItems),
+    fitClosing: pick(page.fitClosing, h.fitClosing),
     proofEyebrow: pick(page.proofEyebrow, h.proofEyebrow),
     proofTitle: pick(page.proofTitle, h.proofTitle),
     proofStats: pick<{ _key?: string; value: string; label: string }[]>(page.proofStats, h.proofStats),
@@ -101,6 +112,26 @@ export async function getHome() {
     seo: page.seo ?? null,
     projects,
     logos: (data?.logos ?? []) as { _id: string; name: string; logo?: any; ar?: number }[],
+  }
+}
+
+/**
+ * How we film (the low-profile crew), on Home and About. Words from the Home page in Sanity, fallbacks in COPY.home.
+ * Picture: the Home page's own, else the founder's on-location photo from the About page.
+ */
+export async function getCrew() {
+  const d = await sanityFetch<any>(`{
+    "p": *[_id == "homePage"][0]{ crewEyebrow, crewTitle, crewBody, crewImage, whoWeAre },
+    "fallback": *[_id == "aboutPage"][0].founder->onLocationPhoto
+  }`)
+  const p = d?.p ?? {}
+  const h = COPY.home
+  return {
+    eyebrow: pick<string>(p.crewEyebrow, h.crewEyebrow),
+    title: pick<string>(p.crewTitle, h.crewTitle),
+    body: pick<string>(p.crewBody, h.crewBody),
+    whoWeAre: pick<string>(p.whoWeAre, WHO_WE_ARE),
+    image: (p.crewImage?.asset ? p.crewImage : d?.fallback?.asset ? d.fallback : null) as Img,
   }
 }
 
@@ -129,10 +160,20 @@ export async function getServices(): Promise<Service[]> {
   const rows = await sanityFetch<Service[]>(
     `*[_type == "service" && defined(slug.current)] | order(coalesce(order, 999) asc){ _id, _updatedAt, title, "slug": slug.current, summary, cardImage, showAsFullCard }`,
   )
-  return pick(rows, SAMPLE_SERVICES)
+  return withTraining(pick(rows, SAMPLE_SERVICES).filter((s) => !RETIRED_SERVICE_SLUGS.includes(s.slug)))
+}
+
+/** Add the placeholder Training videos service (src/lib/offers.ts) when Sanity has none, after the full cards and before “Also”. */
+function withTraining(list: Service[]): Service[] {
+  if (list.some((s) => s.slug === FALLBACK_TRAINING_SERVICE.slug)) return list
+  const at = list.findIndex((s) => s.showAsFullCard === false)
+  const out = [...list]
+  out.splice(at === -1 ? out.length : at, 0, FALLBACK_TRAINING_SERVICE)
+  return out
 }
 
 export async function getServiceBySlug(slug: string): Promise<Service | null> {
+  if (RETIRED_SERVICE_SLUGS.includes(slug)) return null
   const data = await sanityFetch<Service>(
     `*[_type == "service" && slug.current == $slug][0]{
       _id, title, "slug": slug.current, summary, cardImage, heroHeadline, clip, description, whoItsFor, included, timeline, timelineNote, faq, seo,
@@ -146,7 +187,35 @@ export async function getServiceBySlug(slug: string): Promise<Service | null> {
     const d = data as any
     return { ...data, relatedProjects: pick(data.relatedProjects, d.fallbackProjects ?? []) }
   }
+  if (slug === FALLBACK_TRAINING_SERVICE.slug) return FALLBACK_TRAINING_SERVICE
   return SAMPLE_SERVICES.find((s) => s.slug === slug) ?? null
+}
+
+/**
+ * The Story Kit filmstrip (Home and the Story Kit page). Words from the Home page in Sanity (Filmstrip group),
+ * with fallbacks in COPY.filmstrip. Each frame's picture: its own, else a real still from a featured story.
+ */
+export async function getFilmstrip(): Promise<Filmstrip> {
+  const data = await sanityFetch<any>(`{
+    "f": *[_id == "homePage"][0].filmstrip,
+    "stills": *[_type == "project" && featuredOnHome == true && defined(slug.current)] | order(coalesce(order, 999) asc)[0...6]{ "img": coalesce(caseStudy->gallery[2], thumbnail) }
+  }`)
+  const f = data?.f ?? {}
+  const c = COPY.filmstrip
+  const stills: Img[] = (data?.stills ?? []).map((x: { img?: Img }) => x?.img).filter((x: Img) => x?.asset)
+  const frames: { _key?: string; title?: string; line?: string; image?: Img }[] = pick(f.frames, c.frames)
+  return {
+    title: pick(f.title, c.title),
+    intro: pick(f.intro, c.intro),
+    lead: pick(f.lead, c.lead),
+    note: pick<string>(f.note, c.note),
+    frames: frames.map((fr, i) => ({
+      _key: fr._key ?? `f${i}`,
+      title: fr.title ?? '',
+      line: fr.line,
+      image: fr.image?.asset ? fr.image : stills.length ? stills[i % stills.length] : null,
+    })),
+  }
 }
 
 /** Services page singleton (adds Process title to the simple-page fields). */
@@ -187,7 +256,7 @@ export async function getOffers(): Promise<Offer[]> {
 export async function getOfferBySlug(slug: string): Promise<Offer | null> {
   const data = await sanityFetch<any>(
     `*[_type == "offer" && slug.current == $slug][0]{
-      ${OFFER_CARD}, heroHeadline, description, includedTitle, included, idealFor, timeline, timelineNote, ctaLabel, closingHeadline, hookVideo, faq, seo,
+      ${OFFER_CARD}, heroHeadline, description, descriptionNote, includedTitle, included, idealFor, timeline, timelineNote, ctaLabel, closingHeadline, hookVideo, faq, seo,
       relatedServices[]->{ _id, title, "slug": slug.current },
       relatedProjects[]->{ ${CARD} }
     }`,

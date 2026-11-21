@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
       // Every other old project post goes to the stories page.
       { source: '/:old(20\\d\\d-[a-z0-9-]+|ongoing-[a-z0-9-]+)', destination: '/stories', permanent: true },
       { source: '/:old(feed|comments/feed|author/.*|category/.*)', destination: '/', permanent: true },
+      // Retainers became the Brand Engine offer (Nov 2026).
+      { source: '/services/retainers', destination: '/services/brand-engine', permanent: true },
     ]
   },
   async headers() {

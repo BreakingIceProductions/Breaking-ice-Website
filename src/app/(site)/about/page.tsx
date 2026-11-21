@@ -1,25 +1,30 @@
 import Link from 'next/link'
 import { Btn, Eyebrow, Still, ArrowLink } from '@/components/brand'
 import { ClosingBand, Process, RichText } from '@/components/sections'
+import { CrewSection } from '@/components/home'
 import { VideoLoop } from '@/components/video'
-import { getAbout, getSettings, pick } from '@/lib/data'
+import { getAbout, getCrew, getSettings, pick } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
 import { vimeoPoster } from '@/lib/vimeo'
 import { urlFor } from '@/sanity/client'
-import { ALBERTA_PLACEHOLDER } from '@/lib/placeholders'
 import { WHO_WE_ARE } from '@/lib/offers'
+import { ALBERTA_PLACEHOLDER } from '@/lib/placeholders'
 
 export async function generateMetadata() {
   const a = await getAbout()
   return seoMeta(a.seo, 'About', 'We started in Norman Wells, NWT, in 2022. Now we are also in Stony Plain, Alberta. Meet Josh Ferguson and see how we make films.', { path: '/about', eyebrow: 'About' })
 }
 
+/**
+ * About, in order: hero and film · our story · founder · from the North to Alberta · on site (same section as Home) ·
+ * how we work · closing. Not shown since Nov 21 (fields kept in Sanity): what we believe.
+ */
 export default async function AboutPage() {
-  const [a, s] = await Promise.all([getAbout(), getSettings()])
+  const [a, s, crew] = await Promise.all([getAbout(), getSettings(), getCrew()])
   const heroPoster = a.heroPoster?.asset ? urlFor(a.heroPoster).width(1600).height(900).fit('crop').url() : await vimeoPoster(a.heroVideo, 1600)
   const milestones: { _key?: string; year: string; text: string }[] = pick(a.milestones, [1, 2, 3, 4].map((n) => ({ year: '[Year]', text: `[Milestone ${n}]` })))
-  const beliefs: { _key?: string; title: string; body: string }[] = pick(a.beliefs, [1, 2, 3].map((n) => ({ title: `[Belief ${n}]`, body: '[Two or three sentences.]' })))
   const founder = a.founder ?? {}
+  const crewUsesOnLocation = Boolean(founder.onLocationPhoto?.asset?._ref) && crew.image?.asset?._ref === founder.onLocationPhoto.asset._ref
 
   return (
     <>
@@ -47,6 +52,21 @@ export default async function AboutPage() {
           </div>
           <div className="body-lg">
             <RichText value={a.storyBody} fallback={['[The story of the company: how it started, who it serves, what it has learned. Three or four short paragraphs, in your words.]']} />
+          </div>
+        </div>
+      </section>
+
+      <section className="section ruled" aria-labelledby="founder">
+        <div className="wrap grid-2" style={{ alignItems: 'start' }}>
+          <Still image={founder.portrait} label="Portrait" ratio="ratio-45" width={900} />
+          <div className="stack" style={{ gap: 16 }}>
+            <Eyebrow>{pick(a.founderEyebrow, 'Founder')}</Eyebrow>
+            <h2 id="founder" className="h2">{founder.name ?? 'Josh Ferguson'}</h2>
+            <span className="caption">{founder.role ?? 'Owner & creative director'}</span>
+            <RichText value={founder.bio} fallback={['[Founder bio: background, the North, why this work. Three short paragraphs.]']} />
+            {/* The on-location photo moves to How we film when that section borrows it; never the same picture twice. */}
+            {!crewUsesOnLocation && <Still image={founder.onLocationPhoto} label="On location" ratio="ratio-169" />}
+            <div><Btn href="/contact">{s.primaryCta}</Btn></div>
           </div>
         </div>
       </section>
@@ -84,6 +104,9 @@ export default async function AboutPage() {
         </div>
       </section>
 
+      {/* On site: same section as Home, words from the Home page in Sanity */}
+      <CrewSection eyebrow={crew.eyebrow} title={crew.title} body={crew.body} image={crew.image} />
+
       <section className="section ruled" aria-labelledby="how">
         <div className="wrap">
           <div className="sec-head-row">
@@ -94,38 +117,6 @@ export default async function AboutPage() {
             <ArrowLink href="/services">Our services</ArrowLink>
           </div>
           <Process steps={s.processSteps} compact />
-        </div>
-      </section>
-
-      <section className="section ruled" aria-labelledby="founder">
-        <div className="wrap grid-2" style={{ alignItems: 'start' }}>
-          <Still image={founder.portrait} label="Portrait" ratio="ratio-45" width={900} />
-          <div className="stack" style={{ gap: 16 }}>
-            <Eyebrow>{pick(a.founderEyebrow, 'Founder')}</Eyebrow>
-            <h2 id="founder" className="h2">{founder.name ?? 'Josh Ferguson'}</h2>
-            <span className="caption">{founder.role ?? 'Owner & creative director'}</span>
-            <RichText value={founder.bio} fallback={['[Founder bio: background, the North, why this work. Three short paragraphs.]']} />
-            <Still image={founder.onLocationPhoto} label="On location" ratio="ratio-169" />
-            <div><Btn href="/contact">{s.primaryCta}</Btn></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section ruled" aria-labelledby="believe">
-        <div className="wrap">
-          <div className="sec-head">
-            <Eyebrow>{pick(a.beliefsEyebrow, 'What we believe')}</Eyebrow>
-            <h2 id="believe" className="quote quote-lg">{pick(a.beliefsTitle, s.tagline)}</h2>
-          </div>
-          <div className="grid-3">
-            {beliefs.map((b, i) => (
-              <div key={b._key ?? i} className="panel stack" style={{ gap: 12 }}>
-                <span className="step-num">0{i + 1}</span>
-                <h3 className={`h3 ${b.title.startsWith('[') ? 'placeholder-text' : ''}`}>{b.title}</h3>
-                <p className={`muted ${b.body.startsWith('[') ? 'placeholder-text' : ''}`} style={{ margin: 0 }}>{b.body}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

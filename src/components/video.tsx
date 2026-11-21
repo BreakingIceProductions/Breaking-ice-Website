@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { embedUrl } from '@/lib/video'
-import { Placeholder } from './brand'
 
 /**
  * Silent preview loop. Shows the poster first (fast), and only loads the
@@ -137,7 +136,8 @@ export function VideoLoop({
       {posterUrl ? (
         <Image src={posterUrl} alt={posterAlt} fill sizes={sizes} priority={priority} style={{ objectFit: 'cover' }} />
       ) : (
-        !src && label && <Placeholder label={label} play />
+        // No poster and no film: the quiet brand pattern, never a labelled box on a live page.
+        !src && <div className="media-pattern" aria-hidden="true" data-label={label} />
       )}
       {live && src && (
         <iframe
@@ -201,6 +201,9 @@ export function PlayerButton({
     }
   }, [open])
 
+  // No film to play: no button at all (never an empty player on a live page).
+  if (!src) return null
+
   return (
     <>
       <button ref={openerRef} type="button" className={className} onClick={() => { setOpen(true); track('Video play', { video: trackAs, page: window.location.pathname }) }}>
@@ -214,11 +217,7 @@ export function PlayerButton({
             </button>
             <div className="lightbox-inner" onClick={(e) => e.stopPropagation()}>
               <div className="media ratio-169 on-dark">
-                {src ? (
-                  <iframe src={src} title={trackAs} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
-                ) : (
-                  <Placeholder label="The full film plays here once a YouTube or Vimeo link is added in the Studio" play />
-                )}
+                <iframe src={src} title={trackAs} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
               </div>
             </div>
           </div>,

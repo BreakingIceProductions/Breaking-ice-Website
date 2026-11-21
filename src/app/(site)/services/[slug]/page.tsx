@@ -8,11 +8,10 @@ import { ProcessCompact } from '@/components/process-compact'
 import { OfferPage } from '@/components/offer-page'
 import { ClosingBand, RichText } from '@/components/sections'
 import { VideoLoop } from '@/components/video'
-import { getOfferBySlug, getOfferFaq, getOffers, getProjects, getServiceBySlug, getServices, getSettings } from '@/lib/data'
+import { getFilmstrip, getOfferBySlug, getOfferFaq, getOffers, getProjects, getServiceBySlug, getServices, getSettings } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
 import type { PT } from '@/lib/types'
 import { CATEGORY_LABELS } from '@/lib/video'
-import { COPY } from '@/lib/offers'
 import { urlFor } from '@/sanity/client'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -45,8 +44,14 @@ export default async function ServicePage({ params }: Props) {
   const { slug } = await params
   const offer = await getOfferBySlug(slug)
   if (offer) {
-    const [offers, s, projects, faq] = await Promise.all([getOffers(), getSettings(), getProjects(), getOfferFaq(offer)])
-    return <OfferPage offer={offer} others={offers.filter((o) => o.slug !== offer.slug)} projects={projects} faq={faq} s={s} />
+    const [offers, s, projects, faq, filmstrip] = await Promise.all([
+      getOffers(),
+      getSettings(),
+      getProjects(),
+      getOfferFaq(offer),
+      offer.slug === 'story-kit' ? getFilmstrip() : null,
+    ])
+    return <OfferPage offer={offer} others={offers.filter((o) => o.slug !== offer.slug)} projects={projects} faq={faq} s={s} filmstrip={filmstrip} />
   }
   const [sv, all, s, projects] = await Promise.all([getServiceBySlug(slug), getServices(), getSettings(), getProjects()])
   if (!sv) notFound()
@@ -97,12 +102,6 @@ export default async function ServicePage({ params }: Props) {
               <Eyebrow>{sv.title} · Alberta and the NWT</Eyebrow>
               <h1 className="h1">{sv.heroHeadline ?? sv.title}</h1>
               <p className="body-lg muted" style={{ margin: '0 0 var(--space-8)' }}>{sv.summary}</p>
-              {/* Retainers sit next to the Brand Engine offer: one line for people who want the done-for-you version. */}
-              {sv.slug === 'retainers' && (
-                <p className="offer-note">
-                  {COPY.services.retainersNote} <ArrowLink href="/services/brand-engine">{COPY.services.retainersNoteLink}</ArrowLink>
-                </p>
-              )}
               <div className="btn-row">
                 <Btn href={contactHref}>{s.primaryCta}</Btn>
                 {s.bookingLink && <Btn href={s.bookingLink} variant="secondary" external>Book a 20-minute call</Btn>}
@@ -160,11 +159,14 @@ export default async function ServicePage({ params }: Props) {
               ))}
             </ul>
           </div>
-          <div className="panel stack" style={{ gap: 12 }}>
-            <span className="eyebrow">Usual timeline</span>
-            <p className="h2" style={{ margin: 0 }}>{sv.timeline ?? '[Timeline]'}</p>
-            {sv.timelineNote && <p className="muted" style={{ margin: 0 }}>{sv.timelineNote}</p>}
-          </div>
+          {/* No timeline yet (e.g. the placeholder Training videos page): no panel. */}
+          {sv.timeline && (
+            <div className="panel stack" style={{ gap: 12 }}>
+              <span className="eyebrow">Usual timeline</span>
+              <p className="h2" style={{ margin: 0 }}>{sv.timeline}</p>
+              {sv.timelineNote && <p className="muted" style={{ margin: 0 }}>{sv.timelineNote}</p>}
+            </div>
+          )}
         </div>
       </section>
 
@@ -232,7 +234,7 @@ export default async function ServicePage({ params }: Props) {
         </div>
       </section>
 
-      <ClosingBand s={s} />
+      <ClosingBand s={s} headline={sv.closingHeadline} />
     </>
   )
 }

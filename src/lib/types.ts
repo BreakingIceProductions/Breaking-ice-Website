@@ -34,6 +34,8 @@ export type Service = {
   relatedProjects?: ProjectCard[]
   testimonial?: Testimonial | null
   faq?: { _key: string; question?: string; answer?: string }[]
+  /** Closing band headline (code fallback only; Sanity services use the site-wide one). */
+  closingHeadline?: string
   seo?: Seo
 }
 
@@ -124,6 +126,8 @@ export type Offer = {
   description?: PT
   /** Code fallback for description: plain paragraphs. */
   descriptionText?: string[]
+  /** One short line under the description (e.g. the retainers note on the Brand Engine). */
+  descriptionNote?: string
   includedTitle?: string
   included?: string[]
   idealFor?: string[]
@@ -148,4 +152,24 @@ export type FaqItem = {
   answer?: string
   category?: string
   order?: number
+}
+
+/** A featured story on Home: the card plus what the carousel shows. */
+export type FeaturedStory = ProjectCard & {
+  year?: number
+  heroVideo?: string
+  /** One line on what the film had to do (Sanity: project → “The job”). */
+  jobLine?: string
+  summary?: string
+  still?: Img
+}
+
+export type Filmstrip = {
+  title: string
+  intro: string
+  /** The lead frame (“One shoot”). */
+  lead: string
+  /** Small note under the strip. */
+  note?: string
+  frames: { _key: string; title: string; line?: string; image: Img }[]
 }
