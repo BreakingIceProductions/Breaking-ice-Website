@@ -46,3 +46,39 @@
 @media (min-width: 821px) {
   .legal-toc { position: sticky; top: calc(var(--header-h) + var(--space-6)); align-self: start; }
 }
+
+/* ── Home hero: the reel full bleed, the line over it (Nov 2026). ── */
+.hero-bleed { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: flex-end; min-height: calc(100svh - var(--header-h) - var(--strip-h)); padding: var(--space-24) 0 var(--space-16); }
+.hero-bleed-film { position: absolute; inset: 0; z-index: -2; }
+/* The film covers the box at any shape: a 16:9 player scaled to whichever side is short. */
+.hero-bleed-film .media { position: absolute; inset: 0; border-radius: 0; aspect-ratio: auto; container-type: size; background: var(--navy); }
+/* max-width: none undoes the global iframe { max-width: 100% }, which clamped the width on tall/narrow heroes
+   and let the player letterbox (the grey band above the footage). */
+.hero-bleed-film .media > iframe { inset: auto; left: 50%; top: 50%; max-width: none; max-height: none; width: max(100cqw, 177.78cqh); height: max(100cqh, 56.25cqw); transform: translate(-50%, -50%); }
+.hero-bleed-film .media > img { object-fit: cover; object-position: center; }
+/* Navy wash from the bottom-left so the words stay readable over any frame. */
+.hero-bleed-scrim { position: absolute; inset: 0; z-index: -1; pointer-events: none; background:
+  linear-gradient(0deg, rgb(24 32 47 / .88) 0%, rgb(24 32 47 / .45) 45%, rgb(24 32 47 / .15) 100%),
+  linear-gradient(90deg, rgb(24 32 47 / .55) 0%, rgb(24 32 47 / 0) 65%); }
+.hero-bleed-copy { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-5); }
+.hero-bleed-copy .eyebrow { margin: 0; }
+.hero-bleed-title { margin: 0; max-width: 14ch; color: var(--ink-inverse); font-size: clamp(48px, 8.4vw, 124px); line-height: .98; }
+.hero-bleed-sub { margin: 0 0 var(--space-4); max-width: 46ch; color: var(--ink-inverse); font-size: clamp(19px, 1.6vw, 23px); line-height: 1.45; }
+.hero-bleed .reel-link { color: var(--ink-inverse); }
+.hero-bleed .reel-link .ring { border-color: var(--ink-inverse); }
+.hero-bleed .reel-link:hover .ring { background: var(--ink-inverse); color: var(--navy); }
+.hero-bleed .hero-note { top: var(--space-6); bottom: auto; }
+@media (max-width: 820px) {
+  .hero-bleed { min-height: 82svh; padding: var(--space-16) 0 var(--space-12); }
+}
+
+/* Home · the plain, quotable who-we-are line */
+.who-we-are { margin: 0; max-width: 62ch; padding-top: var(--space-5); border-top: 1px solid var(--line); font-size: 17px; line-height: 26px; color: var(--ink-muted); }
+
+/* Home · proof numbers: as many columns as there are numbers (up to 4) */
+.proof-stats { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.proof-stats .stat dt { max-width: 34ch; font-size: 15px; line-height: 22px; }
+@media (max-width: 820px) { .proof-stats { grid-template-columns: minmax(0, 1fr); } .proof-stats .stat + .stat { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); } }
+
+/* Home · problem beside the optional hook video */
+.home-problem { gap: var(--space-12); }

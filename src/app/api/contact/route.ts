@@ -19,6 +19,7 @@ type Enquiry = {
   email: string
   organization: string
   type: string
+  offer: string
   story: string
   budget: string
   timeline: string
@@ -26,7 +27,7 @@ type Enquiry = {
   page: string
 }
 
-const MAX = { name: 120, email: 200, organization: 200, type: 120, story: 5000, budget: 80, timeline: 80, heard: 80, page: 300 }
+const MAX = { name: 120, email: 200, organization: 200, type: 120, offer: 80, story: 5000, budget: 80, timeline: 80, heard: 80, page: 300 }
 
 // Light rate limit per IP (per server instance; enough to blunt a burst).
 const hits = new Map<string, number[]>()
@@ -66,6 +67,7 @@ export async function POST(req: Request) {
     email: clean(body.email, MAX.email),
     organization: clean(body.organization, MAX.organization),
     type: clean(body.type, MAX.type),
+    offer: clean(body.offer, MAX.offer),
     story: clean(body.story, MAX.story),
     budget: clean(body.budget, MAX.budget),
     timeline: clean(body.timeline, MAX.timeline),
@@ -95,7 +97,9 @@ const rows = (e: Enquiry): [string, string][] => [
   ['Name', e.name],
   ['Email', e.email],
   ['Organization', e.organization || '—'],
-  ['Needs', e.type || '—'],
+  ['Offer', e.offer || '—'],
+  // type is the service a service page sent, else the offer label; skip it when it only repeats the offer.
+  ['Needs', e.type && e.type !== e.offer ? e.type : '—'],
   ['Budget', e.budget || '—'],
   ['Timeline', e.timeline || '—'],
   ['Heard about us', e.heard || '—'],

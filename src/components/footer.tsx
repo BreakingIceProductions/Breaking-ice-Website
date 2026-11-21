@@ -25,6 +25,7 @@ export function Footer({ s }: { s: Settings }) {
               <li><Link href="/stories">Stories</Link></li>
               <li><Link href="/services">Services</Link></li>
               <li><Link href="/about">About</Link></li>
+              <li><Link href="/faq">FAQ</Link></li>
               <li><Link href="/contact">Contact</Link></li>
             </ul>
           </div>

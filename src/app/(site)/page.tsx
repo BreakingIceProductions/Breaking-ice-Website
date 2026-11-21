@@ -1,14 +1,16 @@
 import Image from 'next/image'
-import { ArrowLink, Btn, Eyebrow, Lockup, Still } from '@/components/brand'
-import { LocationCard, ServiceCard, StoryCard } from '@/components/cards'
-import { Checklist, Testimonials } from '@/components/interactive'
-import { ClosingBand, Process, RichText } from '@/components/sections'
-import { ReturnCalculator } from '@/components/return-calculator'
+import { ArrowLink, Btn, Eyebrow } from '@/components/brand'
+import { StoryCard } from '@/components/cards'
+import { Testimonials } from '@/components/interactive'
+import { OfferLadder } from '@/components/offers'
+import { ClosingBand } from '@/components/sections'
 import { SplitHeading } from '@/components/split-heading'
 import { SwipeRail } from '@/components/swipe-rail'
 import { PlayerButton, VideoLoop } from '@/components/video'
-import { getHome, getLocation, getServices, getSettings } from '@/lib/data'
+import { getHome, getOffers, getSettings } from '@/lib/data'
+import { COPY } from '@/lib/offers'
 import { seoMeta } from '@/lib/seo'
+import { vimeoPoster } from '@/lib/vimeo'
 import { urlFor } from '@/sanity/client'
 
 export async function generateMetadata() {
@@ -26,74 +28,139 @@ function logoBox(ar = 3) {
   return { w: Math.round(h * ar), h: Math.round(h) }
 }
 
+const PlayRing = () => (
+  <span className="ring" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
+  </span>
+)
+
+/**
+ * Home, in order: hero reel · the problem · what we believe · the ladder · featured stories · proof · closing.
+ * Every line comes from the Home page in Sanity, with fallbacks in getHome() and src/lib/offers.ts (COPY.home).
+ */
 export default async function HomePage() {
-  const [h, s, services, ab, nt] = await Promise.all([getHome(), getSettings(), getServices(), getLocation('alberta'), getLocation('northwest-territories')])
-  const poster = h.heroPoster?.asset ? urlFor(h.heroPoster).width(2000).height(1125).fit('crop').url() : null
-  const locations = [ab.loc, nt.loc].filter(Boolean)
+  const [h, s, offers] = await Promise.all([getHome(), getSettings(), getOffers()])
+  const poster = h.heroPoster?.asset ? urlFor(h.heroPoster).width(2400).height(1350).fit('crop').url() : null
+  const hookPoster = h.hookVideo ? (h.hookPoster?.asset ? urlFor(h.hookPoster).width(1600).height(900).fit('crop').url() : await vimeoPoster(h.hookVideo, 1600)) : null
   const logos = h.logos.length ? h.logos : Array.from({ length: 7 }, (_, i) => ({ _id: `l${i}`, name: '', logo: null, ar: undefined as number | undefined }))
 
   return (
     <>
-      {/* Calm first screen: just the name, then the film */}
-      <section className="splash" aria-label="Breaking Ice Productions">
-        <Lockup variant="vertical" height={300} className="splash-logo" />
-        <p className="splash-line">{h.heroEyebrow}</p>
-        {/* Phones only: one quiet way in, without scrolling. */}
-        <ArrowLink href="/contact" className="splash-cta">{s.primaryCta}</ArrowLink>
-        <a href="#film" className="scroll-cue splash-cue">Scroll down <span aria-hidden="true">↓</span></a>
+      {/* 1 · Hero: the reel, full bleed, with the line over it */}
+      <section className="hero-bleed dark" aria-label="Introduction">
+        <div className="hero-bleed-film">
+          <VideoLoop url={h.heroReel} posterUrl={poster} posterAlt={h.heroPoster?.alt} label="" onDark priority sizes="100vw" />
+        </div>
+        <div className="hero-bleed-scrim" aria-hidden="true" />
+        <div className="wrap hero-bleed-copy">
+          <p className="eyebrow">{h.heroEyebrow}</p>
+          <SplitHeading as="h1" className="display-xl hero-bleed-title" text={h.heroTitle} />
+          <p className="hero-sub hero-bleed-sub">{h.heroHeadline}</p>
+          <div className="btn-row">
+            <Btn href="/contact">{s.primaryCta}</Btn>
+            <Btn href="/stories" variant="secondary">{s.secondaryCta}</Btn>
+            <PlayerButton url={h.fullReel} trackAs="Showreel">
+              <PlayRing />
+              Watch the reel
+            </PlayerButton>
+          </div>
+        </div>
+        {!h.heroReel && !poster && <span className="hero-note">Hero reel: add a Vimeo/YouTube link and poster image in the Studio</span>}
       </section>
 
-      {/* Hero: the reel, contained in a soft frame */}
-      <section id="film" className="hero-contained" aria-label="Introduction">
-        <div className="wrap">
-          <div className="hero-head">
-            <SplitHeading as="h1" className="display-xl" text={h.heroHeadline} />
-            <div className="hero-aside">
-              <p className="hero-sub">{h.heroSubline}</p>
-              <div className="btn-row">
-                <Btn href="/contact">{s.primaryCta}</Btn>
-                <Btn href="/stories" variant="secondary">{s.secondaryCta}</Btn>
-                <PlayerButton url={h.fullReel} trackAs="Showreel">
-                  <span className="ring" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>
-                  </span>
-                  Watch the reel
-                </PlayerButton>
-              </div>
-            </div>
+      {/* 2 · The problem (with the optional hook video beside it) */}
+      <section className="section" aria-labelledby="problem-title">
+        <div className={`wrap ${h.hookVideo ? 'grid-2 home-problem' : 'split'}`} style={{ alignItems: 'center' }}>
+          <div className="stack" style={{ gap: 'var(--space-4)' }}>
+            <Eyebrow>{h.problemEyebrow}</Eyebrow>
+            <h2 id="problem-title" className="h2">{h.problemTitle}</h2>
+            {h.hookVideo && <p className="intro-copy">{h.problemBody}</p>}
           </div>
-          <div className="hero-frame">
-            <VideoLoop url={h.heroReel} posterUrl={poster} posterAlt={h.heroPoster?.alt} label="" className="ratio-169" onDark priority />
-            {!h.heroReel && !poster && (
-              <span className="hero-note">Hero reel: add a Vimeo/YouTube link and poster image in the Studio</span>
-            )}
+          {h.hookVideo ? (
+            <div className="stack" style={{ gap: 'var(--space-4)' }}>
+              <VideoLoop url={h.hookVideo} posterUrl={hookPoster} posterAlt={h.hookPoster?.alt} label="Short film" className="ratio-169" />
+              <PlayerButton url={h.hookVideo} trackAs="Home hook">
+                <PlayRing />
+                Watch with sound
+              </PlayerButton>
+            </div>
+          ) : (
+            <p className="intro-copy">{h.problemBody}</p>
+          )}
+        </div>
+      </section>
+
+      {/* 3 · What we believe, and the plain who-we-are line */}
+      <section className="section ruled" aria-labelledby="belief-title">
+        <div className="wrap split">
+          <Eyebrow>{h.beliefEyebrow}</Eyebrow>
+          <div className="stack" style={{ gap: 'var(--space-5)' }}>
+            <h2 id="belief-title" className="quote quote-lg">{h.beliefTitle}</h2>
+            <p className="intro-copy">{h.beliefBody}</p>
+            <p className="who-we-are">{h.whoWeAre}</p>
           </div>
         </div>
       </section>
 
-      {/* Intro + stats */}
-      <section id="intro" className="section">
+      {/* 4 · The ladder: three offers, each linking to its page */}
+      <section className="section ruled" aria-labelledby="ladder-title">
         <div className="wrap">
-          <div className="split">
-            <Eyebrow>{h.introEyebrow}</Eyebrow>
-            <p className="intro-copy">{h.introBody}</p>
+          <div className="sec-head-row">
+            <div className="sec-head">
+              <Eyebrow>{h.ladderEyebrow}</Eyebrow>
+              <h2 id="ladder-title" className="h2">{h.ladderTitle}</h2>
+              <p className="body-lg muted lede">{h.ladderIntro}</p>
+            </div>
+            <ArrowLink href="/services">All services</ArrowLink>
           </div>
-          <dl className="stats">
-            {h.stats.map((st, i) => (
+          <OfferLadder offers={offers} />
+        </div>
+      </section>
+
+      {/* 5 · Featured stories (the projects marked "featured on home") */}
+      <section className="section ruled" aria-labelledby="stories-title">
+        <div className="wrap">
+          <div className="sec-head-row">
+            <div className="sec-head">
+              <Eyebrow>{h.storiesEyebrow}</Eyebrow>
+              <h2 id="stories-title" className="h2">{h.storiesTitle}</h2>
+            </div>
+            <ArrowLink href="/stories">All stories</ArrowLink>
+          </div>
+          <SwipeRail className="home-rail">
+            <div className="grid-3">
+              {h.projects.map((p) => <StoryCard key={p._id} p={p} />)}
+            </div>
+          </SwipeRail>
+        </div>
+      </section>
+
+      {/* 6 · Proof: North-Wright numbers, client logos, testimonials */}
+      <section className="section ruled" aria-labelledby="proof-title">
+        <div className="wrap">
+          <div className="sec-head-row">
+            <div className="sec-head">
+              <Eyebrow>{h.proofEyebrow}</Eyebrow>
+              <h2 id="proof-title" className="h2">{h.proofTitle}</h2>
+              <p className="body-lg muted lede">{h.proofBody}</p>
+            </div>
+            {h.proofProject ? (
+              <ArrowLink href={`/stories/${h.proofProject.slug}`}>{COPY.home.proofStoryLink}</ArrowLink>
+            ) : (
+              <ArrowLink href="/stories">{COPY.home.proofAllLink}</ArrowLink>
+            )}
+          </div>
+          <dl className="stats proof-stats" style={{ marginTop: 0 }}>
+            {h.proofStats.map((st, i) => (
               <div className="stat" key={st._key ?? i}>
                 <dt className="caption">{st.label}</dt>
                 <dd className="stat-value">{st.value}</dd>
               </div>
             ))}
           </dl>
-        </div>
-      </section>
 
-      {/* Client logos */}
-      <section className="section flush-top" aria-labelledby="logos-title">
-        <div className="wrap">
-          <h2 id="logos-title" className="sr-only">{h.logoStripTitle}</h2>
-          <div className="divider" style={{ marginBottom: 'var(--space-8)' }}>
+          <h3 id="logos-title" className="sr-only">{h.logoStripTitle}</h3>
+          <div className="divider" style={{ margin: 'var(--space-16) 0 var(--space-8)' }}>
             <span className="label">{h.logoStripEyebrow}</span>
           </div>
           <div className="logo-strip">
@@ -114,129 +181,14 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* How we work */}
-      <section className="section ruled" aria-labelledby="process-title">
-        <div className="wrap">
-          <div className="sec-head">
-            <Eyebrow>{h.processEyebrow}</Eyebrow>
-            <h2 id="process-title" className="h2">{h.processTitle}</h2>
-          </div>
-          <SwipeRail className="home-rail">
-            <Process steps={s.processSteps} />
-          </SwipeRail>
-        </div>
-      </section>
-
-      {/* Selected stories */}
-      <section className="section ruled" aria-labelledby="stories-title">
-        <div className="wrap">
-          <div className="sec-head-row">
-            <div className="sec-head">
-              <Eyebrow>{h.storiesEyebrow}</Eyebrow>
-              <h2 id="stories-title" className="h2">{h.storiesTitle}</h2>
-            </div>
-            <ArrowLink href="/stories">All stories</ArrowLink>
-          </div>
-          <SwipeRail className="home-rail">
-            <div className="grid-3">
-              {h.projects.map((p) => <StoryCard key={p._id} p={p} />)}
-            </div>
-          </SwipeRail>
-        </div>
-      </section>
-
-      {/* Testimonials */}
       <section className="section ruled" aria-labelledby="t-title">
         <div className="wrap">
           <Testimonials items={h.testimonials} eyebrow={h.testimonialsEyebrow} title={h.testimonialsTitle} />
         </div>
       </section>
 
-      {/* What a film could be worth */}
-      <section className="section calc-band" aria-labelledby="calc-title">
-        <div className="wrap wrap-narrow">
-          <div className="sec-head center">
-            <Eyebrow>The value of a film</Eyebrow>
-            <SplitHeading as="h2" className="h2" text="A good film works for you all year. See what that can be worth." />
-            <p className="hero-sub" style={{ margin: 0 }}>Move the sliders to your own numbers. We use the same maths when we talk with you.</p>
-          </div>
-          <ReturnCalculator cta={s.primaryCta} />
-        </div>
-      </section>
-
-      {/* Is this you? */}
-      <section className="section ruled" aria-labelledby="check-title">
-        <div className="wrap grid-2" style={{ alignItems: 'start' }}>
-          <div className="sec-head" style={{ marginBottom: 0 }}>
-            <Eyebrow>{h.checklistEyebrow}</Eyebrow>
-            <h2 id="check-title" className="h2">{h.checklistTitle}</h2>
-          </div>
-          <Checklist situations={h.situations} closing={h.checklistClosing} cta={s.primaryCta} />
-        </div>
-      </section>
-
-      {/* Services */}
-      <section className="section ruled" aria-labelledby="svc-title">
-        <div className="wrap">
-          <div className="sec-head-row">
-            <div className="sec-head">
-              <Eyebrow>{h.servicesEyebrow}</Eyebrow>
-              <h2 id="svc-title" className="h2">{h.servicesTitle}</h2>
-            </div>
-            <ArrowLink href="/services">All services</ArrowLink>
-          </div>
-          {/* One service per long bar, stacked, so services read differently from the story grid. */}
-          <div className="svc-list">
-            {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
-          </div>
-        </div>
-      </section>
-
-      {/* Founder */}
-      <section className="section ruled" aria-labelledby="founder-title">
-        <div className="wrap grid-2" style={{ alignItems: 'center' }}>
-          <div className="founder-pics">
-            <div className="founder-portrait">
-              <Still image={h.founder?.portrait} label="Portrait" ratio="ratio-45" width={900} />
-            </div>
-            <div className="founder-location">
-              <Still image={h.founder?.onLocationPhoto} label="On location" ratio="ratio-169" width={900} />
-            </div>
-          </div>
-          <div className="stack" style={{ gap: 'var(--space-5)' }}>
-            <Eyebrow>{h.founderEyebrow}</Eyebrow>
-            <h2 id="founder-title" className="h2">{h.founderTitle}</h2>
-            <RichText
-              value={h.founder?.founderNote}
-              fallback={['[A short first-person note from Josh: why this work, why the North, why Alberta now. Two short paragraphs.]']}
-            />
-            <div>
-              <div style={{ fontWeight: 600 }}>{h.founder?.name ?? 'Josh Ferguson'}</div>
-              <div className="caption">{h.founder?.role ?? 'Owner & creative director'}</div>
-            </div>
-            <div className="btn-row">
-              <Btn href="/contact">{s.primaryCta}</Btn>
-              <ArrowLink href="/about">About us</ArrowLink>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Locations */}
-      <section id="locations" className="section ruled" aria-labelledby="loc-title">
-        <div className="wrap">
-          <div className="sec-head">
-            <Eyebrow>{h.locationsEyebrow}</Eyebrow>
-            <h2 id="loc-title" className="h2">{h.locationsTitle}</h2>
-          </div>
-          <div className="grid-2">
-            {locations.map((l) => l && <LocationCard key={l._id} l={l} />)}
-          </div>
-        </div>
-      </section>
-
-      <ClosingBand s={s} />
+      {/* 7 · Closing */}
+      <ClosingBand s={s} line={h.closingLine} />
     </>
   )
 }

@@ -7,6 +7,7 @@ import { seoMeta } from '@/lib/seo'
 import { vimeoPoster } from '@/lib/vimeo'
 import { urlFor } from '@/sanity/client'
 import { ALBERTA_PLACEHOLDER } from '@/lib/placeholders'
+import { WHO_WE_ARE } from '@/lib/offers'
 
 export async function generateMetadata() {
   const a = await getAbout()
@@ -29,6 +30,7 @@ export default async function AboutPage() {
           <p className="body-lg muted lede">
             {pick(a.heroIntro, 'Breaking Ice Productions tells the human stories inside organizations, working from Stony Plain, Alberta and Norman Wells, NWT.')}
           </p>
+          <p className="who-we-are" style={{ marginTop: 'var(--space-8)' }}>{pick(a.whoWeAre, WHO_WE_ARE)}</p>
         </div>
       </section>
       <section style={{ paddingBottom: 'var(--section)' }}>

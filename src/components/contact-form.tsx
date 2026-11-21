@@ -11,6 +11,8 @@ type Opt = { value: string; label: string }
 
 export function ContactForm({
   services,
+  offers = [],
+  labels = { offer: 'Which offer interests you?', offerHelp: '', story: 'What is your story?' },
   budget,
   timeline,
   heard,
@@ -26,6 +28,10 @@ export function ContactForm({
   deliveryErrorMessage = 'Your text is still here.',
 }: {
   services: Opt[]
+  /** The three offers; the form adds "Not sure yet" as the default. */
+  offers?: Opt[]
+  /** Field labels (Sanity contactPage, with fallbacks in src/lib/offers.ts COPY.contact). */
+  labels?: { offer: string; offerHelp: string; story: string; storyPlaceholder?: string }
   budget: string[]
   timeline: string[]
   heard: string[]
@@ -43,9 +49,11 @@ export function ContactForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null)
   // Prefill from the URL after load, so the form itself is in the server HTML.
-  // ?type=<service-slug> comes from service pages; name, email and organization from the client portal
+  // ?type=<service-slug> comes from service pages (kept as the enquiry's "Needs" and a story prefill); name, email and organization from the client portal
   // (through sessionStorage, so they never sit in the URL).
   const [type, setType] = useState('')
+  // ?offer=<offer-slug> comes from the offer pages' "Start a conversation".
+  const [offer, setOffer] = useState('not-sure')
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
     const form = formRef.current
@@ -61,6 +69,8 @@ export function ContactForm({
     fill('name', handoff.name ?? null)
     fill('email', handoff.email ?? null)
     fill('organization', handoff.organization ?? null)
+    const o = q.get('offer')
+    if (o && offers.some((x) => x.value === o)) setOffer(o)
     const t = q.get('type')
     if (t) {
       setType(t)
@@ -98,12 +108,14 @@ export function ContactForm({
     const first = String(f.get('name')).trim().split(' ')[0]
     setName(first)
     setState('sending')
-    const typeLabel = services.find((x) => x.value === type)?.label
-      || ({ 'something-else': 'Something else', 'not-sure': 'Not sure yet' } as Record<string, string>)[type]
-      || ''
+    // "Needs": the service a service page sent (?type=), else the offer chosen here, so the email, Slack and the
+    // Google Sheet's existing "type" column always get a sensible value.
+    const offerLabel = offers.find((x) => x.value === offer)?.label || 'Not sure yet'
+    const serviceLabel = services.find((x) => x.value === type)?.label || ''
+    const typeLabel = serviceLabel || offerLabel
     const payload = {
       name: f.get('name'), email: f.get('email'), organization: f.get('organization'),
-      type: typeLabel, story: f.get('story'), budget: f.get('budget'), timeline: f.get('timeline'),
+      type: typeLabel, offer: offerLabel, story: f.get('story'), budget: f.get('budget'), timeline: f.get('timeline'),
       heard: f.get('heard'), website: f.get('website'), startedAt: startedAt.current,
       page: window.location.pathname + window.location.search,
     }
@@ -113,7 +125,7 @@ export function ContactForm({
     try {
       const res = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       if (res.ok) {
-        track('Contact form sent', { type: typeLabel || 'unspecified', heard: String(payload.heard || 'unspecified') })
+        track('Contact form sent', { type: typeLabel || 'unspecified', offer: String(payload.offer), heard: String(payload.heard || 'unspecified') })
         setState('sent')
         setTimeout(() => doneRef.current?.focus(), 0)
         return
@@ -204,18 +216,18 @@ export function ContactForm({
           <label htmlFor="c-org">Organization <span className="hint">(optional)</span></label>
           <input className="input" id="c-org" name="organization" autoComplete="organization" />
         </div>
+        {/* One no-pressure question. It replaces the old "What do you need?" list of services. */}
         <div className="field full">
-          <label htmlFor="c-type">What do you need?</label>
-          <select className="input" id="c-type" name="type" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="">Select one</option>
-            {services.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            <option value="something-else">Something else</option>
+          <label htmlFor="c-offer">{labels.offer} <span className="hint">(optional)</span></label>
+          <select className="input" id="c-offer" name="offer" value={offer} onChange={(e) => setOffer(e.target.value)} aria-describedby="c-offer-help">
+            {offers.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             <option value="not-sure">Not sure yet</option>
           </select>
+          <span id="c-offer-help" className="hint">{labels.offerHelp}</span>
         </div>
         <div className="field full">
-          <label htmlFor="c-story">What is your story?</label>
-          <textarea className="input" id="c-story" name="story" aria-required="true" maxLength={5000} {...inv('story')} />
+          <label htmlFor="c-story">{labels.story}</label>
+          <textarea className="input" id="c-story" name="story" aria-required="true" maxLength={5000} placeholder={labels.storyPlaceholder} {...inv('story')} />
           {err('story')}
         </div>
         <div className="field">

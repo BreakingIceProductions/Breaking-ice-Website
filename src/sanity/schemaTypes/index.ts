@@ -1,11 +1,12 @@
 import { caseStudy } from './documents/case-study'
 import { clientLogo, legalPage, location, person, testimonial } from './documents/misc'
+import { faqQuestion, offer } from './documents/offer'
 import { project } from './documents/project'
 import { service } from './documents/service'
 import { altImage, portableText, seo, videoUrl } from './objects/shared'
-import { aboutPage, contactPage, homePage, servicesPage, siteSettings, storiesPage } from './singletons/pages'
+import { aboutPage, contactPage, faqPage, homePage, servicesPage, siteSettings, storiesPage } from './singletons/pages'
 
-export const SINGLETONS = ['siteSettings', 'homePage', 'aboutPage', 'storiesPage', 'servicesPage', 'contactPage']
+export const SINGLETONS = ['siteSettings', 'homePage', 'aboutPage', 'storiesPage', 'servicesPage', 'contactPage', 'faqPage']
 
 export const schemaTypes = [
   // objects
@@ -17,6 +18,8 @@ export const schemaTypes = [
   project,
   caseStudy,
   service,
+  offer,
+  faqQuestion,
   testimonial,
   person,
   location,
@@ -29,4 +32,5 @@ export const schemaTypes = [
   storiesPage,
   servicesPage,
   contactPage,
+  faqPage,
 ]

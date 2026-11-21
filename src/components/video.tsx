@@ -24,6 +24,7 @@ export function VideoLoop({
   startAt = 0.25,
   segment = 12,
   hoverOnly,
+  sizes = '(max-width: 820px) 100vw, 60vw',
 }: {
   url?: string
   posterUrl?: string | null
@@ -38,6 +39,8 @@ export function VideoLoop({
   segment?: number
   /** Stay a still image until the pointer is over the card, then play the preview. Touch devices stay still. */
   hoverOnly?: boolean
+  /** Image sizes hint for the poster (full-bleed heroes pass 100vw so the still stays sharp). */
+  sizes?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const frame = useRef<HTMLIFrameElement>(null)
@@ -132,7 +135,7 @@ export function VideoLoop({
   return (
     <div ref={ref} className={`media ${onDark ? 'on-dark' : ''} ${className}`}>
       {posterUrl ? (
-        <Image src={posterUrl} alt={posterAlt} fill sizes="(max-width: 820px) 100vw, 60vw" priority={priority} style={{ objectFit: 'cover' }} />
+        <Image src={posterUrl} alt={posterAlt} fill sizes={sizes} priority={priority} style={{ objectFit: 'cover' }} />
       ) : (
         !src && label && <Placeholder label={label} play />
       )}

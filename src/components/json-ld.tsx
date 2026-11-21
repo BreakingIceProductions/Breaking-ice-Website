@@ -1,5 +1,6 @@
 import { SITE_NAME, SITE_URL } from '@/lib/site'
-import type { Settings } from '@/lib/types'
+import { WHO_WE_ARE } from '@/lib/offers'
+import type { Offer, Settings } from '@/lib/types'
 
 /** Structured data for Google. Escapes '<' so CMS text can't break out of the script tag. */
 export function JsonLd({ data }: { data: Record<string, unknown> | Record<string, unknown>[] }) {
@@ -11,14 +12,24 @@ export const real = (v?: string | null) => (v && !v.trim().startsWith('[') ? v.t
 
 export const ORG_ID = `${SITE_URL}/#organization`
 
-export function organizationLd(s: Settings) {
+const AREA_SERVED = [
+  { '@type': 'AdministrativeArea', name: 'Alberta' },
+  { '@type': 'AdministrativeArea', name: 'Northwest Territories' },
+]
+
+/**
+ * The business, typed as both Organization and ProfessionalService (a LocalBusiness subtype), with the three
+ * offers as an OfferCatalog. No prices: the offers carry no price fields on purpose.
+ */
+export function organizationLd(s: Settings, offers: Offer[] = []) {
   const social = Object.values((s as { social?: Record<string, string | undefined> }).social ?? {}).filter(Boolean)
   return [
     {
       '@context': 'https://schema.org',
-      '@type': 'Organization',
+      '@type': ['Organization', 'ProfessionalService'],
       '@id': ORG_ID,
       name: SITE_NAME,
+      description: WHO_WE_ARE,
       url: SITE_URL,
       // Google wants a square raster logo, at least 112px.
       logo: `${SITE_URL}/brand/bi-icon-512.png`,
@@ -32,10 +43,27 @@ export function organizationLd(s: Settings) {
         { '@type': 'PostalAddress', addressLocality: 'Stony Plain', addressRegion: 'AB', addressCountry: 'CA' },
         { '@type': 'PostalAddress', addressLocality: 'Norman Wells', addressRegion: 'NT', addressCountry: 'CA' },
       ],
-      areaServed: [
-        { '@type': 'AdministrativeArea', name: 'Alberta' },
-        { '@type': 'AdministrativeArea', name: 'Northwest Territories' },
-      ],
+      areaServed: AREA_SERVED,
+      knowsAbout: ['Video production', 'Organizational films', 'Brand films', 'Documentary', 'Social media video'],
+      hasOfferCatalog: offers.length
+        ? {
+            '@type': 'OfferCatalog',
+            name: 'Ways to work with us',
+            itemListElement: offers.map((o) => ({
+              '@type': 'Offer',
+              itemOffered: {
+                '@type': 'Service',
+                '@id': `${SITE_URL}/services/${o.slug}#service`,
+                name: o.name,
+                description: o.oneLiner,
+                url: `${SITE_URL}/services/${o.slug}`,
+                serviceType: 'Video production',
+                areaServed: AREA_SERVED,
+                provider: { '@id': ORG_ID },
+              },
+            })),
+          }
+        : undefined,
       sameAs: social.length ? social : undefined,
     },
     { '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${SITE_URL}/#website`, name: SITE_NAME, url: SITE_URL, publisher: { '@id': ORG_ID }, inLanguage: 'en-CA' },

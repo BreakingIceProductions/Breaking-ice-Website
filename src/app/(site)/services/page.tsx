@@ -1,33 +1,71 @@
 import { Eyebrow, ArrowLink } from '@/components/brand'
 import { ServiceCard } from '@/components/cards'
+import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
+import { OfferLadder } from '@/components/offers'
 import { ClosingBand, Process } from '@/components/sections'
-import { getServices, getServicesPage, getSettings, pick } from '@/lib/data'
+import { getOffers, getServices, getServicesPage, getSettings, pick } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
+import { SITE_URL } from '@/lib/site'
+import { COPY } from '@/lib/offers'
 
 export async function generateMetadata() {
   const p = await getServicesPage()
-  return seoMeta(p.seo, 'Video production services', 'Organizational and brand films, social videos, event films, retainers, documentaries and photos, in Alberta and the NWT.', { path: '/services', eyebrow: 'Services' })
+  return seoMeta(p.seo, 'Video production services', COPY.services.metaDescription, { path: '/services', eyebrow: 'Services' })
 }
 
 export default async function ServicesPage() {
-  const [page, services, s] = await Promise.all([getServicesPage(), getServices(), getSettings()])
+  const [page, offers, services, s] = await Promise.all([getServicesPage(), getOffers(), getServices(), getSettings()])
   return (
     <>
+      <JsonLd
+        data={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: page.ladderTitle,
+            itemListElement: offers.map((o, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              item: { '@type': 'Service', '@id': `${SITE_URL}/services/${o.slug}#service`, name: o.name, url: `${SITE_URL}/services/${o.slug}`, provider: { '@id': ORG_ID } },
+            })),
+          },
+          breadcrumbLd([['Services', '/services']]),
+        ]}
+      />
       <section className="page-head">
         <div className="wrap">
           <Eyebrow>{pick(page.eyebrow, 'Services')}</Eyebrow>
-          <h1 className="display-xl">{pick(page.headline, 'Films that sound like your people')}</h1>
-          <p className="body-lg muted lede">
-            {pick(page.intro, 'Video first. Organizational and brand films lead, with room for whatever your story needs.')}
-          </p>
+          <h1 className="display-xl">{pick(page.headline, 'What we make')}</h1>
+          <p className="body-lg muted lede">{page.intro}</p>
         </div>
       </section>
-      <section className="section svc-overview flush-top" aria-labelledby="all-services">
-        <h2 id="all-services" className="sr-only">All services</h2>
-        <div className="wrap svc-list">
-          {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
+
+      {/* The three offers lead: a step up from one film to stories all year. */}
+      <section className="section flush-top" aria-labelledby="offers-title">
+        <div className="wrap">
+          <div className="sec-head">
+            <Eyebrow>{page.ladderEyebrow}</Eyebrow>
+            <h2 id="offers-title" className="h2">{page.ladderTitle}</h2>
+            <p className="body-lg muted lede">{page.ladderIntro}</p>
+          </div>
+          <OfferLadder offers={offers} />
         </div>
       </section>
+
+      {/* The six existing services, now as the kinds of film we make. */}
+      <section className="section ruled svc-overview" aria-labelledby="all-services">
+        <div className="wrap">
+          <div className="sec-head svc-kinds-head">
+            <Eyebrow>{page.kindsEyebrow}</Eyebrow>
+            <h2 id="all-services" className="h2">{page.kindsTitle}</h2>
+            <p className="body-lg muted lede">{page.kindsIntro}</p>
+          </div>
+          <div className="svc-list">
+            {services.map((sv) => <ServiceCard key={sv._id} s={sv} />)}
+          </div>
+        </div>
+      </section>
+
       <section className="section ruled" aria-labelledby="how">
         <div className="wrap">
           <div className="sec-head-row">

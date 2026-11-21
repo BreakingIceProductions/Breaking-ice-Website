@@ -3,10 +3,10 @@ import { Header } from '@/components/header'
 import { Motion } from '@/components/motion'
 import { JsonLd, organizationLd } from '@/components/json-ld'
 import { Tracking } from '@/components/tracking'
-import { getSettings } from '@/lib/data'
+import { getOffers, getSettings } from '@/lib/data'
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const s = await getSettings()
+  const [s, offers] = await Promise.all([getSettings(), getOffers()])
   return (
     <>
       <a href="#main" className="skip">Skip to content</a>
@@ -15,7 +15,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <Footer s={s} />
       <Motion />
       <Tracking bookingLink={s.bookingLink} />
-      <JsonLd data={organizationLd(s)} />
+      <JsonLd data={organizationLd(s, offers)} />
     </>
   )
 }

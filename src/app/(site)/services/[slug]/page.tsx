@@ -5,12 +5,14 @@ import { notFound } from 'next/navigation'
 import { Btn, Eyebrow, Mark, ArrowLink } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
 import { ProcessCompact } from '@/components/process-compact'
+import { OfferPage } from '@/components/offer-page'
 import { ClosingBand, RichText } from '@/components/sections'
 import { VideoLoop } from '@/components/video'
-import { getProjects, getServiceBySlug, getServices, getSettings } from '@/lib/data'
+import { getOfferBySlug, getOfferFaq, getOffers, getProjects, getServiceBySlug, getServices, getSettings } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
 import type { PT } from '@/lib/types'
 import { CATEGORY_LABELS } from '@/lib/video'
+import { COPY } from '@/lib/offers'
 import { urlFor } from '@/sanity/client'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -22,19 +24,30 @@ function placeholderLines(value: PT | undefined): string[] | null {
   return lines.every((l) => l.startsWith('[')) ? lines : null
 }
 
+/** Offers and services share /services/[slug]. An offer wins if a slug ever matches both. */
 export async function generateStaticParams() {
-  const services = await getServices()
-  return services.map((s) => ({ slug: s.slug }))
+  const [offers, services] = await Promise.all([getOffers(), getServices()])
+  return [...new Set([...offers.map((o) => o.slug), ...services.map((s) => s.slug)])].map((slug) => ({ slug }))
 }
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params
+  const offer = await getOfferBySlug(slug)
+  if (offer) {
+    const desc = offer.seoDescription || `${offer.oneLiner ?? offer.name} Video production for organizations across Alberta and the NWT.`
+    return seoMeta(offer.seo, offer.seoTitle || offer.name, desc, { path: `/services/${offer.slug}`, eyebrow: 'Services', image: offer.heroImage })
+  }
   const sv = await getServiceBySlug(slug)
   return sv ? seoMeta(sv.seo, sv.title, `${sv.summary} From Stony Plain, AB and Norman Wells, NT, for organizations across Alberta and the NWT.`, { path: `/services/${sv.slug}`, eyebrow: 'Services', image: sv.cardImage }) : {}
 }
 
 export default async function ServicePage({ params }: Props) {
   const { slug } = await params
+  const offer = await getOfferBySlug(slug)
+  if (offer) {
+    const [offers, s, projects, faq] = await Promise.all([getOffers(), getSettings(), getProjects(), getOfferFaq(offer)])
+    return <OfferPage offer={offer} others={offers.filter((o) => o.slug !== offer.slug)} projects={projects} faq={faq} s={s} />
+  }
   const [sv, all, s, projects] = await Promise.all([getServiceBySlug(slug), getServices(), getSettings(), getProjects()])
   if (!sv) notFound()
   const related = sv.relatedProjects?.length ? sv.relatedProjects : projects.slice(0, 3)
@@ -84,6 +97,12 @@ export default async function ServicePage({ params }: Props) {
               <Eyebrow>{sv.title} · Alberta and the NWT</Eyebrow>
               <h1 className="h1">{sv.heroHeadline ?? sv.title}</h1>
               <p className="body-lg muted" style={{ margin: '0 0 var(--space-8)' }}>{sv.summary}</p>
+              {/* Retainers sit next to the Brand Engine offer: one line for people who want the done-for-you version. */}
+              {sv.slug === 'retainers' && (
+                <p className="offer-note">
+                  {COPY.services.retainersNote} <ArrowLink href="/services/brand-engine">{COPY.services.retainersNoteLink}</ArrowLink>
+                </p>
+              )}
               <div className="btn-row">
                 <Btn href={contactHref}>{s.primaryCta}</Btn>
                 {s.bookingLink && <Btn href={s.bookingLink} variant="secondary" external>Book a 20-minute call</Btn>}

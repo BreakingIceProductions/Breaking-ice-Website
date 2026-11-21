@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { sanityFetch } from '@/sanity/client'
 import { DEFAULT_SETTINGS, SAMPLE_LOCATIONS, SAMPLE_PROJECTS, SAMPLE_SERVICES, SAMPLE_TESTIMONIALS } from './samples'
-import type { Location, ProjectCard, Service, Settings, Testimonial } from './types'
+import { COPY, FALLBACK_FAQ, FALLBACK_OFFERS, OFFER_FAQ_CATEGORY, WHO_WE_ARE } from './offers'
+import type { FaqItem, Location, Offer, ProjectCard, Service, Settings, Testimonial } from './types'
 
 /** Use the Sanity value when it has content, otherwise the fallback. */
 const pick = <T,>(value: T | null | undefined, fallback: T): T => {
@@ -53,7 +54,8 @@ export async function getProjects(): Promise<ProjectCard[]> {
 
 export async function getHome() {
   const data = await sanityFetch<any>(`{
-    "page": *[_id == "homePage"][0]{ ..., testimonials[]->{ ${TESTIMONIAL} }, founder->{ name, role, portrait, onLocationPhoto, founderNote } },
+    "page": *[_id == "homePage"][0]{ ..., testimonials[]->{ ${TESTIMONIAL} }, "proofProject": proofProject->{ title, "slug": slug.current } },
+    "nwProject": *[_type == "project" && client match "North-Wright*" && defined(slug.current)] | order(coalesce(order, 999) asc)[0]{ title, "slug": slug.current },
     "featured": *[_type == "project" && featuredOnHome == true && defined(slug.current)] | order(coalesce(order, 999) asc)[0...6]{ ${CARD} },
     "latest": *[_type == "project" && defined(slug.current)] | order(coalesce(order, 999) asc, _createdAt desc)[0...6]{ ${CARD} },
     "logos": *[_type == "clientLogo" && showInStrip != false] | order(coalesce(order, 999) asc){ _id, name, logo, "ar": logo.asset->metadata.dimensions.aspectRatio }
@@ -61,44 +63,41 @@ export async function getHome() {
   const page = data?.page ?? {}
   const projects: ProjectCard[] = pick(data?.featured, pick(data?.latest, SAMPLE_PROJECTS))
   const testimonials: Testimonial[] = pick(page.testimonials?.filter(Boolean), SAMPLE_TESTIMONIALS)
+  const h = COPY.home
   return {
     heroReel: page.heroReel as string | undefined,
     heroPoster: page.heroPoster,
     fullReel: page.fullReel as string | undefined,
     heroEyebrow: pick(page.heroEyebrow, 'Video production · Alberta and the Northwest Territories'),
+    heroTitle: pick(page.heroTitle, h.heroTitle),
     heroHeadline: pick(page.heroHeadline, 'We use film to go past the surface and show people what your organization is about.'),
     heroSubline: pick(page.heroSubline, 'We make films for companies, communities and other organizations. Our crew takes the time to know your people. That is how the real story comes out.'),
-    introEyebrow: pick(page.introEyebrow, 'Who we are'),
-    introBody: pick(
-      page.introBody,
-      'Every organization is made of people who care about their work. We listen to them first. We take the time to earn their trust. Then we find what matters and make the film.',
-    ),
-    stats: pick<{ _key?: string; value: string; label: string }[]>(page.stats, [
-      { value: '[00]', label: '[Stat: projects delivered]' },
-      { value: '[00]', label: '[Stat: years filming in the North]' },
-      { value: '[00]', label: '[Stat: communities filmed in]' },
-      { value: '[00]', label: '[Stat: organizations served]' },
-    ]),
-    logoStripEyebrow: pick(page.logoStripEyebrow, 'Organizations we work with'),
-    logoStripTitle: pick(page.logoStripTitle, 'Organizations we work with'),
-    processEyebrow: pick(page.processEyebrow, 'How we work'),
-    processTitle: pick(page.processTitle, 'Four steps, every time'),
+    problemEyebrow: pick(page.problemEyebrow, h.problemEyebrow),
+    problemTitle: pick(page.problemTitle, h.problemTitle),
+    problemBody: pick(page.problemBody, h.problemBody),
+    hookVideo: page.hookVideo as string | undefined,
+    hookPoster: page.hookPoster,
+    beliefEyebrow: pick(page.beliefEyebrow, h.beliefEyebrow),
+    beliefTitle: pick(page.beliefTitle, h.beliefTitle),
+    beliefBody: pick(page.beliefBody, h.beliefBody),
+    whoWeAre: pick(page.whoWeAre, WHO_WE_ARE),
+    ladderEyebrow: pick(page.ladderEyebrow, h.ladderEyebrow),
+    ladderTitle: pick(page.ladderTitle, h.ladderTitle),
+    ladderIntro: pick(page.ladderIntro, h.ladderIntro),
     storiesEyebrow: pick(page.storiesEyebrow, 'Our work'),
     storiesTitle: pick(page.storiesTitle, 'Stories we have told'),
+    proofEyebrow: pick(page.proofEyebrow, h.proofEyebrow),
+    proofTitle: pick(page.proofTitle, h.proofTitle),
+    proofStats: pick<{ _key?: string; value: string; label: string }[]>(page.proofStats, h.proofStats),
+    proofBody: pick(page.proofBody, h.proofBody),
+    // The chosen proof story, else the first North-Wright Airways story, else none (link goes to all stories).
+    proofProject: (page.proofProject ?? data?.nwProject ?? null) as { title: string; slug: string } | null,
+    closingLine: pick(page.closingLine, h.closingLine),
+    logoStripEyebrow: pick(page.logoStripEyebrow, 'Organizations we work with'),
+    logoStripTitle: pick(page.logoStripTitle, 'Organizations we work with'),
     testimonialsEyebrow: pick(page.testimonialsEyebrow, 'What clients say'),
     testimonialsTitle: pick(page.testimonialsTitle, 'In their words'),
     testimonials,
-    checklistEyebrow: pick(page.checklistEyebrow, 'Sound familiar?'),
-    checklistTitle: pick(page.checklistTitle, 'Is this you?'),
-    situations: pick<string[]>(page.situations, ['[Situation 1]', '[Situation 2]', '[Situation 3]', '[Situation 4]']),
-    checklistClosing: pick(page.checklistClosing, '[Closing line: then let’s talk.]'),
-    servicesEyebrow: pick(page.servicesEyebrow, 'Services'),
-    servicesTitle: pick(page.servicesTitle, 'What we make'),
-    founderEyebrow: pick(page.founderEyebrow, 'Founder'),
-    founderTitle: pick(page.founderTitle, 'Hi, I’m Josh.'),
-    founder: page.founder ?? null,
-    locationsEyebrow: pick(page.locationsEyebrow, 'Locations'),
-    locationsTitle: pick(page.locationsTitle, 'Where we work'),
     seo: page.seo ?? null,
     projects,
     logos: (data?.logos ?? []) as { _id: string; name: string; logo?: any; ar?: number }[],
@@ -151,8 +150,78 @@ export async function getServiceBySlug(slug: string): Promise<Service | null> {
 }
 
 /** Services page singleton (adds Process title to the simple-page fields). */
-export async function getServicesPage(): Promise<{ eyebrow?: string; headline?: string; intro?: string; processTitle?: string; seo?: any }> {
-  return (await sanityFetch<any>(`*[_id == "servicesPage"][0]{ eyebrow, headline, intro, processTitle, seo }`)) ?? {}
+export async function getServicesPage() {
+  const p = (await sanityFetch<any>(`*[_id == "servicesPage"][0]{ eyebrow, headline, intro, processTitle, ladderEyebrow, ladderTitle, ladderIntro, kindsEyebrow, kindsTitle, kindsIntro, seo }`)) ?? {}
+  const c = COPY.services
+  return {
+    eyebrow: p.eyebrow as string | undefined,
+    headline: p.headline as string | undefined,
+    intro: pick(p.intro, c.intro),
+    processTitle: p.processTitle as string | undefined,
+    ladderEyebrow: pick(p.ladderEyebrow, c.ladderEyebrow),
+    ladderTitle: pick(p.ladderTitle, c.ladderTitle),
+    ladderIntro: pick(p.ladderIntro, c.ladderIntro),
+    kindsEyebrow: pick(p.kindsEyebrow, c.kindsEyebrow),
+    kindsTitle: pick(p.kindsTitle, c.kindsTitle),
+    kindsIntro: pick(p.kindsIntro, c.kindsIntro),
+    seo: p.seo ?? null,
+  }
+}
+
+const OFFER_CARD = `_id, _updatedAt, name, "slug": slug.current, order, featured, badge, ladderLine, ladderBlurb, ladderLink, oneLiner, heroImage`
+
+/** Fill each empty field of a Sanity offer from the code fallback with the same slug. */
+function withFallback(o: Partial<Offer> & { slug: string }): Offer {
+  const f = (FALLBACK_OFFERS.find((x) => x.slug === o.slug) ?? {}) as Partial<Offer>
+  const merged: Record<string, unknown> = { ...f }
+  for (const [k, v] of Object.entries(o)) merged[k] = pick(v as unknown, (f as Record<string, unknown>)[k])
+  return { ...merged, _id: o._id ?? f._id ?? o.slug, name: pick(o.name, f.name ?? o.slug), slug: o.slug } as Offer
+}
+
+/** The offer ladder, in order. Falls back to the three code offers while Sanity has none. */
+export async function getOffers(): Promise<Offer[]> {
+  const rows = await sanityFetch<Offer[]>(`*[_type == "offer" && defined(slug.current)] | order(coalesce(order, 999) asc){ ${OFFER_CARD} }`)
+  return rows?.length ? rows.map(withFallback) : FALLBACK_OFFERS
+}
+
+export async function getOfferBySlug(slug: string): Promise<Offer | null> {
+  const data = await sanityFetch<any>(
+    `*[_type == "offer" && slug.current == $slug][0]{
+      ${OFFER_CARD}, heroHeadline, description, includedTitle, included, idealFor, timeline, timelineNote, ctaLabel, closingHeadline, hookVideo, faq, seo,
+      relatedServices[]->{ _id, title, "slug": slug.current },
+      relatedProjects[]->{ ${CARD} }
+    }`,
+    { slug },
+  )
+  if (data) return withFallback(data)
+  return FALLBACK_OFFERS.find((o) => o.slug === slug) ?? null
+}
+
+/** FAQ questions, ordered by category then order. Falls back to the code questions while Sanity has none. */
+export async function getFaqItems(): Promise<FaqItem[]> {
+  const rows = await sanityFetch<FaqItem[]>(
+    `*[_type == "faqQuestion" && defined(question)] | order(coalesce(order, 999) asc, _createdAt asc){ _id, question, answer, category, order }`,
+  )
+  return pick(rows, FALLBACK_FAQ)
+}
+
+/** Questions for an offer page: its own, else the FAQ questions in its category. */
+export async function getOfferFaq(offer: Offer): Promise<{ _key: string; question?: string; answer?: string }[]> {
+  if (offer.faq?.length) return offer.faq
+  const cat = OFFER_FAQ_CATEGORY[offer.slug]
+  const all = await getFaqItems()
+  return all.filter((q) => q.category === cat).map((q) => ({ _key: q._id, question: q.question, answer: q.answer }))
+}
+
+export async function getFaqPage() {
+  const p = (await sanityFetch<any>(`*[_id == "faqPage"][0]{ eyebrow, headline, intro, closingHeadline, seo }`)) ?? {}
+  return {
+    eyebrow: pick(p.eyebrow, COPY.faq.eyebrow),
+    headline: pick(p.headline, COPY.faq.headline),
+    intro: pick(p.intro, COPY.faq.intro),
+    closingHeadline: pick(p.closingHeadline, COPY.faq.closingHeadline),
+    seo: p.seo ?? null,
+  }
 }
 
 export async function getLocation(slug: string) {

@@ -103,3 +103,49 @@ export type Settings = {
   defaultSeo?: Seo
   locations: Pick<Location, '_id' | 'title' | 'slug' | 'baseLine' | 'base'>[]
 }
+
+export type Offer = {
+  _id: string
+  _updatedAt?: string
+  name: string
+  slug: string
+  order?: number
+  /** Optional small label on the ladder card. Empty by default. */
+  badge?: string
+  /** The emphasised (navy) step on the ladder. */
+  featured?: boolean
+  /** Ladder card: one-liner, short blurb and link text. */
+  ladderLine?: string
+  ladderBlurb?: string
+  ladderLink?: string
+  /** Offer page hero. */
+  heroHeadline?: string
+  oneLiner?: string
+  description?: PT
+  /** Code fallback for description: plain paragraphs. */
+  descriptionText?: string[]
+  includedTitle?: string
+  included?: string[]
+  idealFor?: string[]
+  timeline?: string
+  timelineNote?: string
+  ctaLabel?: string
+  closingHeadline?: string
+  heroImage?: Img
+  hookVideo?: string
+  faq?: { _key: string; question?: string; answer?: string }[]
+  relatedServices?: Pick<Service, '_id' | 'title' | 'slug'>[]
+  relatedProjects?: ProjectCard[]
+  seo?: Seo
+  /** Code fallbacks for the SEO tab. */
+  seoTitle?: string
+  seoDescription?: string
+}
+
+export type FaqItem = {
+  _id: string
+  question: string
+  answer?: string
+  category?: string
+  order?: number
+}

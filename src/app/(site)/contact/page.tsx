@@ -1,8 +1,9 @@
 import { Eyebrow } from '@/components/brand'
 import { ContactForm } from '@/components/contact-form'
 import { PhoneLink } from '@/components/sections'
-import { getContact, getServices, getSettings, pick } from '@/lib/data'
+import { getContact, getOffers, getServices, getSettings, pick } from '@/lib/data'
 import { seoMeta } from '@/lib/seo'
+import { COPY } from '@/lib/offers'
 
 export async function generateMetadata() {
   const c = await getContact()
@@ -10,7 +11,7 @@ export async function generateMetadata() {
 }
 
 export default async function ContactPage() {
-  const [c, s, services] = await Promise.all([getContact(), getSettings(), getServices()])
+  const [c, s, services, offers] = await Promise.all([getContact(), getSettings(), getServices(), getOffers()])
   const nextSteps: { title: string; text: string }[] = pick(c.nextSteps, [
     { title: '[Step 1]', text: '[We read it and reply within [N] business days.]' },
     { title: '[Step 2]', text: '[A short call to listen and ask questions.]' },
@@ -24,7 +25,7 @@ export default async function ContactPage() {
           <Eyebrow>{pick(c.eyebrow, 'Contact')}</Eyebrow>
           <h1 className="display-xl">{pick(c.headline, 'Start a conversation')}</h1>
           <p className="body-lg muted lede">
-            {pick(c.intro, 'No pitch, no pressure. Tell us a little about the story and we’ll take it from there.')}
+            {pick(c.intro, COPY.contact.intro)}
           </p>
         </div>
       </section>
@@ -32,6 +33,13 @@ export default async function ContactPage() {
         <div className="wrap contact-grid">
           <ContactForm
             services={services.map((sv) => ({ value: sv.slug, label: sv.title }))}
+            offers={offers.map((o) => ({ value: o.slug, label: o.name }))}
+            labels={{
+              offer: pick(c.offerLabel, COPY.contact.offerLabel),
+              offerHelp: pick(c.offerHelp, COPY.contact.offerHelp),
+              story: pick(c.storyLabel, COPY.contact.storyLabel),
+              storyPlaceholder: pick(c.storyPlaceholder, COPY.contact.storyPlaceholder),
+            }}
             budget={pick(c.budgetOptions, ['[Range 1]', '[Range 2]', '[Range 3]', 'Not sure yet'])}
             timeline={pick(c.timelineOptions, ['[Option 1]', '[Option 2]', '[Option 3]', 'Flexible'])}
             heard={pick(c.heardOptions, ['Google search', 'Referral / word of mouth', 'Social media', 'Saw your work', 'Other'])}

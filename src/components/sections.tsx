@@ -61,7 +61,7 @@ export function PhoneLink({ phone, className, style }: { phone: string; classNam
 }
 
 /** Navy closing band over the shard field, with exactly one copper quote. */
-export function ClosingBand({ s, headline, secondary = true }: { s: Settings; headline?: string; secondary?: boolean }) {
+export function ClosingBand({ s, headline, line, secondary = true, ctaHref = '/contact' }: { s: Settings; headline?: string; line?: string; secondary?: boolean; ctaHref?: string }) {
   return (
     <section className="closing shard-field band" aria-label="Start a conversation">
       <span className="shard-highlight" style={{ right: '12%', top: 'calc(50% - 30px)' }} aria-hidden="true">
@@ -70,8 +70,9 @@ export function ClosingBand({ s, headline, secondary = true }: { s: Settings; he
       <div className="wrap">
         <span className="eyebrow">{s.closingEyebrow}</span>
         <h2 className="h1">{headline || s.closingHeadline}</h2>
+        {line && <p className="body-lg muted" style={{ margin: 0, maxWidth: '52ch' }}>{line}</p>}
         <div className="btn-row" style={{ marginTop: 8 }}>
-          <Btn href="/contact">{s.primaryCta}</Btn>
+          <Btn href={ctaHref}>{s.primaryCta}</Btn>
           {secondary && <Btn href="/stories" variant="secondary">{s.secondaryCta}</Btn>}
         </div>
       </div>

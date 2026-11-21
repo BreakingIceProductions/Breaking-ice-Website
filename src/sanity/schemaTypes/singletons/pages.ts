@@ -2,6 +2,7 @@ import { CogIcon } from '@sanity/icons/Cog'
 import { DocumentIcon } from '@sanity/icons/Document'
 import { HomeIcon } from '@sanity/icons/Home'
 import { defineArrayMember, defineField, defineType } from 'sanity'
+import { COPY, WHO_WE_ARE } from '../../../lib/offers'
 import { seoField, seoFieldTab } from '../objects/shared'
 
 const text = (name: string, title?: string) => defineField({ name, title, type: 'string' })
@@ -78,21 +79,77 @@ export const homePage = defineType({
   groups: [
     { name: 'hero', title: 'Hero', default: true },
     { name: 'sections', title: 'Sections' },
+    { name: 'proof', title: 'Proof' },
     { name: 'seo', title: 'SEO' },
+    { name: 'retired', title: 'Old sections (not shown)' },
   ],
   fields: [
     defineField({ name: 'heroReel', title: 'Hero reel (silent loop)', type: 'videoUrl', group: 'hero' }),
     defineField({ name: 'heroPoster', title: 'Hero poster image', type: 'altImage', group: 'hero' }),
     defineField({ name: 'fullReel', title: 'Full reel (with sound)', type: 'videoUrl', group: 'hero' }),
     defineField({ ...text('heroEyebrow', 'Hero eyebrow'), group: 'hero' }),
-    defineField({ ...text('heroHeadline', 'Hero headline'), group: 'hero' }),
-    defineField({ ...longText('heroSubline', 'Hero subline'), group: 'hero' }),
-    defineField({ ...text('introEyebrow', 'Intro eyebrow'), group: 'sections' }),
-    defineField({ name: 'introBody', title: 'Intro', type: 'text', rows: 4, group: 'sections' }),
+    copy('heroTitle', 'Hero title (big headline)', COPY.home.heroTitle, 'hero'),
+    defineField({ ...text('heroHeadline', 'Hero line under the title'), group: 'hero' }),
+    defineField({ ...longText('heroSubline', 'Meta description fallback'), group: 'hero', description: 'Not shown on the page; used for Google when the SEO tab is empty.' }),
+    // The problem
+    copy('problemEyebrow', 'Problem eyebrow', COPY.home.problemEyebrow, 'sections'),
+    copy('problemTitle', 'Problem title', COPY.home.problemTitle, 'sections'),
+    defineField({ ...longText('problemBody', 'Problem text'), group: 'sections', description: `Leave empty to use “${COPY.home.problemBody}”` }),
+    defineField({ name: 'hookVideo', title: 'Hook video (optional)', type: 'videoUrl', group: 'sections', description: 'Shown beside the problem section only when set.' }),
+    defineField({ name: 'hookPoster', title: 'Hook video still', type: 'altImage', group: 'sections', description: 'Optional. Defaults to the Vimeo thumbnail.' }),
+    // What we believe
+    copy('beliefEyebrow', 'Belief eyebrow', COPY.home.beliefEyebrow, 'sections'),
+    copy('beliefTitle', 'Belief title', COPY.home.beliefTitle, 'sections'),
+    defineField({ ...longText('beliefBody', 'Belief text'), group: 'sections', description: `Leave empty to use “${COPY.home.beliefBody}”` }),
+    defineField({ ...longText('whoWeAre', 'Who-we-are line'), group: 'sections', description: 'A plain, quotable sentence. Leave empty to use the built-in line.' }),
+    // The ladder
+    copy('ladderEyebrow', 'Offers eyebrow', COPY.home.ladderEyebrow, 'sections'),
+    copy('ladderTitle', 'Offers title', COPY.home.ladderTitle, 'sections'),
+    defineField({ ...longText('ladderIntro', 'Offers intro'), group: 'sections', description: `Leave empty to use “${COPY.home.ladderIntro}”` }),
+    // Featured stories
+    copy('storiesEyebrow', 'Stories eyebrow', 'Our work', 'sections'),
+    copy('storiesTitle', 'Stories title', 'Stories we have told', 'sections'),
+    // Proof
+    copy('proofEyebrow', 'Proof eyebrow', COPY.home.proofEyebrow, 'proof'),
+    copy('proofTitle', 'Proof title', COPY.home.proofTitle, 'proof'),
+    defineField({ ...longText('proofBody', 'Proof text'), group: 'proof', description: 'Approved figures only. Leave empty to use the North-Wright Airways paragraph.' }),
+    defineField({
+      name: 'proofStats',
+      title: 'Proof numbers',
+      description: 'Only approved, real numbers. Leave empty to use the North-Wright Airways numbers.',
+      type: 'array',
+      group: 'proof',
+      validation: (r) => r.max(4),
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'proofStat',
+          fields: [defineField({ name: 'value', type: 'string' }), defineField({ name: 'label', type: 'string' })],
+          preview: { select: { title: 'value', subtitle: 'label' } },
+        }),
+      ],
+    }),
+    defineField({ name: 'proofProject', title: 'Proof story (optional)', type: 'reference', to: [{ type: 'project' }], group: 'proof', description: 'Leave empty to link the first North-Wright Airways story (or all stories if there is none).' }),
+    copy('logoStripEyebrow', 'Logo strip eyebrow', 'Organizations we work with', 'proof'),
+    copy('logoStripTitle', 'Logo strip title (read by screen readers)', 'Organizations we work with', 'proof'),
+    copy('testimonialsEyebrow', 'Testimonials eyebrow', 'What clients say', 'proof'),
+    copy('testimonialsTitle', 'Testimonials title', 'In their words', 'proof'),
+    defineField({
+      name: 'testimonials',
+      type: 'array',
+      group: 'proof',
+      of: [defineArrayMember({ type: 'reference', to: [{ type: 'testimonial' }] })],
+    }),
+    defineField({ ...longText('closingLine', 'Closing band line'), group: 'sections', description: `Leave empty to use “${COPY.home.closingLine}”` }),
+    seoFieldTab,
+    // Retired in the Nov 2026 restructure. Kept so nothing typed here is lost; the page no longer shows them.
+    defineField({ ...text('introEyebrow', 'Intro eyebrow'), group: 'retired' }),
+    defineField({ name: 'introBody', title: 'Intro', type: 'text', rows: 4, group: 'retired' }),
     defineField({
       name: 'stats',
+      title: 'Stats (old)',
       type: 'array',
-      group: 'sections',
+      group: 'retired',
       validation: (r) => r.max(4),
       of: [
         defineArrayMember({
@@ -102,32 +159,19 @@ export const homePage = defineType({
         }),
       ],
     }),
-    copy('logoStripEyebrow', 'Logo strip eyebrow', 'Trusted by', 'sections'),
-    copy('logoStripTitle', 'Logo strip title (read by screen readers)', 'Organizations we’ve worked with', 'sections'),
-    copy('processEyebrow', 'Process eyebrow', 'How we work', 'sections'),
-    defineField({ ...text('processTitle', 'Process title'), group: 'sections' }),
-    copy('storiesEyebrow', 'Stories eyebrow', 'Selected stories', 'sections'),
-    defineField({ ...text('storiesTitle', 'Stories title'), group: 'sections' }),
-    copy('testimonialsEyebrow', 'Testimonials eyebrow', 'Testimonials', 'sections'),
-    defineField({ ...text('testimonialsTitle', 'Testimonials title'), group: 'sections' }),
-    defineField({
-      name: 'testimonials',
-      type: 'array',
-      group: 'sections',
-      of: [defineArrayMember({ type: 'reference', to: [{ type: 'testimonial' }] })],
-    }),
-    copy('checklistEyebrow', 'Checklist eyebrow', 'Sound familiar?', 'sections'),
-    defineField({ ...text('checklistTitle', 'Checklist title'), group: 'sections' }),
-    defineField({ name: 'situations', type: 'array', group: 'sections', of: [defineArrayMember({ type: 'string' })] }),
-    defineField({ ...text('checklistClosing', 'Checklist closing line'), group: 'sections' }),
-    copy('servicesEyebrow', 'Services eyebrow', 'Services', 'sections'),
-    defineField({ ...text('servicesTitle', 'Services title'), group: 'sections' }),
-    copy('founderEyebrow', 'Founder eyebrow', 'Founder', 'sections'),
-    defineField({ ...text('founderTitle', 'Founder title'), group: 'sections' }),
-    defineField({ name: 'founder', type: 'reference', to: [{ type: 'person' }], group: 'sections' }),
-    copy('locationsEyebrow', 'Locations eyebrow', 'Locations', 'sections'),
-    defineField({ ...text('locationsTitle', 'Locations title'), group: 'sections' }),
-    seoFieldTab,
+    defineField({ ...text('processEyebrow', 'Process eyebrow'), group: 'retired' }),
+    defineField({ ...text('processTitle', 'Process title'), group: 'retired' }),
+    defineField({ ...text('checklistEyebrow', 'Checklist eyebrow'), group: 'retired' }),
+    defineField({ ...text('checklistTitle', 'Checklist title'), group: 'retired' }),
+    defineField({ name: 'situations', type: 'array', group: 'retired', of: [defineArrayMember({ type: 'string' })] }),
+    defineField({ ...text('checklistClosing', 'Checklist closing line'), group: 'retired' }),
+    defineField({ ...text('servicesEyebrow', 'Services eyebrow'), group: 'retired' }),
+    defineField({ ...text('servicesTitle', 'Services title'), group: 'retired' }),
+    defineField({ ...text('founderEyebrow', 'Founder eyebrow'), group: 'retired' }),
+    defineField({ ...text('founderTitle', 'Founder title'), group: 'retired' }),
+    defineField({ name: 'founder', type: 'reference', to: [{ type: 'person' }], group: 'retired' }),
+    defineField({ ...text('locationsEyebrow', 'Locations eyebrow'), group: 'retired' }),
+    defineField({ ...text('locationsTitle', 'Locations title'), group: 'retired' }),
   ],
   preview: { prepare: () => ({ title: 'Home page' }) },
 })
@@ -141,6 +185,7 @@ export const aboutPage = defineType({
     copy('heroEyebrow', 'Hero eyebrow', 'About'),
     text('heroHeadline', 'Hero headline'),
     longText('heroIntro', 'Hero intro'),
+    defineField({ ...longText('whoWeAre', 'Who-we-are line'), description: `Leave empty to use “${WHO_WE_ARE}”` }),
     defineField({ name: 'heroVideo', title: 'Hero video', type: 'videoUrl' }),
     defineField({ name: 'heroPoster', title: 'Hero video still', description: 'Shown while the video loads.', type: 'altImage' }),
     copy('storyEyebrow', 'Story eyebrow', 'Our story'),
@@ -196,6 +241,20 @@ const simplePage = (name: string, title: string) =>
   })
 
 export const storiesPage = simplePage('storiesPage', 'Stories page')
+export const faqPage = defineType({
+  name: 'faqPage',
+  title: 'FAQ page',
+  type: 'document',
+  icon: DocumentIcon,
+  fields: [
+    copy('eyebrow', 'Eyebrow', COPY.faq.eyebrow),
+    copy('headline', 'Headline', COPY.faq.headline),
+    defineField({ ...longText('intro', 'Intro'), description: `Leave empty to use “${COPY.faq.intro}”` }),
+    copy('closingHeadline', 'Closing headline', COPY.faq.closingHeadline),
+    seoField,
+  ],
+  preview: { prepare: () => ({ title: 'FAQ page' }) },
+})
 export const servicesPage = defineType({
   name: 'servicesPage',
   title: 'Services page',
@@ -205,6 +264,12 @@ export const servicesPage = defineType({
     text('eyebrow'),
     text('headline'),
     longText('intro'),
+    copy('ladderEyebrow', 'Offers eyebrow', COPY.services.ladderEyebrow),
+    copy('ladderTitle', 'Offers title', COPY.services.ladderTitle),
+    defineField({ ...longText('ladderIntro', 'Offers intro'), description: `Leave empty to use “${COPY.services.ladderIntro}”` }),
+    copy('kindsEyebrow', 'Kinds of film eyebrow', COPY.services.kindsEyebrow),
+    copy('kindsTitle', 'Kinds of film title', COPY.services.kindsTitle),
+    copy('kindsIntro', 'Kinds of film line', COPY.services.kindsIntro),
     defineField({ ...text('processTitle', 'Process title'), description: 'Defaults to “Four steps, every time”.' }),
     seoField,
   ],
@@ -221,6 +286,10 @@ export const contactPage = defineType({
     text('headline'),
     longText('intro'),
     copy('submitLabel', 'Submit button label', 'Send'),
+    copy('offerLabel', 'Offer question label', COPY.contact.offerLabel),
+    copy('offerHelp', 'Offer question help text', COPY.contact.offerHelp),
+    copy('storyLabel', 'Story field label', COPY.contact.storyLabel),
+    copy('storyPlaceholder', 'Story field example text', COPY.contact.storyPlaceholder),
     defineField({ name: 'budgetOptions', type: 'array', of: [defineArrayMember({ type: 'string' })] }),
     defineField({ name: 'timelineOptions', type: 'array', of: [defineArrayMember({ type: 'string' })] }),
     defineField({ name: 'heardOptions', title: 'How did you hear options', type: 'array', of: [defineArrayMember({ type: 'string' })] }),
