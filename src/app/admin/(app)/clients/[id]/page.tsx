@@ -1,4 +1,7 @@
 import '../../../../css/admin-pages.css'
+import '../../../../css/admin-simple-a.css'
+import '../../../../css/admin-simple-b.css'
+import '../../../../css/admin-simple-c.css'
 import { requireAdmin } from '@/admin/auth'
 import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import Link from 'next/link'
@@ -12,6 +15,8 @@ import { tagsFor } from '@/admin/people-shared'
 import { stageIndex, stageTitle } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
 import { TagChips } from '@/admin/ui/tag-chips'
+import { Segments } from '@/admin/ui/graphics'
+import { StageChip, Timeline } from '@/admin/ui/viz-c'
 import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
 
 type Props = { params: Promise<{ id: string }>; searchParams?: Promise<{ added?: string; found?: string }> }
@@ -26,9 +31,9 @@ const studioHref = (id: string) => `/studio/portal/structure/client;${encodeURIC
 
 /** Where each project sits in the relationship: on the go, still a conversation, or done. */
 const GROUPS: { title: string; test: (p: OfficeProject) => boolean; empty: string }[] = [
-  { title: 'On the go', test: (p) => stageIndex(p.pipelineStage) >= stageIndex('booked') && stageIndex(p.pipelineStage) < stageIndex('delivered'), empty: 'Nothing in production right now.' },
+  { title: 'On the go', test: (p) => stageIndex(p.pipelineStage) >= stageIndex('booked') && stageIndex(p.pipelineStage) < stageIndex('delivered'), empty: 'None right now' },
   { title: 'In conversation', test: (p) => stageIndex(p.pipelineStage) < stageIndex('booked'), empty: '' },
-  { title: 'Done together', test: (p) => stageIndex(p.pipelineStage) >= stageIndex('delivered'), empty: 'No finished projects here yet.' },
+  { title: 'Done together', test: (p) => stageIndex(p.pipelineStage) >= stageIndex('delivered'), empty: 'None yet' },
 ]
 
 export default async function ClientPage({ params, searchParams }: Props) {
@@ -63,16 +68,20 @@ export default async function ClientPage({ params, searchParams }: Props) {
             <a className="a-chip a-chip-link" href={`/api/admin/view-as?client=${encodeURIComponent(c._id)}`} target="_blank" rel="noopener noreferrer">View their portal<span className="sr-only"> (opens in a new tab)</span> ↗</a>
           </div>
         </div>
-        <Link className="btn btn-primary" href={`/admin/projects/new?client=${encodeURIComponent(c._id)}`}>New project</Link>
+        <Link className="btn sa-copper" href={`/admin/projects/new?client=${encodeURIComponent(c._id)}`}>New project</Link>
       </header>
 
       {sp.added && <p className="ap-note" role="status">Client added. Nobody was emailed. Start their first project with New project.</p>}
       {sp.found && <p className="ap-note" role="status">This client was already here (same organisation or email), so nothing new was made.</p>}
 
-      <dl className="a-kpis ap-kpis-dl">
-        <div className="a-kpi"><dt className="a-kpi-label">Projects</dt><dd className="a-kpi-num">{c.projects.length}</dd><dd className="a-kpi-note">{delivered} delivered</dd></div>
-        <div className="a-kpi"><dt className="a-kpi-label">Invoiced</dt><dd className="a-kpi-num">{cad(c.billed)}</dd><dd className="a-kpi-note">through Zoho Books</dd></div>
-        <div className="a-kpi"><dt className="a-kpi-label">Outstanding</dt><dd className="a-kpi-num">{cad(outstanding)}</dd><dd className="a-kpi-note">{outstanding > 0 ? 'still to be paid' : 'all paid up'}</dd></div>
+      <dl className="a-kpis ap-kpis-dl sc-kpis">
+        <div className="a-kpi">
+          <dt className="a-kpi-label">Projects</dt>
+          <dd className="a-kpi-num">{c.projects.length}</dd>
+          {c.projects.length > 0 && <dd className="sc-kpi-mark"><Segments total={c.projects.length} done={delivered} label={`${delivered} of ${c.projects.length} delivered`} /><span className="sa-muted small" aria-hidden="true">{delivered} delivered</span></dd>}
+        </div>
+        <div className="a-kpi" title="Invoiced through Zoho Books"><dt className="a-kpi-label">Invoiced</dt><dd className="a-kpi-num">{cad(c.billed)}</dd></div>
+        <div className={`a-kpi${outstanding > 0 ? ' is-hot' : ''}`}><dt className="a-kpi-label">Outstanding</dt><dd className="a-kpi-num">{cad(outstanding)}</dd>{outstanding <= 0 && c.billed > 0 && <dd className="sc-kpi-mark"><span className="sb-chip sb-ok"><span className="sb-dot" aria-hidden="true" />Paid up</span></dd>}</div>
         <div className="a-kpi"><dt className="a-kpi-label">Last activity</dt><dd className="a-kpi-num ap-kpi-num-sm">{c.lastActivity ? fmtAgo(c.lastActivity) : '—'}</dd></div>
       </dl>
 
@@ -85,7 +94,7 @@ export default async function ClientPage({ params, searchParams }: Props) {
               <section key={g.title} className="p-card" aria-label={g.title}>
                 <div className="a-card-head">
                   <h2 className="a-h2">{g.title}</h2>
-                  <span className="muted small">{list.length}</span>
+                  <span className="sa-count">{list.length}</span>
                 </div>
                 {list.length ? (
                   <ul className="a-rows">
@@ -98,14 +107,14 @@ export default async function ClientPage({ params, searchParams }: Props) {
                           </span>
                         </Link>
                         <span className="a-row-side">
-                          <span className="a-stage">{stageTitle(p.pipelineStage)}</span>
+                          <StageChip stage={p.pipelineStage} title={stageTitle(p.pipelineStage)} />
                           {p.quoteAmount ? <span className="muted small">{cad(p.quoteAmount)}</span> : null}
                         </span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="muted a-empty">{g.empty}</p>
+                  <p className="sc-empty">{g.empty}</p>
                 )}
               </section>
             )
@@ -137,16 +146,9 @@ export default async function ClientPage({ params, searchParams }: Props) {
           <section className="p-card" aria-labelledby="h-feed">
             <h2 id="h-feed" className="a-h2">Recent activity</h2>
             {feed.length ? (
-              <ul className="a-feed">
-                {feed.map((f, i) => (
-                  <li key={i}>
-                    <span className="stack ap-tight"><span>{activityText(f.text)}</span><span className="muted small">{f.project}</span></span>
-                    <time className="muted small" dateTime={f.at}>{fmtAgo(f.at)}</time>
-                  </li>
-                ))}
-              </ul>
+              <Timeline label="Recent activity, newest first" items={feed.map((f, i) => ({ key: String(i), text: activityText(f.text), sub: f.project, when: fmtAgo(f.at), dateTime: f.at }))} />
             ) : (
-              <p className="muted a-empty">Versions, comments, stage changes and notes show up here.</p>
+              <p className="sc-empty">None yet</p>
             )}
           </section>
         </aside>

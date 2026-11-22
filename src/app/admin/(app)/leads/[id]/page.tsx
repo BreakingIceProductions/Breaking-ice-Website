@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import '../../../../css/admin-pages.css'
+import '../../../../css/admin-simple-a.css'
+import '../../../../css/admin-simple-b.css'
+import '../../../../css/admin-simple-c.css'
 import { notFound, redirect } from 'next/navigation'
 import { requireAdmin } from '@/admin/auth'
 import { Breadcrumb } from '@/admin/ui/breadcrumb'
@@ -11,7 +14,10 @@ import { budgetTitle, fmtTime, isContactLog, isSalesStage, LOST_REASONS, typeTit
 import { getPeople } from '@/admin/people'
 import { tagsFor } from '@/admin/people-shared'
 import { EmailComposer, SentEmails } from '@/admin/ui/email'
+import { HelpTip } from '@/admin/ui/help-tip'
 import { LeadActivity, LeadArchive, LeadFields, LeadSteps, type LeadLogEntry } from '@/admin/ui/lead'
+import { Chip } from '@/admin/ui/viz'
+import { DaysChip } from '@/admin/ui/viz-c'
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ email?: string | string[] }> }
 
@@ -73,6 +79,8 @@ export default async function LeadPage({ params, searchParams }: Props) {
     proposal: { title: 'Write the quote', detail: quote ?? 'Call done. Price it up while it’s fresh.' },
     quoted: { title: 'Follow up on the quote', detail: quote ?? 'No quote has gone out through the portal yet.' },
   }[p.pipelineStage as 'lead' | 'call' | 'proposal' | 'quoted']
+  // The full line for hover and screen readers; the chip shows the date only.
+  const lastContactText = lastContact ? `Last contact: ${lastContact.text}, ${day(ymd(new Date(lastContact.at)))}` : log[0] ? `No contact logged yet. Latest activity: ${log[0].text}, ${day(ymd(new Date(log[0].at)))}` : 'No contact logged yet'
   const reason = LOST_REASONS.find((r) => r.value === lead.lostReason)?.title
 
   return (
@@ -82,7 +90,11 @@ export default async function LeadPage({ params, searchParams }: Props) {
       <header className="a-head">
         <div className="stack ap-gap-2 ap-minw0">
           <h1 className="a-h1">{title}</h1>
-          <p className="muted m0">{[company, typeTitle(p.projectType), budgetTitle(lead.budget)].filter(Boolean).join(' · ')}</p>
+          <ul className="sc-chips" aria-label="About this lead">
+            <li className="sa-chip">{company}</li>
+            {typeTitle(p.projectType) && <li className="sa-chip">{typeTitle(p.projectType)}</li>}
+            {budgetTitle(lead.budget) && <li className="sa-chip"><span className="sr-only">Budget </span>{budgetTitle(lead.budget)}</li>}
+          </ul>
         </div>
         <div className="btn-row">
           <Link className="text-link small" href={projectPage}>Open project page</Link>
@@ -93,20 +105,30 @@ export default async function LeadPage({ params, searchParams }: Props) {
       </header>
 
       {p.archived && (
-        <p className="ap-note" role="status">Archived{reason ? ` · ${reason}` : ''}. Bring them back from the Archive bar on the Pipeline.</p>
+        <div className="sc-chips" role="status">
+          <Chip tone="muted" label={`Archived${reason ? `: ${reason}` : ''}`}>Archived{reason ? ` · ${reason}` : ''}</Chip>
+          <HelpTip label="About bringing a lead back">Bring them back from the Archive bar on the Pipeline.</HelpTip>
+        </div>
       )}
 
       <section className="p-card ld-stage" aria-label="Where they are">
         <LeadSteps projectId={p._id} projectTitle={p.title} stage={p.pipelineStage} quoteSent={Boolean(p.quote?.sharedAt)} />
-        <p className="muted small m0">Pick a stage to move them there. Signed makes the project.</p>
       </section>
 
       <section className="bd-nextup ld-nextup" aria-label="Next up">
         <div className="stack ap-tight ap-minw0">
           <span className="eyebrow">Next up</span>
           <strong className="ld-next-title">{next.title}</strong>
-          <span className="small">{next.detail}</span>
-          {moved != null && <span className="small muted">Moved here {moved === 0 ? 'today' : `${moved} day${moved === 1 ? '' : 's'} ago`}</span>}
+          {/* Before the call the detail only repeats the button ("Write to them"), so it's left to the button. */}
+          {!(p.pipelineStage === 'lead' && email) && <span className="small">{next.detail}</span>}
+          <span className="sc-chips">
+            <DaysChip days={moved} />
+            <span className="sa-chip sc-icon-chip" title={lastContactText}>
+              <span aria-hidden="true">{lastContact ? '✆' : '○'}</span>
+              <span className="sr-only">Last contact: </span>
+              {lastContact ? day(ymd(new Date(lastContact.at))) : 'No contact logged'}
+            </span>
+          </span>
         </div>
         {p.pipelineStage === 'proposal' && (
           <div className="btn-row">
@@ -123,13 +145,6 @@ export default async function LeadPage({ params, searchParams }: Props) {
         )}
       </section>
 
-      <div className="stack">
-        <p className="small m0">
-          <strong>Last contact:</strong>{' '}
-          {lastContact ? `${lastContact.text}, ${day(ymd(new Date(lastContact.at)))}` : log[0] ? `none logged yet. Latest activity: ${log[0].text}, ${day(ymd(new Date(log[0].at)))}` : 'none logged yet.'}
-        </p>
-      </div>
-
       <div className="a-split">
         <div className="a-col stack">
           <LeadFields
@@ -140,8 +155,8 @@ export default async function LeadPage({ params, searchParams }: Props) {
           />
         </div>
         <aside className="stack a-col a-aside ld-aside" aria-label="Activity">
-          <LeadActivity projectId={p._id} today={today()} entries={entries} />
-          <SentEmails emails={p.office.emails ?? []} />
+          <LeadActivity simple projectId={p._id} today={today()} entries={entries} />
+          {(p.office.emails ?? []).length > 0 && <SentEmails emails={p.office.emails ?? []} />}
         </aside>
       </div>
     </div>

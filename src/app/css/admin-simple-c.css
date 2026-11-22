@@ -1,0 +1,156 @@
+/* ═════════════════════════════════════════════════════════
+   Back office, simplified, second pass ("Direction A: calm cards, one action each").
+   Pipeline, All projects, Lead, New lead, People, Clients, client page, New client, New project.
+   Classes are `.sc-*`. Reads the admin tokens from admin.css, so it follows light and dark; reuses the
+   `.sa-` look (admin-simple-a.css) and the `.sb-` chips (admin-simple-b.css), which these pages also import.
+   Rules: one copper button per screen, statuses are dots and chips, 44px touch targets, phone = cards.
+   ═════════════════════════════════════════════════════════ */
+
+/* ── Shared ────────────────────────────────────────────── */
+.admin .sc-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.admin .sc-title .sa-help { align-self: center; }
+.admin .sc-title .sa-help-text:not([hidden]) { order: 3; }
+.admin .sc-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0; padding: 0; list-style: none; }
+.admin .sc-icon-chip { display: inline-flex; align-items: center; gap: 6px; }
+.admin .sc-empty { margin: 0; color: var(--a-muted); font-size: var(--a-fs-sm); }
+
+/* A button that opens a closed form or list (log contact, more details, filter). */
+.admin .sc-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+.admin .sc-toggle[aria-expanded='true'] { background: var(--a-tint); }
+.admin .sc-toggle .sc-n { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--a-accent); color: #fff; font-size: var(--a-fs-xs); font-weight: 700; }
+
+/* "More details" fold in forms. */
+.admin .sc-more { border-top: 1px solid var(--a-hairline); padding-top: var(--space-3); }
+.admin .sc-more > summary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-weight: 600; color: var(--a-text); list-style: none; border-radius: 8px; }
+.admin .sc-more > summary::-webkit-details-marker { display: none; }
+.admin .sc-more > summary::before { content: '+'; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--a-tint); font-weight: 700; line-height: 1; }
+.admin .sc-more[open] > summary::before { content: '−'; }
+.admin .sc-more > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.admin .sc-more > .ld-form-grid { margin-top: var(--space-3); }
+.admin .sc-form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+
+/* ── Mini stage bar (All projects) ─────────────────────── */
+.admin .sc-ministage { display: inline-flex; flex-direction: column; gap: 6px; min-width: 0; }
+.admin .sc-ministage .gx-seg { gap: 2px; }
+.admin .sc-ministage .gx-seg > span { width: 10px; height: 6px; border-radius: 2px; }
+.admin .sc-ministage-name { font-size: var(--a-fs-sm); color: var(--a-strong); white-space: nowrap; }
+
+/* ── Days in stage chip ────────────────────────────────── */
+.admin .sc-days { display: inline-flex; align-items: center; min-height: 24px; padding: 0 9px; border-radius: 999px; background: var(--a-tint); color: var(--a-muted); font-size: var(--a-fs-label); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.admin .sc-days.is-cold { background: color-mix(in srgb, var(--a-accent) 16%, transparent); color: var(--a-accent-text); }
+.admin .sc-days-flame { margin-right: 5px; font-size: .7em; color: var(--a-accent); vertical-align: 1px; }
+
+/* ── Timeline with dots ────────────────────────────────── */
+.admin .sc-timeline { position: relative; list-style: none; margin: 0; padding: 0; }
+.admin .sc-timeline li { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 0 0 16px 22px; }
+.admin .sc-timeline li:last-child { padding-bottom: 0; }
+.admin .sc-timeline li::before { content: ''; position: absolute; left: 5px; top: 14px; bottom: -2px; width: 2px; background: var(--a-hairline); }
+.admin .sc-timeline li:last-child::before { display: none; }
+.admin .sc-tl-dot { position: absolute; left: 0; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--a-text); box-shadow: 0 0 0 3px var(--a-card); }
+.admin .sc-timeline li:first-child .sc-tl-dot { background: var(--a-accent); }
+.admin .sc-timeline li.is-note .sc-tl-dot { background: var(--a-card); box-shadow: inset 0 0 0 2px var(--a-text), 0 0 0 3px var(--a-card); }
+.admin .sc-tl-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.4; overflow-wrap: anywhere; }
+.admin .sc-tl-sub { font-size: var(--a-fs-sm); color: var(--a-muted); }
+.admin .sc-tl-when { flex: none; font-size: var(--a-fs-label); color: var(--a-muted); white-space: nowrap; font-variant-numeric: tabular-nums; padding-top: 2px; }
+
+/* ── Pipeline ──────────────────────────────────────────── */
+.admin .pl-page .sc-card-open { gap: 6px; }
+.admin .sc-card-marks { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 24px; margin-top: 2px; }
+.admin .sc-card-marks .gx-seg { gap: 3px; flex-wrap: wrap; }
+.admin .sc-card-marks .gx-seg > span { width: 18px; }
+.admin .bd-card.is-cold { border-color: color-mix(in srgb, var(--a-accent) 45%, var(--a-hairline)); }
+.admin .sc-card-foot { justify-content: flex-end; padding-block: 6px; }
+.admin .sc-going { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); padding: 12px 16px; border: 1px solid var(--a-hairline); border-radius: 16px; background: var(--a-card); }
+.admin .sc-going-list { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; font-size: var(--a-fs-sm); color: var(--a-muted); }
+.admin .sc-going-list li { white-space: nowrap; }
+.admin .sc-going-list strong { color: var(--a-text); font-variant-numeric: tabular-nums; }
+.admin .sc-going-list li.is-hot strong { color: var(--a-accent-text); }
+.admin .sc-going .text-link { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* ── All projects ──────────────────────────────────────── */
+.admin .sc-ptable .sc-pt-next .sa-chip { gap: 8px; }
+.admin .sc-pt-date { font-weight: 600; color: var(--a-text); }
+.admin .sc-pt-what { color: var(--a-muted); max-width: 18ch; overflow: hidden; text-overflow: ellipsis; }
+.admin .sc-pt-stagecell { display: inline-flex; align-items: center; gap: 8px; }
+.admin .sc-menu { position: relative; }
+.admin .sc-menu > summary { list-style: none; }
+.admin .sc-menu > summary::-webkit-details-marker { display: none; }
+.admin .sc-menu-btn { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; color: var(--a-muted); font-size: 1.25rem; line-height: 1; }
+.admin .sc-menu-btn:hover, .admin .sc-menu[open] > .sc-menu-btn { background: var(--a-tint); color: var(--a-text); }
+.admin .sc-menu-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.admin .sc-menu-pop { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 220px; padding: 10px; border: 1px solid var(--a-hairline-strong); border-radius: 14px; background: var(--a-card); box-shadow: 0 10px 30px rgb(0 0 0 / .14); }
+.admin .sc-menu-pop .a-select, .admin .sc-menu-pop select { width: 100%; }
+
+/* Phone: each project is a card (title and money on top, client, then date and stage). */
+@media (max-width: 767px) {
+  .admin .sc-ptable, .admin .sc-ptable tbody { display: block; width: 100%; min-width: 0 !important; }
+  .admin .p-card:has(.sc-ptable) .a-table-scroll { overflow: visible; }
+  .admin .sc-ptable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .admin .p-card:has(.sc-ptable) { padding: 8px; }
+  .admin .sc-ptable tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 't q' 'c s' 'n s'; align-items: center; gap: 4px 12px; padding: 12px 10px; border-top: 1px solid var(--a-hairline); }
+  .admin .sc-ptable tr:first-child { border-top: 0; }
+  .admin .sc-ptable td { display: block; padding: 0; border: 0; min-width: 0; }
+  .admin .sc-pt-title { grid-area: t; }
+  .admin .sc-pt-quote { grid-area: q; text-align: right; font-weight: 600; }
+  .admin .sc-pt-client { grid-area: c; font-size: var(--a-fs-sm); color: var(--a-muted); }
+  .admin .sc-pt-next { grid-area: n; }
+  .admin .sc-pt-stage { grid-area: s; justify-self: end; align-self: end; width: auto !important; padding-left: 0 !important; }
+  .admin .sc-ptable .sc-menu-btn { width: 40px; height: 44px; }
+  .admin .sc-pt-what { max-width: 12ch; }
+  .admin .sc-pt-quote:has([aria-label='No quote']) { visibility: hidden; }
+  .admin .sc-pt-next:has([aria-label='No date']) { display: none !important; }
+  .admin .sc-ptable .sc-ministage { align-items: flex-end; }
+  .admin .sc-ptable .sc-ministage .gx-seg > span { width: 6px; }
+}
+
+/* ── Lead page ─────────────────────────────────────────── */
+.admin .sc-facts-card { gap: var(--space-3); }
+.admin .sc-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 14px 24px; margin: 0; }
+.admin .sc-facts > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.admin .sc-facts dt { font-size: var(--a-fs-label); color: var(--a-muted); }
+.admin .sc-facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.admin .sc-notes { display: flex; flex-direction: column; gap: 4px; padding-top: var(--space-3); border-top: 1px solid var(--a-hairline); white-space: pre-line; }
+.admin .sc-add { align-self: flex-start; min-height: 44px; }
+.admin .sc-log > .sa-reveal-btn { align-self: flex-start; }
+.admin .sc-log .ld-log { margin-top: var(--space-3); }
+/* The "Saved" tick stays out of the reading order until it shows. */
+.admin .sc-saved { visibility: hidden; transition: opacity .3s, visibility 0s .3s; }
+.admin .sc-saved.on { visibility: visible; transition: opacity .15s; }
+.admin .ld-nextup .sc-chips { margin-top: 6px; }
+
+/* ── People ────────────────────────────────────────────── */
+.admin .sc-quiet-count { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.admin .pp-tagfilter[hidden] { display: none; }
+.admin .pp-tagfilter:not([hidden]) { padding: 12px 14px; border-radius: 14px; background: var(--a-tint); }
+@media (max-width: 767px) {
+  .admin .sc-pcards, .admin .sc-pcards tbody { display: block; width: 100%; min-width: 0 !important; }
+  .admin .pp-card:has(.sc-pcards) .a-table-scroll { overflow: visible; }
+  .admin .sc-pcards thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .admin .pp-card:has(.sc-pcards) { padding: 6px; }
+  .admin .sc-pcards tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'n s' 'c c' 'r r' 'g g'; gap: 4px 10px; padding: 12px 10px; border-top: 1px solid var(--a-hairline); }
+  .admin .sc-pcards tr:first-child { border-top: 0; }
+  .admin .sc-pcards td { display: block; padding: 0; border: 0; min-width: 0; }
+  .admin .sc-pc-name { grid-area: n; }
+  .admin .sc-pc-status { grid-area: s; justify-self: end; }
+  .admin .sc-pc-co { grid-area: c; font-size: var(--a-fs-sm); }
+  .admin .sc-pc-reach { grid-area: r; display: flex !important; flex-wrap: wrap; gap: 0 14px; font-size: var(--a-fs-sm); }
+  .admin .sc-pc-tags { grid-area: g; }
+  .admin .sc-pc-tags:has([aria-label='No tags']) { display: none !important; }
+  .admin .sc-pcards .pp-tags { min-width: 0; }
+  .admin .sc-pc-reach .pp-reach { display: inline-flex; align-items: center; min-height: 32px; overflow-wrap: anywhere; }
+}
+
+/* ── Clients (column browser) and client page ─────────── */
+.admin .sc-clients .fd-row .sb-initials { width: 32px; height: 32px; font-size: var(--a-fs-xs); }
+.admin .sc-clients .fd-row.on .sb-initials { background: color-mix(in srgb, var(--a-on-sel) 18%, transparent); box-shadow: none; color: inherit; }
+.admin .sc-fd-sub { display: flex; margin-top: 4px; }
+.admin .sc-count-chip.sc-count-inline { margin-left: 0; }
+.admin .sc-count-chip { flex: none; display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 24px; margin-left: auto; padding: 0 8px; border-radius: 999px; background: var(--a-tint); color: var(--a-strong); font-size: var(--a-fs-label); font-weight: 700; font-variant-numeric: tabular-nums; }
+.admin .sc-clients .fd-row.on .sc-count-chip { background: color-mix(in srgb, var(--a-on-sel) 18%, transparent); color: inherit; }
+.admin .sc-clients .fd-row.on .sb-chip { background: color-mix(in srgb, var(--a-on-sel) 18%, transparent); color: inherit; }
+.admin .sc-kpis .a-kpi-num { white-space: nowrap; overflow-wrap: normal; font-size: clamp(1.25rem, .9rem + 1.1vw, 1.75rem); }
+.admin .sc-kpis .ap-kpi-num-sm { font-size: clamp(1.05rem, .85rem + .6vw, 1.25rem); }
+.admin .sc-kpi-mark { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; }
+.admin .sc-kpi-mark .gx-seg { flex-wrap: wrap; }
+.admin .sc-kpi-mark .gx-seg > span { width: 16px; }
+.admin .cp-page .a-row-side { align-items: flex-end; gap: 4px; }

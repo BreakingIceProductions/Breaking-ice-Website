@@ -1,6 +1,11 @@
 import Link from 'next/link'
 import { PendingLink } from '@/admin/ui/pending-link'
 import '../../../css/admin-pages.css'
+import '../../../css/admin-simple-a.css'
+import '../../../css/admin-simple-b.css'
+import '../../../css/admin-simple-d.css'
+import { Initials } from '@/admin/ui/viz'
+import { MiniIcon, NumTile, StateDot } from '@/admin/ui/viz-d'
 import { requireAdmin } from '@/admin/auth'
 import { listProjects } from '@/admin/data'
 import { openPayments, portalsOverview, type PortalCard, type Waiting } from '@/admin/portals'
@@ -35,8 +40,11 @@ function Items({ list, empty }: { list: Waiting[]; empty: string }) {
 
 type Side = 'us' | 'them'
 
-/** Set-up gaps ("No Drive folder yet", "Nothing shared for review yet") read as one quiet line, not as tasks. */
-const SETUP: Record<string, string> = { 'no-drive': 'Drive folder', 'nothing-shared': 'something shared for review' }
+/** Set-up gaps ("No Drive folder yet", "Nothing shared for review yet") read as grey dots, not as tasks. */
+const SETUP: Record<string, string> = { 'no-drive': 'Drive folder', 'nothing-shared': 'Shared for review' }
+/** "No portal address yet": shown once, as a chip by the client's status, not again in the list. */
+const NO_SLUG = 'no-slug'
+const isTask = (w: Waiting) => !SETUP[w.key] && w.key !== NO_SLUG
 
 function Card({ c, side }: { c: PortalCard; side: Side }) {
   const seen = c.lastClient
@@ -47,35 +55,53 @@ function Card({ c, side }: { c: PortalCard; side: Side }) {
         ? 'Client hasn’t opened the quote yet'
         : 'Client hasn’t opened it yet'
   const setup = c.onYou.filter((w) => SETUP[w.key])
-  const onYou = c.onYou.filter((w) => !SETUP[w.key])
+  const noSlug = c.onYou.find((w) => w.key === NO_SLUG)
+  const onYou = c.onYou.filter(isTask)
+  // The count includes the missing address: it's still a thing for us to do, shown as its own chip.
+  const usCount = onYou.length + (noSlug ? 1 : 0)
   const list = side === 'us' ? onYou : c.onClient
-  const other = side === 'us' ? c.onClient.length : onYou.length
+  const seenShort = c.lastClient ? `Seen ${c.lastClient.when}` : c.opened ? 'Opened' : 'Not opened'
   return (
-    <li className="p-card cp-card">
-      <div className="cp-top">
-        <span className="a-client">{c.client}</span>
-        <h3 className="cp-title"><Link className="a-strong-link" href={c.href}>{c.title}</Link></h3>
-        <p className="cp-tags">
-          <span className="a-stage">{c.stage}</span>
-          {c.hidden && <span className="cp-tag">Hidden from the client</span>}
-        </p>
-        <p className="muted small cp-see">
-          {c.hidden ? 'They can’t see this project.' : c.noAddress ? 'They can’t open it yet: it has no portal address.' : <>They see “{c.theySee}”. {seen}</>}
-        </p>
+    <li className="sa-card sd-pcard">
+      <div className="sd-pc-head">
+        <Initials name={c.client} />
+        <div className="sd-pc-name">
+          <span className="a-client">{c.client}</span>
+          <h3 className="sd-pc-title"><Link className="a-strong-link" href={c.href}>{c.title}</Link></h3>
+        </div>
       </div>
-      <div className="cp-one">
-        <h4 className="cp-h">{side === 'us' ? 'Waiting on us' : 'Waiting on them'}</h4>
-        {list.length ? <Items list={list} empty="" /> : <p className="cp-quiet">{side === 'us' ? 'Nothing for us to do here' : 'Nothing out with them'}</p>}
-        {other > 0 && <p className="cp-quiet">Also {plural(other, 'thing')} waiting on {side === 'us' ? 'them' : 'us'}.</p>}
-        {side === 'us' && setup.length > 0 && (
-          <p className="cp-quiet">
-            Not set up yet:{' '}
-            {setup.map((w, i) => (
-              <span key={w.key}>{i > 0 && ' · '}{w.href ? <Link className="text-link" href={w.href}>{SETUP[w.key]}</Link> : SETUP[w.key]}</span>
-            ))}
-          </p>
+      <p className="sd-pc-dots">
+        <span className="sa-chip" title={c.hidden ? undefined : `They see “${c.theySee}”`}>{c.stage}{!c.hidden && <span className="sr-only">. They see “{c.theySee}”</span>}</span>
+        <StateDot tone={usCount ? 'accent' : 'off'} label={`${usCount} waiting on us`}>Us {usCount}</StateDot>
+        <StateDot tone={c.onClient.length ? 'on' : 'off'} label={`${c.onClient.length} waiting on them`}>Them {c.onClient.length}</StateDot>
+        {c.hidden ? (
+          <span className="sd-seen" title="They can’t see this project."><MiniIcon kind="eye-off" />Hidden<span className="sr-only">: they can’t see this project</span></span>
+        ) : noSlug ? (
+          <a className="sd-seen sd-seen-warn" href={noSlug.href} target="_blank" rel="noopener noreferrer" title={noSlug.text}><MiniIcon kind="eye-off" />No portal address<span className="sr-only">. {noSlug.text} (opens the editor in a new tab)</span></a>
+        ) : (
+          <span className={`sd-seen${c.lastClient || c.opened ? '' : ' sd-seen-quiet'}`} title={seen}><MiniIcon kind={c.lastClient || c.opened ? 'eye' : 'eye-off'} />{seenShort}<span className="sr-only">. {seen}</span></span>
         )}
-      </div>
+      </p>
+      {list.length ? (
+        <div className="sd-pc-list">
+          <h4 className="sr-only">{side === 'us' ? 'Waiting on us' : 'Waiting on them'}</h4>
+          <Items list={list} empty="" />
+        </div>
+      ) : (
+        !noSlug && <p className="sd-pc-clear"><MiniIcon kind="check" />{side === 'us' ? 'Nothing for us' : 'Nothing out with them'}</p>
+      )}
+      {side === 'us' && setup.length > 0 && (
+        <p className="sd-pc-setup">
+          <span className="sr-only">Not set up yet: </span>
+          {setup.map((w) =>
+            w.href ? (
+              <Link key={w.key} className="sd-setup-dot" href={w.href} title={w.text}><span aria-hidden="true" />{SETUP[w.key]}</Link>
+            ) : (
+              <span key={w.key} className="sd-setup-dot" title={w.text}><span aria-hidden="true" />{SETUP[w.key]}</span>
+            ),
+          )}
+        </p>
+      )}
       <p className="cp-foot">
         {c.viewAs && !c.noAddress && (
           <a className="text-link" href={c.viewAs} target="_blank" rel="noopener noreferrer">
@@ -95,7 +121,7 @@ function CardGrid({ cards, side, small }: { cards: PortalCard[]; side: Side; sma
   // Nothing on this side and only a card or two: show them as they are rather than behind a click.
   const first = matching.length || cards.length > 2 ? matching : cards
   const rest = cards.filter((c) => !first.includes(c))
-  const cls = `cp-grid${small ? ' cp-grid-sm' : ''}`
+  const cls = `cp-grid sd-pgrid${small ? ' cp-grid-sm' : ''}`
   return (
     <>
       {first.length ? <ul className={cls}>{first.map((c) => <Card key={c.id} c={c} side={side} />)}</ul> : <p className="cp-quiet">{side === 'us' ? 'Nothing waiting on us here.' : 'Nothing waiting on them here.'}</p>}
@@ -126,38 +152,15 @@ export default async function Portals({ searchParams }: Props) {
   return (
     <div className="a-page">
       <header className="a-head">
-        <div className="stack ap-gap-3">
-          <h1 className="a-h1">Client portals</h1>
-          <p className="muted m0">Every project’s portal from your side: what it’s waiting on, from them and from you.</p>
-        </div>
+        <h1 className="a-h1 sa-h1">Client portals</h1>
       </header>
 
-      <section aria-label="At a glance" className="a-kpis ap-kpis-5">
-        <div className="a-kpi">
-          <span className="a-kpi-label">Live portals</span>
-          <span className="a-kpi-num">{t.portals}</span>
-          <span className="a-kpi-note">{plural(t.active, 'active project')}{t.hidden ? `, ${t.hidden} hidden from the client` : ''}</span>
-        </div>
-        <Link className="a-kpi td-tile" href="/admin/portals?waiting=them#cp-live">
-          <span className="a-kpi-label">Waiting on them</span>
-          <span className="a-kpi-num">{t.onClient}</span>
-          <span className="a-kpi-note">{t.onClient ? `${plural(t.onClient, 'thing')} out, on ${plural(t.onClientProjects, 'project')}` : 'Nothing out with them'}</span>
-        </Link>
-        <Link className="a-kpi td-tile" href="/admin/portals?waiting=us#cp-live">
-          <span className="a-kpi-label">Waiting on us</span>
-          <span className={`a-kpi-num ${t.onYou ? 'a-accent' : ''}`}>{t.onYou}</span>
-          <span className="a-kpi-note">{t.onYou ? `${plural(t.onYou, 'thing')} to do, on ${plural(t.onYouProjects, 'project')}` : 'You’re clear'}</span>
-        </Link>
-        <div className="a-kpi">
-          <span className="a-kpi-label">Not opened yet</span>
-          <span className="a-kpi-num">{t.notOpened}</span>
-          <span className="a-kpi-note">{t.notOpened ? `${plural(t.notOpened, 'portal')} with no client activity recorded` : 'Every live portal has client activity'}</span>
-        </div>
-        <Link className="a-kpi td-tile" href="/admin/library?tab=out&show=out">
-          <span className="a-kpi-label">Out for signature</span>
-          <span className="a-kpi-num">{docs.out.length}</span>
-          <span className="a-kpi-note">{plural(docs.signed.length, 'document')} signed in the last 14 days</span>
-        </Link>
+      <section aria-label="At a glance" className="sd-glance">
+        <NumTile n={t.portals} label="live" title={`${plural(t.portals, 'live portal')}: ${plural(t.active, 'active project')}${t.hidden ? `, ${t.hidden} hidden from the client` : ''}`} />
+        <NumTile n={t.onYou} label="on us" accent={t.onYou > 0} href="/admin/portals?waiting=us#cp-live" title={t.onYou ? `Waiting on us: ${plural(t.onYou, 'thing')} to do, on ${plural(t.onYouProjects, 'project')}` : 'Waiting on us: you’re clear'} />
+        <NumTile n={t.onClient} label="on them" href="/admin/portals?waiting=them#cp-live" title={t.onClient ? `Waiting on them: ${plural(t.onClient, 'thing')} out, on ${plural(t.onClientProjects, 'project')}` : 'Waiting on them: nothing out with them'} />
+        <NumTile n={t.notOpened} label="not opened" title={t.notOpened ? `Not opened yet: ${plural(t.notOpened, 'portal')} with no client activity recorded` : 'Every live portal has client activity'} />
+        <NumTile n={docs.out.length} label="to sign" href="/admin/library?tab=out&show=out" title={`Out for signature: ${docs.out.length}. ${plural(docs.signed.length, 'document')} signed in the last 14 days`} />
       </section>
 
       <section aria-labelledby="cp-live" className="stack ap-gap-4 a-pending-scope">
@@ -182,10 +185,7 @@ export default async function Portals({ searchParams }: Props) {
 
       {quotes.length > 0 && (
         <section aria-labelledby="cp-quotes" className="stack ap-gap-4">
-          <div className="a-card-head">
-            <h2 id="cp-quotes" className="a-h2">Quotes out</h2>
-            <span className="muted small">No portal yet. They only see the quote page.</span>
-          </div>
+          <h2 id="cp-quotes" className="a-h2" title="No portal yet. They only see the quote page.">Quotes out</h2>
           <CardGrid cards={quotes} side={side} small />
         </section>
       )}

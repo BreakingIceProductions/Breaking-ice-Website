@@ -1,4 +1,9 @@
 import '../../../css/admin-pages.css'
+import '../../../css/admin-simple-a.css'
+import '../../../css/admin-simple-b.css'
+import '../../../css/admin-simple-d.css'
+import { HelpTip } from '@/admin/ui/help-tip'
+import { MiniIcon } from '@/admin/ui/viz-d'
 import Link from 'next/link'
 import { PendingLink } from '@/admin/ui/pending-link'
 import { requireAdmin } from '@/admin/auth'
@@ -48,10 +53,7 @@ export default async function Library({ searchParams }: Props) {
   return (
     <div className="a-page">
       <header className="a-head">
-        <div className="stack ap-gap-3">
-          <h1 className="a-h1">Library</h1>
-          <p className="muted m0">Your documents to sign, the emails clients get, your email templates, and everything out for signature.</p>
-        </div>
+        <h1 className="a-h1 sa-h1">Library</h1>
       </header>
       {/* Sample mode already says so in the banner above; this is only for a live site whose document store isn't set up. */}
       {memoryMode() && !adminSampleMode() && <p className="a-sample m0" role="status">Document signing isn’t set up on this site yet, so changes here aren’t kept and no emails go out.</p>}
@@ -100,30 +102,45 @@ async function Documents({ doc, readOnly, sample }: { doc?: string; readOnly: bo
   )
 }
 
+/** Emails that only go when you press a button; every other one goes by itself. */
+const MANUAL = new Set(['review-batch', 'quote', 'quote-again', 'to-sign-client', 'to-sign-person'])
+
 async function Emails() {
   const emails = await emailCatalog()
   return (
     <div className="stack ap-gap-4">
-      <p className="muted small m0">Every email the portal sends to clients and signers, drawn from the real templates with made-up details. Read only: nothing here sends.</p>
+      <p className="sd-legend m0">
+        <span className="sd-trigger sd-trigger-auto"><MiniIcon kind="auto" />Auto</span>
+        <span className="sd-trigger"><MiniIcon kind="manual" />You press Send</span>
+        <HelpTip label="About client emails">Every email the portal sends to clients and signers, drawn from the real templates with made-up details. Read only: nothing here sends.</HelpTip>
+      </p>
       <ul className="lb-emails">
-        {emails.map((e) => (
-          <li key={e.key}>
-            <details className="p-card lb-email">
-              <summary>
-                <span className="stack ap-tight ap-minw0">
-                  <strong>{e.name}</strong>
-                  <span className="small">Subject: {e.subject}</span>
-                  <span className="muted small">{e.when}</span>
-                </span>
-              </summary>
-              <iframe className="lb-email-frame" title={`Preview of the “${e.name}” email`} srcDoc={e.html} sandbox="" loading="lazy" />
-              <details className="lb-email-text">
-                <summary className="small">Plain-text version</summary>
-                <pre>{e.text}</pre>
+        {emails.map((e) => {
+          const manual = MANUAL.has(e.key)
+          return (
+            <li key={e.key}>
+              <details className="p-card lb-email sd-email">
+                <summary>
+                  <span className={`sd-trigger-icon${manual ? '' : ' sd-trigger-auto'}`} title={e.when}>
+                    <MiniIcon kind={manual ? 'manual' : 'auto'} />
+                    <span className="sr-only">{manual ? 'You press Send' : 'Sent automatically'}</span>
+                  </span>
+                  <span className="stack ap-tight ap-minw0">
+                    <strong>{e.name}</strong>
+                    <span className="small muted sd-ellipsis">{e.subject}</span>
+                  </span>
+                </summary>
+                <p className="sd-when m0"><span className="sd-when-label">{manual ? 'You press Send' : 'Auto'}</span> {e.when}</p>
+                <p className="small m0">Subject: {e.subject}</p>
+                <iframe className="lb-email-frame" title={`Preview of the “${e.name}” email`} srcDoc={e.html} sandbox="" loading="lazy" />
+                <details className="lb-email-text">
+                  <summary className="small">Plain-text version</summary>
+                  <pre>{e.text}</pre>
+                </details>
               </details>
-            </details>
-          </li>
-        ))}
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
@@ -152,6 +169,7 @@ async function OutAndSigned({ show }: { show?: string }) {
   const counts: Record<Filter, number> = { needs: all.filter(pick.needs).length, out: c.out.length, signed: all.filter(pick.signed).length, all: all.length }
   return (
     <div className="stack ap-gap-4">
+      <div className="sd-switch-row">
       <nav className="a-switch" aria-label="Show">
         {FILTERS.map((f) => (
           <PendingLink key={f.key} href={`/admin/library?tab=out&show=${f.key}`} scroll={false} aria-current={filter === f.key ? 'page' : undefined}>
@@ -159,12 +177,18 @@ async function OutAndSigned({ show }: { show?: string }) {
           </PendingLink>
         ))}
       </nav>
+      <HelpTip label="About Needs you">Needs you: out {STALE_DAYS} days or more and still not signed. Email them again, or void it.</HelpTip>
+      </div>
       <section className="p-card" aria-label={FILTERS.find((f) => f.key === filter)!.label}>
-        {filter === 'needs' && <p className="muted small m0">Out {STALE_DAYS} days or more and still not signed: email them again, or void it.</p>}
-        <RequestTable
-          rows={rows.map((r) => requestRow(r, known))}
-          empty={filter === 'needs' ? 'Nothing needs you: everything out was sent in the last week.' : filter === 'signed' ? 'Nothing signed yet.' : 'Nothing sent for signing yet. Send a document from a project’s Documents tab or from the Library.'}
-        />
+        {filter === 'needs' && !rows.length ? (
+          <p className="sd-allclear m0" title={`Nothing out ${STALE_DAYS} days or more without a signature.`}><MiniIcon kind="check" />Nothing needs you<span className="sr-only">: everything out was sent in the last {STALE_DAYS} days</span></p>
+        ) : (
+          <RequestTable
+            steps
+            rows={rows.map((r) => requestRow(r, known))}
+            empty={filter === 'signed' ? 'Nothing signed yet.' : 'Nothing sent for signing yet. Send a document from a project’s Documents tab or from the Library.'}
+          />
+        )}
       </section>
     </div>
   )

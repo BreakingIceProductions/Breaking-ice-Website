@@ -1,4 +1,7 @@
 import '../../../css/admin-pages.css'
+import '../../../css/admin-simple-a.css'
+import '../../../css/admin-simple-b.css'
+import '../../../css/admin-simple-c.css'
 import Link from 'next/link'
 import { requireAdmin } from '@/admin/auth'
 import { listClients, type ClientSummary } from '@/admin/data'
@@ -66,14 +69,13 @@ export default async function Contacts({ searchParams }: Props) {
   return (
     <div className="a-page">
       <header className="a-head">
-        <div className="stack ap-head-text">
+        <div className="sc-title">
           <h1 className="a-h1">People</h1>
-          <p className="muted m0">Everyone we work with: client contacts and the people on leads. {people.length} {people.length === 1 ? 'person' : 'people'} at {clients.length} {clients.length === 1 ? 'company' : 'companies'}.</p>
+          <span className="sa-count" title={`${people.length} ${people.length === 1 ? 'person' : 'people'} at ${clients.length} ${clients.length === 1 ? 'company' : 'companies'}`}>
+            {people.length}<span className="sr-only"> {people.length === 1 ? 'person' : 'people'} at {clients.length} {clients.length === 1 ? 'company' : 'companies'}</span>
+          </span>
         </div>
-        <div className="btn-row">
-          <Link className="text-link" href="/admin/clients">Files by client</Link>
-          <Link className="btn btn-secondary" href="/admin/clients/new?from=people">New client</Link>
-        </div>
+        <Link className="btn btn-secondary" href="/admin/clients/new?from=people">New client</Link>
       </header>
 
 

@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { PendingLink } from '@/admin/ui/pending-link'
 import { redirect } from 'next/navigation'
 import '../../../css/admin-pages.css'
+import '../../../css/admin-simple-a.css'
+import '../../../css/admin-simple-b.css'
+import '../../../css/admin-simple-c.css'
 import { requireAdmin } from '@/admin/auth'
 import { listProjects } from '@/admin/data'
 import { fmtDate } from '@/admin/dates'
@@ -9,6 +12,7 @@ import { cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { stageIndex } from '@/admin/stages'
 import { StageControl } from '@/admin/ui/stage-control'
+import { MiniStage } from '@/admin/ui/viz-c'
 import { PIPELINE_STAGES, REGIONS } from '@/sanity/portal/office-constants'
 
 export const metadata = { title: 'All projects' }
@@ -74,16 +78,13 @@ export default async function Projects({ searchParams }: Props) {
   return (
     <div className="a-page">
       <header className="a-head">
-        <div className="stack ap-gap-2">
-          <h1 className="a-h1">All projects</h1>
-          <p className="muted m0">Every lead and project in one list, with the archive.</p>
-        </div>
+        <h1 className="a-h1">All projects</h1>
         <div className="btn-row">
           <div className="a-switch" role="group" aria-label="View">
             <Link href="/admin/pipeline">Board</Link>
             <Link href="/admin/projects?view=list" aria-current="page">List</Link>
           </div>
-          <Link className="btn btn-primary" href="/admin/projects/new">New project</Link>
+          <Link className="btn sa-copper" href="/admin/projects/new">New project</Link>
         </div>
       </header>
 
@@ -108,7 +109,7 @@ export default async function Projects({ searchParams }: Props) {
       {shown.length ? (
         <div className="p-card">
           <div className="a-table-scroll">
-            <table className="a-table ap-table">
+            <table className="a-table ap-table sc-ptable">
               <caption className="sr-only">{archived ? 'Archived projects' : stage ? `Projects in ${PIPELINE_STAGES.find((s) => s.value === stage)?.title}` : 'All live projects'}, sorted by {SORTS[sort].toLowerCase()}</caption>
               <thead>
                 <tr>
@@ -125,15 +126,31 @@ export default async function Projects({ searchParams }: Props) {
                   const region = REGIONS.find((r) => r.value === p.region)?.title
                   return (
                     <tr key={p._id}>
-                      <td>
-                        <Link className="a-strong-link" href={`/admin/projects/${p._id}`}>{p.title}</Link>
-                        {region && <span className="ap-sub">{region}</span>}
+                      <td className="sc-pt-title">
+                        <Link className="a-strong-link" href={`/admin/projects/${p._id}`} title={region}>{p.title}</Link>
                       </td>
-                      <td>{p.client._id ? <Link className="text-link-plain" href={`/admin/clients/${p.client._id}`}>{p.client.organizationName}</Link> : p.client.organizationName || '—'}</td>
-                      <td>{p.declinedAt ? `Declined · ${fmtDate(p.declinedAt)}` : next ? `${next.label} · ${fmtDate(next.date)}` : '—'}</td>
-                      <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>
-                      <td className="a-stage-col">
-                        <StageControl compact archived={p.archived} declined={Boolean(p.declinedAt)} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
+                      <td className="sc-pt-client">{p.client._id ? <Link className="text-link-plain" href={`/admin/clients/${p.client._id}`}>{p.client.organizationName}</Link> : p.client.organizationName || '—'}</td>
+                      <td className="sc-pt-next">
+                        {p.declinedAt ? (
+                          <span className="sa-chip is-past" title={`Declined · ${fmtDate(p.declinedAt)}`}>Declined {fmtDate(p.declinedAt)}</span>
+                        ) : next ? (
+                          <span className="sa-chip" title={`${next.label} · ${fmtDate(next.date)}`}><span className="sc-pt-date">{fmtDate(next.date)}</span><span className="sc-pt-what">{next.label}</span></span>
+                        ) : (
+                          <span className="sa-muted" aria-label="No date">—</span>
+                        )}
+                      </td>
+                      <td className="num sc-pt-quote">{p.quoteAmount ? cad(p.quoteAmount) : <span aria-label="No quote">—</span>}</td>
+                      <td className="a-stage-col sc-pt-stage">
+                        <span className="sc-pt-stagecell">
+                          <MiniStage stage={p.pipelineStage} archived={p.archived} declined={Boolean(p.declinedAt)} />
+                          {/* Changing the stage is one press away, and on the project page. */}
+                          <details className="sc-menu">
+                            <summary className="sc-menu-btn" aria-label={`Change the stage of ${p.title}`} title="Change the stage"><span aria-hidden="true">⋯</span></summary>
+                            <div className="sc-menu-pop">
+                              <StageControl compact archived={p.archived} declined={Boolean(p.declinedAt)} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
+                            </div>
+                          </details>
+                        </span>
                       </td>
                     </tr>
                   )

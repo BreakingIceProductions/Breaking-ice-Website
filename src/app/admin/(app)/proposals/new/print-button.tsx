@@ -24,7 +24,7 @@ export function PrintQuote() {
       <button type="button" className="btn btn-primary" disabled={!filled} aria-describedby="pb-print-why" onClick={() => window.print()}>
         Print or save as PDF
       </button>
-      <p id="pb-print-why" className="pb-print-why">
+      <p id="pb-print-why" className="pb-print-why sr-only">
         {filled ? 'Prints just the table above, ready to save as a PDF and drop into the quote.' : 'Put a deliverable in a package first; then the table above can be printed.'}
       </p>
     </div>

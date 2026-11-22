@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { HelpTip } from './help-tip'
 
 type Answer = { sample?: boolean; message?: string; id?: string; existing?: boolean; field?: string }
 type Field = 'company' | 'name' | 'email' | 'role' | 'phone'
@@ -66,17 +67,17 @@ export function NewClientForm({ canEdit, cancelHref }: { canEdit: boolean; cance
         </div>
         <label className="a-check ld-form-wide">
           <input id="nc-emails" name="getsEmails" type="checkbox" checked={f.getsEmails} onChange={(e) => setF((s) => ({ ...s, getsEmails: e.target.checked }))} />
-          <span>Gets portal emails <span className="muted">(“a new version is ready”). Off until you turn it on.</span></span>
+          <span>Gets portal emails <span className="muted">(“a new version is ready”)</span></span>
         </label>
       </div>
 
-      <p className="muted m0">Nobody is sent anything. If the organisation or the email is already here, you’re taken to that client instead of making it twice.</p>
       {msg && (
         <p id="nc-msg" ref={msgRef} tabIndex={-1} className={msg.bad ? 'err m0' : 'm0'} role={msg.bad ? 'alert' : 'status'}>{msg.text}</p>
       )}
-      <div className="btn-row">
-        <button type="submit" className="btn btn-primary" disabled={busy || !canEdit} aria-busy={busy || undefined}>{busy ? 'Adding…' : 'Add client'}</button>
+      <div className="btn-row sc-form-foot">
+        <button type="submit" className="btn sa-copper" disabled={busy || !canEdit} aria-busy={busy || undefined}>{busy ? 'Adding…' : 'Add client'}</button>
         <a className="btn btn-secondary" href={cancelHref}>Cancel</a>
+        <HelpTip label="About adding a client">Nobody is sent anything. If the organisation or the email is already here, you’re taken to that client instead of making it twice.</HelpTip>
       </div>
       {!canEdit && <p className="muted m0">This sign-in is view only, so it can’t add clients.</p>}
     </form>

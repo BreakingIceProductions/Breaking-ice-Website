@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import type { BoardCard } from '../board-data'
 import { InlineError, saveFailed, useNotify } from './confirm'
-import { Bar } from './graphics'
+import { Segments } from './graphics'
 import { StageControl } from './stage-control'
 import { StageDialog, type Stage } from './stage-dialog'
+import { DaysChip } from './viz-c'
 
 type Column = Stage & { hint: string; /** Fold the column down to a header until it's opened. */ quiet?: boolean; /** Columns sharing a group sit together, with a divider and a jump button per group. */ group?: string }
 
@@ -140,8 +141,6 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
           <div className="a-switch" role="group" aria-label="Jump to">
             {groups.map((g) => <button key={g.first} type="button" onClick={() => jump(g.first)}>{g.title}</button>)}
           </div>
-          <span className="bd-jump-hint only-fine">Scroll sideways, or Shift + scroll</span>
-          <span className="bd-jump-hint only-coarse">Swipe sideways to see more stages</span>
         </div>
       )}
       <div className="bd-scroll" ref={scroller} tabIndex={0} role="group" aria-label="Board, scrolls sideways">
@@ -154,12 +153,11 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
             return (
               <section key={col.value} data-stage={col.value} className={`bd-col${folded ? ' is-folded' : ''}${starts ? ' bd-col-starts' : ''}${over === col.value ? ' is-over' : ''}`} aria-label={`${col.group ? `${col.group}: ` : ''}${col.title}, ${list.length}`}
                 onDragOver={(e) => { e.preventDefault(); setOver(col.value) }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null) }} onDrop={(e) => drop(e, col)}>
-                <header className="bd-col-head">
+                <header className="bd-col-head" title={col.hint}>
                   <h2 className="bd-col-title" tabIndex={-1}>{col.title}</h2>
                   <span className="bd-count">{list.length}</span>
                 </header>
                 {worth > 0 && <p className="bd-sum">{total(worth)}</p>}
-                <p className="bd-hint">{col.hint}</p>
                 {folded ? (
                   list.length > 0 && <button type="button" className="linklike small" onClick={() => setShown((s) => [...s, col.value])}>Show {list.length}</button>
                 ) : (
@@ -171,20 +169,21 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                         <li key={c.id} data-card={c.id} className={`bd-card${c.cold ? ' is-cold' : ''}${placed[c.id] ? ' is-placed' : ''}`} aria-busy={placed[c.id] && moving === c.id ? true : undefined} draggable
                           onDragStart={(e) => { dragId.current = c.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.id) }}
                           onDragEnd={() => { dragId.current = null; setOver(null) }}>
-                          <button type="button" className="bd-open" onClick={() => open(c)}>
+                          {/* Client, title, money, then progress and age as small marks. The next step is on hover and in the card's window. */}
+                          <button type="button" className="bd-open sc-card-open" title={`Next: ${nextOf(c)}`} onClick={() => open(c)}>
                             <span className="a-client">{c.client}</span>
                             <strong className="bd-title">{c.title}</strong>
-                            <span className="bd-amount">{!c.amount && c.budget ? `Budget ${c.budget}` : money(c.amount)}</span>
-                            <span className="bd-meta"><span>{c.checks.length ? `${done} of ${c.checks.length} done` : ''}</span><span>{inStage(c.days)}</span></span>
-                            {c.checks.length > 0 && (
-                              <Bar thin value={done / c.checks.length} />
-                            )}
-                            {c.cold && <span className="bd-flag">Going cold</span>}
+                            {(c.amount || c.budget) && <span className="bd-amount">{!c.amount && c.budget ? <><span className="sr-only">Budget </span>{c.budget}</> : money(c.amount)}</span>}
+                            <span className="sc-card-marks">
+                              {c.checks.length > 0 ? <Segments total={c.checks.length} done={done} label={`${done} of ${c.checks.length} done`} /> : <span />}
+                              <DaysChip days={c.days} cold={c.cold} />
+                            </span>
                           </button>
-                          <div className="bd-foot">
-                            <span className="bd-next">Next: {nextOf(c)}</span>
-                            {onward && <button type="button" className="bd-on" onClick={() => setMove({ card: c, to: onward })}>Move on<span className="sr-only"> to {onward.title}</span></button>}
-                          </div>
+                          {onward && (
+                            <div className="bd-foot sc-card-foot">
+                              <button type="button" className="bd-on" onClick={() => setMove({ card: c, to: onward })}>Move on<span className="sr-only"> to {onward.title}</span></button>
+                            </div>
+                          )}
                         </li>
                       )
                     })}
@@ -200,8 +199,6 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
       {archive && (
         <div className={`bd-archive${over === '__archive' ? ' is-over' : ''}`} onDragOver={(e) => { e.preventDefault(); setOver('__archive') }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOver(null) }} onDrop={dropOnArchive}>
           {archive}
-          <p className="bd-archive-hint only-fine">Drag a card here to archive it</p>
-          <p className="bd-archive-hint only-coarse">To archive a card, open it and use its stage menu</p>
         </div>
       )}
 
@@ -327,7 +324,6 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
               </div>
 
               <footer className="bd-pop-foot">
-                <span className="small muted">Moving or archiving shows a preview first.</span>
                 <StageControl compact projectId={c.id} projectTitle={c.title} current={c.stage} stages={stages}
                   onRun={(to, phase) => {
                     if (phase === 'start') { setMoving(c.id); setPlaced((p) => ({ ...p, [c.id]: to.value })) }

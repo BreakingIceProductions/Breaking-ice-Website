@@ -13,6 +13,8 @@ import { Uploader } from '@/portal/uploader'
 import { useConfirm, useNotify } from './confirm'
 import { R2Upload } from './r2-upload'
 import { fmtDate } from '@/admin/dates'
+import { Initials } from './viz'
+import { StageChip } from './viz-c'
 
 export type LibClient = { _id: string; organizationName: string; contacts?: { _key: string; name: string; email: string; role?: string }[] }
 export type LibProject = {
@@ -60,9 +62,10 @@ export function AdminLibrary({ clients, projects, reviewUpload = false }: { clie
     return {
       id: c._id,
       label: c.organizationName,
-      meta: `${mine.length} ${mine.length === 1 ? 'project' : 'projects'}`,
+      lead: <Initials name={c.organizationName} />,
+      badge: <span className="sc-count-chip" role="img" aria-label={`${mine.length} ${mine.length === 1 ? 'project' : 'projects'}`} title={`${mine.length} ${mine.length === 1 ? 'project' : 'projects'}`}>{mine.length}</span>,
       childTitle: 'Projects',
-      children: mine.map((p) => ({ ...projectNode(p, 'studio'), meta: p.stageTitle })),
+      children: mine.map((p) => ({ ...projectNode(p, 'studio'), meta: undefined, sub: <span className="sc-fd-sub"><StageChip stage={p.pipelineStage} title={p.stageTitle} /></span> })),
     }
   })
 
@@ -93,7 +96,8 @@ export function AdminLibrary({ clients, projects, reviewUpload = false }: { clie
     title = client.organizationName
     panel = <ClientPanel c={client} count={projects.filter((p) => p.clientId === client._id).length} />
   } else {
-    panel = <p className="muted">Pick a client. Their columns match exactly what they see in their portal, with your controls added.</p>
+    // Nothing picked yet: the columns speak for themselves.
+    panel = null
   }
 
   return <Finder rootTitle="Clients" root={root} path={path} onPath={setPath} panel={panel} panelTitle={title} />
@@ -103,7 +107,7 @@ function ClientPanel({ c, count }: { c: LibClient; count: number }) {
   return (
     <div className="stack gap-4">
       <h4 className="lib-title">{c.organizationName}</h4>
-      <p className="muted small m0">{count} {count === 1 ? 'project' : 'projects'}</p>
+      <div className="sc-chips"><span className="sc-count-chip sc-count-inline">{count}</span><span className="sa-muted small">{count === 1 ? 'project' : 'projects'}</span></div>
       {c.contacts?.length ? (
         <dl className="key-dates">
           {c.contacts.map((p) => (
@@ -125,7 +129,10 @@ function ProjectPanel({ p }: { p: LibProject }) {
   return (
     <div className="stack gap-4">
       <h4 className="lib-title">{projectLabel(p)}</h4>
-      <p className="muted small m0">{p.stageTitle}{p.startDate ? '' : ' · No start date yet: add one in the editor so the folder is dated'}</p>
+      <div className="sc-chips">
+        <StageChip stage={p.pipelineStage} title={p.stageTitle} />
+        {!p.startDate && <span className="sb-chip sb-warm" title="No start date yet: add one in the editor so the folder is dated"><span className="sb-dot" aria-hidden="true" />No start date<span className="sr-only">: add one in the editor so the folder is dated</span></span>}
+      </div>
       {p.nextStep && <p className="lib-next"><span className="label">Next</span> {p.nextStep}</p>}
       <div className="btn-row">
         <Link className="btn btn-primary btn-sm" href={`/admin/projects/${p._id}`}>Open project</Link>

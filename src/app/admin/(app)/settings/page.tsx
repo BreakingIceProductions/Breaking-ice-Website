@@ -1,4 +1,8 @@
 import '../../../css/admin-pages.css'
+import '../../../css/admin-simple-a.css'
+import '../../../css/admin-simple-d.css'
+import { HelpTip } from '@/admin/ui/help-tip'
+import { StateDot } from '@/admin/ui/viz-d'
 import { requireAdmin } from '@/admin/auth'
 import { adminEnv, calendarReady, ticktickReady, zohoReady } from '@/admin/config'
 import { fmtDate } from '@/admin/dates'
@@ -49,33 +53,33 @@ export default async function Settings({ searchParams }: Props) {
   const connect = (app: string, label: string) => <a className="btn btn-secondary btn-sm" href={`/api/admin/connect/${app}`}>Connect<span className="sr-only"> {label}</span></a>
   // Set up in Vercel rather than signed in to, so the row's action looks again once the steps are done.
   const checkAgain = (label: string) => <a className="btn btn-secondary btn-sm" href="/admin/settings">Check again<span className="sr-only"> for {label}</span></a>
-  const state = (on: boolean, ready: boolean, onText = 'Connected') => <span className={`a-conn-state ${on ? 'on' : 'off'}`}>{on ? onText : ready ? 'Not connected' : 'Not set up yet'}</span>
+  const state = (on: boolean, ready: boolean, onText = 'Connected', since?: string) => (
+    <StateDot tone={on ? 'on' : 'off'} label={on && since ? since : undefined}>{on ? onText : ready ? 'Not connected' : 'Not set up'}</StateDot>
+  )
 
   return (
     <div className="a-page a-narrow">
       <header className="a-head">
-        <div className="stack ap-gap-2">
-          <h1 className="a-h1">Settings</h1>
-          <p className="muted m0">The apps the back office works with, and who can sign in.</p>
-        </div>
+        <h1 className="a-h1 sa-h1">Settings</h1>
       </header>
       {notice && <p className="notice" role="status">{notice}</p>}
 
       <section className="p-card" aria-labelledby="h-conns">
         <h2 id="h-conns" className="a-h2">Connections</h2>
-        <ul className="ap-conns">
-          <li className="ap-conn">
-            <div>
-              <div className="ap-conn-name"><strong>Zoho Books</strong>{state(Boolean(zoho), zohoReady())}</div>
-              <p className="ap-conn-what">
+        <ul className="sd-conns">
+          <li className="sd-conn">
+            <div className="sd-conn-name">
+              <strong>Zoho Books</strong>
+              <HelpTip label="About Zoho Books">
                 {zoho
                   ? `Connected to ${zoho.orgName ?? 'your organisation'} since ${fmtDate(zoho.connectedAt)}. Makes customers and draft invoices; you send each invoice yourself from Zoho Books.`
                   : 'Makes customers and draft invoices (deposit, balance and portal payment requests). You send each invoice yourself from Zoho Books.'}
-              </p>
+              </HelpTip>
             </div>
-            <div className="ap-conn-action">{zoho ? disconnect('zoho', 'Zoho Books') : connect('zoho', 'Zoho Books')}</div>
-            {zoho && zohoNeedsReconnect(zoho) && <p className="ap-conn-extra err">Disconnect and connect again so card payments from the portal are recorded in Zoho Books.</p>}
-            <details className="ap-details">
+            {state(Boolean(zoho), zohoReady(), 'Connected', zoho ? `Connected to ${zoho.orgName ?? 'your organisation'} since ${fmtDate(zoho.connectedAt)}` : undefined)}
+            <div className="sd-conn-action">{zoho ? disconnect('zoho', 'Zoho Books') : connect('zoho', 'Zoho Books')}</div>
+            {zoho && zohoNeedsReconnect(zoho) && <p className="sd-conn-extra err">Disconnect and connect again so card payments from the portal are recorded in Zoho Books.</p>}
+            <details className="ap-details sd-conn-more">
               <summary>{zoho || zohoReady() ? 'How it works' : 'Setup steps'}</summary>
               <div className="stack small ap-gap-2">
                 <p className="m0">Deposit invoices are drafted when a project is booked and balance invoices when it’s delivered. When a client pays by card in the portal, the card fee is added to their invoice and the payment is recorded. e-Transfers and EFTs show as paid in the portal once Zoho Books has them.</p>
@@ -92,14 +96,15 @@ export default async function Settings({ searchParams }: Props) {
             </details>
           </li>
 
-          <li className="ap-conn">
-            <div>
-              <div className="ap-conn-name"><strong>TickTick</strong>{state(Boolean(tt), ticktickReady())}</div>
-              <p className="ap-conn-what">{tt ? `Connected since ${fmtDate(tt.connectedAt)}. ` : ''}Each project gets its own list, and each stage adds its checklist with due dates.</p>
+          <li className="sd-conn">
+            <div className="sd-conn-name">
+              <strong>TickTick</strong>
+              <HelpTip label="About TickTick">{tt ? `Connected since ${fmtDate(tt.connectedAt)}. ` : ''}Each project gets its own list, and each stage adds its checklist with due dates.</HelpTip>
             </div>
-            <div className="ap-conn-action">{tt ? disconnect('ticktick', 'TickTick') : connect('ticktick', 'TickTick')}</div>
+            {state(Boolean(tt), ticktickReady(), 'Connected', tt ? `Connected since ${fmtDate(tt.connectedAt)}` : undefined)}
+            <div className="sd-conn-action">{tt ? disconnect('ticktick', 'TickTick') : connect('ticktick', 'TickTick')}</div>
             {!ticktickReady() && (
-              <details className="ap-details">
+              <details className="ap-details sd-conn-more">
                 <summary>Setup steps</summary>
                 <ol className="a-steps small">
                   <li>Go to <a className="text-link" href="https://developer.ticktick.com/manage" target="_blank" rel="noopener noreferrer">developer.ticktick.com/manage</a> and create an app.</li>
@@ -111,14 +116,15 @@ export default async function Settings({ searchParams }: Props) {
             )}
           </li>
 
-          <li className="ap-conn">
-            <div>
-              <div className="ap-conn-name"><strong>Wispr Flow</strong>{state(Boolean(wispr), wisprReady())}</div>
-              <p className="ap-conn-what">{wispr ? `Connected since ${fmtDate(wispr.connectedAt)}. ` : ''}Lets us find the call with a lead and draft the email from its notes. Read only: nothing in Wispr Flow is changed.</p>
+          <li className="sd-conn">
+            <div className="sd-conn-name">
+              <strong>Wispr Flow</strong>
+              <HelpTip label="About Wispr Flow">{wispr ? `Connected since ${fmtDate(wispr.connectedAt)}. ` : ''}Lets us find the call with a lead and draft the email from its notes. Read only: nothing in Wispr Flow is changed.</HelpTip>
             </div>
-            <div className="ap-conn-action">{wispr ? disconnect('wispr', 'Wispr Flow') : connect('wispr', 'Wispr Flow')}</div>
+            {state(Boolean(wispr), wisprReady(), 'Connected', wispr ? `Connected since ${fmtDate(wispr.connectedAt)}` : undefined)}
+            <div className="sd-conn-action">{wispr ? disconnect('wispr', 'Wispr Flow') : connect('wispr', 'Wispr Flow')}</div>
             {!wispr && (
-              <details className="ap-details">
+              <details className="ap-details sd-conn-more">
                 <summary>{wisprReady() ? 'How connecting works' : 'Setup steps'}</summary>
                 {wisprReady() ? (
                   <p className="small m0">You’ll sign in to Wispr Flow and allow access. If Wispr doesn’t accept this site, the reason shows here and nothing else changes.</p>
@@ -133,13 +139,14 @@ export default async function Settings({ searchParams }: Props) {
             )}
           </li>
 
-          <li className="ap-conn">
-            <div>
-              <div className="ap-conn-name"><strong>Google Calendar</strong>{state(calendarReady(), false)}</div>
-              <p className="ap-conn-what">Shoots, travel, meetings and milestones go on a separate “Breaking Ice Projects” calendar, so your own events are never touched.</p>
+          <li className="sd-conn">
+            <div className="sd-conn-name">
+              <strong>Google Calendar</strong>
+              <HelpTip label="About Google Calendar">Shoots, travel, meetings and milestones go on a separate “Breaking Ice Projects” calendar, so your own events are never touched.</HelpTip>
             </div>
-            <div className="ap-conn-action">{calendarReady() ? null : checkAgain('Google Calendar')}</div>
-            <details className="ap-details">
+            {state(calendarReady(), false)}
+            <div className="sd-conn-action">{calendarReady() ? null : checkAgain('Google Calendar')}</div>
+            <details className="ap-details sd-conn-more">
               <summary>{calendarReady() ? 'Details' : 'Setup steps'}</summary>
               {calendarReady() ? (
                 <p className="small m0">Writing to <code>{adminEnv.calendarId}</code>. Turn TickTick’s own calendar sync off for these lists, or you’ll see things twice.</p>
@@ -157,13 +164,14 @@ export default async function Settings({ searchParams }: Props) {
             </details>
           </li>
 
-          <li className="ap-conn">
-            <div>
-              <div className="ap-conn-name"><strong>Review storage</strong>{state(r2Ready(), false, 'Ready')}</div>
-              <p className="ap-conn-what">Holds the review copies for the review room. Clients and guests watch from short-lived private links; Vimeo links keep working as before.</p>
+          <li className="sd-conn">
+            <div className="sd-conn-name">
+              <strong>Review storage</strong>
+              <HelpTip label="About review storage">Holds the review copies for the review room. Clients and guests watch from short-lived private links; Vimeo links keep working as before.</HelpTip>
             </div>
-            <div className="ap-conn-action">{r2Ready() ? null : checkAgain('review storage')}</div>
-            <details className="ap-details">
+            {state(r2Ready(), false, 'Ready')}
+            <div className="sd-conn-action">{r2Ready() ? null : checkAgain('review storage')}</div>
+            <details className="ap-details sd-conn-more">
               <summary>{r2Ready() ? 'Details' : 'Setup steps'}</summary>
               {r2Ready() ? (
                 <p className="small m0">Cloudflare R2 bucket <code>{r2Env.bucket}</code>.</p>
@@ -180,12 +188,11 @@ export default async function Settings({ searchParams }: Props) {
       </section>
 
       <section className="p-card" aria-labelledby="h-access">
-        <h2 id="h-access" className="a-h2">Full access</h2>
+        <div className="a-card-head">
+          <h2 id="h-access" className="a-h2">Full access</h2>
+          <HelpTip label="How to change who has full access">Set <code>ADMIN_EMAILS</code> in Vercel, then redeploy.</HelpTip>
+        </div>
         <p className="m0">{adminEnv.emails.join(', ')}</p>
-        <details className="ap-details">
-          <summary className="small muted">How to change this</summary>
-          <p className="small muted m0">Set <code>ADMIN_EMAILS</code> in Vercel, then redeploy.</p>
-        </details>
       </section>
 
       <GuestsCard

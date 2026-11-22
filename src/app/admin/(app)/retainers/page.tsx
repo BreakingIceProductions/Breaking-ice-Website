@@ -1,11 +1,14 @@
 import '../../../css/admin-pages.css'
 import Link from 'next/link'
 import '../../../css/retainer-admin.css'
+import '../../../css/admin-simple-a.css'
+import '../../../css/admin-simple-b.css'
+import '../../../css/admin-simple-d.css'
 import { requireAdmin } from '@/admin/auth'
 import { listClients } from '@/admin/data'
 import { allRetainerClients, buildMonthView, monthKey, monthLabel, type RetainerClient } from '@/retainer/data'
 import type { RetainerMonthView } from '@/retainer/types'
-import { Meter } from '@/admin/ui/retainer-meter'
+import { MeterRing } from '@/admin/ui/retainer-meter'
 
 export const metadata = { title: 'Retainers' }
 
@@ -24,14 +27,16 @@ export default async function Retainers() {
   const row = (c: RetainerClient) => {
     const v = views.get(c._id)
     return (
-      <li key={c._id}>
-        <Link className="a-row-main" href={`/admin/retainers/${encodeURIComponent(c._id)}`}>
-          <strong><span className="rt-swatch" style={c.retainer.accent ? ({ '--rt-accent': c.retainer.accent } as React.CSSProperties) : undefined} aria-hidden="true" />{c.organizationName}</strong>
-          <span className="muted small">
-            {[`${c.retainer.perMonth} a month`, c.retainer.rollover === 'next-month' ? 'unused carry over' : 'starts fresh monthly', c.retainer.publerWorkspaceId ? 'social posts linked' : 'no social account linked'].join(' · ')}
+      <li key={c._id} className="sd-rt-row">
+        <Link className="a-row-main sd-rt-main" href={`/admin/retainers/${encodeURIComponent(c._id)}`}>
+          <strong className="sd-rt-name"><span className="rt-swatch" style={c.retainer.accent ? ({ '--rt-accent': c.retainer.accent } as React.CSSProperties) : undefined} aria-hidden="true" />{c.organizationName}</strong>
+          <span className="sa-chips sd-rt-chips">
+            <span className="sa-chip">{c.retainer.perMonth} a month</span>
+            <span className="sa-chip" title={c.retainer.rollover === 'next-month' ? 'Unused carry over' : 'Starts fresh monthly'}>{c.retainer.rollover === 'next-month' ? 'Carries over' : 'Fresh monthly'}</span>
+            <span className={`sa-chip${c.retainer.publerWorkspaceId ? '' : ' sd-chip-quiet'}`}>{c.retainer.publerWorkspaceId ? 'Social linked' : 'No social account'}</span>
           </span>
         </Link>
-        <span className="a-row-side">{c.retainer.active ? (v ? <Meter view={v} accent={c.retainer.accent} /> : <span className="muted small">Couldn’t count this month</span>) : <span className="a-stage">Off</span>}</span>
+        <span className="a-row-side sd-rt-side">{c.retainer.active ? (v ? <MeterRing view={v} /> : <span className="muted small">Couldn’t count this month</span>) : <span className="a-stage">Off</span>}</span>
       </li>
     )
   }
@@ -39,9 +44,9 @@ export default async function Retainers() {
   return (
     <div className="a-page">
       <header className="a-head">
-        <div className="stack ap-gap-3">
-          <h1 className="a-h1">Retainers</h1>
-          <p className="muted m0">Monthly clients: what’s done in {monthLabel(month)}, from social posts and what we’ve delivered.</p>
+        <div className="sd-head-row">
+          <h1 className="a-h1 sa-h1">Retainers</h1>
+          <span className="sa-chip">{monthLabel(month)}</span>
         </div>
       </header>
 

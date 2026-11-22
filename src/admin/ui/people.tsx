@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Chip, type ChipTone } from './viz'
 import { applyAction, cleanTag, FIELD_MAX, mergePeople, normEmail, PeopleError, sameTag, STARTER_TAGS, type BasePerson, type PeopleAction, type PeopleStore, type Person, type PersonField } from '../people-shared'
 
 const FILTERS = [
@@ -22,6 +23,11 @@ const SORTS = [
 type Note = { text: string; bad?: boolean; /** Shows an Undo button beside the message (in the panel, where the page's own notices can't be reached). */ undo?: () => void }
 type Send = (action: PeopleAction) => Promise<{ key?: string } | null>
 
+/** The status as a coloured chip: the group (client, lead, past) is the colour, the words after "·" the text. */
+const TONE: Record<string, ChipTone> = { client: 'ok', lead: 'warm', past: 'muted', contact: 'info' }
+const statusShort = (s: string) => (s.includes(' · ') ? s.split(' · ').slice(1).join(' · ') : s)
+const firstCap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`
 const people_ = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`
 
@@ -37,6 +43,7 @@ export function PeopleTable({ base, store: saved, canEdit, initial }: { base: Ba
   const [picked, setPicked] = useState<string[]>(initial.tags)
   const [openId, setOpenId] = useState<string | null>(initial.person ?? null)
   const [managing, setManaging] = useState(false)
+  const [filtering, setFiltering] = useState(initial.tags.length > 0)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<Note | null>(null)
 
@@ -133,10 +140,13 @@ export function PeopleTable({ base, store: saved, canEdit, initial }: { base: Ba
             return <button key={f.key} type="button" aria-pressed={show === f.key} onClick={() => setShow(f.key)}>{f.label} <span className="pp-n">{n}</span></button>
           })}
         </div>
-        {canEdit && <button type="button" className="btn btn-primary btn-sm pp-add" onClick={() => open('new')}>Add person</button>}
+        <button type="button" className="btn btn-secondary btn-sm sc-toggle" aria-expanded={filtering} aria-controls="pp-tagfilter" onClick={() => setFiltering((v) => !v)}>
+          Filter by tag{tagsOn.length > 0 && <span className="sc-n"><span className="sr-only">, </span>{tagsOn.length}<span className="sr-only"> on</span></span>}
+        </button>
+        {canEdit && <button type="button" className="btn sa-copper btn-sm pp-add" onClick={() => open('new')}>Add person</button>}
       </div>
 
-      <div className="pp-tagfilter" role="group" aria-labelledby="pp-tagfilter-h">
+      <div id="pp-tagfilter" className="pp-tagfilter" role="group" aria-labelledby="pp-tagfilter-h" hidden={!filtering}>
         <span id="pp-tagfilter-h" className="pp-tagfilter-h">Filter by tag</span>
         {store.tags.map((t) => (
           <button key={t} type="button" className="pp-pick" aria-pressed={tagsOn.includes(t)} onClick={() => toggleTag(t)}>
@@ -149,7 +159,7 @@ export function PeopleTable({ base, store: saved, canEdit, initial }: { base: Ba
       </div>
 
       <div className="row-wrap pp-bar">
-        <span className="muted small" role="status">
+        <span className={`muted small${q || tagsOn.length || show !== 'all' ? '' : ' sc-quiet-count'}`} role="status">
           {people_(rows.length)}
           {tagsOn.length > 0 && ` tagged ${tagsOn.join(' and ')}`}
           {!panelOpen && !managing && note && <span className={note.bad ? 'pp-bad' : undefined}> · {note.text}</span>}
@@ -162,7 +172,7 @@ export function PeopleTable({ base, store: saved, canEdit, initial }: { base: Ba
 
       <div className="p-card pp-card">
         <div className="a-table-scroll" tabIndex={0} role="region" aria-label="People">
-          <table className="a-table pp-table">
+          <table className="a-table pp-table sc-pcards">
             <thead>
               <tr>
                 <th scope="col">Name</th>
@@ -175,21 +185,21 @@ export function PeopleTable({ base, store: saved, canEdit, initial }: { base: Ba
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id} className="pp-row" onClick={(e) => { if (!(e.target as HTMLElement).closest('a, button')) open(p.id) }}>
-                  <td>
+                  <td className="sc-pc-name">
                     <button type="button" className="pp-name" aria-haspopup="dialog" onClick={() => open(p.id)}>{p.name}</button>
                     {p.role && <span className="pp-sub">{p.role}</span>}
                   </td>
-                  <td>
+                  <td className="sc-pc-co">
                     {p.clientId ? <Link className="a-strong-link" href={`/admin/clients/${p.clientId}`}>{p.company}</Link> : p.company || <span className="muted" aria-label="No company">—</span>}
                     {p.also.length > 0 && <span className="pp-sub">Also {p.also.join(', ')}</span>}
                   </td>
-                  <td>
+                  <td className="sc-pc-reach">
                     {p.email && <a className="text-link pp-reach" href={`mailto:${p.email}`}>{p.email}</a>}
                     {p.phone && <a className="text-link-plain pp-reach" href={telHref(p.phone)}>{p.phone}</a>}
                     {!p.email && !p.phone && <span className="muted">No email or phone</span>}
                   </td>
-                  <td><span className={`pp-status k-${p.kind}`}>{p.status}</span></td>
-                  <td>
+                  <td className="sc-pc-status"><Chip tone={TONE[p.kind] ?? 'muted'} label={p.status}>{firstCap(statusShort(p.status))}</Chip></td>
+                  <td className="sc-pc-tags">
                     {p.tags.length ? (
                       <ul className="pp-tags" aria-label={`Tags on ${p.name}`}>
                         {p.tags.map((t) => <li key={t} className="pp-tag">{t}</li>)}

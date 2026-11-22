@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useNotify, useUndoable } from './confirm'
+import { HelpTip, Reveal } from './help-tip'
 
 export type GuestRow = { key?: string; email: string; name?: string; /** "Through Nov 26", "Ended Nov 2" or "No end date". */ when: string; ended?: boolean; /** Set in Vercel, so it can't be removed here. */ fixed?: boolean }
 
@@ -78,7 +79,10 @@ export function GuestsCard({ guests, signInUrl, canEdit }: { guests: GuestRow[];
         <h2 id="h-guests" className="a-h2">View-only guests</h2>
         <button type="button" className="linklike small" onClick={copy}>{copied ? 'Copied' : 'Copy sign-in link'}</button>
       </div>
-      <p className="small m0">Guests sign in with their own email, see every page, and can’t change anything. Removing someone signs them out within seconds (you can undo it first), and access ends by itself on the date shown.</p>
+      <p className="sa-chips sd-tips m0">
+        <span className="sa-chip">View only · ends on its own</span>
+        <HelpTip label="About view-only guests">Guests sign in with their own email, see every page, and can’t change anything. Removing someone signs them out within seconds (you can undo it first), and access ends by itself on the date shown.</HelpTip>
+      </p>
 
       <ul className="a-doc-list">
         {shown.map((g) => (
@@ -97,6 +101,7 @@ export function GuestsCard({ guests, signInUrl, canEdit }: { guests: GuestRow[];
       </ul>
 
       {canEdit && (
+        <Reveal label="+ Guest" openLabel="Close" className="sd-guest-reveal">
         <form className="g-form" onSubmit={(e) => { e.preventDefault(); send({ action: 'add', email, name, days }) }}>
           <div className="field g-wide"><label htmlFor="g-email">Email</label><input id="g-email" className="input" type="email" required placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div className="field"><label htmlFor="g-name">Name (optional)</label><input id="g-name" className="input" value={name} onChange={(e) => setName(e.target.value)} /></div>
@@ -108,6 +113,7 @@ export function GuestsCard({ guests, signInUrl, canEdit }: { guests: GuestRow[];
           </div>
           <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Add guest'}</button>
         </form>
+        </Reveal>
       )}
       <p className="small muted m0 status-line" role="status">{msg}</p>
     </section>

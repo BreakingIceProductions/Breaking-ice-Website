@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { Deliverable } from '@/portal/types'
 import { useConfirm } from './confirm'
 import { fmtDate } from '@/admin/dates'
+import { HelpTip } from './help-tip'
 
 type Share = NonNullable<Deliverable['share']>
 
@@ -45,11 +46,13 @@ export function ShareControl({ projectId, deliverableKey, share: initial, viewOn
     <section className="p-card" aria-labelledby="h-share">
       <div className="a-card-head">
         <h2 id="h-share" className="a-h2">Share link</h2>
-        <span className={`a-conn-state ${share?.on ? 'on' : 'off'}`}>{share ? (share.on ? 'On' : 'Off') : 'None yet'}</span>
+        <span className="sa-chips sd-tips">
+          <span className={`a-conn-state ${share?.on ? 'on' : 'off'}`}>{share ? (share.on ? 'On' : 'Off') : 'None yet'}</span>
+          <HelpTip label="About share links">
+            For people who aren’t portal contacts (a board member, a colleague). Anyone with the link can watch this version and comment after typing their name. Only the client’s signed-in contacts can approve or ask for changes.
+          </HelpTip>
+        </span>
       </div>
-      <p className="muted small m0">
-        For people who aren’t portal contacts (a board member, a colleague). Anyone with the link can watch this version and comment after typing their name. Only the client’s signed-in contacts can approve or ask for changes.
-      </p>
       {share ? (
         <>
           <label className="small muted" htmlFor="share-url">Link</label>

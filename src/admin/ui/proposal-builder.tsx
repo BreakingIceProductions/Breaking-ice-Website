@@ -120,7 +120,6 @@ export function ProposalBuilder() {
           <h2 id="pb-h-items" className="a-h2">Deliverables</h2>
           <span className="muted small">{s.items.length}</span>
         </div>
-        <p className="muted small m0 pb-how">Price each one, then <span className="pb-on-mouse">drag it into a package</span><span className="pb-on-touch">tap 1, 2 or 3 to add it to a package</span>. One deliverable can sit in more than one package.</p>
         <ul className="pb-list">
           {s.items.map((i) => (
             <li key={i.id} className={`pb-item${used.has(i.id) ? '' : ' is-unused'}`}>
@@ -155,7 +154,7 @@ export function ProposalBuilder() {
             <input className="pb-in pb-pack-name" aria-label={`Name of package ${n + 1}`} value={k.name} onChange={(e) => setPack(n, { name: e.target.value })} />
             <input className="pb-in" aria-label={`Short description of ${k.name}`} placeholder="Six words or fewer" value={k.blurb} onChange={(e) => setPack(n, { blurb: e.target.value })} />
 
-            <ul className="pb-drop">
+            <ul className={`pb-drop${k.ids.length ? '' : ' sd-drop-empty'}`}>
               {k.ids.map((id) => {
                 const i = item(id)
                 if (!i) return null
@@ -169,9 +168,14 @@ export function ProposalBuilder() {
                   </li>
                 )
               })}
-              {!k.ids.length && <li className="pb-empty"><span className="pb-on-mouse">Drag deliverables here</span><span className="pb-on-touch">Tap {n + 1} on a deliverable to add it here</span></li>}
+              {!k.ids.length && (
+                <li className="pb-empty">
+                  <span className="pb-on-mouse">Drag here</span><span className="pb-on-touch">Tap {n + 1} on a deliverable</span>
+                  {n > 0 && s.packs[n - 1].ids.length > 0 && <button type="button" className="linklike small" onClick={() => setPack(n, { ids: [...new Set([...s.packs[n - 1].ids, ...k.ids])] })}>or include everything in {s.packs[n - 1].name}</button>}
+                </li>
+              )}
             </ul>
-            {n > 0 && <button type="button" className="linklike small" onClick={() => setPack(n, { ids: [...new Set([...s.packs[n - 1].ids, ...k.ids])] })}>Include everything in {s.packs[n - 1].name}</button>}
+            {n > 0 && k.ids.length > 0 && <button type="button" className="linklike small" onClick={() => setPack(n, { ids: [...new Set([...s.packs[n - 1].ids, ...k.ids])] })}>Include everything in {s.packs[n - 1].name}</button>}
 
             <dl className="pb-math">
               <div><dt>Deliverables</dt><dd>{cad(t.items)}</dd></div>
@@ -193,14 +197,12 @@ export function ProposalBuilder() {
 
       <section className="p-card" aria-labelledby="pb-h-tr">
         <h2 id="pb-h-tr" className="a-h2">Client conversation</h2>
-        <p className="muted small m0">Paste the transcript or your notes to keep them beside the pricing.</p>
-        <textarea className="input pb-transcript" aria-label="Transcript or notes" value={s.transcript} onChange={(e) => set({ transcript: e.target.value })} />
+        <textarea className="input pb-transcript" aria-label="Transcript or notes" placeholder="Paste the transcript or your notes" value={s.transcript} onChange={(e) => set({ transcript: e.target.value })} />
       </section>
 
       <section className="p-card" aria-labelledby="pb-h-prev">
         <div className="a-card-head">
-          <h2 id="pb-h-prev" className="a-h2">What the client sees</h2>
-          <span className="muted small">The Investment page of the PDF, before tax</span>
+          <h2 id="pb-h-prev" className="a-h2" title="The Investment page of the PDF, before tax">What the client sees</h2>
         </div>
         {/* Printed only: names the quote at the top of the page (the heading above is for you, not the client). */}
         <p className="pb-print-title">{[s.client.trim(), s.title.trim()].filter(Boolean).join(' · ') || 'Quote'}</p>

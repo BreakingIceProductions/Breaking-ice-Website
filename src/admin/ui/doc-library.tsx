@@ -6,6 +6,7 @@ import { DocText } from '@/portal/sign-doc'
 import { detectFields, EMPTY_LINE, hasWording, newKey, sendable, SYSTEM_FIELDS, undefinedFields, type Audience, type DocField, type DocTemplate, type FieldType } from '@/portal/sign-docs'
 import { SendDocumentToggle, type SendProject, type SendTemplate } from './sign-requests'
 import { fmtDate } from '@/admin/dates'
+import { StateDot } from './viz-d'
 
 const TYPE_LABEL: Record<FieldType, string> = { text: 'Text', date: 'Date', money: 'Money', choice: 'Choice' }
 const day = (iso: string) => fmtDate(iso)
@@ -18,9 +19,10 @@ const save = (body: unknown) =>
 /** Owner fields show their default (or a blank); signer fields stay blank in a preview. */
 const previewValues = (fields: DocField[]) => Object.fromEntries(fields.filter((f) => f.who === 'owner' && f.default).map((f) => [f.key, f.default!]))
 
+/** Grey dot: no wording yet (can't be sent). Amber: needs your check. Green: wording approved. */
 export function WordingChip({ t }: { t: DocTemplate }) {
-  if (!hasWording(t)) return <span className="pill pill-doc-void">No wording yet</span>
-  return t.wordingApproved ? <span className="pill pill-doc-signed">Wording approved</span> : <span className="pill pill-doc-check">Needs your check</span>
+  if (!hasWording(t)) return <StateDot tone="off" label="No wording yet, so it can’t be sent">No wording</StateDot>
+  return t.wordingApproved ? <StateDot tone="on" label="Wording approved">Approved</StateDot> : <StateDot tone="warn" label="Needs your check">Check</StateDot>
 }
 
 /** One template: read it with its fill-ins marked, edit it, approve it, print a blank copy, send it. */
@@ -64,8 +66,12 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
         <h2 id={`${uid}-h`} className="a-h2 a-h2-lg">{t.title}</h2>
         <WordingChip t={t} />
       </div>
-      <p className="muted small m0">
-        {t.audience === 'client' ? 'Signed in the client portal by the client’s contacts.' : 'Signed by one person through their own private link. Never shown in a client portal.'} Last changed {day(t.updatedAt)}.
+      <p className="sa-chips m0">
+        <span className="sa-chip" title={t.audience === 'client' ? 'Signed in the client portal by the client’s contacts.' : 'Signed by one person through their own private link. Never shown in a client portal.'}>
+          {t.audience === 'client' ? 'Client portal' : 'Own link'}
+          <span className="sr-only">: {t.audience === 'client' ? 'signed in the client portal by the client’s contacts' : 'signed by one person through their own private link, never shown in a client portal'}</span>
+        </span>
+        <span className="sa-chip">Changed {day(t.updatedAt)}</span>
       </p>
 
       {hasWording(t) ? (
@@ -73,7 +79,7 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
           <DocText body={t.body} fields={t.fields} values={previewValues(t.fields)} live choicesInline />
         </div>
       ) : (
-        <p className="lb-empty-body">{EMPTY_LINE}</p>
+        <p className="lb-empty-body sd-empty-body">No wording yet</p>
       )}
 
       {t.fields.length > 0 && (
@@ -103,9 +109,7 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
           <button type="button" className="btn btn-secondary btn-sm" disabled title="Needs wording first">Download blank PDF</button>
         )}
       </div>
-      {!hasWording(t) ? (
-        <p className="muted small m0">Can’t be sent: it has no wording yet.</p>
-      ) : !t.wordingApproved ? (
+      {!hasWording(t) ? null : !t.wordingApproved ? (
         <p className="muted small m0">Can’t be sent until you read it and press Approve wording.</p>
       ) : null}
       {!readOnly && sendable(t) && (

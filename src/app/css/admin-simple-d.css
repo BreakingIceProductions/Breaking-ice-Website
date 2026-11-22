@@ -1,0 +1,161 @@
+/* ═════════════════════════════════════════════════════════
+   Back office, simplified, second pass ("Direction A: calm cards, one action each").
+   Client portals, Quote builder, Library, Settings, Retainers, Galleries and the Review room.
+   Reads the admin tokens from admin.css (light and dark follow); reuses `.sa-*` (admin-simple-a.css) and
+   `.sb-*` (admin-simple-b.css), so pages import those too. Classes here are `.sd-*`; helpers in
+   src/admin/ui/viz-d.tsx. 44px touch targets, visible focus, big numbers never wrap.
+   ═════════════════════════════════════════════════════════ */
+
+.admin { --sd-green: #4f8a5b; --sd-amber: #c08a1e; }
+:root[data-theme='dark'] .admin { --sd-green: #6fae7c; --sd-amber: #e0b04a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .admin { --sd-green: #6fae7c; --sd-amber: #e0b04a; } }
+
+/* ── Shared bits ───────────────────────────────────────── */
+.admin .sd-accent { color: var(--a-accent-text, var(--a-accent)); }
+.admin .sd-tile-static { cursor: default; }
+.admin .sd-tile-static:hover { border-color: var(--a-hairline); }
+.admin .sd-glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow: column; gap: 12px; }
+.admin .sd-glance .sa-tile { flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px; }
+.admin .sd-glance .sa-tile-num { font-size: clamp(1.625rem, 1rem + 1.2vw, 2.25rem); }
+.admin .sd-glance .sa-tile-label { font-size: var(--a-fs-body); }
+
+/* A row of chips ending in a "?": opened, the note gets the full width under the row. */
+.admin .sd-tips { flex-wrap: wrap; }
+.admin .a-card-head:has(.sd-tips .sa-help-btn[aria-expanded='true']) { flex-wrap: wrap; }
+.admin .sd-tips:has(.sa-help-btn[aria-expanded='true']) { flex-basis: 100%; }
+.admin .sd-tips > .sa-help:has(> .sa-help-btn[aria-expanded='true']) { flex-basis: 100%; justify-content: flex-start; }
+.admin .a-card-head .sd-tips > .sa-help:has(> .sa-help-btn[aria-expanded='true']) { justify-content: flex-end; }
+
+/* A dot and a word: green on, amber needs a look, grey off, copper "with you". */
+.admin .sd-state { display: inline-flex; align-items: center; gap: 6px; font-size: var(--a-fs-sm); font-weight: 600; line-height: 1.3; white-space: nowrap; color: var(--a-strong); font-variant-numeric: tabular-nums; }
+.admin .sd-state-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--a-mark-quiet); }
+.admin .sd-on .sd-state-dot { background: var(--sd-green); }
+.admin .sd-warn .sd-state-dot { background: var(--sd-amber); }
+.admin .sd-accent .sd-state-dot, .admin .sd-state.sd-accent .sd-state-dot { background: var(--a-accent); }
+.admin .sd-off { color: var(--a-muted); font-weight: 500; }
+.admin .sd-off .sd-state-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--a-mark-quiet); }
+
+/* ── Client portals ────────────────────────────────────── */
+.admin .sd-pgrid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); }
+.admin .sd-pcard { gap: var(--space-3); padding: 20px 22px; }
+.admin .sd-pc-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.admin .sd-pc-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.admin .sd-pc-title { margin: 0; font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: 1.25rem; line-height: 1.25; overflow-wrap: anywhere; }
+.admin .sd-pc-dots { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.admin .sd-seen { display: inline-flex; align-items: center; gap: 6px; font-size: var(--a-fs-sm); color: var(--a-muted); white-space: nowrap; }
+.admin .sd-seen svg { flex: none; }
+.admin .sd-seen-quiet { color: var(--a-muted); }
+.admin a.sd-seen-warn { min-height: 32px; padding: 0 10px; border-radius: 999px; background: color-mix(in srgb, var(--sd-amber) 16%, transparent); color: var(--a-strong); font-weight: 600; text-decoration: none; }
+.admin a.sd-seen-warn:hover { background: color-mix(in srgb, var(--sd-amber) 26%, transparent); }
+.admin a.sd-seen-warn:focus-visible, .admin .sd-setup-dot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.admin .sd-pc-list .cp-list { gap: 6px; }
+.admin .sd-pc-clear { margin: 0; display: inline-flex; align-items: center; gap: 8px; color: var(--a-muted); font-size: var(--a-fs-body); }
+.admin .sd-pc-clear svg { color: var(--sd-green); }
+.admin .sd-pc-setup { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.admin .sd-setup-dot { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; font-size: var(--a-fs-sm); color: var(--a-muted); text-decoration: none; border-radius: 6px; }
+.admin .sd-setup-dot > span { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--a-mark-quiet); }
+.admin a.sd-setup-dot:hover { color: var(--a-text); text-decoration: underline; text-underline-offset: 3px; }
+.admin .sd-pcard .cp-foot { padding-top: var(--space-2); }
+
+@media (max-width: 720px) {
+  .admin .sd-glance { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: row; gap: 8px; }
+  .admin .sd-glance .sa-tile { padding: 10px 12px; border-radius: 14px; }
+  .admin .sd-glance .sa-tile-num { font-size: 1.5rem; }
+  .admin .sd-glance .sa-tile-label { font-size: var(--a-fs-sm); line-height: 1.25; }
+  .admin .sd-pcard { padding: 16px; }
+  .admin .sd-pc-head .sb-initials { width: 36px; height: 36px; }
+}
+
+/* ── Library ───────────────────────────────────────────── */
+.admin .lb-group a .sd-state { font-size: var(--a-fs-xs); }
+.admin .lb-group a[aria-current='page'] .sd-state { color: inherit; }
+.admin .lb-group a[aria-current='page'] .sd-off .sd-state-dot { box-shadow: inset 0 0 0 1.5px currentColor; }
+.admin .sd-empty-body { padding: var(--space-5); font-style: normal; text-align: center; }
+.admin .sd-list-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.admin .sd-list-foot .sa-help { flex-wrap: wrap; }
+.admin .sd-list-foot .sa-help-text:not([hidden]) { flex-basis: 100%; }
+.admin .sd-switch-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.admin .sd-switch-row .sa-help { flex-wrap: wrap; }
+/* Client emails: closed folds with an icon for who sends them. */
+.admin .sd-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; color: var(--a-muted); font-size: var(--a-fs-sm); }
+.admin .sd-trigger { display: inline-flex; align-items: center; gap: 6px; }
+.admin .sd-trigger svg, .admin .sd-trigger-icon svg { color: var(--a-muted); }
+.admin .sd-trigger-auto svg { color: var(--a-accent); }
+.admin .sd-email > summary { align-items: center; gap: 14px; min-height: 44px; }
+.admin .sd-email > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 8px; }
+.admin .sd-trigger-icon { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--a-tint); }
+.admin .sd-trigger-icon svg { width: 16px; height: 16px; }
+.admin .sd-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.admin .sd-email[open] .sd-ellipsis { display: none; }
+.admin .sd-email[open] > summary { margin-bottom: var(--space-3); }
+.admin .sd-email > .sd-when, .admin .sd-email > .small { margin-bottom: var(--space-2); }
+.admin .sd-when { font-size: var(--a-fs-sm); color: var(--a-muted); line-height: 1.5; }
+.admin .sd-when-label { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; background: var(--a-tint); color: var(--a-strong); font-weight: 600; }
+.admin .lb-emails:has(.sd-email) { gap: var(--space-2); }
+.admin .sd-email.p-card { padding-block: 12px; }
+/* Out and signed: the step bar inside each request. */
+.admin .sd-steps-compact { max-width: 420px; gap: 8px; }
+.admin .sd-steps-compact li strong { font-size: var(--a-fs-sm); }
+.admin .sd-steps-compact .sa-stage-bar { height: 6px; }
+.admin .lb-req .sd-steps { margin: var(--space-2) 0; }
+.admin .sd-allclear { display: inline-flex; align-items: center; gap: 8px; color: var(--a-muted); font-size: var(--a-fs-body); }
+.admin .sd-allclear svg { color: var(--sd-green); width: 18px; height: 18px; }
+
+/* ── Quote builder ─────────────────────────────────────── */
+.admin .sd-head-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.admin .sd-head-row .sa-chips { flex-wrap: wrap; }
+.admin .sd-head-row .sa-help-text:not([hidden]) { flex-basis: 100%; max-width: 62ch; }
+.admin .pb-drop.sd-drop-empty { display: flex; align-items: stretch; justify-content: center; min-height: 88px; padding: var(--space-2); border: 1.5px dashed var(--a-hairline-strong); border-radius: var(--a-radius-in); }
+.admin .pb-pack.is-over .pb-drop.sd-drop-empty { border-color: var(--a-accent); background: color-mix(in srgb, var(--a-accent) 8%, transparent); }
+.admin .sd-drop-empty .pb-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: var(--space-3); text-align: center; font-size: var(--a-fs-body); }
+.admin .sd-drop-empty .pb-empty .linklike { min-height: 32px; }
+@media (max-width: 820px) {
+  .admin .pb-drop.sd-drop-empty { min-height: 64px; padding: var(--space-2); border: 1.5px dashed var(--a-hairline-strong); border-radius: var(--a-radius-in); }
+  .admin .sd-drop-empty .pb-empty { padding: var(--space-2); text-align: center; }
+}
+
+/* ── Settings ──────────────────────────────────────────── */
+.admin .sd-conns { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 12px; }
+.admin .sd-conn { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; min-width: 0; padding: 16px; border: 1px solid var(--a-hairline); border-radius: 16px; background: var(--a-tint); }
+.admin .sd-conn:has(.sd-conn-more[open]), .admin .sd-conn:has(.sa-help-btn[aria-expanded='true']) { grid-column: 1 / -1; }
+.admin .sd-conn-name { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; width: 100%; }
+.admin .sd-conn-name strong { font-size: var(--a-fs-lg); }
+.admin .sd-conn-name .sa-help-text:not([hidden]) { flex-basis: 100%; }
+.admin .sd-conn .sd-state { font-size: var(--a-fs-body); }
+.admin .sd-conn-action:empty { display: none; }
+.admin .sd-conn-action form { margin: 0; }
+.admin .sd-conn-extra { margin: 0; font-size: var(--a-fs-sm); }
+.admin .sd-conn-more { width: 100%; margin-top: auto; }
+.admin .sd-conn-more > summary { min-height: 44px; font-weight: 400; font-size: var(--a-fs-sm); color: var(--a-muted); }
+.admin .sd-conn-more code { overflow-wrap: anywhere; }
+.admin .sd-guest-reveal { margin-top: var(--space-1); }
+.admin .sd-guest-reveal .sa-reveal-btn { min-height: 44px; }
+
+/* ── Retainers list ────────────────────────────────────── */
+.admin .sd-chip-quiet { background: transparent; box-shadow: inset 0 0 0 1px var(--a-hairline-strong); color: var(--a-muted); }
+.admin .a-rows li.sd-rt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3) var(--space-4); }
+.admin .sd-rt-main { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; min-height: 44px; }
+.admin .sd-rt-name { display: inline-flex; align-items: center; gap: 8px; font-size: var(--a-fs-lg); line-height: 1.3; overflow-wrap: normal; word-break: normal; }
+.admin .sd-rt-chips { flex-wrap: wrap; }
+.admin .sd-rt-side { flex: none; }
+@media (max-width: 560px) {
+  .admin .sd-rt-side .sb-ring { --sb-ring: 56px !important; }
+  .admin .sd-rt-chips .sa-chip { font-size: var(--a-fs-xs); padding: 2px 8px; }
+}
+
+/* ── Review room (owner's side) ────────────────────────── */
+.admin .rr-item-head .rr-who { order: -1; }
+.admin .rr-who .sb-initials { width: 28px; height: 28px; font-size: var(--a-fs-xs); }
+.admin .rr-replies .rr-who .sb-initials { width: 24px; height: 24px; }
+.admin .rr-item-head .rr-chip { border-radius: 999px; background: var(--a-tint); border-color: transparent; }
+.admin .rr-item-head .rr-chip:hover { border-color: var(--a-hairline-strong); }
+.admin .sd-email:not([open]) { gap: 0; }
+.admin :is(.sd-legend, .sd-switch-row, .sd-list-foot) > .sa-help:has(> .sa-help-btn[aria-expanded='true']) { flex-basis: 100%; }
+.admin .sd-conn-name > .sa-help:has(> .sa-help-btn[aria-expanded='true']) { display: contents; }
+/* Opened notes in these rows sit on their own line under the "?", the full width of the row. */
+.admin :is(.sd-tips, .sd-legend, .sd-switch-row, .sd-list-foot, .sd-conn-name, .sd-head-row) .sa-help-text:not([hidden]) { max-width: none; }
+@media (max-width: 560px) {
+  .admin .sd-conn { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 12px; padding: 14px; }
+  .admin .sd-conn > .sd-conn-name, .admin .sd-conn > .sd-conn-more, .admin .sd-conn > .sd-conn-extra { grid-column: 1 / -1; }
+  .admin .sd-conn > .sd-conn-action { justify-self: end; }
+}

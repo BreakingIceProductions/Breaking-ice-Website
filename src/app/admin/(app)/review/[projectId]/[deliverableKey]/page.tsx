@@ -1,4 +1,7 @@
 import '../../../../../css/admin-pages.css'
+import '../../../../../css/admin-simple-a.css'
+import '../../../../../css/admin-simple-b.css'
+import '../../../../../css/admin-simple-d.css'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdmin } from '@/admin/auth'

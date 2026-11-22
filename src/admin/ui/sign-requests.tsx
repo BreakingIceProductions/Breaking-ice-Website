@@ -5,6 +5,7 @@ import { useId, useState } from 'react'
 import { DocText } from '@/portal/sign-doc'
 import { statusLabel, type Audience, type DocField, type SignStatus } from '@/portal/sign-docs'
 import { fmtDate } from '@/admin/dates'
+import { StepBar } from './viz-d'
 
 /* ── Shapes the pages hand over (no tokens in lists except the link itself) ── */
 
@@ -47,7 +48,7 @@ async function copy(text: string) {
 
 /* ── The list of requests, with their actions ─────────────────────────── */
 
-export function RequestTable({ rows, showProject = true, empty }: { rows: RequestRow[]; showProject?: boolean; empty: string }) {
+export function RequestTable({ rows, showProject = true, empty, steps }: { rows: RequestRow[]; showProject?: boolean; empty: string; /** Show Sent › Opened › Signed as a bar instead of the line of dates (the Library). */ steps?: boolean }) {
   const router = useRouter()
   const [msg, setMsg] = useState<{ id: string; text: string; err?: boolean }>()
   const [busy, setBusy] = useState('')
@@ -83,8 +84,19 @@ export function RequestTable({ rows, showProject = true, empty }: { rows: Reques
                   </span>
                 )}
               </span>
-              <span className={`pill pill-doc-${r.status}`}>{statusLabel[r.status]}</span>
+              {!(steps && r.status !== 'void') && <span className={`pill pill-doc-${r.status}`}>{statusLabel[r.status]}</span>}
             </div>
+            {steps && r.status !== 'void' ? (
+              <StepBar
+                compact
+                label={`${statusLabel[r.status]}. Sent ${day(r.createdAt)}${r.emailedAt ? `, emailed ${day(r.emailedAt)}` : ', link only'}${r.viewedAt ? `, opened ${day(r.viewedAt)}` : ''}${r.signedAt ? `, signed ${day(r.signedAt)}` : ''}`}
+                steps={[
+                  { key: 'sent', label: 'Sent', on: true, when: `${day(r.createdAt)}${r.emailedAt ? '' : ' · link'}` },
+                  { key: 'opened', label: 'Opened', on: Boolean(r.viewedAt || r.signedAt), when: r.viewedAt ? day(r.viewedAt) : '' },
+                  { key: 'signed', label: 'Signed', on: r.status === 'signed', when: r.signedAt ? day(r.signedAt) : '' },
+                ]}
+              />
+            ) : (
             <p className="lb-req-dates muted small">
               Sent {day(r.createdAt)}
               {r.emailedAt ? ` · emailed ${day(r.emailedAt)}` : ' · link only'}
@@ -92,6 +104,7 @@ export function RequestTable({ rows, showProject = true, empty }: { rows: Reques
               {r.signedAt ? ` · signed ${day(r.signedAt)}` : ''}
               {r.voidedAt ? ` · withdrawn ${day(r.voidedAt)}` : ''}
             </p>
+            )}
             <div className="lb-req-actions">
               {r.status === 'signed' && r.pdfHref ? (
                 <a className="btn btn-primary btn-sm" href={r.pdfHref} target="_blank" rel="noopener noreferrer">View signed<span className="sr-only"> {r.title} by {r.signer} (opens the PDF in a new tab)</span></a>

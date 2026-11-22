@@ -16,6 +16,12 @@ export type FinderNode = {
   /** Can't be opened at all. */
   locked?: boolean
   dot?: Dot
+  /** Shown in place of the folder icon (a client's initials). */
+  lead?: React.ReactNode
+  /** Shown after the label, at the row's end (a count). */
+  badge?: React.ReactNode
+  /** Shown under the label, in place of the meta line (a stage chip). */
+  sub?: React.ReactNode
   /** Title of the column this node's children appear in. */
   childTitle?: string
   children?: FinderNode[]
@@ -124,12 +130,14 @@ export function Finder({
                         title={n.locked ? 'An older version. Ask Breaking Ice if you need it.' : undefined}
                         onClick={() => onPath([...path.slice(0, i), n.id])}
                       >
-                        {n.children && <Folder />}
+                        {n.lead ?? (n.children && <Folder />)}
                         <span className="fd-text">
                           {n.kicker && <span className="fd-kicker">{n.kicker}</span>}
                           <span className="fd-label">{n.label}</span>
                           {n.meta && <span className="fd-meta">{n.meta}</span>}
+                          {n.sub}
                         </span>
+                        {n.badge}
                         {n.dot && <span className={`fd-dot fd-dot-${n.dot}`} role="img" aria-label={DOT_LABEL[n.dot]} title={DOT_LABEL[n.dot]} />}
                         {n.children && <Chevron />}
                       </button>

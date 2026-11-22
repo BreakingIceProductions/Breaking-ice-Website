@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import '../../../css/admin-pages.css'
+import '../../../css/admin-simple-a.css'
+import '../../../css/admin-simple-b.css'
+import '../../../css/admin-simple-c.css'
 import { Suspense } from 'react'
 import { requireAdmin } from '@/admin/auth'
 import { adminSampleMode } from '@/admin/config'
@@ -30,12 +33,10 @@ export default async function Clients() {
   return (
     <div className="a-page a-page-wide">
       <header className="a-head">
-        <div className="stack ap-head-text">
-          <h1 className="a-h1">Clients</h1>
-          <p className="muted m0">Files by client: each client’s projects, cuts and documents.</p>
-        </div>
+        <h1 className="a-h1">Clients</h1>
         <Link className="btn btn-secondary" href="/admin/clients/new">New client</Link>
       </header>
+      <div className="sc-clients">
       <Suspense>
         <AdminLibrary
           clients={clients.map((c) => ({ _id: c._id, organizationName: c.organizationName, contacts: c.contacts }))}
@@ -43,6 +44,7 @@ export default async function Clients() {
           reviewUpload={r2Ready() || adminSampleMode()}
         />
       </Suspense>
+      </div>
     </div>
   )
 }

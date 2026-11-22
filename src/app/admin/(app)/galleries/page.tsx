@@ -25,10 +25,7 @@ export default async function Galleries() {
   return (
     <div className="a-page ga-page">
       <header className="a-head">
-        <div className="stack ap-head-text">
-          <h1 className="a-h1">Galleries</h1>
-          <p className="muted m0">Photo galleries for clients: upload a shoot, share a link, see their favourites.</p>
-        </div>
+        <h1 className="a-h1">Galleries</h1>
       </header>
 
       {galleriesSampleMode() && !adminSampleMode() && <p className="a-sample m0" role="status">Galleries aren’t connected on this site yet, so nothing here is saved.</p>}

@@ -7,6 +7,8 @@ import { fillTemplate, forStage, LIMITS, parseRecipients, PLACEHOLDERS, type Ema
 import { blockTokens, inlineTokens, insertToken, tidyTokens, type BlockOption } from '../email-blocks-shared'
 import { useConfirm } from './confirm'
 import { fmtDate } from '@/admin/dates'
+import { HelpTip } from './help-tip'
+import { StateDot } from './viz-d'
 
 type Reply = { sample?: boolean; message?: string; warning?: string; html?: string; template?: EmailTemplate }
 const post = (url: string, body: unknown) =>
@@ -611,7 +613,7 @@ export function SentEmails({ emails }: { emails: SentEmail[] }) {
 const STAGE_OPTIONS = PIPELINE_STAGES.map((s) => ({ value: s.value, title: s.title }))
 
 export function TemplateChip({ t }: { t: EmailTemplate }) {
-  return t.approved ? <span className="pill pill-doc-signed">Approved</span> : <span className="pill pill-doc-check">Needs your check</span>
+  return t.approved ? <StateDot tone="on" label="Wording approved">Approved</StateDot> : <StateDot tone="warn" label="Needs your check">Check</StateDot>
 }
 
 /**
@@ -651,10 +653,6 @@ export function EmailTemplates({ templates: initial, saved, previews, sampleVars
 
   return (
     <div className="stack gap-4">
-      <p className="muted small m0">
-        Starting points for the Email button on lead and project pages. Fill-ins like {'{firstName}'} are replaced when you pick one. Any template can be used, but one that isn’t approved shows a note to check the wording first.
-        {!saved && ' These are the starters: nothing is saved until you change one.'}
-      </p>
       <div className="lb-split">
         <nav className="lb-list" aria-label="Email templates">
           <div className="lb-group">
@@ -670,7 +668,13 @@ export function EmailTemplates({ templates: initial, saved, previews, sampleVars
             </ul>
             {!templates.length && <p className="muted small a-empty">No templates yet.</p>}
           </div>
-          {!readOnly && <div><button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditing('new'); setMsg(undefined) }}>New template</button></div>}
+          <div className="sd-list-foot">
+            {!readOnly && <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setEditing('new'); setMsg(undefined) }}>New template</button>}
+            <HelpTip label="About email templates">
+                Starting points for the Email button on lead and project pages. Fill-ins like {'{firstName}'} are replaced when you pick one. Any template can be used, but one that isn’t approved shows a note to check the wording first.
+                {!saved && ' These are the starters: nothing is saved until you change one.'} The preview uses made-up details. Sending happens only from a lead or project page, when you press Send.
+              </HelpTip>
+          </div>
         </nav>
 
         {editing ? (
@@ -711,7 +715,6 @@ export function EmailTemplates({ templates: initial, saved, previews, sampleVars
                 <button type="button" className="linklike small" disabled={busy} onClick={() => act('delete')}>Delete</button>
               </div>
             )}
-            <p className="muted small m0">The preview uses made-up details. Sending happens only from a lead or project page, when you press Send.</p>
           </section>
         ) : (
           <section className="p-card lb-panel">

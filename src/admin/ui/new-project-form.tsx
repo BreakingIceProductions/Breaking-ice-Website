@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
+import { HelpTip } from './help-tip'
 
 type ClientOption = { _id: string; organizationName: string }
 type Answer = { sample?: boolean; message?: string; id?: string }
@@ -82,11 +83,11 @@ export function NewProjectForm({ clients, initialClient, canEdit }: { clients: C
         <div className="field"><label htmlFor="np-start">Start date <span className="muted">(optional)</span></label><input id="np-start" className="input" type="date" value={f.startDate} onChange={set('startDate')} /></div>
       </div>
 
-      <p className="muted small m0">It starts in Onboarding. Nobody is sent anything and no onboarding tasks or invoices are made. A new organisation that’s already here is matched by its name or the email instead of being made twice.</p>
       {msg && <p ref={msgRef} tabIndex={-1} className={msg.bad ? 'err m0' : 'm0'} role={msg.bad ? 'alert' : 'status'}>{msg.text}</p>}
-      <div className="btn-row">
-        <button type="submit" className="btn btn-primary" disabled={busy || !canEdit} aria-busy={busy || undefined}>{busy ? 'Adding…' : 'Add project'}</button>
+      <div className="btn-row sc-form-foot">
+        <button type="submit" className="btn sa-copper" disabled={busy || !canEdit} aria-busy={busy || undefined}>{busy ? 'Adding…' : 'Add project'}</button>
         <a className="btn btn-secondary" href="/admin/projects">Cancel</a>
+        <HelpTip label="About adding a project">It starts in Onboarding. Nobody is sent anything and no onboarding tasks or invoices are made. A new organisation that’s already here is matched by its name or the email instead of being made twice.</HelpTip>
       </div>
       {!canEdit && <p className="muted small m0">This sign-in is view only, so it can’t add projects.</p>}
     </form>

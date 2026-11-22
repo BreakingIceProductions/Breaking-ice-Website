@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clockTime, frameAt, frameMiddle, frameOf, frameStart, spokenTime, timecode } from './timecode'
 import type { DeliverableStatus, ReviewComment, ReviewShape } from './types'
 import { useConfirmDialog } from '@/admin/ui/confirm'
+import { Initials } from '@/admin/ui/viz'
 import './review-room.css'
 
 /**
@@ -830,9 +831,11 @@ const when = (iso: string) => {
   return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
 }
 
-function Who({ c }: { c: ReviewComment }) {
+/** `avatar`: the owner's side shows the author's initials in a circle (decorative; the name follows). */
+function Who({ c, avatar }: { c: ReviewComment; avatar?: boolean }) {
   return (
     <span className="rr-who">
+      {avatar && <Initials name={c.author.name} />}
       <strong>{c.author.name}</strong>
       {c.author.kind === 'guest' && <span className="rr-tag">Guest</span>}
       {c.author.kind === 'admin' && <span className="rr-tag rr-tag-us">Breaking Ice</span>}
@@ -888,7 +891,7 @@ function CommentItem({
           {chip}
           {c.drawing?.length ? <ToolIcon t="pen" /> : null}
         </button>
-        <Who c={c} />
+        <Who c={c} avatar={isAdmin} />
         <span className="small muted rr-when">{pending ? 'Posting…' : when(c.createdAt)}{c.editedAt ? ' · edited' : ''}</span>
       </div>
       <Body c={c} isAdmin={isAdmin} canWrite={canWrite && !pending} onEdit={onEdit} onDelete={onDelete} deleteBelow />
@@ -899,7 +902,7 @@ function CommentItem({
           {replies.map((r) => (
             <li key={r._id} className="rr-reply">
               <div className="rr-item-head">
-                <Who c={r} />
+                <Who c={r} avatar={isAdmin} />
                 <span className="small muted rr-when">{when(r.createdAt)}{r.editedAt ? ' · edited' : ''}</span>
               </div>
               <Body c={r} isAdmin={isAdmin} canWrite={canWrite} onEdit={onEdit} onDelete={onDelete} />

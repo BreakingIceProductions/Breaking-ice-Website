@@ -4,11 +4,14 @@ import { useRouter } from 'next/navigation'
 import { activityText } from '../activity-text'
 import { useEffect, useId, useRef, useState } from 'react'
 import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
-import { CONTACT_KINDS, LEAD_BUDGETS, LEAD_SOURCES, LOST_REASONS, webHref } from '../lead'
+import { CONTACT_KINDS, fmtTime, LEAD_BUDGETS, LEAD_SOURCES, LOST_REASONS, webHref } from '../lead'
 import type { LeadDetails } from '../types'
 import { useNotify } from './confirm'
 import { StageDialog, type Stage } from './stage-dialog'
+import { HelpTip, Reveal } from './help-tip'
 import { TagChips } from './tag-chips'
+import { Chip } from './viz'
+import { Timeline } from './viz-c'
 
 const post = (url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -74,7 +77,7 @@ function useSavedTick() {
     clearTimeout(timer.current)
     timer.current = setTimeout(() => setOn(false), 1800)
   }
-  const el = <span className={`ld-saved${on ? ' on' : ''}`} aria-hidden="true">{kind === 'sample' ? 'Not kept' : 'Saved'}</span>
+  const el = <span className={`ld-saved sc-saved${on ? ' on' : ''}`} aria-hidden="true">{kind === 'sample' ? 'Not kept' : 'Saved'}</span>
   return [show, el] as const
 }
 
@@ -141,8 +144,24 @@ export type LeadContact = {
   tags?: string[]
 }
 
+const titleOf = (list: readonly { title: string; value: string }[], v?: string) => list.find((o) => o.value === v)?.title
+const dayText = (d?: string) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' }) : undefined)
+
+/**
+ * The lead's details. They read as plain facts (only the ones that are set); Edit turns the same card into
+ * the fields, which save when you leave each one. Done goes back to the facts.
+ */
 export function LeadFields({ projectId, contact, lead, projectType }: { projectId: string; contact: LeadContact; lead: LeadDetails; projectType?: string }) {
   const router = useRouter()
+  const [editing, setEditing] = useState(false)
+  const editBtn = useRef<HTMLButtonElement>(null)
+  const firstEdit = useRef(false)
+  // What the facts show: the saved values, updated as each field saves (sample data included, so the page reads true).
+  const [vals, setVals] = useState<Patch>({ name: contact.name, email: contact.email, phone: lead.phone, website: lead.website, source: lead.source, projectType, budget: lead.budget, startDate: lead.startDate, callDate: lead.callDate, callTime: lead.callTime, notes: lead.notes })
+  useEffect(() => {
+    if (!firstEdit.current) { firstEdit.current = true; return }
+    if (!editing) editBtn.current?.focus()
+  }, [editing])
   const [status, setStatus] = useState('')
   const notesSaved = useRef(lead.notes ?? '')
   const [notes, setNotes] = useState(lead.notes ?? '')
@@ -152,6 +171,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
     setStatus('Saving…')
     const r = await post('/api/admin/lead', { projectId, patch })
     setStatus(r.ok ? (r.data.sample ? SAMPLE : 'Saved.') : failed(r.status))
+    if (r.ok) setVals((v) => ({ ...v, ...patch }))
     // The heading and "Next up" read these details too.
     if (r.ok && !r.data.sample) router.refresh()
     return r.ok ? (r.data.sample ? 'sample' : true) : false
@@ -160,14 +180,55 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
   // The project section shows what's been set; the rest wait behind "Add details". Sorted once, from the
   // first render, so a field doesn't jump out from under you while you fill it in.
   const projectFields = [
-    { label: 'Type', el: <SelectField key="type" label="Type" name="projectType" value={projectType} save={save} options={PROJECT_TYPES} none="Not set" /> },
-    { label: 'Budget', el: <SelectField key="budget" label="Budget" name="budget" value={lead.budget} save={save} options={LEAD_BUDGETS} none="Not discussed" /> },
-    { label: 'Start date', el: <TextField key="start" label="Start date" name="startDate" type="date" value={lead.startDate} save={save} /> },
-    { label: 'Call date', el: <TextField key="callDate" label="Call date" name="callDate" type="date" value={lead.callDate} save={save} /> },
-    { label: 'Call time', el: <TextField key="callTime" label="Call time" name="callTime" type="time" value={lead.callTime} save={save} /> },
+    { label: 'Type', el: <SelectField key="type" label="Type" name="projectType" value={vals.projectType} save={save} options={PROJECT_TYPES} none="Not set" /> },
+    { label: 'Budget', el: <SelectField key="budget" label="Budget" name="budget" value={vals.budget} save={save} options={LEAD_BUDGETS} none="Not discussed" /> },
+    { label: 'Start date', el: <TextField key="start" label="Start date" name="startDate" type="date" value={vals.startDate} save={save} /> },
+    { label: 'Call date', el: <TextField key="callDate" label="Call date" name="callDate" type="date" value={vals.callDate} save={save} /> },
+    { label: 'Call time', el: <TextField key="callTime" label="Call time" name="callTime" type="time" value={vals.callTime} save={save} /> },
   ]
   const projectSet = projectFields.filter((f) => firstSet.includes(f.label))
   const projectUnset = projectFields.filter((f) => !firstSet.includes(f.label))
+
+  const web = webHref(vals.website)
+  const facts: [string, React.ReactNode][] = [
+    ['Name', vals.name],
+    ['Email', vals.email && <a className="text-link-plain" href={`mailto:${vals.email}`}>{vals.email}</a>],
+    ['Phone', vals.phone && <a className="text-link-plain" href={`tel:${vals.phone.replace(/[^\d+]/g, '')}`}>{vals.phone}</a>],
+    ['Company', contact.company],
+    ['Website', vals.website && (web ? <a className="text-link-plain" href={web} target="_blank" rel="noopener noreferrer">{vals.website}<span className="sr-only"> (opens in a new tab)</span></a> : vals.website)],
+    ['Found us', titleOf(LEAD_SOURCES, vals.source)],
+    ['Type', titleOf(PROJECT_TYPES, vals.projectType)],
+    ['Budget', titleOf(LEAD_BUDGETS, vals.budget)],
+    ['Start date', dayText(vals.startDate)],
+    ['Call', vals.callDate || vals.callTime ? [dayText(vals.callDate), vals.callTime && fmtTime(vals.callTime)].filter(Boolean).join(' · ') : undefined],
+  ]
+  const set = facts.filter(([, v]) => v)
+  const unset = facts.filter(([, v]) => !v).map(([k]) => k.toLowerCase())
+
+  if (!editing)
+    return (
+      <section className="p-card sc-facts-card" aria-labelledby="ld-h-details">
+        <div className="a-card-head">
+          <h2 id="ld-h-details" className="a-h2">Details</h2>
+          <button ref={editBtn} type="button" className="btn btn-secondary btn-sm" onClick={() => setEditing(true)}>Edit<span className="sr-only"> details</span></button>
+        </div>
+        <dl className="sc-facts">
+          {set.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+          {contact.tags?.length ? <div><dt>Tags</dt><dd><TagChips tags={contact.tags} /></dd></div> : null}
+        </dl>
+        {!contact.onClient && (
+          <div className="sc-chips">
+            <Chip tone="warm" label={`Not on ${contact.company}’s contact list`}>Not on contact list</Chip>
+            <HelpTip label="About the contact list">They can’t sign in to the portal or get its emails until they’re added to {contact.company}’s contact list in the editor.</HelpTip>
+          </div>
+        )}
+        {vals.notes ? (
+          <div className="sc-notes"><span className="a-round-label">Why now, and your notes</span><p className="m0">{vals.notes}</p></div>
+        ) : null}
+        {unset.length > 0 && <button type="button" className="linklike small sc-add" onClick={() => setEditing(true)}>+ Add {unset.length === 1 ? unset[0] : `${unset.length} more`}{!vals.notes && ' and notes'}<span className="sr-only">: {unset.join(', ')}</span></button>}
+        <span className="sr-only" role="status">{status}</span>
+      </section>
+    )
 
   return (
     <div className="stack gap-4">
@@ -175,9 +236,12 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
         <section className="p-card" aria-labelledby="ld-h-contact">
           <div className="a-card-head">
             <h2 id="ld-h-contact" className="a-h2">Contact</h2>
-            {contact.onClient && contact.studioHref && (
-              <a className="text-link small" href={contact.studioHref} target="_blank" rel="noopener noreferrer">Edit client details<span aria-hidden="true"> ↗</span><span className="sr-only"> in the editor (opens in a new tab)</span></a>
-            )}
+            <span className="row-wrap gap-2">
+              {contact.onClient && contact.studioHref && (
+                <a className="text-link small" href={contact.studioHref} target="_blank" rel="noopener noreferrer">Edit client details<span aria-hidden="true"> ↗</span><span className="sr-only"> in the editor (opens in a new tab)</span></a>
+              )}
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditing(false)}>Done</button>
+            </span>
           </div>
           <div className="ld-rows">
             {contact.onClient ? (
@@ -187,21 +251,21 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
               </>
             ) : (
               <>
-                <TextField label="Name" name="name" value={contact.name} save={save} />
-                <TextField label="Email" name="email" type="email" value={contact.email} save={save} />
+                <TextField label="Name" name="name" value={vals.name} save={save} />
+                <TextField label="Email" name="email" type="email" value={vals.email} save={save} />
               </>
             )}
-            <TextField label="Phone" name="phone" type="tel" value={lead.phone} save={save} />
+            <TextField label="Phone" name="phone" type="tel" value={vals.phone} save={save} />
             <Fixed label="Company">{contact.company}</Fixed>
             {contact.tags?.length ? <Fixed label="Tags"><TagChips tags={contact.tags} /></Fixed> : null}
             <TextField
               label="Website"
               name="website"
-              value={lead.website}
+              value={vals.website}
               save={save}
               after={(v) => webHref(v) && <a className="text-link small" href={webHref(v)} target="_blank" rel="noopener noreferrer">Open<span className="sr-only"> their website in a new tab</span></a>}
             />
-            <SelectField label="Found us" name="source" value={lead.source} save={save} options={LEAD_SOURCES} none="Not asked yet" />
+            <SelectField label="Found us" name="source" value={vals.source} save={save} options={LEAD_SOURCES} none="Not asked yet" />
           </div>
           {!contact.onClient && (
             <p className="muted small m0">Not on {contact.company}’s contact list, so they can’t sign in to the portal or get its emails. Add them to the contact list in the editor when they should.</p>
@@ -238,7 +302,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
       </section>
 
       <p className="muted small ld-hint">
-        <span>Change any detail; it saves when you leave the field.</span>
+        <span>Each detail saves when you leave the field.</span>
         <span role="status">{status}</span>
       </p>
     </div>
@@ -250,7 +314,11 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
 /** `source` (where the line came from) and `note` (one of your own notes) are for the project page, which lists more than the log. */
 export type LeadLogEntry = { key: string; date: string; time?: string; text: string; source?: string; note?: boolean }
 
-export function LeadActivity({ projectId, today, entries }: { projectId: string; today: string; entries: LeadLogEntry[] }) {
+/**
+ * The log-contact form and the activity list. `simple` (the lead page) keeps the form behind a "Log contact"
+ * button and draws the list as a timeline with dots; the project page keeps the open form and plain list.
+ */
+export function LeadActivity({ projectId, today, entries, simple }: { projectId: string; today: string; entries: LeadLogEntry[]; simple?: boolean }) {
   const router = useRouter()
   const [kind, setKind] = useState(CONTACT_KINDS[0].value)
   const [date, setDate] = useState(today)
@@ -273,31 +341,41 @@ export function LeadActivity({ projectId, today, entries }: { projectId: string;
     router.refresh()
   }
 
+  const form = (
+    <form onSubmit={log} className="ld-log" aria-label="Log contact">
+      {!simple && <span className="a-round-label">Log contact</span>}
+      <div className="ld-log-row">
+        <label><span className="sr-only">Kind of contact</span>
+          <select className="input" value={kind} onChange={(e) => setKind(e.target.value)}>
+            {CONTACT_KINDS.map((k) => <option key={k.value} value={k.value}>{k.title}</option>)}
+          </select>
+        </label>
+        <label><span className="sr-only">Date</span>
+          <input className="input" type="date" value={date} max={today} required onChange={(e) => setDate(e.target.value)} />
+        </label>
+      </div>
+      <label><span className="sr-only">Short note</span>
+        <input className="input" value={note} maxLength={200} placeholder="Short note (optional)" onChange={(e) => setNote(e.target.value)} />
+      </label>
+      <div className="row-wrap">
+        <button type="submit" className="btn btn-secondary btn-sm" disabled={busy}>{busy ? 'Logging…' : 'Log it'}</button>
+        <span className="small muted" role="status">{msg}</span>
+      </div>
+    </form>
+  )
+
   return (
     <section className="p-card" aria-labelledby="ld-h-activity">
-      <h2 id="ld-h-activity" className="a-h2">Activity</h2>
-      <form onSubmit={log} className="ld-log" aria-label="Log contact">
-        <span className="a-round-label">Log contact</span>
-        <div className="ld-log-row">
-          <label><span className="sr-only">Kind of contact</span>
-            <select className="input" value={kind} onChange={(e) => setKind(e.target.value)}>
-              {CONTACT_KINDS.map((k) => <option key={k.value} value={k.value}>{k.title}</option>)}
-            </select>
-          </label>
-          <label><span className="sr-only">Date</span>
-            <input className="input" type="date" value={date} max={today} required onChange={(e) => setDate(e.target.value)} />
-          </label>
-        </div>
-        <label><span className="sr-only">Short note</span>
-          <input className="input" value={note} maxLength={200} placeholder="Short note (optional)" onChange={(e) => setNote(e.target.value)} />
-        </label>
-        <div className="row-wrap">
-          <button type="submit" className="btn btn-secondary btn-sm" disabled={busy}>{busy ? 'Logging…' : 'Log it'}</button>
-          <span className="small muted" role="status">{msg}</span>
-        </div>
-      </form>
+      {simple ? (
+        <div className="a-card-head"><h2 id="ld-h-activity" className="a-h2">Activity</h2></div>
+      ) : (
+        <h2 id="ld-h-activity" className="a-h2">Activity</h2>
+      )}
+      {simple ? <Reveal className="sc-log" label={<><span aria-hidden="true">+</span> Log contact</>} openLabel="Close">{form}</Reveal> : form}
 
-      {entries.length ? (
+      {entries.length && simple ? (
+        <Timeline label="Activity, newest first" items={shown.map((l) => ({ key: l.key, text: l.note ? l.text : activityText(l.text), sub: l.source, note: l.note, when: <>{l.date}{l.time && <><br />{l.time}</>}</> }))} />
+      ) : entries.length ? (
         <ul className="a-feed ld-feed">
           {shown.map((l) => (
             <li key={l.key}>
@@ -409,6 +487,10 @@ export function LeadForm() {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((s) => ({ ...s, [k]: e.target.value }))
   const defaultTitle = `${f.company.trim() || f.name.trim() || 'Company'} project`
   const badEmail = { text: 'That email doesn’t look right. Check it and try again.', bad: true, field: 'email' as const }
+  // "More details" opens by itself when a saved draft brings anything back into it.
+  const more = useRef<HTMLDetailsElement>(null)
+  const extra = Boolean(f.phone || f.title || f.projectType || f.budget || f.source || f.notes)
+  useEffect(() => { if (extra && more.current) more.current.open = true }, [extra])
 
   // An error is announced and focused, so it's never missed below the fold.
   useEffect(() => { if (msg?.bad) msgRef.current?.focus() }, [msg])
@@ -434,25 +516,30 @@ export function LeadForm() {
           // A malformed address gets the message below instead of the browser's bubble.
           onInvalid={(e) => { if (e.currentTarget.validity.typeMismatch) { e.preventDefault(); setMsg(badEmail) } }}
           aria-invalid={msg?.bad && msg.field === 'email' ? true : undefined} aria-describedby={msg?.bad && msg.field === 'email' ? 'nl-msg' : undefined} /></div>
-        <div className="field"><label htmlFor="nl-phone">Phone <span className="muted">(optional)</span></label><input id="nl-phone" className="input" type="tel" maxLength={40} autoComplete="off" value={f.phone} onChange={set('phone')} /></div>
         <div className="field"><label htmlFor="nl-company">Company</label><input id="nl-company" className="input" required maxLength={160} autoComplete="off" value={f.company} onChange={set('company')} /></div>
-        <div className="field ld-form-wide"><label htmlFor="nl-title">Project title</label><input id="nl-title" className="input" maxLength={160} placeholder={defaultTitle} value={f.title} onChange={set('title')} aria-describedby="nl-title-hint" /><span id="nl-title-hint" className="hint">Leave empty to call it “{defaultTitle}”.</span></div>
-        <div className="field"><label htmlFor="nl-type">Type</label>
-          <select id="nl-type" className="input" value={f.projectType} onChange={set('projectType')}><option value="">Not set</option>{PROJECT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.title}</option>)}</select>
-        </div>
-        <div className="field"><label htmlFor="nl-budget">Budget range</label>
-          <select id="nl-budget" className="input" value={f.budget} onChange={set('budget')}><option value="">Not discussed</option>{LEAD_BUDGETS.map((b) => <option key={b.value} value={b.value}>{b.title}</option>)}</select>
-        </div>
-        <div className="field"><label htmlFor="nl-source">Found us</label>
-          <select id="nl-source" className="input" value={f.source} onChange={set('source')}><option value="">Not asked yet</option>{LEAD_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.title}</option>)}</select>
-        </div>
-        <div className="field ld-form-wide"><label htmlFor="nl-notes">Notes</label><textarea id="nl-notes" className="input ld-notes" rows={4} maxLength={6000} value={f.notes} onChange={set('notes')} /></div>
       </div>
-      <p className="muted small m0">Adding a lead sends them nothing. A company you already have is matched by its name or by this email; otherwise a new client is made with this one contact.</p>
+      <details className="sc-more" ref={more}>
+        <summary>More details</summary>
+        <div className="ld-form-grid">
+          <div className="field"><label htmlFor="nl-phone">Phone <span className="muted">(optional)</span></label><input id="nl-phone" className="input" type="tel" maxLength={40} autoComplete="off" value={f.phone} onChange={set('phone')} /></div>
+          <div className="field"><label htmlFor="nl-title">Project title</label><input id="nl-title" className="input" maxLength={160} placeholder={defaultTitle} value={f.title} onChange={set('title')} /></div>
+          <div className="field"><label htmlFor="nl-type">Type</label>
+            <select id="nl-type" className="input" value={f.projectType} onChange={set('projectType')}><option value="">Not set</option>{PROJECT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.title}</option>)}</select>
+          </div>
+          <div className="field"><label htmlFor="nl-budget">Budget range</label>
+            <select id="nl-budget" className="input" value={f.budget} onChange={set('budget')}><option value="">Not discussed</option>{LEAD_BUDGETS.map((b) => <option key={b.value} value={b.value}>{b.title}</option>)}</select>
+          </div>
+          <div className="field"><label htmlFor="nl-source">Found us</label>
+            <select id="nl-source" className="input" value={f.source} onChange={set('source')}><option value="">Not asked yet</option>{LEAD_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.title}</option>)}</select>
+          </div>
+          <div className="field ld-form-wide"><label htmlFor="nl-notes">Notes</label><textarea id="nl-notes" className="input ld-notes" rows={4} maxLength={6000} value={f.notes} onChange={set('notes')} /></div>
+        </div>
+      </details>
       {msg && <p id="nl-msg" ref={msgRef} tabIndex={-1} className={`m0 ${msg.bad ? 'err' : 'small'}`} role={msg.bad ? 'alert' : 'status'}>{msg.text}</p>}
-      <div className="btn-row">
-        <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Adding…' : 'Add lead'}</button>
+      <div className="btn-row sc-form-foot">
+        <button type="submit" className="btn sa-copper" disabled={busy}>{busy ? 'Adding…' : 'Add lead'}</button>
         <a className="btn btn-secondary" href="/admin/pipeline">Cancel</a>
+        <HelpTip label="About adding a lead">Adding a lead sends them nothing. A company you already have is matched by its name or by this email; otherwise a new client is made with this one contact. Leave the project title empty to call it “{defaultTitle}”.</HelpTip>
       </div>
     </form>
   )
