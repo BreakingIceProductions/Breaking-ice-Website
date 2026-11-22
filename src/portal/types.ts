@@ -2,7 +2,7 @@ export type SanityImage = { asset?: { _ref?: string } } | null | undefined
 
 export type Producer = { name?: string; role?: string; email?: string; phone?: string; portrait?: SanityImage }
 
-export type Contact = { _key: string; name: string; email: string; role?: string; getsEmails?: boolean }
+export type Contact = { _key: string; name: string; email: string; role?: string; getsEmails?: boolean; /** Back office only: not read for the portal. */ phone?: string }
 
 export type PortalClient = {
   _id: string

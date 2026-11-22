@@ -119,8 +119,12 @@ export default async function ClientPage({ params, searchParams }: Props) {
               <dl className="key-dates">
                 {c.contacts.map((p) => (
                   <div key={p._key}>
-                    <dt><a className="text-link-plain" href={`mailto:${p.email}`}>{p.name}</a><TagChips tags={tagsFor(people, p.email)} label={`Tags on ${p.name}`} /></dt>
-                    <dd className="muted">{p.role || p.email}</dd>
+                    <dt>{p.email ? <a className="text-link-plain" href={`mailto:${p.email}`}>{p.name}</a> : p.name}<TagChips tags={tagsFor(people, p.email)} label={`Tags on ${p.name}`} /></dt>
+                    <dd className="muted">
+                      {p.role || p.email}
+                      {/* Under the role or email, tap to call on a phone. */}
+                      {p.phone && <>{(p.role || p.email) && <br />}Phone: <a className="text-link-plain" href={`tel:${p.phone.replace(/[^\d+]/g, '')}`}>{p.phone}</a></>}
+                    </dd>
                   </div>
                 ))}
               </dl>

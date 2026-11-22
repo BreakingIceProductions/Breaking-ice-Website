@@ -1,5 +1,8 @@
 import 'server-only'
 import { SITE_URL } from '@/lib/site'
+import { postMessage } from '@/slack/api'
+import { actions as slackActions, section as slackSection, type SlackBlock, type SlackButton } from '@/slack/blocks'
+import { slackBotReady, slackEnv } from '@/slack/env'
 import { portalEnv } from './config'
 
 /**
@@ -470,7 +473,17 @@ export const paymentSection = (m: { label: string; projectTitle: string; status:
     button: { href: m.portalUrl, label: 'Open your portal' },
   })
 
-export async function notifyJosh(text: string) {
+/**
+ * A Slack ping to Josh. With the Slack app set up (SLACK_BOT_TOKEN + SLACK_CHANNEL_ID) it goes through the
+ * bot, with blocks or buttons when given (src/slack/blocks.ts); otherwise, or if that fails, plain text
+ * through SLACK_WEBHOOK_URL as before.
+ */
+export async function notifyJosh(text: string, opts: { blocks?: SlackBlock[]; buttons?: SlackButton[] } = {}) {
+  if (slackBotReady()) {
+    const blocks = opts.blocks ?? (opts.buttons?.length ? [slackSection(text), slackActions(opts.buttons)] : undefined)
+    const r = await postMessage({ channel: slackEnv.channelId, text, blocks })
+    if (r.ok) return
+  }
   if (portalEnv.slackWebhook) {
     await fetch(portalEnv.slackWebhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) }).catch((e) =>
       console.error('[portal] slack failed', e),

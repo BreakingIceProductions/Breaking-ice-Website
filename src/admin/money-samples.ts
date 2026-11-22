@@ -67,7 +67,7 @@ export function withSampleMoney(p: OfficeProject): OfficeProject {
 
 /** Finished and lost work, so last year, the funnel and the outcomes aren't empty. */
 export function sampleMoneyExtras(): OfficeProject[] {
-  const client = (id: string, name: string) => ({ _id: id, organizationName: name, contacts: [{ _key: 'c1', name: '[Client contact]', email: `${id.replace(/^sample-/, '')}@example.com` }] })
+  const client = (id: string, name: string) => ({ _id: id, organizationName: name, contacts: [{ _key: 'c1', name: '[Client contact]', email: `${id.replace(/^sample-/, '')}@example.com`, ...(id === 'sample-gnwt' && { phone: '867-555-0101' }) }] })
   const base = { deliverables: [], schedule: [], milestones: {}, activity: [], crew: [], region: 'alberta' }
   const office = (id: string, lastMove: number, more: Partial<OfficeState>): OfficeState => ({ _id: `bo-state-${id}`, stageChangedAt: at(lastMove), ...more })
   return [

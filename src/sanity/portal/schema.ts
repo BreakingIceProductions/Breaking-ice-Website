@@ -58,9 +58,10 @@ export const client = defineType({
             defineField({
               name: 'email',
               type: 'string',
-              validation: (r) => r.required().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { name: 'email' }),
+              description: 'Optional for leads saved from a call; needed before they can sign in to the portal.', validation: (r) => r.regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { name: 'email' }),
             }),
             defineField({ name: 'role', type: 'string' }),
+            defineField({ name: 'phone', title: 'Phone', type: 'string', description: 'Optional. Shown in the back office only, never on the portal.' }),
             defineField({ name: 'getsEmails', title: 'Gets “new version” emails', type: 'boolean', initialValue: true }),
           ],
           preview: { select: { title: 'name', subtitle: 'email' } },

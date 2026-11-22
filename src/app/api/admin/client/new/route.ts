@@ -19,6 +19,7 @@ export async function POST(req: Request) {
   const name = text(body.name, 120)
   const email = text(body.email, 200).toLowerCase()
   const role = text(body.role, 80)
+  const phone = text(body.phone, 40)
   const getsEmails = body.getsEmails === true
 
   if (!company) return json({ ok: false, error: 'invalid', field: 'company', message: 'Type the organisation’s name.' }, 400)
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
   if (admin.sample) return json({ ok: true, sample: true })
 
   try {
-    const made = await createOfficeClient({ company, name, email, role: role || undefined, getsEmails })
+    const made = await createOfficeClient({ company, name, email, role: role || undefined, phone: phone || undefined, getsEmails })
     if (made.draftOnly) return json({ ok: false, error: 'draft', message: 'A client with that name or email is still being written in the editor. Publish it there instead of adding it again.' }, 409)
     return json({ ok: true, id: made.id, existing: made.existing })
   } catch (e) {

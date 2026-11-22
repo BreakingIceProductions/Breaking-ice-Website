@@ -231,7 +231,8 @@ export default async function Today() {
       detail: r.detail,
       when: r.when,
       urgent: r.urgent,
-      nudge: { email: c?.email ?? '', first: c?.name?.split(' ')[0] ?? 'there', title: r.project.title, client: r.project.client.organizationName },
+      // No Nudge button when the first contact has no email (a lead saved with only a name).
+      nudge: c?.email ? { email: c.email, first: c.name?.split(' ')[0] ?? 'there', title: r.project.title, client: r.project.client.organizationName } : undefined,
     }
   })
   const sharedQuotes: Need[] = projects

@@ -3,6 +3,7 @@ import { SITE_URL } from '@/lib/site'
 import { getPortalSettings, portalClient } from '@/portal/data'
 import { messageEmail, notifyJosh, sendEmail } from '@/portal/email'
 import { portalReady } from '@/portal/config'
+import { recapButtons } from '@/slack/blocks'
 import { allRetainerClients, canWrite, claimRecapSend, edmontonDate, getRetainerMonth, monthKey, monthLabel, piecesForMonth, saveRecap, shiftMonth, type RetainerClient } from './data'
 import type { ItemType, MonthKey, Network, PublerPiece, RetainerItem } from './types'
 
@@ -144,7 +145,8 @@ export async function draftDueRecaps(deadline: number): Promise<string[]> {
       }
       await saveRecap(c._id, month, { draftedAt: new Date().toISOString(), subject: d.subject, body: d.body })
       log.push(`retainer recap drafted: ${c.organizationName} ${month}`)
-      await notifyJosh(`Recap for ${c.organizationName} (${monthLabel(month)}) is drafted. Read it and press Send when it's right: ${SITE_URL}/admin/retainers/${encodeURIComponent(c._id)}?month=${month}`)
+      const page = `${SITE_URL}/admin/retainers/${encodeURIComponent(c._id)}?month=${month}`
+      await notifyJosh(`Recap for ${c.organizationName} (${monthLabel(month)}) is drafted. Read it and press Send when it's right: ${page}`, { buttons: recapButtons(c._id, month, page) })
     } catch (e) {
       log.push(`retainer recap failed: ${c.organizationName}: ${String(e).slice(0, 120)}`)
     }

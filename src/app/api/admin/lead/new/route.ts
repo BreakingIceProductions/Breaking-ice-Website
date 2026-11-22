@@ -23,7 +23,8 @@ export async function POST(req: Request) {
   const projectType = text(body.projectType, 40)
   const lead = cleanLeadPatch({ phone: String(body.phone ?? ''), budget: String(body.budget ?? ''), source: String(body.source ?? ''), notes: String(body.notes ?? '') })
   if (!name) return json({ ok: false, error: 'invalid', message: 'Add their name.' }, 400)
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ ok: false, error: 'invalid', message: 'That email doesn’t look right.' }, 400)
+  // Email can be left empty (a name is enough to start a lead), but one that's there has to look like an address.
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ ok: false, error: 'invalid', message: 'That email doesn’t look right.' }, 400)
   if (!lead || (projectType && !PROJECT_TYPES.some((t) => t.value === projectType))) return json({ ok: false, error: 'invalid', message: 'Something in the form isn’t right. Check it and try again.' }, 400)
   if (admin.sample) return json({ ok: true, sample: true })
   try {

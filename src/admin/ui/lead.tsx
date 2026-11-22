@@ -417,7 +417,7 @@ export function LeadForm() {
     <form onSubmit={submit} className="p-card ld-form">
       <div className="ld-form-grid">
         <div className="field"><label htmlFor="nl-name">Name</label><input id="nl-name" className="input" required maxLength={120} autoComplete="off" value={f.name} onChange={set('name')} /></div>
-        <div className="field"><label htmlFor="nl-email">Email</label><input id="nl-email" className="input" type="email" required maxLength={200} autoComplete="off" value={f.email} onChange={set('email')}
+        <div className="field"><label htmlFor="nl-email">Email <span className="muted">(optional)</span></label><input id="nl-email" className="input" type="email" maxLength={200} autoComplete="off" value={f.email} onChange={set('email')}
           // A malformed address gets the message below instead of the browser's bubble.
           onInvalid={(e) => { if (e.currentTarget.validity.typeMismatch) { e.preventDefault(); setMsg(badEmail) } }}
           aria-invalid={msg?.bad && msg.field === 'email' ? true : undefined} aria-describedby={msg?.bad && msg.field === 'email' ? 'nl-msg' : undefined} /></div>

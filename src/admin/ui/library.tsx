@@ -107,7 +107,7 @@ function ClientPanel({ c, count }: { c: LibClient; count: number }) {
       {c.contacts?.length ? (
         <dl className="key-dates">
           {c.contacts.map((p) => (
-            <div key={p._key}><dt><a className="text-link-plain" href={`mailto:${p.email}`}>{p.name}</a></dt><dd className="muted">{p.role || p.email}</dd></div>
+            <div key={p._key}><dt>{p.email ? <a className="text-link-plain" href={`mailto:${p.email}`}>{p.name}</a> : p.name}</dt><dd className="muted">{p.role || p.email}</dd></div>
           ))}
         </dl>
       ) : (

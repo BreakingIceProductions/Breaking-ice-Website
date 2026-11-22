@@ -2,6 +2,7 @@ import 'server-only'
 import { randomBytes } from 'node:crypto'
 import { SITE_URL } from '@/lib/site'
 import { notifyJosh } from '@/portal/email'
+import { suggestionButtons } from '@/slack/blocks'
 import { portalClient } from '@/portal/data'
 import { PROJECT_TYPES, type PipelineStage } from '@/sanity/portal/office-constants'
 import { adminSampleMode } from './config'
@@ -288,7 +289,9 @@ export async function addSuggestion(input: NewSuggestion): Promise<boolean> {
   })
   if (!added) return false
   const who = `*${slackEsc(s.name)}*${s.company ? `, ${slackEsc(s.company)}` : ''}`
-  await notifyJosh(`New possible lead (from ${SOURCE_LABEL[s.source]}): ${who} — ${slackEsc(s.summary)} <${SITE_URL}/admin|Review on Today>`)
+  await notifyJosh(`New possible lead (from ${SOURCE_LABEL[s.source]}): ${who} — ${slackEsc(s.summary)} <${SITE_URL}/admin|Review on Today>`, {
+    buttons: suggestionButtons(item._key, `${SITE_URL}/admin`),
+  })
   return true
 }
 

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 type Answer = { sample?: boolean; message?: string; id?: string; existing?: boolean; field?: string }
-type Field = 'company' | 'name' | 'email' | 'role'
+type Field = 'company' | 'name' | 'email' | 'role' | 'phone'
 
 const post = (body: unknown) =>
   fetch('/api/admin/client/new', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -17,7 +17,7 @@ const post = (body: unknown) =>
  */
 export function NewClientForm({ canEdit, cancelHref }: { canEdit: boolean; cancelHref: string }) {
   const router = useRouter()
-  const [f, setF] = useState({ company: '', name: '', email: '', role: '', getsEmails: false })
+  const [f, setF] = useState({ company: '', name: '', email: '', role: '', phone: '', getsEmails: false })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ text: string; bad?: boolean; field?: Field } | null>(null)
   const msgRef = useRef<HTMLParagraphElement>(null)
@@ -59,6 +59,10 @@ export function NewClientForm({ canEdit, cancelHref }: { canEdit: boolean; cance
         <div className="field">
           <label htmlFor="nc-role">Role <span className="muted">(optional)</span></label>
           <input id="nc-role" name="role" className="input" maxLength={80} autoComplete="organization-title" value={f.role} onChange={set('role')} />
+        </div>
+        <div className="field">
+          <label htmlFor="nc-phone">Phone <span className="muted">(optional)</span></label>
+          <input id="nc-phone" name="phone" className="input" type="tel" maxLength={40} autoComplete="tel" value={f.phone} onChange={set('phone')} />
         </div>
         <label className="a-check ld-form-wide">
           <input id="nc-emails" name="getsEmails" type="checkbox" checked={f.getsEmails} onChange={(e) => setF((s) => ({ ...s, getsEmails: e.target.checked }))} />

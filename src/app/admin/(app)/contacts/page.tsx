@@ -31,7 +31,7 @@ function knownPeople(clients: ClientSummary[]): BasePerson[] {
     const common = { company: c.organizationName, clientId: c._id, last: c.lastActivity }
     const contacts: BasePerson[] = (c.contacts ?? [])
       .filter((x) => x.name || x.email)
-      .map((x) => ({ ...common, ...where, id: `c:${c._id}:${x._key}`, source: 'client', name: x.name || x.email, role: x.role, email: x.email, studioHref: `/studio/portal/structure/client;${encodeURIComponent(c._id)}` }))
+      .map((x) => ({ ...common, ...where, id: `c:${c._id}:${x._key}`, source: 'client', name: x.name || x.email, role: x.role, email: x.email, phone: x.phone || undefined, studioHref: `/studio/portal/structure/client;${encodeURIComponent(c._id)}` }))
     const onLeads: BasePerson[] = []
     for (const p of c.projects) {
       const l = p.office.lead

@@ -112,7 +112,7 @@ export async function listClients(): Promise<ClientSummary[]> {
   const projects = await listProjects()
   const clients = adminSampleMode()
     ? [...new Map(projects.map((p) => [p.client._id, p.client])).values()]
-    : ((await q<OfficeClient[]>(`*[_type == "client"] | order(organizationName asc){_id, organizationName, contacts[]{_key, name, email, role}, billingEmail, driveFolderId}`)) ?? [])
+    : ((await q<OfficeClient[]>(`*[_type == "client"] | order(organizationName asc){_id, organizationName, contacts[]{_key, name, email, role, phone}, billingEmail, driveFolderId}`)) ?? [])
   return clients.map((c) => summarize(c, projects)).sort((a, b) => (b.lastActivity ?? '').localeCompare(a.lastActivity ?? ''))
 }
 
@@ -313,7 +313,7 @@ export async function createLead(input: NewLead): Promise<{ id: string; clientId
   return { id, clientId, newClient: !existing }
 }
 
-export type NewClient = { company: string; name: string; email: string; role?: string; getsEmails?: boolean }
+export type NewClient = { company: string; name: string; email: string; role?: string; phone?: string; getsEmails?: boolean }
 
 /**
  * The New client form: one client with one contact, nothing else. Matched the same way New lead
@@ -339,7 +339,7 @@ export async function createOfficeClient(input: NewClient): Promise<{ id: string
     _type: 'client',
     organizationName: input.company,
     // Being listed lets them sign in to the portal if they ask for a link; nothing is sent to them by this.
-    contacts: [{ _key: key(), _type: 'contact', name: input.name, email, ...(input.role && { role: input.role }), getsEmails: Boolean(input.getsEmails) }],
+    contacts: [{ _key: key(), _type: 'contact', name: input.name, email, ...(input.role && { role: input.role }), ...(input.phone && { phone: input.phone }), getsEmails: Boolean(input.getsEmails) }],
     portalPayments: false,
     noGst: false,
   })
