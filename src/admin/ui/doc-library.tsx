@@ -5,9 +5,10 @@ import { useId, useState } from 'react'
 import { DocText } from '@/portal/sign-doc'
 import { detectFields, EMPTY_LINE, hasWording, newKey, sendable, SYSTEM_FIELDS, undefinedFields, type Audience, type DocField, type DocTemplate, type FieldType } from '@/portal/sign-docs'
 import { SendDocumentToggle, type SendProject, type SendTemplate } from './sign-requests'
+import { fmtDate } from '@/admin/dates'
 
 const TYPE_LABEL: Record<FieldType, string> = { text: 'Text', date: 'Date', money: 'Money', choice: 'Choice' }
-const day = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Edmonton' })
+const day = (iso: string) => fmtDate(iso)
 
 const save = (body: unknown) =>
   fetch('/api/admin/library', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -37,7 +38,7 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
     setBusy(false)
     if (!j.ok) return setMsg({ text: j.message ?? 'That didn’t work. Try again.', err: true })
     setT(j.template)
-    setMsg({ text: on ? `Wording approved. ${t.title} can be sent now.${sample ? ' (Sample mode: kept until the dev server restarts.)' : ''}` : 'Back to Needs your check. It can’t be sent until you approve it again.' })
+    setMsg({ text: on ? `Wording approved. ${t.title} can be sent now.${sample ? ' (Sample data: kept only until the app restarts.)' : ''}` : 'Back to Needs your check. It can’t be sent until you approve it again.' })
     router.refresh()
   }
 
@@ -49,7 +50,7 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
         onSaved={(next, changed) => {
           setT(next)
           setEditing(false)
-          setMsg({ text: changed && hasWording(next) ? 'Saved. The wording changed, so it needs your check before it can be sent.' : `Saved.${sample ? ' (Sample mode: kept until the dev server restarts.)' : ''}` })
+          setMsg({ text: changed && hasWording(next) ? 'Saved. The wording changed, so it needs your check before it can be sent.' : `Saved.${sample ? ' (Sample data: kept only until the app restarts.)' : ''}` })
           router.refresh()
         }}
       />
@@ -63,7 +64,7 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
         <h2 id={`${uid}-h`} className="a-h2 a-h2-lg">{t.title}</h2>
         <WordingChip t={t} />
       </div>
-      <p className="muted small" style={{ margin: 0 }}>
+      <p className="muted small m0">
         {t.audience === 'client' ? 'Signed in the client portal by the client’s contacts.' : 'Signed by one person through their own private link. Never shown in a client portal.'} Last changed {day(t.updatedAt)}.
       </p>
 
@@ -76,7 +77,7 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
       )}
 
       {t.fields.length > 0 && (
-        <div className="stack" style={{ gap: 'var(--space-2)' }}>
+        <div className="stack gap-2">
           <span className="a-round-label">Fill-ins</span>
           <ul className="lb-fields">
             {t.fields.map((f) => (
@@ -89,9 +90,9 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
           </ul>
         </div>
       )}
-      {notSetUp.length > 0 && <p className="small a-urgent" style={{ margin: 0 }}>Not set up yet: {notSetUp.map((k) => `{{${k}}}`).join(', ')}. Add them under Edit, or it can’t be sent.</p>}
+      {notSetUp.length > 0 && <p className="small a-urgent m0">Not set up yet: {notSetUp.map((k) => `{{${k}}}`).join(', ')}. Add them under Edit, or it can’t be sent.</p>}
 
-      {msg && <p className={`small ${msg.err ? 'err' : ''}`} role="status" style={{ margin: 0 }}>{msg.text}</p>}
+      {msg && <p className={`small ${msg.err ? 'err' : ''} m0`} role="status">{msg.text}</p>}
       <div className="row-wrap">
         {!readOnly && <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setMsg(undefined); setEditing(true) }}>Edit</button>}
         {!readOnly && hasWording(t) && !t.wordingApproved && <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => approve(true)}>Approve wording</button>}
@@ -103,9 +104,9 @@ export function TemplatePanel({ template, projects, readOnly, sample }: { templa
         )}
       </div>
       {!hasWording(t) ? (
-        <p className="muted small" style={{ margin: 0 }}>Can’t be sent: it has no wording yet.</p>
+        <p className="muted small m0">Can’t be sent: it has no wording yet.</p>
       ) : !t.wordingApproved ? (
-        <p className="muted small" style={{ margin: 0 }}>Can’t be sent until you read it and press Approve wording.</p>
+        <p className="muted small m0">Can’t be sent until you read it and press Approve wording.</p>
       ) : null}
       {!readOnly && sendable(t) && (
         <div className="pj-sub">
@@ -168,7 +169,7 @@ function TemplateEditor({ template, onCancel, onSaved }: { template: DocTemplate
         </div>
       </div>
 
-      <div className="stack" style={{ gap: 'var(--space-2)' }}>
+      <div className="stack gap-2">
         <span className="a-round-label">Fields found in the wording</span>
         {found.length ? (
           <ul className="lb-found">
@@ -241,8 +242,8 @@ function TemplateEditor({ template, onCancel, onSaved }: { template: DocTemplate
         <div><button type="button" className="btn btn-secondary btn-sm" onClick={() => add()}>Add a fill-in</button></div>
       </fieldset>
 
-      <p className="muted small" style={{ margin: 0 }}>Saving a change to the wording or fill-ins sets it back to Needs your check. Documents already sent keep the text they were sent with.</p>
-      {state.err && <p className="err small" role="alert" style={{ margin: 0 }}>{state.err}</p>}
+      <p className="muted small m0">Saving a change to the wording or fill-ins sets it back to Needs your check. Documents already sent keep the text they were sent with.</p>
+      {state.err && <p className="err small m0" role="alert">{state.err}</p>}
       <div className="row-wrap">
         <button type="submit" className="btn btn-primary btn-sm" disabled={state.busy}>{state.busy ? 'Saving…' : 'Save'}</button>
         <button type="button" className="btn btn-secondary btn-sm" onClick={onCancel}>Cancel</button>

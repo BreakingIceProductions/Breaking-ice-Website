@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import '../../../css/admin-pages.css'
 import { Suspense } from 'react'
 import { requireAdmin } from '@/admin/auth'
 import { adminSampleMode } from '@/admin/config'
@@ -6,7 +8,7 @@ import { listClients } from '@/admin/data'
 import { stageTitle } from '@/admin/stages'
 import { AdminLibrary, type LibProject } from '@/admin/ui/library'
 
-export const metadata = { title: 'Finder' }
+export const metadata = { title: 'Clients' }
 
 export default async function Clients() {
   await requireAdmin()
@@ -28,13 +30,11 @@ export default async function Clients() {
   return (
     <div className="a-page a-page-wide">
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">Clients, projects and files</span>
-          <h1 className="a-h1">Finder</h1>
+        <div className="stack ap-head-text">
+          <h1 className="a-h1">Clients</h1>
+          <p className="muted m0">Files by client: each client’s projects, cuts and documents.</p>
         </div>
-        <a className="btn btn-primary" href="/studio/portal/intent/create/template=client;type=client" target="_blank" rel="noopener noreferrer">
-          New client<span className="sr-only"> (opens the Studio)</span>
-        </a>
+        <Link className="btn btn-secondary" href="/admin/clients/new">New client</Link>
       </header>
       <Suspense>
         <AdminLibrary

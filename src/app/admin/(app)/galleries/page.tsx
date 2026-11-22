@@ -1,5 +1,7 @@
+import '../../../css/admin-pages.css'
 import Link from 'next/link'
 import { requireAdmin } from '@/admin/auth'
+import { adminSampleMode } from '@/admin/config'
 import { listClients, listProjects } from '@/admin/data'
 import { viewUrl } from '@/galleries/files'
 import { galleriesSampleMode, listGalleries } from '@/galleries/store'
@@ -23,17 +25,23 @@ export default async function Galleries() {
   return (
     <div className="a-page ga-page">
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
+        <div className="stack ap-head-text">
           <h1 className="a-h1">Galleries</h1>
-          <p className="muted" style={{ margin: 0 }}>Photo galleries for clients: upload a shoot, share a link, see their favourites.</p>
+          <p className="muted m0">Photo galleries for clients: upload a shoot, share a link, see their favourites.</p>
         </div>
       </header>
 
-      {galleriesSampleMode() && <p className="a-sample" role="status" style={{ margin: 0 }}>Sample mode: nothing is saved. Galleries and uploads live in memory until the dev server restarts.</p>}
+      {galleriesSampleMode() && !adminSampleMode() && <p className="a-sample m0" role="status">Galleries aren’t connected on this site yet, so nothing here is saved.</p>}
 
-      {!admin.viewOnly && <NewGalleryForm clients={clientOptions} projects={projectOptions} />}
+      {/* The form stays folded away until it's wanted (open from the start when there are no galleries yet). */}
+      {!admin.viewOnly && (
+        <details className="ga-new-toggle" open={!galleries.length}>
+          <summary className="btn btn-primary">New gallery</summary>
+          <NewGalleryForm clients={clientOptions} projects={projectOptions} />
+        </details>
+      )}
 
-      <section aria-labelledby="ga-list-h" className="stack" style={{ gap: 'var(--space-4)' }}>
+      <section aria-labelledby="ga-list-h" className="stack ap-gap-4">
         <h2 id="ga-list-h" className="a-h2">All galleries ({galleries.length})</h2>
         {galleries.length ? (
           <ul className="ga-list">
@@ -74,7 +82,7 @@ export default async function Galleries() {
         ) : (
           <div className="p-card">
             <p className="a-empty"><strong>No galleries yet.</strong></p>
-            <p className="muted small a-empty">Make one above, then drop a folder of photos onto it.</p>
+            <p className="muted small a-empty">Start one with New gallery, then drop a folder of photos onto it.</p>
           </div>
         )}
       </section>

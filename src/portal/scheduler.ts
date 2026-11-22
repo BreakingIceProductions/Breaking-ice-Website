@@ -31,6 +31,8 @@ import { syncVimeo } from './vimeo'
  *  Payments      portal payments whose Zoho Books invoice is paid show as paid.
  *  Retainers     from the 1st, last month's recap is drafted for each retainer client (src/retainer/recap.ts).
  *                Josh reads and sends it from the back office; it is never sent from here.
+ *  Leads         once a day after 7:00, recent Wispr Flow calls that look like a first talk with a new client
+ *                become suggestions on Today, with a Slack note to Josh (src/admin/wispr-leads.ts). Nobody is contacted.
  *
  *  Each email is claimed before it's sent (a write that only succeeds if nothing changed
  *  since we read the project), so a run that's cut short or overlaps another can never
@@ -144,6 +146,20 @@ export async function runScheduler(now = Date.now()) {
     log.push(...(await draftDueRecaps(started + 56_000)))
   } catch (e) {
     log.push(`retainer recaps failed: ${String(e).slice(0, 160)}`)
+  }
+
+  // 3d. Possible new leads from Wispr Flow: once a day, the first run after 7:00 Edmonton time (src/admin/wispr-leads.ts).
+  // Claimed here; the Claude call runs after the response is sent, so it can't push this run past its limit.
+  try {
+    const { wisprCheckDue, runWisprLeadCheck } = await import('@/admin/wispr-leads')
+    if (await wisprCheckDue()) {
+      const { after } = await import('next/server')
+      after(async () => console.log('[scheduler]', await runWisprLeadCheck(Date.now() + 200_000)))
+      log.push('wispr leads: check started')
+    }
+  } catch (e) {
+    console.error('[scheduler] wispr leads failed', e)
+    log.push(`wispr leads failed: ${String(e).slice(0, 160)}`)
   }
 
   await cleanSignInGuards()

@@ -6,7 +6,7 @@ import { BRAND_COLOURS, type BrandFonts, type RetainerSettings } from '@/retaine
 
 /** POSTs JSON to a back-office route; never throws. */
 export async function postJson(url: string, body: unknown): Promise<{ ok: boolean; message?: string; sample?: boolean; [k: string]: unknown }> {
-  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null)
+  const r = await fetch(url, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null)
   const j = r ? await r.json().catch(() => ({})) : {}
   return { ...j, ok: Boolean(r?.ok && j.ok !== false) }
 }
@@ -71,8 +71,8 @@ export function RetainerSettingsForm({ clientId, settings, readOnly }: { clientI
   }
 
   return (
-    <form className="stack" style={{ gap: 'var(--space-4)' }} onSubmit={save}>
-      <fieldset disabled={readOnly || busy} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
+    <form className="stack rt-stack" onSubmit={save}>
+      <fieldset className="rt-fieldset" disabled={readOnly || busy}>
         <legend className="sr-only">Retainer settings</legend>
         <div className="rt-form">
           <label className="small a-check rt-wide">
@@ -109,10 +109,10 @@ export function RetainerSettingsForm({ clientId, settings, readOnly }: { clientI
             </div>
           </div>
         </div>
-        <fieldset className="rt-brand-set" style={{ border: 0, margin: 'var(--space-6) 0 0', padding: 0, minWidth: 0 }}>
-          <legend className="p-label" style={{ padding: 0, marginBottom: 'var(--space-2)' }}>Brand</legend>
-          <p className="small muted" style={{ margin: '0 0 var(--space-4)' }}>
-            Optional. Fill these in and their retainer page wears the client’s own design system, with Breaking Ice as a small credit. Leave them all empty for the Breaking Ice look. Logo files: set in the Studio (Client, Retainer, Brand).
+        <fieldset className="rt-fieldset rt-brand-set">
+          <legend className="p-label">Brand</legend>
+          <p className="small muted rt-brand-note">
+            Optional. Fill these in and their retainer page wears the client’s own design system, with Breaking Ice as a small credit. Leave them all empty for the Breaking Ice look. Logo files are set in the editor, under the client’s Retainer, Brand.
           </p>
           <div className="rt-form">
             <div className="field">
@@ -144,7 +144,7 @@ export function RetainerSettingsForm({ clientId, settings, readOnly }: { clientI
       </fieldset>
       {!readOnly && (
         <div className="row-wrap">
-          <button type="submit" className="btn btn-primary btn-sm" disabled={busy || bad}>{busy ? 'Saving…' : 'Save settings'}</button>
+          <button type="submit" className="btn btn-secondary btn-sm" disabled={busy || bad}>{busy ? 'Saving…' : 'Save settings'}</button>
           <span className="small muted" role="status">{msg}</span>
         </div>
       )}

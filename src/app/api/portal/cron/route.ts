@@ -5,7 +5,8 @@ import { runScheduler } from '@/portal/scheduler'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// Raised from 60 for the daily Wispr lead check, which runs after the response (see runScheduler). 300 is what the plan allows.
+export const maxDuration = 300
 
 /** Called every 10 minutes with "Authorization: Bearer CRON_SECRET". */
 export async function GET(req: Request) {

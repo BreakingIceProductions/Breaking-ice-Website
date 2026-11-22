@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import type { PlannedAction, StagePlan } from '../types'
+import { InlineError, isShown } from './confirm'
 
 export type Stage = { title: string; value: string }
 type Result = { id: string; ok: boolean; message: string }
@@ -13,7 +14,7 @@ const APPS: PlannedAction['app'][] = ['Back office', 'TickTick', 'Google Calenda
  * The stage-move preview. Give it a target stage and it asks the server what the
  * move will do, lets you untick any step, and only then runs it.
  */
-export function StageDialog({ projectId, projectTitle, target, onClose }: { projectId: string; projectTitle: string; target: Stage | null; onClose: () => void }) {
+export function StageDialog({ projectId, projectTitle, target, onClose, returnTo, onRun }: { projectId: string; projectTitle: string; target: Stage | null; onClose: () => void; /** Where focus goes after Cancel or Done when whatever opened the preview is gone (a drag, say). */ returnTo?: () => HTMLElement | null; /** For optimistic placement: 'start' when Confirm is pressed, then 'done' or 'failed' (nothing changed; the dialog offers Try again). */ onRun?: (phase: 'start' | 'done' | 'failed') => void }) {
   const router = useRouter()
   const dialog = useRef<HTMLDialogElement>(null)
   const [plan, setPlan] = useState<StagePlan | null>(null)
@@ -21,11 +22,16 @@ export function StageDialog({ projectId, projectTitle, target, onClose }: { proj
   const [results, setResults] = useState<Result[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const opener = useRef<Element | null>(null)
 
   useEffect(() => {
     if (!target) return
     const d = dialog.current
-    if (d && !d.open) d.showModal()
+    if (d && !d.open) {
+      // Remember the stage button or menu that opened this, to hand focus back on close.
+      opener.current = document.activeElement
+      d.showModal()
+    }
     let stale = false
     setPlan(null)
     setResults(null)
@@ -50,13 +56,16 @@ export function StageDialog({ projectId, projectTitle, target, onClose }: { proj
     if (!target) return
     setBusy(true)
     setError('')
+    onRun?.('start')
     try {
       const r = await fetch('/api/admin/stage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, to: target.value, run: true, skip }) })
       const j = await r.json()
       if (!r.ok) throw new Error(j.message || 'The move didn’t go through. Nothing was changed.')
       setResults(j.results)
+      onRun?.((j.results as Result[] | undefined)?.find((x) => x.id === 'stage')?.ok === false ? 'failed' : 'done')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong.')
+      onRun?.('failed')
     }
     setBusy(false)
   }
@@ -65,16 +74,23 @@ export function StageDialog({ projectId, projectTitle, target, onClose }: { proj
 
   function onClosed() {
     const ran = Boolean(results)
+    const from = opener.current
+    const fallback = returnTo?.() ?? null
     setPlan(null)
     setResults(null)
     onClose()
     if (ran) router.refresh()
+    // Back to the trigger (a select keeps its place too); otherwise to the card or button given.
+    requestAnimationFrame(() => {
+      const el = from instanceof HTMLElement && from.isConnected && from !== document.body && isShown(from) ? from : fallback
+      el?.focus({ preventScroll: true })
+    })
   }
 
   const toggle = (id: string) => setSkip((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
 
   return (
-    <dialog ref={dialog} className="a-dialog" aria-labelledby="stage-h" onClose={onClosed}>
+    <dialog ref={dialog} className="a-dialog" aria-labelledby="stage-h" onClose={(e) => { if (e.target === e.currentTarget) onClosed() }}>
       {target && (
         <div className="a-dialog-body">
           <span className="eyebrow">{results ? 'Done' : 'Preview · nothing has run yet'}</span>
@@ -83,7 +99,7 @@ export function StageDialog({ projectId, projectTitle, target, onClose }: { proj
           </h2>
 
           {busy && !plan && !results && <p className="muted" role="status">Working out what this will do…</p>}
-          {error && <p className="err" role="alert">{error}</p>}
+          {error && <InlineError onRetry={plan && !results ? run : undefined} busy={busy}>{error}</InlineError>}
           {error && !plan && <div className="btn-row a-dialog-actions"><button type="button" className="btn btn-secondary" onClick={close}>Close</button></div>}
 
           {plan && !results && (

@@ -1,3 +1,4 @@
+import '../../../css/admin-pages.css'
 import Link from 'next/link'
 import { requireAdmin } from '@/admin/auth'
 import { listClients, type ClientSummary } from '@/admin/data'
@@ -7,7 +8,7 @@ import { mergePeople, type BasePerson } from '@/admin/people-shared'
 import { stageIndex, stageTitle } from '@/admin/stages'
 import { PeopleTable } from '@/admin/ui/people'
 
-export const metadata = { title: 'Clients' }
+export const metadata = { title: 'People' }
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> }
 
@@ -61,29 +62,20 @@ export default async function Contacts({ searchParams }: Props) {
   const [clients, store, sp] = await Promise.all([listClients(), getPeople(), searchParams])
   const base = knownPeople(clients)
   const people = mergePeople(base, store)
-  const count = (k: BasePerson['kind']) => people.filter((p) => p.kind === k).length
   const one = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v)
   return (
     <div className="a-page">
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">Everyone in one list</span>
-          <h1 className="a-h1">Clients</h1>
+        <div className="stack ap-head-text">
+          <h1 className="a-h1">People</h1>
+          <p className="muted m0">Everyone we work with: client contacts and the people on leads. {people.length} {people.length === 1 ? 'person' : 'people'} at {clients.length} {clients.length === 1 ? 'company' : 'companies'}.</p>
         </div>
         <div className="btn-row">
-          <Link className="btn btn-secondary" href="/admin/clients">Open the Finder</Link>
-          <a className="btn btn-primary" href="/studio/portal/intent/create/template=client;type=client" target="_blank" rel="noopener noreferrer">
-            New client<span className="sr-only"> (opens the Studio)</span>
-          </a>
+          <Link className="text-link" href="/admin/clients">Files by client</Link>
+          <Link className="btn btn-secondary" href="/admin/clients/new?from=people">New client</Link>
         </div>
       </header>
 
-      <section aria-label="At a glance" className="a-kpis">
-        <div className="a-kpi"><span className="a-kpi-label">People</span><span className="a-kpi-num">{people.length}</span><span className="a-kpi-note">{clients.length} {clients.length === 1 ? 'company' : 'companies'}</span></div>
-        <div className="a-kpi"><span className="a-kpi-label">Clients</span><span className="a-kpi-num">{count('client')}</span><span className="a-kpi-note">Working with now</span></div>
-        <div className="a-kpi"><span className="a-kpi-label">Open leads</span><span className="a-kpi-num">{count('lead')}</span><span className="a-kpi-note">Not booked yet</span></div>
-        <div className="a-kpi"><span className="a-kpi-label">Contacts only</span><span className="a-kpi-num">{count('contact')}</span><span className="a-kpi-note">No portal, no emails</span></div>
-      </section>
 
       <PeopleTable base={base} store={store} canEdit={!admin.viewOnly} initial={{ show: one(sp.show), tags: [sp.tag ?? []].flat().slice(0, 20), person: one(sp.person) }} />
     </div>

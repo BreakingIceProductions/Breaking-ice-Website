@@ -256,17 +256,17 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
   const mins = meta ? `${Math.floor(meta.duration / 60)}:${String(Math.floor(meta.duration % 60)).padStart(2, '0')}` : ''
 
   return (
-    <div className="stack" style={{ gap: 'var(--space-3)' }}>
+    <div className="stack gap-3">
       <div className="dropzone dropzone-compact">
-        <p style={{ margin: 0 }}>
+        <p className="m0">
           {file ? <strong>{file.name}</strong> : <strong>An MP4 review copy</strong>}{' '}
           {!busy && <button type="button" className="linklike" onClick={() => input.current?.click()}>{file ? 'choose another' : 'choose a file'}</button>}
         </p>
-        <p className="muted small" style={{ margin: 0 }}>{meta && file ? `${mins} · ${meta.width}×${meta.height} · ${fmtSize(file.size)}` : 'H.264 MP4. It plays as uploaded: nothing is re-encoded.'}</p>
+        <p className="muted small m0">{meta && file ? `${mins} · ${meta.width}×${meta.height} · ${fmtSize(file.size)}` : 'H.264 MP4. It plays as uploaded: nothing is re-encoded.'}</p>
         <input ref={input} type="file" accept="video/mp4,.mp4" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) choose(f); e.target.value = '' }} />
       </div>
       {file && (
-        <label className="small muted" style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+        <label className="small muted inline-row">
           Frame rate (for timecode)
           <select className="input a-select" style={{ width: 'auto', minHeight: 36 }} value={fps} disabled={busy} onChange={(e) => setFps(Number(e.target.value))}>
             {REVIEW_FPS.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -285,7 +285,7 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
           {state === 'uploading' && <div className="up-actions"><button type="button" className="linklike small" onClick={cancel}>Cancel</button></div>}
         </div>
       )}
-      {!busy && note && <p className="small muted" role="status" style={{ margin: 0 }}>{note}</p>}
+      {!busy && note && <p className="small muted m0" role="status">{note}</p>}
       {!busy && (
         <div>
           <button type="button" className="btn btn-primary btn-sm" disabled={!file || !meta || !title.trim()} onClick={start}>Upload for review</button>

@@ -1,6 +1,8 @@
+import '../../../../../css/admin-pages.css'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAdmin } from '@/admin/auth'
+import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import { getProject } from '@/admin/data'
 import { ShareControl } from '@/admin/ui/share-control'
 import { versionLabel, versionPath } from '@/portal/library'
@@ -26,18 +28,16 @@ export default async function AdminReview({ params }: Props) {
 
   return (
     <div className="a-page">
-      <Link className="text-link-plain muted small ld-back" href={`/admin/projects/${encodeURIComponent(p._id)}?tab=portal`}>← {p.title}</Link>
+      <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }, { label: p.title, href: `/admin/projects/${encodeURIComponent(p._id)}?tab=portal` }]} />
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
-          <span className="eyebrow">Review room</span>
+        <div className="stack ap-gap-2 ap-minw0">
           <h1 className="a-h1">{d.title} <span className="muted">· {versionLabel(d)}</span></h1>
-          <p className="muted" style={{ margin: 0 }}>{p.client.organizationName} · {p.title}</p>
+          <p className="muted m0">Review room · {p.client.organizationName} · {p.title}</p>
         </div>
         <div className="pj-head-side">
-          <Link className="btn btn-secondary btn-sm" href={finder}>Open in the Finder</Link>
+          <Link className="btn btn-secondary btn-sm" href={finder}>Open in Clients</Link>
         </div>
       </header>
-      {admin.sample && <p className="a-sample" role="status" style={{ margin: 0 }}>Sample data: comments and links you make here aren’t saved.</p>}
 
       {d.host === 'r2' ? (
         <>
@@ -57,8 +57,8 @@ export default async function AdminReview({ params }: Props) {
         </>
       ) : (
         <section className="p-card">
-          <p style={{ margin: 0 }}>This version plays on Vimeo, so its comments are on Vimeo’s review page.</p>
-          {(d.vimeoReview ?? d.shareUrl) && <p style={{ margin: 0 }}><a className="text-link" href={(d.vimeoReview ?? d.shareUrl)!} target="_blank" rel="noopener noreferrer">Open it on Vimeo ↗</a></p>}
+          <p className="m0">This version plays on Vimeo, so its comments are on Vimeo’s review page.</p>
+          {(d.vimeoReview ?? d.shareUrl) && <p className="m0"><a className="text-link" href={(d.vimeoReview ?? d.shareUrl)!} target="_blank" rel="noopener noreferrer">Open it on Vimeo ↗</a></p>}
         </section>
       )}
     </div>

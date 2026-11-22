@@ -10,7 +10,9 @@ import { fmtSize } from '@/portal/resumable'
 import { FeedbackList, ReviewThumb, VersionHead, WatchTile } from '@/portal/review-ui'
 import type { Deliverable, DriveFile } from '@/portal/types'
 import { Uploader } from '@/portal/uploader'
+import { useConfirm, useNotify } from './confirm'
 import { R2Upload } from './r2-upload'
+import { fmtDate } from '@/admin/dates'
 
 export type LibClient = { _id: string; organizationName: string; contacts?: { _key: string; name: string; email: string; role?: string }[] }
 export type LibProject = {
@@ -99,9 +101,9 @@ export function AdminLibrary({ clients, projects, reviewUpload = false }: { clie
 
 function ClientPanel({ c, count }: { c: LibClient; count: number }) {
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
+    <div className="stack gap-4">
       <h4 className="lib-title">{c.organizationName}</h4>
-      <p className="muted small" style={{ margin: 0 }}>{count} {count === 1 ? 'project' : 'projects'}</p>
+      <p className="muted small m0">{count} {count === 1 ? 'project' : 'projects'}</p>
       {c.contacts?.length ? (
         <dl className="key-dates">
           {c.contacts.map((p) => (
@@ -113,7 +115,7 @@ function ClientPanel({ c, count }: { c: LibClient; count: number }) {
       )}
       <div className="btn-row">
         <Link className="btn btn-secondary btn-sm" href={`/admin/clients/${c._id}`}>Client overview</Link>
-        <a className="btn btn-secondary btn-sm" href="/studio/portal/intent/create/template=clientProject;type=clientProject" target="_blank" rel="noopener noreferrer">New project ↗</a>
+        <Link className="btn btn-secondary btn-sm" href="/admin/projects/new">New project</Link>
       </div>
     </div>
   )
@@ -121,13 +123,13 @@ function ClientPanel({ c, count }: { c: LibClient; count: number }) {
 
 function ProjectPanel({ p }: { p: LibProject }) {
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
+    <div className="stack gap-4">
       <h4 className="lib-title">{projectLabel(p)}</h4>
-      <p className="muted small" style={{ margin: 0 }}>{p.stageTitle}{p.startDate ? '' : ' · No start date yet: add one in the Studio so the folder is dated'}</p>
+      <p className="muted small m0">{p.stageTitle}{p.startDate ? '' : ' · No start date yet: add one in the editor so the folder is dated'}</p>
       {p.nextStep && <p className="lib-next"><span className="label">Next</span> {p.nextStep}</p>}
       <div className="btn-row">
         <Link className="btn btn-primary btn-sm" href={`/admin/projects/${p._id}`}>Open project</Link>
-        <a className="btn btn-secondary btn-sm" href={`/studio/portal/structure/clientProject;${encodeURIComponent(p._id)}`} target="_blank" rel="noopener noreferrer">Edit in Studio ↗</a>
+        <a className="btn btn-secondary btn-sm" href={`/studio/portal/structure/clientProject;${encodeURIComponent(p._id)}`} target="_blank" rel="noopener noreferrer">Edit details<span aria-hidden="true"> ↗</span><span className="sr-only"> in the editor (opens in a new tab)</span></a>
       </div>
     </div>
   )
@@ -161,7 +163,7 @@ function AddVersion({ project, category, title: fixedTitle, reviewUpload = false
   }
 
   return (
-    <div className="stack" style={{ gap: 'var(--space-3)' }}>
+    <div className="stack gap-3">
       <h4 className="lib-sub">{fixedTitle ? 'Add the next version' : category === 'video' ? 'Add a video' : 'Add a document'}</h4>
       {!fixedTitle && (
         <>
@@ -177,8 +179,8 @@ function AddVersion({ project, category, title: fixedTitle, reviewUpload = false
         </div>
       )}
       {category === 'video' && how === 'upload' && reviewUpload ? (
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <p className="muted small" style={{ margin: 0 }}>Plays in our own review room: the client (and anyone you share a link with) comments on exact frames and can draw on the picture.</p>
+        <div className="stack gap-3">
+          <p className="muted small m0">Plays in our own review room: the client (and anyone you share a link with) comments on exact frames and can draw on the picture.</p>
           <label htmlFor={`n-${listId}`} className="small muted">Note to the client (optional)</label>
           <textarea id={`n-${listId}`} className="input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What changed and what to look for" />
           <label className="small a-check"><input type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} /> Send to the client now (emails them)</label>
@@ -196,7 +198,7 @@ function AddVersion({ project, category, title: fixedTitle, reviewUpload = false
           />
         </div>
       ) : category === 'video' ? (
-        <form onSubmit={addVideo} className="stack" style={{ gap: 'var(--space-3)' }}>
+        <form onSubmit={addVideo} className="stack gap-3">
           <label htmlFor={`u-${listId}`} className="small muted">Vimeo link (upload the video to Vimeo first)</label>
           <input id={`u-${listId}`} className="input" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://vimeo.com/123456789/abcdef" required />
           <label htmlFor={`n-${listId}`} className="small muted">Note to the client (optional)</label>
@@ -226,24 +228,24 @@ function AddVersion({ project, category, title: fixedTitle, reviewUpload = false
               }}
             />
           ) : (
-            <p className="muted small" style={{ margin: 0 }}>Add a title first, then the file.</p>
+            <p className="muted small m0">Add a title first, then the file.</p>
           )}
         </>
       )}
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small muted m0" role="status">{msg}</p>}
     </div>
   )
 }
 
 function GroupPanel({ project, group, reviewUpload, onChange, onOpen }: { project: LibProject; group: DeliverableGroup; reviewUpload: boolean; onChange: () => void; onOpen: (key: string) => void }) {
   return (
-    <div className="stack" style={{ gap: 'var(--space-5)' }}>
+    <div className="stack gap-5">
       <ul className="lib-list">
         {[...group.versions].reverse().map((d) => (
           <li key={d._key}>
             <button type="button" className="lib-row" onClick={() => onOpen(d._key)}>
               <span className={`fd-dot fd-dot-${d.final ? 'final' : d.status === 'awaiting-feedback' ? 'awaiting' : d.status === 'approved' ? 'approved' : d.status === 'changes-requested' ? 'changes' : 'hidden'}`} aria-hidden="true" />
-              <span className="stack" style={{ gap: 0, minWidth: 0 }}>
+              <span className="stack gap-0 min0">
                 <strong>{versionLabel(d)}</strong>
                 <span className="muted small">{[d.date, clientCanOpen(d, project.deliverables) ? 'client can see it' : 'hidden from client'].filter(Boolean).join(' · ')}</span>
               </span>
@@ -258,14 +260,16 @@ function GroupPanel({ project, group, reviewUpload, onChange, onOpen }: { projec
 
 function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject; d: Deliverable; onChange: () => void; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false)
-  const remove = async () => {
+  const confirm = useConfirm()
+  const notify = useNotify()
+  const remove = async (asked = false) => {
     const what = d.host === 'r2' ? 'It comes off the project and the client’s portal, and the review copy is deleted from storage (its comments stay on record).' : categoryOf(d) === 'video' ? 'It comes off the project and the client’s portal. The video itself stays on Vimeo.' : 'It comes off the project and the client’s portal, and the file goes to Google Drive’s trash (restorable there for 30 days).'
-    if (!window.confirm(`Delete ${d.title}, ${versionLabel(d)}?\n\n${what}`)) return
+    if (!asked && !(await confirm({ title: `Delete ${d.title}, ${versionLabel(d)}?`, body: what, confirmLabel: 'Delete', danger: true }))) return
     setBusy(true)
     const r = await json('DELETE', '/api/admin/version', { projectId: project._id, key: d._key })
     setBusy(false)
     if (r.ok) onDeleted()
-    else alert('That didn’t delete. Reload the page and try again.')
+    else notify({ text: `${d.title}, ${versionLabel(d)} wasn’t deleted. Check your connection and try again.`, tone: 'error', retry: () => remove(true) })
   }
   const latest = isLatest(d, project.deliverables)
   const video = categoryOf(d) === 'video'
@@ -276,12 +280,12 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
     onChange()
   }
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
+    <div className="stack gap-4">
       <VersionHead title={d.title} kind={video ? 'video' : fileKind({ name: d.fileName })} ext={video ? undefined : d.fileName?.split('.').pop()} version={versionLabel(d)} date={d.date} length={d.length} />
       {video && d.host === 'r2' ? (
-        <div className="stack" style={{ gap: 'var(--space-2)' }}>
-          <Link className="btn btn-primary btn-sm" style={{ alignSelf: 'flex-start' }} href={`/admin/review/${encodeURIComponent(project._id)}/${encodeURIComponent(d._key)}`}>Open the review room</Link>
-          <p className="muted small" style={{ margin: 0 }}>
+        <div className="stack gap-2">
+          <Link className="btn btn-primary btn-sm self-start" href={`/admin/review/${encodeURIComponent(project._id)}/${encodeURIComponent(d._key)}`}>Open the review room</Link>
+          <p className="muted small m0">
             {[d.openComments ? `${d.openComments} open comment${d.openComments === 1 ? '' : 's'} from the client` : 'No open comments from the client', d.fps && `${d.fps} fps`, d.width && d.height && `${d.width}×${d.height}`].filter(Boolean).join(' · ')}
           </p>
         </div>
@@ -294,9 +298,9 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
           <ReviewThumb src={`/api/admin/preview?projectId=${encodeURIComponent(project._id)}&key=${encodeURIComponent(d._key)}`} kind={fileKind({ name: d.fileName })} ext={d.fileName?.split('.').pop()} />
         </a>
       ) : null}
-      {video && d.host !== 'r2' && !d.vimeoThumb && <p className="muted small" style={{ margin: 0 }}>The thumbnail shows up after the next sync with Vimeo.</p>}
+      {video && d.host !== 'r2' && !d.vimeoThumb && <p className="muted small m0">The thumbnail shows up after the next sync with Vimeo.</p>}
 
-      {d.fileName && <p className="muted small" style={{ margin: 0 }}>{d.fileName}</p>}
+      {d.fileName && <p className="muted small m0">{d.fileName}</p>}
       {d.notes && <p className="deliv-note">{d.notes}</p>}
       <FeedbackList items={d.feedback} title="Client feedback" />
 
@@ -322,7 +326,7 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
         {d.vimeoReview && <a className="btn btn-secondary btn-sm" href={d.vimeoReview} target="_blank" rel="noopener noreferrer">Review page ↗</a>}
         {d.fileUrl && <a className="btn btn-secondary btn-sm" href={d.fileUrl} target="_blank" rel="noopener noreferrer">Open in Drive ↗</a>}
       </div>
-      <div><button type="button" className="linklike small lib-delete" disabled={busy} onClick={remove}>Delete this version</button></div>
+      <div><button type="button" className="linklike small lib-delete" disabled={busy} onClick={() => remove()}>Delete this version</button></div>
     </div>
   )
 }
@@ -330,6 +334,8 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
 function AssetsPanel({ project, folder = REFERENCE }: { project: LibProject; folder?: typeof REFERENCE | typeof FINALS }) {
   const [files, setFiles] = useState<DriveFile[] | null>(null)
   const [connected, setConnected] = useState(true)
+  const confirm = useConfirm()
+  const notify = useNotify()
   const load = useCallback(async () => {
     const r = await fetch(`/api/admin/files?projectId=${encodeURIComponent(project._id)}`, { cache: 'no-store' }).catch(() => null)
     const j = await r?.json().catch(() => null)
@@ -341,8 +347,8 @@ function AssetsPanel({ project, folder = REFERENCE }: { project: LibProject; fol
   }, [load])
   if (!connected) return <p className="muted">Google Drive isn’t connected yet.</p>
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
-      <p className="muted small" style={{ margin: 0 }}>
+    <div className="stack gap-4">
+      <p className="muted small m0">
         {folder === FINALS
           ? `What the client downloads once it’s delivered: masters, web and vertical cuts, captions (.srt), stills. ${project.status === 'delivered' ? 'The client can see these now.' : 'Hidden from the client until you mark the project Delivered.'}`
           : 'Logos, scripts, music: shared both ways. The client sees and can download everything here.'}
@@ -362,9 +368,9 @@ function AssetsPanel({ project, folder = REFERENCE }: { project: LibProject; fol
           {files.map((f) => (
             <li key={f.id}>
               <IconFor name={f.name} mime={f.mimeType} />
-              <span className="stack" style={{ gap: 0, minWidth: 0 }}>
+              <span className="stack gap-0 min0">
                 <span className="fname">{f.name}</span>
-                <span className="muted small">{[f.uploadedBy, new Date(f.modifiedTime).toLocaleDateString('en-CA'), fmtSize(f.size)].filter(Boolean).join(' · ')}</span>
+                <span className="muted small">{[f.uploadedBy, fmtDate(f.modifiedTime), fmtSize(f.size)].filter(Boolean).join(' · ')}</span>
               </span>
               <span className="row-wrap small">
                 <a className="text-link" href={`https://drive.google.com/file/d/${f.id}/view`} target="_blank" rel="noopener noreferrer">Open<span className="sr-only"> {f.name} in Drive</span></a>
@@ -372,10 +378,13 @@ function AssetsPanel({ project, folder = REFERENCE }: { project: LibProject; fol
                   type="button"
                   className="linklike lib-delete"
                   onClick={async () => {
-                    if (!window.confirm(`Delete ${f.name}?\n\nThe client stops seeing it, and it goes to Google Drive’s trash (restorable there for 30 days).`)) return
-                    const r = await json('DELETE', '/api/admin/files', { projectId: project._id, fileId: f.id })
-                    if (r.ok) await load()
-                    else alert('That didn’t delete. Reload the page and try again.')
+                    if (!(await confirm({ title: `Delete ${f.name}?`, body: 'The client stops seeing it, and it goes to Google Drive’s trash (restorable there for 30 days).', confirmLabel: 'Delete', danger: true }))) return
+                    const del = async (): Promise<void> => {
+                      const r = await json('DELETE', '/api/admin/files', { projectId: project._id, fileId: f.id })
+                      if (r.ok) await load()
+                      else notify({ text: `${f.name} wasn’t deleted. Check your connection and try again.`, tone: 'error', retry: () => void del() })
+                    }
+                    await del()
                   }}
                 >
                   Delete<span className="sr-only"> {f.name}</span>
@@ -385,7 +394,7 @@ function AssetsPanel({ project, folder = REFERENCE }: { project: LibProject; fol
           ))}
         </ul>
       ) : (
-        <p className="muted small" style={{ margin: 0 }}>No files yet.</p>
+        <p className="muted small m0">No files yet.</p>
       )}
     </div>
   )

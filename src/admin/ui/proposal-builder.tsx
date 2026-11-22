@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useConfirm } from './confirm'
 
 /**
  * Prototype: three packages built by dragging deliverables into them.
@@ -35,6 +36,7 @@ const START: State = {
 export function ProposalBuilder() {
   const [s, setS] = useState<State>(START)
   const [ready, setReady] = useState(false)
+  const confirm = useConfirm()
   const [over, setOver] = useState<string | null>(null)
   const drag = useRef<Drag | null>(null)
 
@@ -118,7 +120,7 @@ export function ProposalBuilder() {
           <h2 id="pb-h-items" className="a-h2">Deliverables</h2>
           <span className="muted small">{s.items.length}</span>
         </div>
-        <p className="muted small" style={{ margin: 0 }}>Price each one, then drag it into a package. One deliverable can sit in more than one package.</p>
+        <p className="muted small m0">Price each one, then drag it into a package. One deliverable can sit in more than one package.</p>
         <ul className="pb-list">
           {s.items.map((i) => (
             <li key={i.id} className={`pb-item${used.has(i.id) ? '' : ' is-unused'}`}>
@@ -177,12 +179,11 @@ export function ProposalBuilder() {
                 <dt><label htmlFor={`pb-adj-${n}`}>Adjust</label></dt>
                 <dd><span className="pb-money"><span aria-hidden="true">$</span><input id={`pb-adj-${n}`} className="pb-in pb-in-num" inputMode="decimal" placeholder="0" value={k.adjust ?? ''} onChange={(e) => setPack(n, { adjust: e.target.value.trim() === '-' ? null : num(e.target.value) })} /></span></dd>
               </div>
-              <div className="pb-price"><dt>Package price</dt><dd>{cad(t.price)}</dd></div>
+              <div className="pb-price"><dt>Package price</dt><dd key={t.price} className="pb-bump">{cad(t.price)}</dd></div>
               <div><dt>{s.gst ? 'GST (5%)' : 'GST'}</dt><dd>{s.gst ? cad(t.tax) : 'Not charged'}</dd></div>
-              <div><dt>Total</dt><dd>{cad(t.total)}</dd></div>
+              <div><dt>Total</dt><dd key={t.total} className="pb-bump">{cad(t.total)}</dd></div>
               <div><dt>Deposit ({s.deposit}%)</dt><dd>{cad(t.deposit)}</dd></div>
             </dl>
-            <p className="hint pb-hint">Adjust takes a minus for a bundle discount, or a plus for travel and extras.</p>
             {t.unpriced > 0 && <p className="a-warning pb-warn">{t.unpriced} {t.unpriced === 1 ? 'deliverable has' : 'deliverables have'} no price yet.</p>}
             <textarea className="input pb-why" aria-label={`Reasoning for ${k.name}`} placeholder="Reasoning: who this package is for and why it’s priced this way (only you see this)" value={k.why} onChange={(e) => setPack(n, { why: e.target.value })} />
           </section>
@@ -192,7 +193,7 @@ export function ProposalBuilder() {
 
       <section className="p-card" aria-labelledby="pb-h-tr">
         <h2 id="pb-h-tr" className="a-h2">Client conversation</h2>
-        <p className="muted small" style={{ margin: 0 }}>Paste the transcript or your notes to keep them beside the pricing. Pulling a call straight from Granola comes next.</p>
+        <p className="muted small m0">Paste the transcript or your notes to keep them beside the pricing.</p>
         <textarea className="input pb-transcript" aria-label="Transcript or notes" value={s.transcript} onChange={(e) => set({ transcript: e.target.value })} />
       </section>
 
@@ -201,6 +202,8 @@ export function ProposalBuilder() {
           <h2 id="pb-h-prev" className="a-h2">What the client sees</h2>
           <span className="muted small">The Investment page of the PDF, before tax</span>
         </div>
+        {/* Printed only: names the quote at the top of the page (the heading above is for you, not the client). */}
+        <p className="pb-print-title">{[s.client.trim(), s.title.trim()].filter(Boolean).join(' · ') || 'Quote'}</p>
         <div className="a-table-scroll">
           <table className="a-table pb-table">
             <thead>
@@ -221,14 +224,13 @@ export function ProposalBuilder() {
             <tfoot>
               <tr>
                 <th scope="row">Investment</th>
-                {sums.map((t, n) => <td key={n} className="pb-col pb-total">{cad(t.price)}</td>)}
+                {sums.map((t, n) => <td key={`${n}-${t.price}`} className="pb-col pb-total pb-bump">{cad(t.price)}</td>)}
               </tr>
             </tfoot>
           </table>
         </div>
         <div className="row-wrap">
-          <button type="button" className="btn btn-primary btn-sm" disabled title="Coming once the layout is settled">Build the PDF</button>
-          <button type="button" className="linklike small" onClick={() => { if (window.confirm('Clear everything in the builder and start again?')) setS({ ...START, items: START.items.map((i) => ({ ...i })), packs: START.packs.map((k) => ({ ...k, ids: [] })) }) }}>Start over</button>
+          <button type="button" className="linklike small" onClick={async () => { if (await confirm({ title: 'Start over?', body: 'This clears everything in the builder: details, deliverables and packages.', confirmLabel: 'Clear and start over', danger: true })) setS({ ...START, items: START.items.map((i) => ({ ...i })), packs: START.packs.map((k) => ({ ...k, ids: [] })) }) }}>Start over</button>
         </div>
       </section>
     </div>

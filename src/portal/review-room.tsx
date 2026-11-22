@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clockTime, frameAt, frameMiddle, frameOf, frameStart, spokenTime, timecode } from './timecode'
 import type { DeliverableStatus, ReviewComment, ReviewShape } from './types'
+import { useConfirmDialog } from '@/admin/ui/confirm'
 import './review-room.css'
 
 /**
@@ -65,6 +66,7 @@ const typing = (el: EventTarget | null) => {
 export function ReviewRoom(props: Props) {
   const { via, project, deliverableKey, token, fps, title, versionLabel, guest } = props
   const router = useRouter()
+  const [confirm, confirmDialog] = useConfirmDialog('rr-confirm')
   const root = useRef<HTMLDivElement>(null)
   const stage = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
@@ -362,21 +364,39 @@ export function ReviewRoom(props: Props) {
     if (!body || busy || !canWrite) return
     const t = inPt !== null ? inPt : frameStart(atFrame, fps)
     const tOut = inPt !== null && outPt !== null ? outPt : undefined
+    const drawing = draft.length ? draft : undefined
+    // Optimistic: the comment shows in the list at once (marked "Posting…") and the box clears; if it
+    // doesn't go through, it comes back out of the list and what you wrote goes back in the box.
+    const tempId = `pending-${Date.now()}`
+    const temp: ReviewComment = { _id: tempId, deliverableKey, version: 0, t, tOut, text: body, drawing, author: { kind: via === 'admin' ? 'admin' : guest ? 'guest' : 'client', name: guest?.name ?? 'You' }, createdAt: new Date().toISOString(), mine: true }
+    const kept = { draft, draftFrame, inPt, outPt, loop }
+    setComments((cs) => [...cs, temp])
+    setText('')
+    setDraft([])
+    setDraftFrame(null)
+    setTool(null)
+    setInPt(null)
+    setOutPt(null)
+    setLoop(false)
+    setSelected(tempId)
     setBusy(true)
-    const r = await send('POST', { t, tOut, text: body, drawing: draft.length ? draft : undefined })
+    const r = await send('POST', { t, tOut, text: body, drawing })
     setBusy(false)
     if (r.ok && r.comment) {
-      setComments((cs) => [...cs, r.comment!])
-      setText('')
-      setDraft([])
-      setDraftFrame(null)
-      setTool(null)
-      setInPt(null)
-      setOutPt(null)
-      setLoop(false)
-      setSelected(r.comment._id)
+      setComments((cs) => cs.map((x) => (x._id === tempId ? r.comment! : x)))
+      setSelected((s) => (s === tempId ? r.comment!._id : s))
       setSay(sample ? 'Comment added (sample: it isn’t saved).' : 'Comment posted.')
-    } else setSay(r.error === 'too-many' ? 'That’s a lot of comments at once. Wait a few minutes and try again.' : 'That comment didn’t go through. Try again.')
+    } else {
+      setComments((cs) => cs.filter((x) => x._id !== tempId))
+      setSelected((s) => (s === tempId ? null : s))
+      setText((now) => now || body)
+      setDraft(kept.draft)
+      setDraftFrame(kept.draftFrame)
+      setInPt(kept.inPt)
+      setOutPt(kept.outPt)
+      setLoop(kept.loop)
+      setSay(r.error === 'too-many' ? 'That’s a lot of comments at once. Wait a few minutes and try again.' : 'That comment didn’t go through. It’s back in the box: try again.')
+    }
   }
 
   async function reply(parent: ReviewComment, body: string) {
@@ -410,7 +430,8 @@ export function ReviewRoom(props: Props) {
   }
 
   async function remove(c: ReviewComment) {
-    if (!window.confirm('Delete this comment?')) return
+    const own = Boolean(c.mine)
+    if (!(await confirm({ title: 'Delete this comment?', body: own ? 'It goes for everyone, along with any replies. This can’t be undone.' : `${c.author.name}’s comment goes for everyone, along with any replies. This can’t be undone.`, confirmLabel: 'Delete', danger: true }))) return
     const r = await send('DELETE', { id: c._id })
     if (r.ok) {
       setComments((cs) => cs.filter((x) => x._id !== c._id && x.parent !== c._id))
@@ -462,7 +483,7 @@ export function ReviewRoom(props: Props) {
   const [decided, setDecided] = useState('')
   async function decide(action: 'approve' | 'changes') {
     if (!project) return
-    if (action === 'approve' && !window.confirm(`Approve ${title}, ${versionLabel}?`)) return
+    if (action === 'approve' && !(await confirm({ title: `Approve ${title}, ${versionLabel}?`, body: 'We’ll take it to the next stage.', confirmLabel: 'Approve' }))) return
     const note = action === 'changes' ? summary.trim() || `See the ${openCount} open comment${openCount === 1 ? '' : 's'} in the review room.` : ''
     setBusy(true)
     const r = await fetch('/api/portal/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ project, key: deliverableKey, action, note }) }).catch(() => null)
@@ -481,6 +502,7 @@ export function ReviewRoom(props: Props) {
 
   return (
     <div className="rr-host">
+      {confirmDialog}
     <div className="rr" ref={root} data-via={via}>
       <div className="rr-main">
         <div className="rr-stage" ref={stage}>
@@ -707,15 +729,15 @@ export function ReviewRoom(props: Props) {
                 <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setAsking(true)}>Request changes</button>
               </div>
             ) : (
-              <div className="stack" style={{ gap: 'var(--space-2)' }}>
-                <p className="small" style={{ margin: 0 }}><strong>{openCount}</strong> open comment{openCount === 1 ? '' : 's'} will go with this request.</p>
+              <div className="stack rr-ask">
+                <p className="small"><strong>{openCount}</strong> open comment{openCount === 1 ? '' : 's'} will go with this request.</p>
                 <label htmlFor={`rr-sum-${deliverableKey}`} className="small muted">Anything else? (optional)</label>
                 <textarea id={`rr-sum-${deliverableKey}`} className="input" rows={3} maxLength={4000} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="A summary, or anything that isn’t about one moment" />
                 <div className="rr-decide-row">
                   <button type="button" className="btn btn-primary btn-sm" disabled={busy || (!openCount && !summary.trim())} onClick={() => decide('changes')}>{busy ? 'Sending…' : 'Send the request'}</button>
                   <button type="button" className="linklike small" onClick={() => setAsking(false)}>Cancel</button>
                 </div>
-                {!openCount && !summary.trim() && <p className="small muted" style={{ margin: 0 }}>Add a comment on the video or a note here first.</p>}
+                {!openCount && !summary.trim() && <p className="small muted">Add a comment on the video or a note here first.</p>}
               </div>
             )}
           </section>
@@ -856,18 +878,20 @@ function CommentItem({
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView({ block: 'nearest' })
   }, [selected])
+  // Posted a moment ago and still on its way to the server.
+  const pending = c._id.startsWith('pending-')
 
   return (
-    <li ref={ref} className={`rr-item${c.done ? ' done' : ''}${selected ? ' on' : ''}`} aria-current={selected ? 'true' : undefined}>
+    <li ref={ref} className={`rr-item${c.done ? ' done' : ''}${selected ? ' on' : ''}${pending ? ' is-pending' : ''}`} aria-current={selected ? 'true' : undefined} aria-busy={pending || undefined}>
       <div className="rr-item-head">
         <button type="button" className="rr-chip" onClick={onGo} aria-label={`Go to ${chip}${c.drawing?.length ? ', with a drawing' : ''}`}>
           {chip}
           {c.drawing?.length ? <ToolIcon t="pen" /> : null}
         </button>
         <Who c={c} />
-        <span className="small muted rr-when">{when(c.createdAt)}{c.editedAt ? ' · edited' : ''}</span>
+        <span className="small muted rr-when">{pending ? 'Posting…' : when(c.createdAt)}{c.editedAt ? ' · edited' : ''}</span>
       </div>
-      <Body c={c} isAdmin={isAdmin} canWrite={canWrite} onEdit={onEdit} onDelete={onDelete} />
+      <Body c={c} isAdmin={isAdmin} canWrite={canWrite && !pending} onEdit={onEdit} onDelete={onDelete} deleteBelow />
       {c.done && <p className="small rr-done-note"><span aria-hidden="true">✓ </span>Done{c.doneBy ? ` · ${c.doneBy}` : ''}</p>}
 
       {replies.length > 0 && (
@@ -884,7 +908,7 @@ function CommentItem({
         </ol>
       )}
 
-      {canWrite && (
+      {canWrite && !pending && (
         <div className="rr-item-actions">
           <button type="button" className="linklike small" onClick={() => setReplying((r) => !r)} aria-expanded={replying}>Reply</button>
           {canDone && (
@@ -892,6 +916,7 @@ function CommentItem({
               <input type="checkbox" checked={Boolean(c.done)} onChange={(e) => onDone(e.target.checked)} /> Done
             </label>
           )}
+          {canDeleteIt(c, canWrite, isAdmin) && <button type="button" className="linklike small rr-delete" onClick={() => onDelete(c)}>Delete<span className="sr-only"> comment by {c.author.name}</span></button>}
         </div>
       )}
       {replying && (
@@ -931,12 +956,16 @@ function CommentItem({
   )
 }
 
-function Body({ c, isAdmin, canWrite, onEdit, onDelete }: { c: ReviewComment; isAdmin: boolean; canWrite: boolean; onEdit: (c: ReviewComment, text: string) => Promise<boolean>; onDelete: (c: ReviewComment) => void }) {
+/** Your own comment for 15 minutes; in the back office, anyone's. */
+const canDeleteIt = (c: ReviewComment, canWrite: boolean, isAdmin: boolean) => canWrite && ((Boolean(c.mine) && Date.now() - Date.parse(c.createdAt) < EDIT_MS) || isAdmin)
+
+/** The text, with Edit (and Delete, for replies; a top comment's Delete sits last in its action row). */
+function Body({ c, isAdmin, canWrite, onEdit, onDelete, deleteBelow }: { c: ReviewComment; isAdmin: boolean; canWrite: boolean; onEdit: (c: ReviewComment, text: string) => Promise<boolean>; onDelete: (c: ReviewComment) => void; deleteBelow?: boolean }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(c.text)
   const fresh = Date.now() - Date.parse(c.createdAt) < EDIT_MS
   const canEdit = canWrite && Boolean(c.mine) && fresh
-  const canDelete = canWrite && ((Boolean(c.mine) && fresh) || isAdmin)
+  const canDelete = !deleteBelow && canDeleteIt(c, canWrite, isAdmin)
   if (editing)
     return (
       <form
@@ -960,7 +989,7 @@ function Body({ c, isAdmin, canWrite, onEdit, onDelete }: { c: ReviewComment; is
       {(canEdit || canDelete) && (
         <div className="rr-own">
           {canEdit && <button type="button" className="linklike small" onClick={() => setEditing(true)}>Edit<span className="sr-only"> your comment</span></button>}
-          {canDelete && <button type="button" className="linklike small" onClick={() => onDelete(c)}>Delete<span className="sr-only"> comment by {c.author.name}</span></button>}
+          {canDelete && <button type="button" className="linklike small rr-delete" onClick={() => onDelete(c)}>Delete<span className="sr-only"> comment by {c.author.name}</span></button>}
         </div>
       )}
     </>

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useNotify } from './confirm'
 
 type Values = { signedYear: string; collectedYear: string; leadsMonth: string; winRate: string }
 
@@ -18,17 +19,38 @@ export function GoalsForm({ goals }: { goals: Partial<Record<keyof Values, numbe
   const [values, setValues] = useState<Values>(() => Object.fromEntries(FIELDS.map((f) => [f.key, goals[f.key] ? String(goals[f.key]) : ''])) as Values)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const notify = useNotify()
+  const saved = Object.fromEntries(FIELDS.map((f) => [f.key, goals[f.key] ? String(goals[f.key]) : ''])) as Values
+
+  async function put(next: Values) {
+    setBusy(true)
+    setMsg('')
+    const r = await fetch('/api/admin/money/goals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(next) }).catch(() => null)
+    const j = r ? await r.json().catch(() => ({})) : {}
+    setBusy(false)
+    if (!r?.ok) {
+      setMsg(j.message || 'That didn’t save. Reload the page and try again.')
+      return null
+    }
+    router.refresh()
+    return j as { sample?: boolean }
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
-    setBusy(true)
-    setMsg('')
-    const r = await fetch('/api/admin/money/goals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) }).catch(() => null)
-    const j = r ? await r.json().catch(() => ({})) : {}
-    setBusy(false)
-    if (!r?.ok) return setMsg(j.message || 'That didn’t save. Reload the page and try again.')
+    // What was saved before, so Undo can put it back.
+    const before = saved
+    const j = await put(values)
+    if (!j) return
     setMsg(j.sample ? 'Sample data: the goals weren’t saved.' : 'Goals saved.')
-    router.refresh()
+    if (!j.sample && FIELDS.some((f) => before[f.key] !== values[f.key]))
+      notify({
+        text: 'Goals saved.',
+        undo: async () => {
+          setValues(before)
+          if (await put(before)) setMsg('Goals put back as they were.')
+        },
+      })
   }
 
   return (
@@ -43,7 +65,7 @@ export function GoalsForm({ goals }: { goals: Partial<Record<keyof Values, numbe
         ))}
         <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save goals'}</button>
       </form>
-      <p className="small muted" role="status" style={{ margin: 0, minHeight: 20 }}>{msg}</p>
+      <p className="small muted m0 status-line" role="status">{msg}</p>
     </details>
   )
 }

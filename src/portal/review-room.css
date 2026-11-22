@@ -20,7 +20,7 @@
 .rr-stage:fullscreen .rr-picture { flex: 1; aspect-ratio: auto; max-height: none; }
 .rr-picture video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
 .rr-msg { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: var(--space-6); text-align: center; color: var(--rr-on-media-muted); }
-.rr-buffer { position: absolute; left: var(--space-3); top: var(--space-3); display: inline-flex; align-items: center; gap: var(--space-2); padding: 4px 10px; border-radius: var(--radius-pill); background: rgb(0 0 0 / .6); font-size: 13px; color: var(--rr-on-media); pointer-events: none; }
+.rr-buffer { position: absolute; left: var(--space-3); top: var(--space-3); display: inline-flex; align-items: center; gap: var(--space-2); padding: 4px 10px; border-radius: var(--radius-pill); background: rgb(0 0 0 / .6); font-size: .8125rem; color: var(--rr-on-media); pointer-events: none; }
 .rr-spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: rr-spin .8s linear infinite; }
 @keyframes rr-spin { to { transform: rotate(360deg); } }
 .rr-draw { position: absolute; pointer-events: none; overflow: visible; }
@@ -44,7 +44,7 @@
 
 .rr-buttons { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
 .rr-spacer { flex: 1; }
-.rr-btn { display: inline-grid; place-items: center; min-width: 40px; height: 40px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--rr-on-media); cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; }
+.rr-btn { display: inline-grid; place-items: center; min-width: 40px; height: 40px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--rr-on-media); cursor: pointer; font: inherit; font-size: .875rem; font-weight: 600; }
 .rr-btn svg { width: 20px; height: 20px; fill: currentColor; stroke: currentColor; stroke-width: 0; }
 .rr-btn svg.rr-stroke { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .rr-btn:hover:not(:disabled) { background: rgb(255 255 255 / .12); }
@@ -53,10 +53,10 @@
 .rr-btn[aria-pressed='true'] { background: rgb(255 255 255 / .9); color: #111; }
 .rr-play svg { width: 24px; height: 24px; }
 .rr-text-btn { min-width: 40px; }
-.rr-tc { border: 0; background: transparent; color: var(--rr-on-media); font: 600 15px/1 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; padding: 8px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.rr-tc { border: 0; background: transparent; color: var(--rr-on-media); font: 600 1rem/1 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; padding: 8px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
 .rr-tc:hover { background: rgb(255 255 255 / .12); }
 .rr-tc-of { color: var(--rr-on-media-muted); font-weight: 400; }
-.rr-speed select { height: 36px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .25); background: transparent; color: var(--rr-on-media); font: inherit; font-size: 13px; padding: 0 6px; }
+.rr-speed select { height: 36px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .25); background: transparent; color: var(--rr-on-media); font: inherit; font-size: .875rem; padding: 0 6px; }
 .rr-speed option { color: #111; }
 .rr-volume { width: 84px; accent-color: var(--rr-on-media); }
 
@@ -67,7 +67,7 @@
 .rr-box { min-height: 64px; resize: vertical; }
 .rr-compose-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .rr-tools { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.rr-tool { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface-raised); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.rr-tool { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: var(--radius-pill); border: 1px solid var(--line); background: var(--surface-raised); color: var(--ink); font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; }
 .rr-tool[aria-pressed='true'] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
 .rr-tool:disabled { opacity: .45; cursor: default; }
 .rr-tool:focus-visible, .rr-swatch:focus-visible, .rr-chip:focus-visible, .rr-filter button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -84,10 +84,10 @@
 .rr-decide-row { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
 .rr-decided, .rr-status, .rr-sample { margin: 0; }
 .rr-side-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
-.rr-h { margin: 0; font-size: 17px; }
-.rr-h .muted { font-weight: 400; font-size: 14px; }
+.rr-h { margin: 0; font-size: 1.0625rem; }
+.rr-h .muted { font-weight: 400; font-size: .875rem; }
 .rr-filter { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: 2px; }
-.rr-filter button { border: 0; background: transparent; color: var(--ink-muted); font: inherit; font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: var(--radius-pill); cursor: pointer; min-height: 32px; }
+.rr-filter button { border: 0; background: transparent; color: var(--ink-muted); font: inherit; font-size: 1rem; font-weight: 600; padding: 4px 12px; border-radius: var(--radius-pill); cursor: pointer; min-height: 32px; }
 .rr-filter button[aria-pressed='true'] { background: var(--ink); color: var(--surface); }
 
 .rr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
@@ -96,22 +96,43 @@
 .rr-item.done { border-left-style: dashed; border-left-color: var(--line); }
 .rr-item.done > .rr-text { color: var(--ink-muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--ink-muted) 60%, transparent); }
 .rr-item-head { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.rr-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 3px 8px; font: 600 12px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; cursor: pointer; min-height: 28px; }
+.rr-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 3px 8px; font: 600 .8125rem/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; cursor: pointer; min-height: 28px; }
 .rr-chip:hover { border-color: var(--ink); }
-.rr-who { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
-.rr-tag { font-size: 11px; font-weight: 600; letter-spacing: .02em; padding: 1px 6px; border-radius: var(--radius-pill); border: 1px solid var(--line); color: var(--ink-muted); }
+.rr-who { display: inline-flex; align-items: center; gap: 6px; font-size: 1rem; }
+.rr-tag { font-size: .75rem; font-weight: 600; letter-spacing: .02em; padding: 1px 6px; border-radius: var(--radius-pill); border: 1px solid var(--line); color: var(--ink-muted); }
 .rr-tag-us { color: var(--accent); }
 .rr-when { margin-left: auto; }
-.rr-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.45; }
+.rr-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1rem; line-height: 1.5; }
 .rr-own { display: flex; gap: var(--space-3); }
 .rr-done-note { margin: 0; color: var(--ok, #2c6a4c); font-weight: 600; }
 .rr-replies { list-style: none; margin: 4px 0 0; padding: 0 0 0 var(--space-3); border-left: 2px solid var(--line); display: flex; flex-direction: column; gap: var(--space-2); }
 .rr-reply { display: flex; flex-direction: column; gap: 4px; }
-.rr-item-actions { display: flex; align-items: center; gap: var(--space-4); }
+.rr-item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); }
+/* Actions and the Done tick read at body size: they're what you do next. */
+.rr-item-actions, .rr-own, .rr-item-actions .small, .rr-own .small { font-size: 1rem; }
+.rr-ask { gap: var(--space-2); }
+.rr-ask p { margin: 0; }
+/* Approve / notes buttons beside a version (review-ui.tsx). */
+.rr-fb { gap: var(--space-3); }
+.rr-fb-notes { gap: var(--space-2); }
+.rr-fb p { margin: 0; }
+/* Delete comes last in a comment's actions, quiet until you reach for it. */
+.rr-item-actions .rr-delete, .rr-own .rr-delete { margin-left: auto; color: var(--ink-muted); }
+.rr-delete:hover, .rr-delete:focus-visible { color: var(--danger, #b3261e); }
 .rr-done-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .rr-done-toggle input { width: 18px; height: 18px; accent-color: var(--ink); }
 .rr-reply-form { display: flex; flex-direction: column; gap: var(--space-2); }
 .rr-reply-form .input { min-height: 56px; }
+
+/* The confirm dialog (src/admin/ui/confirm.tsx) in the portal and on share links. In the back office,
+   admin.css styles .a-dialog and these zero-specificity rules give way. */
+:where(.rr-confirm) { width: min(480px, calc(100vw - 32px)); padding: 0; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); color: var(--ink); box-shadow: 0 24px 60px rgb(15 21 32 / .28); }
+:where(.rr-confirm)::backdrop { background: rgb(15 21 32 / .55); }
+:where(.rr-confirm) .a-dialog-body { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6); }
+:where(.rr-confirm) .a-h2 { margin: 0; font-family: var(--font-display); font-size: 1.25rem; line-height: 1.3; }
+:where(.rr-confirm) .a-confirm-text { margin: 0; color: var(--ink-muted); }
+:where(.rr-confirm) .a-dialog-actions { justify-content: flex-end; }
+:where(.rr-confirm) .btn-danger { background: var(--danger, #b3261e); border-color: var(--danger, #b3261e); color: #fff; }
 
 /* Narrow spaces (phones, or beside the back office sidebar): the comments stack under the video. */
 .rr-host { container-type: inline-size; }
@@ -123,7 +144,28 @@
   .rr-stage { border-radius: var(--radius-sm); }
   .rr-volume, .rr-tc-of { display: none; }
   .rr-btn { min-width: 36px; height: 40px; padding: 0 6px; }
-  .rr-tc { font-size: 14px; padding: 8px 4px; }
+  .rr-tc { font-size: .875rem; padding: 8px 4px; }
+}
+/* Touch: 44px targets for every control in the room (swatches keep their dot, with a bigger hit area). */
+@media (pointer: coarse) {
+  .rr-btn, .rr-text-btn { min-width: 44px; height: 44px; }
+  .rr-tc { min-height: 44px; }
+  .rr-speed select { height: 44px; }
+  .rr-tool, .rr-filter button, .rr-chip { min-height: 44px; }
+  .rr-filter button { padding-inline: 16px; }
+  .rr-swatch { width: 44px; height: 44px; border-width: 8px; border-color: transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px var(--line); }
+  .rr-swatch[aria-checked='true'] { box-shadow: inset 0 0 0 2px var(--line), 0 0 0 2px var(--ink); }
+  .rr-swatches { gap: 0; padding: 0; }
+  .rr-done-toggle { min-height: 44px; }
+  .rr-done-toggle input { width: 22px; height: 22px; }
+  .rr-keys summary { display: flex; align-items: center; min-height: 44px; }
+  .rr-item-actions .linklike, .rr-own .linklike, .rr-item-actions button, .rr-own button { min-height: 44px; min-width: 44px; }
+  .rr-timeline { height: 44px; }
+  .rr-track, .rr-played { top: 20px; }
+  .rr-range { top: 16px; }
+  .rr-head { top: 13px; }
+  .rr-mark { top: 4px; width: 14px; height: 14px; margin-left: -7px; }
+  .rr-mark-bar { top: 6px; height: 8px; margin-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .rr-spin { animation: none; border-right-color: currentColor; opacity: .6; }
@@ -139,10 +181,24 @@
 .rv-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--line); }
 .rv-head .small { text-align: right; }
 .rv-body { max-width: 1480px; margin: 0 auto; padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-5); }
-.rv-title h1 { margin: 0; font-size: clamp(22px, 3vw, 30px); }
+.rv-title h1 { margin: 0; font-size: clamp(1.375rem, 3vw, 1.875rem); }
 .rv-title p { margin: 4px 0 0; }
 .rv-gate { max-width: 460px; margin: var(--space-12) auto; padding: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); display: flex; flex-direction: column; gap: var(--space-3); }
 .rv-gate h2 { margin: 0; }
 @media (max-width: 560px) {
   .rv-head, .rv-body { padding: var(--space-4); }
 }
+
+/* Fix pass 3: a comment on its way to the server shows at once, faded, until it's saved. */
+.rr-item.is-pending { opacity: .62; }
+.rr-item.is-pending .rr-when { font-style: italic; }
+@media (prefers-reduced-motion: no-preference) {
+  .rr-list > .rr-item { animation: rr-in .16s ease-out; }
+  @keyframes rr-in { from { opacity: 0; transform: translateY(4px); } }
+}
+/* Labels never under 13px. */
+.rr-tag { font-size: .8125rem; }
+/* In the back office copper is for the timeline marks only: the author label and the comment edges are ink. */
+.admin .rr-tag-us { color: var(--a-strong, var(--ink-muted)); }
+.admin .rr-item { border-left-color: var(--a-hairline-strong, var(--line)); }
+.admin .rr-item.on { border-left-color: var(--ink); }

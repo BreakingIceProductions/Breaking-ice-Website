@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import type { OfficeQuote } from '@/admin/types'
 import { coverImage } from '@/portal/pdf-view'
+import { fmtDate } from '@/admin/dates'
 
 type Props = {
   projectId: string
@@ -16,7 +17,7 @@ type Props = {
   previewHref?: string
 }
 
-const day = (iso?: string) => (iso ? new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', timeZone: iso.length === 10 ? 'UTC' : 'America/Edmonton' }) : '')
+const day = (iso?: string) => fmtDate(iso)
 const cad = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—')
 
 /** Upload the quote PDF, send it to the client's portal, and see when it's opened and signed. */
@@ -92,8 +93,8 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
       )}
 
       {q?.signature && (
-        <div className="stack" style={{ gap: 'var(--space-2)' }}>
-          <p className="small" style={{ margin: 0 }}>
+        <div className="stack gap-2">
+          <p className="small m0">
             {q.signature.name}{q.signature.title ? `, ${q.signature.title}` : ''} ({q.signature.email}) signed {q.signature.method === 'drawn' ? 'by hand' : 'by typing their name'}. Certificate {q.signature.certificateId}.
           </p>
           <div className="row-wrap">
@@ -163,13 +164,13 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
       )}
 
       {!q?.signature && (
-        <p className="muted small" style={{ margin: 0 }}>
+        <p className="muted small m0">
           {recipients.length
             ? `Sending emails ${recipients.join(', ')} a link to review and sign it in their portal. Signing moves the project to Onboarding.`
-            : 'Add a contact for this client in the Studio before sending.'}
+            : 'Add a contact for this client in the editor before sending.'}
         </p>
       )}
-      <p className={`small ${msg?.err ? 'err' : 'muted'}`} role="status" style={{ margin: 0 }}>{busy || msg?.text}</p>
+      <p className={`small ${msg?.err ? 'err' : 'muted'} m0`} role="status">{busy || msg?.text}</p>
     </section>
   )
 }

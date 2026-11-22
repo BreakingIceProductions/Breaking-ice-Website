@@ -2,16 +2,18 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { saveFailed, useNotify } from './confirm'
 import { StageDialog, type Stage } from './stage-dialog'
 
 /**
  * "Move to …" button. Asks the server for a preview of everything the move will
  * do, lets you untick any step, and only then runs it.
  */
-export function StageControl({ projectId, projectTitle, current, next, stages, compact, archived, declined }: { projectId: string; projectTitle: string; current: string; next?: Stage; stages: Stage[]; compact?: boolean; archived?: boolean; declined?: boolean }) {
+export function StageControl({ projectId, projectTitle, current, next, stages, compact, archived, declined, onRun }: { projectId: string; projectTitle: string; current: string; next?: Stage; stages: Stage[]; compact?: boolean; archived?: boolean; declined?: boolean; /** Optimistic placement on a board: called when Confirm is pressed and when the move ends. */ onRun?: (to: Stage, phase: 'start' | 'done' | 'failed') => void }) {
   const router = useRouter()
   const [target, setTarget] = useState<Stage | null>(null)
   const [busy, setBusy] = useState(false)
+  const notify = useNotify()
   const open = (st: Stage) => setTarget(st)
   const others = stages.filter((s) => s.value !== current && s.value !== next?.value)
 
@@ -21,7 +23,7 @@ export function StageControl({ projectId, projectTitle, current, next, stages, c
     const r = await fetch('/api/admin/archive', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, ...change }) }).catch(() => null)
     setBusy(false)
     if (r?.ok) router.refresh()
-    else alert('That didn’t save. Reload the page and try again.')
+    else notify({ text: `${projectTitle} wasn’t ${'archived' in change && !change.archived ? 'unarchived' : 'archived'}. ${saveFailed(r?.status)}`, tone: 'error', retry: () => file(change) })
   }
 
   return (
@@ -81,7 +83,7 @@ export function StageControl({ projectId, projectTitle, current, next, stages, c
       </div>
       )}
 
-      <StageDialog projectId={projectId} projectTitle={projectTitle} target={target} onClose={() => setTarget(null)} />
+      <StageDialog projectId={projectId} projectTitle={projectTitle} target={target} onClose={() => setTarget(null)} onRun={onRun && target ? (phase) => onRun(target, phase) : undefined} />
     </>
   )
 }

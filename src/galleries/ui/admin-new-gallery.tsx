@@ -80,7 +80,7 @@ export function NewGalleryForm({ clients, projects, disabled }: { clients: Clien
         <button type="submit" className="btn btn-primary" disabled={disabled || busy}>{busy ? 'Making it…' : 'Make the gallery'}</button>
         <span className="muted small">It starts as a draft: the client can’t see it until you switch it to Live.</span>
       </div>
-      {msg && <p className="small a-urgent" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small a-urgent m0" role="status">{msg}</p>}
     </form>
   )
 }

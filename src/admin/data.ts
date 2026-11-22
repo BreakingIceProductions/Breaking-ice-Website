@@ -221,7 +221,21 @@ export async function setLead(projectId: string, patch: Partial<Record<keyof Lea
 const slugify = (s: string) =>
   s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70).replace(/-+$/, '') || 'project'
 
-export type NewLead = { name: string; email: string; company: string; title: string; projectType?: string; lead: LeadDetails }
+/** `email` may be empty only for a lead added from a suggestion (a call where no address was given); the New lead form requires one. */
+export type NewLead = {
+  name: string
+  email: string
+  company: string
+  title: string
+  projectType?: string
+  lead: LeadDetails
+  /** An existing client picked by id (the New project form); otherwise found by email, then organization name. */
+  clientId?: string
+  /** 'booked' for the New project form (a job already agreed); leads start at 'lead'. */
+  stage?: 'lead' | 'booked'
+  /** The project's own start date (YYYY-MM-DD), which names its folders. */
+  startDate?: string
+}
 
 /**
  * A new lead from the back office: the client (found by a contact's email, then by organization
@@ -236,14 +250,20 @@ export async function createLead(input: NewLead): Promise<{ id: string; clientId
   // Drafts count too, so a client or address still being written in the Studio isn't doubled up.
   const raw = { cache: 'no-store' as const, perspective: 'raw' as const }
   const found = await portalClient.fetch<{ _id: string; byEmail: boolean }[]>(
-    `*[_type == "client" && (count(contacts[lower(email) == $email]) > 0 || lower(organizationName) == $org)]{_id, "byEmail": count(contacts[lower(email) == $email]) > 0}`,
+    // No email (a lead suggested from a call): found by organization name only.
+    `*[_type == "client" && (($email != "" && count(contacts[lower(email) == $email]) > 0) || lower(organizationName) == $org)]{_id, "byEmail": $email != "" && count(contacts[lower(email) == $email]) > 0}`,
     { email, org: input.company.toLowerCase() },
     raw,
   )
   const published = found.filter((c) => !c._id.startsWith('drafts.') && !c._id.startsWith('versions.'))
-  const existing = published.find((c) => c.byEmail) ?? published[0]
+  const picked = input.clientId
+    ? await portalClient.fetch<{ _id: string } | null>(`*[_type == "client" && _id == $id][0]{_id}`, { id: input.clientId }, raw)
+    : null
+  if (input.clientId && !picked) throw new Error('client-not-found')
+  const existing = picked ? { _id: picked._id, byEmail: false } : (published.find((c) => c.byEmail) ?? published[0])
+  const stage = input.stage ?? 'lead'
   const clientId = existing?._id ?? `client-${randomBytes(8).toString('hex')}`
-  const id = `lead-${randomBytes(8).toString('hex')}`
+  const id = `${stage === 'lead' ? 'lead' : 'project'}-${randomBytes(8).toString('hex')}`
 
   const base = slugify(input.title)
   const taken = new Set(await portalClient.fetch<string[]>(`*[_type == "clientProject" && string::startsWith(slug.current, $base)].slug.current`, { base }, raw))
@@ -259,7 +279,7 @@ export async function createLead(input: NewLead): Promise<{ id: string; clientId
       _type: 'client',
       organizationName: input.company,
       // Being listed lets them sign in to the portal if they ask for a link; nothing is sent to them by this.
-      contacts: [{ _key: key(), _type: 'contact', name: input.name, email, getsEmails: true }],
+      contacts: [email ? { _key: key(), _type: 'contact', name: input.name, email, getsEmails: true } : { _key: key(), _type: 'contact', name: input.name, getsEmails: false }],
       portalPayments: false,
       noGst: false,
     })
@@ -275,21 +295,55 @@ export async function createLead(input: NewLead): Promise<{ id: string; clientId
     stage: 1,
     hiddenFromClient: false,
     dontEmailDelivery: false,
-    pipelineStage: 'lead',
+    pipelineStage: stage,
     archived: false,
     ...(input.projectType && { projectType: input.projectType }),
+    ...(input.startDate && { startDate: input.startDate }),
   })
   tx.create({
     _id: officeId(id),
     _type: 'boState',
     project: id,
     stageChangedAt: at,
-    stageHistory: [{ _key: key(), at, to: 'lead' }],
+    stageHistory: [{ _key: key(), at, to: stage }],
     lead,
-    log: [{ _key: key(), at, text: 'Lead added', kind: 'lead' }],
+    log: [{ _key: key(), at, text: stage === 'lead' ? 'Lead added' : 'Project added', kind: stage === 'lead' ? 'lead' : 'office' }],
   })
   await tx.commit({ autoGenerateArrayKeys: false })
   return { id, clientId, newClient: !existing }
+}
+
+export type NewClient = { company: string; name: string; email: string; role?: string; getsEmails?: boolean }
+
+/**
+ * The New client form: one client with one contact, nothing else. Matched the same way New lead
+ * and New project match (a contact's email, then the organization name, drafts included), and an
+ * existing client is returned untouched instead of being made twice. Nobody is emailed.
+ */
+export async function createOfficeClient(input: NewClient): Promise<{ id: string; existing: boolean; draftOnly?: boolean }> {
+  const email = input.email.toLowerCase()
+  const raw = { cache: 'no-store' as const, perspective: 'raw' as const }
+  const found = await portalClient.fetch<{ _id: string; byEmail: boolean }[]>(
+    `*[_type == "client" && (($email != "" && count(contacts[lower(email) == $email]) > 0) || lower(organizationName) == $org)]{_id, "byEmail": $email != "" && count(contacts[lower(email) == $email]) > 0}`,
+    { email, org: input.company.toLowerCase() },
+    raw,
+  )
+  const published = found.filter((c) => !c._id.startsWith('drafts.') && !c._id.startsWith('versions.'))
+  const hit = published.find((c) => c.byEmail) ?? published[0]
+  if (hit) return { id: hit._id, existing: true }
+  // Only an unpublished draft in the Studio: don't make a second one beside it.
+  if (found[0]) return { id: found[0]._id.replace(/^(drafts|versions\.[^.]+)\./, ''), existing: true, draftOnly: true }
+  const id = `client-${randomBytes(8).toString('hex')}`
+  await portalClient.create({
+    _id: id,
+    _type: 'client',
+    organizationName: input.company,
+    // Being listed lets them sign in to the portal if they ask for a link; nothing is sent to them by this.
+    contacts: [{ _key: key(), _type: 'contact', name: input.name, email, ...(input.role && { role: input.role }), getsEmails: Boolean(input.getsEmails) }],
+    portalPayments: false,
+    noGst: false,
+  })
+  return { id, existing: false }
 }
 
 /** The project type lives on the project itself (the board and the Studio read it there). */

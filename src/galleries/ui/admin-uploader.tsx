@@ -314,7 +314,7 @@ export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySe
         <h2 id="ga-up-h" className="a-h2">Add photos</h2>
         <span className="muted small">JPEG, PNG or WebP, up to {formatBytes(MAX_PHOTO_BYTES)} each</span>
       </div>
-      {sample && <p className="a-warning" style={{ margin: 0 }}>This is the made-up sample shoot. Make a new gallery to try uploading.</p>}
+      {sample && <p className="a-sample m0">This is the made-up sample shoot. Make a new gallery to try uploading.</p>}
       <div className="ga-up-target">
         <label htmlFor="ga-up-set" className="small">Add to set</label>
         <select id="ga-up-set" className="input a-select" value={target} onChange={(e) => setSetKey(e.target.value)} disabled={running}>
@@ -332,8 +332,8 @@ export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySe
         onDragLeave={() => setOver(false)}
         onDrop={onDrop}
       >
-        <p style={{ margin: 0 }}><strong>Drop photos or a whole folder here</strong></p>
-        <div className="btn-row" style={{ justifyContent: 'center' }}>
+        <p className="m0"><strong>Drop photos or a whole folder here</strong></p>
+        <div className="btn-row justify-center">
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => fileInput.current?.click()} disabled={running}>Choose photos</button>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => folderInput.current?.click()} disabled={running}>Choose a folder</button>
         </div>
@@ -365,7 +365,7 @@ export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySe
       {p && (
         <div className="ga-progress" aria-live="polite">
           <progress max={100} value={pct} aria-label="Upload progress" />
-          <p className="small" style={{ margin: 0 }}>
+          <p className="small m0">
             {running ? 'Uploading: ' : ''}
             {p.done} of {p.total} added · {formatBytes(p.bytesDone)} of {formatBytes(p.bytesTotal)}
             {p.failed ? ` · ${p.failed} failed` : ''}
@@ -378,7 +378,7 @@ export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySe
           )}
         </div>
       )}
-      {note && <p className="small" role="status" style={{ margin: 0 }}>{note}</p>}
+      {note && <p className="small m0" role="status">{note}</p>}
       {fails.length > 0 && (
         <details className="ga-fails" open={fails.length <= 5}>
           <summary className="small">{fails.length} {fails.length === 1 ? 'file' : 'files'} not added</summary>

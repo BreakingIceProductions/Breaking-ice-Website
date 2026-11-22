@@ -1,10 +1,12 @@
 import Link from 'next/link'
+import '../../../../css/admin-pages.css'
 import { notFound, redirect } from 'next/navigation'
 import { requireAdmin } from '@/admin/auth'
+import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import { quoteStatus } from '@/admin/board-data'
 import { getProject } from '@/admin/data'
 import { composerSetup } from '@/admin/email-templates'
-import { daysSince, fmtDay, today, TZ, ymd } from '@/admin/dates'
+import { daysSince, today, TZ, ymd, fmtDate } from '@/admin/dates'
 import { budgetTitle, fmtTime, isContactLog, isSalesStage, LOST_REASONS, typeTitle } from '@/admin/lead'
 import { getPeople } from '@/admin/people'
 import { tagsFor } from '@/admin/people-shared'
@@ -17,10 +19,25 @@ export async function generateMetadata({ params }: Props) {
   await requireAdmin()
   const { id } = await params
   const p = await getProject(id)
-  return { title: p ? (p.office.lead?.name ?? p.client.contacts?.[0]?.name ?? p.title) : 'Lead' }
+  return { title: p ? p.title : 'Lead' }
 }
 
-const day = (d?: string) => fmtDay(d, { weekday: 'short', month: 'short', day: 'numeric' })
+const day = (d?: string) => fmtDate(d, 'weekday')
+/**
+ * What to call them on a button: a first name when there's a plain one, otherwise nothing (the
+ * button then says "them"). Skips titles ("Dr."), placeholders in brackets ("[Client name]"), quotes and an
+ * email address typed into the name field.
+ */
+function firstName(name?: string) {
+  // A bracketed name is a placeholder ("[Client contact]"), not a name.
+  if (/^\s*[[({<]/.test(name ?? '')) return null
+  const clean = (name ?? '').replace(/[[\](){}"“”<>]/g, ' ').trim()
+  if (!clean || clean.includes('@')) return null
+  const words = clean.split(/\s+/).filter((w) => !/^(dr|mr|mrs|ms|mx|miss|prof|sir|rev)\.?$/i.test(w))
+  const first = words[0]?.replace(/[.,;:]+$/, '')
+  return first && /^\p{L}[\p{L}'’-]*$/u.test(first) ? first : null
+}
+
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-CA', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })
 
 /** One lead: where they are, what's next, their details and every contact so far. Booked projects have the project page. */
@@ -38,9 +55,11 @@ export default async function LeadPage({ params, searchParams }: Props) {
   const name = listed?.name ?? lead.name
   const email = listed?.email ?? lead.email
   const company = p.client.organizationName
-  const title = name || p.title
+  const title = p.title
+  const callThem = firstName(name) ?? 'them'
   const projectPage = `/admin/projects/${encodeURIComponent(p._id)}`
   const compose = admin.viewOnly ? null : await composerSetup(p, { name, email })
+  const writeInNextUp = p.pipelineStage === 'lead' || p.pipelineStage === 'call'
 
   const log = [...(p.office.log ?? [])].sort((a, b) => b.at.localeCompare(a.at))
   const entries: LeadLogEntry[] = log.map((l) => ({ key: l._key, date: day(ymd(new Date(l.at))), time: l.day ? undefined : clock(l.at), text: l.text }))
@@ -58,34 +77,32 @@ export default async function LeadPage({ params, searchParams }: Props) {
 
   return (
     <div className="a-page">
-      <Link className="text-link-plain muted small ld-back" href="/admin/pipeline">← Pipeline</Link>
+      <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }]} />
 
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
+        <div className="stack ap-gap-2 ap-minw0">
           <h1 className="a-h1">{title}</h1>
-          <p className="muted" style={{ margin: 0 }}>
-            {[company, typeTitle(p.projectType), budgetTitle(lead.budget)].filter(Boolean).join(' · ')}
-            {name && <span className="ld-project"> · {p.title}</span>}
-          </p>
+          <p className="muted m0">{[company, typeTitle(p.projectType), budgetTitle(lead.budget)].filter(Boolean).join(' · ')}</p>
         </div>
         <div className="btn-row">
-          <Link className="text-link small" href={projectPage}>Quote, files and the rest</Link>
-          {compose && <EmailComposer projectId={p._id} {...compose} startOpen={sp.email === '1'} />}
+          <Link className="text-link small" href={projectPage}>Open project page</Link>
+          {/* Before the quote the composer lives in Next up instead, so there's one way to write to them. */}
+          {compose && !writeInNextUp && <EmailComposer key={sp.email === '1' ? 'open' : 'closed'} projectId={p._id} {...compose} startOpen={sp.email === '1'} />}
           {!p.archived && <LeadArchive projectId={p._id} name={title} />}
         </div>
       </header>
 
       {p.archived && (
-        <p className="a-sample" role="status" style={{ margin: 0 }}>Archived{reason ? ` · ${reason}` : ''}. Bring them back from the Archive bar on the Pipeline.</p>
+        <p className="ap-note" role="status">Archived{reason ? ` · ${reason}` : ''}. Bring them back from the Archive bar on the Pipeline.</p>
       )}
 
       <section className="p-card ld-stage" aria-label="Where they are">
         <LeadSteps projectId={p._id} projectTitle={p.title} stage={p.pipelineStage} quoteSent={Boolean(p.quote?.sharedAt)} />
-        <p className="muted small" style={{ margin: 0 }}>Click any stage to move them there. Signed makes the project.</p>
+        <p className="muted small m0">Pick a stage to move them there. Signed makes the project.</p>
       </section>
 
       <section className="bd-nextup ld-nextup" aria-label="Next up">
-        <div className="stack" style={{ gap: 2, minWidth: 0 }}>
+        <div className="stack ap-tight ap-minw0">
           <span className="eyebrow">Next up</span>
           <strong className="ld-next-title">{next.title}</strong>
           <span className="small">{next.detail}</span>
@@ -97,15 +114,20 @@ export default async function LeadPage({ params, searchParams }: Props) {
             <Link className="btn btn-secondary btn-sm" href={`${projectPage}?tab=documents`}>Upload and send the quote</Link>
           </div>
         )}
-        {p.pipelineStage === 'quoted' && <Link className="btn btn-secondary btn-sm" href={`${projectPage}?tab=documents`}>Open the quote</Link>}
+        {p.pipelineStage === 'quoted' && <Link className="btn btn-primary btn-sm" href={`${projectPage}?tab=documents`}>Open the quote</Link>}
+        {writeInNextUp && compose && (
+          // The page's one primary; ?email=1 still opens it.
+          <span className="ld-compose">
+            <EmailComposer primary key={sp.email === '1' ? 'open' : 'closed'} projectId={p._id} {...compose} startOpen={sp.email === '1'} label={p.pipelineStage === 'lead' ? `Write to ${callThem}` : 'Email about the call'} />
+          </span>
+        )}
       </section>
 
-      <div className="stack" style={{ gap: 4 }}>
-        <p className="small" style={{ margin: 0 }}>
+      <div className="stack">
+        <p className="small m0">
           <strong>Last contact:</strong>{' '}
           {lastContact ? `${lastContact.text}, ${day(ymd(new Date(lastContact.at)))}` : log[0] ? `none logged yet. Latest activity: ${log[0].text}, ${day(ymd(new Date(log[0].at)))}` : 'none logged yet.'}
         </p>
-        <p className="muted small" style={{ margin: 0 }}>Call links and email tracking arrive when Google Calendar and Gmail are connected.</p>
       </div>
 
       <div className="a-split">

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { fmtDay } from '@/admin/dates'
+import { fmtDate } from '@/admin/dates'
 import { cad } from '@/admin/insights'
 import { pageHref } from '@/admin/lead'
 import { stageTitle } from '@/admin/stages'
@@ -18,7 +18,7 @@ export function ArchiveBar({ id, list, title = 'Archive', empty = 'Nothing archi
   ] as const
   return (
     <Bucket id={id} title={title} count={list.length} closed>
-      {!list.length && <p className="muted small" style={{ margin: 0 }}>{empty}</p>}
+      {!list.length && <p className="muted small m0">{empty}</p>}
       {groups.map(([label, sub]) =>
         sub.length ? (
           <section key={label} className="a-archive-group" aria-label={`${label} projects`}>
@@ -39,7 +39,7 @@ export function ArchiveBar({ id, list, title = 'Archive', empty = 'Nothing archi
                     <tr key={p._id}>
                       <td><Link className="a-strong-link" href={pageHref(p._id, p.pipelineStage)}>{p.title}</Link></td>
                       <td>{p.client.organizationName}</td>
-                      <td>{stageTitle(p.pipelineStage)}{p.declinedAt ? ` · declined ${fmtDay(p.declinedAt.slice(0, 10))}` : ''}</td>
+                      <td>{stageTitle(p.pipelineStage)}{p.declinedAt ? ` · declined ${fmtDate(p.declinedAt)}` : ''}</td>
                       <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>
                       <td className="a-stage-col">
                         <StageControl compact archived declined={Boolean(p.declinedAt)} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={STAGES} />

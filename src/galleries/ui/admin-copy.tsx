@@ -37,7 +37,7 @@ export function DangerZone({ id, title }: { id: string; title: string }) {
   return (
     <section className="p-card ga-danger" aria-labelledby="ga-danger-h">
       <h2 id="ga-danger-h" className="a-h2">Delete this gallery</h2>
-      <p className="muted small" style={{ margin: 0 }}>Deletes the website’s copies of every photo, the favourites and the activity. The link and the portal stop showing it. This can’t be undone. Originals in Google Drive are left where they are.</p>
+      <p className="muted small m0">Deletes the website’s copies of every photo, the favourites and the activity. The link and the portal stop showing it. This can’t be undone. Originals in Google Drive are left where they are.</p>
       <form
         className="ga-copy-row"
         onSubmit={async (e) => {
@@ -57,7 +57,7 @@ export function DangerZone({ id, title }: { id: string; title: string }) {
         <input id="ga-del" className="input" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={`Type “${title}” to confirm`} autoComplete="off" disabled={busy} />
         <button type="submit" className="btn btn-secondary btn-sm ga-danger-btn" disabled={!match || busy}>{busy ? 'Deleting…' : 'Delete gallery'}</button>
       </form>
-      {msg && <p className="small a-urgent" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small a-urgent m0" role="status">{msg}</p>}
     </section>
   )
 }

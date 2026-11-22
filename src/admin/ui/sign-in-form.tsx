@@ -26,7 +26,7 @@ export function AdminSignInForm({ initialPending, notice }: { initialPending?: s
         setError(
           j.error === 'invalid' ? 'That email doesn’t look quite right.'
           : j.error === 'too-many' ? 'Too many tries. Wait 15 minutes and ask again.'
-          : j.error === 'not-configured' ? 'Sign-in needs PORTAL_SECRET, SANITY_PORTAL_TOKEN and RESEND_API_KEY set in Vercel.'
+          : j.error === 'not-configured' ? 'Sign-in isn’t set up on this site yet.'
           : 'The email couldn’t be sent. Try again in a minute.',
         )
     } catch {
@@ -59,9 +59,9 @@ export function AdminSignInForm({ initialPending, notice }: { initialPending?: s
 
   if (step === 'code')
     return (
-      <form onSubmit={verify} className="stack" style={{ gap: 'var(--space-4)' }} noValidate>
-        <h1 ref={headRef} tabIndex={-1} className="h2" style={{ outline: 'none' }}>Check your email</h1>
-        <p className="muted" style={{ margin: 0 }}>If {email || 'that address'} can open the back office, a link and a 6-digit code are on their way. Tap the link, or type the code here.</p>
+      <form onSubmit={verify} className="stack gap-4" noValidate>
+        <h1 ref={headRef} tabIndex={-1} className="h2 no-outline">Check your email</h1>
+        <p className="muted m0">If {email || 'that address'} can open the back office, a link and a 6-digit code are on their way. Tap the link, or type the code here.</p>
         <div className="field">
           <label htmlFor="a-code">Code</label>
           <input id="a-code" className="input code-input" inputMode="numeric" autoComplete="one-time-code" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? 'signin-err' : undefined} />
@@ -75,9 +75,9 @@ export function AdminSignInForm({ initialPending, notice }: { initialPending?: s
     )
 
   return (
-    <form onSubmit={send} className="stack" style={{ gap: 'var(--space-4)' }} noValidate>
+    <form onSubmit={send} className="stack gap-4" noValidate>
       <h1 className="h2">Back office</h1>
-      <p className="muted" style={{ margin: 0 }}>We’ll email you a sign-in link and code.</p>
+      <p className="muted m0">We’ll email you a sign-in link and code.</p>
       {notice && <p className="notice" role="status">{notice}</p>}
       <div className="field">
         <label htmlFor="a-email">Email</label>

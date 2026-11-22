@@ -1,6 +1,7 @@
+import '../../../css/admin-pages.css'
 import { requireAdmin } from '@/admin/auth'
 import { adminEnv, calendarReady, ticktickReady, zohoReady } from '@/admin/config'
-import { fmtDay, ymd } from '@/admin/dates'
+import { fmtDate } from '@/admin/dates'
 import { listGuests } from '@/admin/guests'
 import { GuestsCard } from '@/admin/ui/guests-card'
 import { SITE_URL } from '@/lib/site'
@@ -26,145 +27,165 @@ export default async function Settings({ searchParams }: Props) {
     : sp.disconnected
       ? 'Disconnected.'
       : sp.error === 'sample'
-        ? 'Connections need the real site settings; this machine is showing sample data.'
+        ? 'Connections only work on the live site. This copy is showing sample data.'
         : sp.error === 'view-only'
           ? 'This account is view only, so it can’t connect apps.'
         : sp.error === 'wispr'
           ? (await lastWisprError()) || 'Wispr Flow didn’t allow this app to connect. Try again.'
         : sp.error === 'not-set-up' && sp.app === 'wispr'
-          ? 'Wispr Flow needs WISPR_MCP_URL in Vercel first (steps below).'
+          ? 'Wispr Flow isn’t set up on the site yet. The setup steps are under Wispr Flow below.'
         : sp.error === 'not-set-up'
-          ? `${NAMES[sp.app ?? ''] ?? 'That app'} needs its client ID and secret in Vercel first (steps below).`
+          ? `${NAMES[sp.app ?? ''] ?? 'That app'} isn’t set up on the site yet. The setup steps are under it below.`
           : sp.error
-            ? `Connecting ${NAMES[sp.app ?? ''] ?? ''} didn’t work. Try again; if it keeps failing, check the redirect address matches exactly.`
+            ? `Connecting ${NAMES[sp.app ?? ''] ?? ''} didn’t work. Try again. If it keeps failing, check the setup steps below.`
             : ''
+
+  const disconnect = (app: string, label: string) => (
+    <form action="/api/admin/disconnect" method="post">
+      <input type="hidden" name="app" value={app} />
+      <button className="btn btn-secondary btn-sm" type="submit">Disconnect<span className="sr-only"> {label}</span></button>
+    </form>
+  )
+  const connect = (app: string, label: string) => <a className="btn btn-secondary btn-sm" href={`/api/admin/connect/${app}`}>Connect<span className="sr-only"> {label}</span></a>
+  // Set up in Vercel rather than signed in to, so the row's action looks again once the steps are done.
+  const checkAgain = (label: string) => <a className="btn btn-secondary btn-sm" href="/admin/settings">Check again<span className="sr-only"> for {label}</span></a>
+  const state = (on: boolean, ready: boolean, onText = 'Connected') => <span className={`a-conn-state ${on ? 'on' : 'off'}`}>{on ? onText : ready ? 'Not connected' : 'Not set up yet'}</span>
 
   return (
     <div className="a-page a-narrow">
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">Back office</span>
+        <div className="stack ap-gap-2">
           <h1 className="a-h1">Settings</h1>
+          <p className="muted m0">The apps the back office works with, and who can sign in.</p>
         </div>
       </header>
       {notice && <p className="notice" role="status">{notice}</p>}
 
-      <section className="p-card" aria-labelledby="h-zoho">
-        <div className="a-card-head">
-          <h2 id="h-zoho" className="a-h2">Zoho Books</h2>
-          <span className={`a-conn-state ${zoho ? 'on' : 'off'}`}>{zoho ? 'Connected' : zohoReady() ? 'Not connected' : 'Not set up'}</span>
-        </div>
-        <p className="muted small" style={{ margin: 0 }}>Creates customers and draft invoices (deposit when booked, balance when delivered, and each portal payment request). You send every invoice yourself from Zoho Books. When a client pays by card in the portal, the card fee is added to their invoice and the payment recorded for you; e-Transfers and EFTs show as paid in the portal once Zoho Books has them.</p>
-        {zoho ? (
-          <>
-            {zohoNeedsReconnect(zoho) && <p className="small err" style={{ margin: 0 }}>Disconnect and connect again so card payments from the portal can be recorded in Zoho Books.</p>}
-            <p className="small" style={{ margin: 0 }}>Connected to <strong>{zoho.orgName ?? 'your organisation'}</strong> since {fmtDay(zoho.connectedAt.slice(0, 10))}. Invoice lines go to {adminEnv.zohoAccountId ? 'the chosen income account' : 'Sales'}{adminEnv.zohoTaxId ? ' with GST added' : ' with no tax added (set ZOHO_TAX_ID once GST is set up in Zoho)'}, due in {adminEnv.zohoDueDays} days.</p>
-            <form action="/api/admin/disconnect" method="post"><input type="hidden" name="app" value="zoho" /><button className="btn btn-secondary btn-sm" type="submit">Disconnect</button></form>
-          </>
-        ) : zohoReady() ? (
-          <a className="btn btn-primary" href="/api/admin/connect/zoho">Connect Zoho Books</a>
-        ) : (
-          <ol className="a-steps small">
-            <li>Go to <a className="text-link" href="https://api-console.zohocloud.ca" target="_blank" rel="noopener noreferrer">api-console.zohocloud.ca</a>, press <strong>Add Client</strong> and pick <strong>Server-based Applications</strong>. Call it “Breaking Ice back office”.</li>
-            <li>Homepage: <code>{zohoRedirect().replace(/\/api\/.*/, '')}</code>. Authorized redirect URI: <code>{zohoRedirect()}</code></li>
-            <li>Copy the Client ID and Client Secret. In Vercel, add <code>ZOHO_CLIENT_ID</code> and <code>ZOHO_CLIENT_SECRET</code>, then redeploy.</li>
-            <li>Come back here and press Connect Zoho Books, then Accept.</li>
-          </ol>
-        )}
-      </section>
+      <section className="p-card" aria-labelledby="h-conns">
+        <h2 id="h-conns" className="a-h2">Connections</h2>
+        <ul className="ap-conns">
+          <li className="ap-conn">
+            <div>
+              <div className="ap-conn-name"><strong>Zoho Books</strong>{state(Boolean(zoho), zohoReady())}</div>
+              <p className="ap-conn-what">
+                {zoho
+                  ? `Connected to ${zoho.orgName ?? 'your organisation'} since ${fmtDate(zoho.connectedAt)}. Makes customers and draft invoices; you send each invoice yourself from Zoho Books.`
+                  : 'Makes customers and draft invoices (deposit, balance and portal payment requests). You send each invoice yourself from Zoho Books.'}
+              </p>
+            </div>
+            <div className="ap-conn-action">{zoho ? disconnect('zoho', 'Zoho Books') : connect('zoho', 'Zoho Books')}</div>
+            {zoho && zohoNeedsReconnect(zoho) && <p className="ap-conn-extra err">Disconnect and connect again so card payments from the portal are recorded in Zoho Books.</p>}
+            <details className="ap-details">
+              <summary>{zoho || zohoReady() ? 'How it works' : 'Setup steps'}</summary>
+              <div className="stack small ap-gap-2">
+                <p className="m0">Deposit invoices are drafted when a project is booked and balance invoices when it’s delivered. When a client pays by card in the portal, the card fee is added to their invoice and the payment is recorded. e-Transfers and EFTs show as paid in the portal once Zoho Books has them.</p>
+                {zoho && <p className="m0">Invoice lines go to {adminEnv.zohoAccountId ? 'the chosen income account' : 'Sales'}{adminEnv.zohoTaxId ? ' with GST added' : ' with no tax added (set ZOHO_TAX_ID once GST is set up in Zoho)'}, due in {adminEnv.zohoDueDays} days.</p>}
+                {!zohoReady() && (
+                  <ol className="a-steps">
+                    <li>Go to <a className="text-link" href="https://api-console.zohocloud.ca" target="_blank" rel="noopener noreferrer">api-console.zohocloud.ca</a>, press <strong>Add Client</strong> and pick <strong>Server-based Applications</strong>. Call it “Breaking Ice back office”.</li>
+                    <li>Homepage: <code>{zohoRedirect().replace(/\/api\/.*/, '')}</code>. Authorized redirect URI: <code>{zohoRedirect()}</code></li>
+                    <li>Copy the Client ID and Client Secret. In Vercel, add <code>ZOHO_CLIENT_ID</code> and <code>ZOHO_CLIENT_SECRET</code>, then redeploy.</li>
+                    <li>Come back here and press Connect, then Accept.</li>
+                  </ol>
+                )}
+              </div>
+            </details>
+          </li>
 
-      <section className="p-card" aria-labelledby="h-tt">
-        <div className="a-card-head">
-          <h2 id="h-tt" className="a-h2">TickTick</h2>
-          <span className={`a-conn-state ${tt ? 'on' : 'off'}`}>{tt ? 'Connected' : ticktickReady() ? 'Not connected' : 'Not set up'}</span>
-        </div>
-        <p className="muted small" style={{ margin: 0 }}>Each project gets its own list, and each stage adds its checklist with due dates.</p>
-        {tt ? (
-          <>
-            <p className="small" style={{ margin: 0 }}>Connected since {fmtDay(tt.connectedAt.slice(0, 10))}.</p>
-            <form action="/api/admin/disconnect" method="post"><input type="hidden" name="app" value="ticktick" /><button className="btn btn-secondary btn-sm" type="submit">Disconnect</button></form>
-          </>
-        ) : ticktickReady() ? (
-          <a className="btn btn-primary" href="/api/admin/connect/ticktick">Connect TickTick</a>
-        ) : (
-          <ol className="a-steps small">
-            <li>Go to <a className="text-link" href="https://developer.ticktick.com/manage" target="_blank" rel="noopener noreferrer">developer.ticktick.com/manage</a> and create an app.</li>
-            <li>OAuth redirect URL: <code>{ticktickRedirect()}</code></li>
-            <li>In Vercel, add <code>TICKTICK_CLIENT_ID</code> and <code>TICKTICK_CLIENT_SECRET</code>, then redeploy.</li>
-            <li>Come back here and press Connect TickTick.</li>
-          </ol>
-        )}
-      </section>
+          <li className="ap-conn">
+            <div>
+              <div className="ap-conn-name"><strong>TickTick</strong>{state(Boolean(tt), ticktickReady())}</div>
+              <p className="ap-conn-what">{tt ? `Connected since ${fmtDate(tt.connectedAt)}. ` : ''}Each project gets its own list, and each stage adds its checklist with due dates.</p>
+            </div>
+            <div className="ap-conn-action">{tt ? disconnect('ticktick', 'TickTick') : connect('ticktick', 'TickTick')}</div>
+            {!ticktickReady() && (
+              <details className="ap-details">
+                <summary>Setup steps</summary>
+                <ol className="a-steps small">
+                  <li>Go to <a className="text-link" href="https://developer.ticktick.com/manage" target="_blank" rel="noopener noreferrer">developer.ticktick.com/manage</a> and create an app.</li>
+                  <li>OAuth redirect URL: <code>{ticktickRedirect()}</code></li>
+                  <li>In Vercel, add <code>TICKTICK_CLIENT_ID</code> and <code>TICKTICK_CLIENT_SECRET</code>, then redeploy.</li>
+                  <li>Come back here and press Connect.</li>
+                </ol>
+              </details>
+            )}
+          </li>
 
-      <section className="p-card" aria-labelledby="h-wispr">
-        <div className="a-card-head">
-          <h2 id="h-wispr" className="a-h2">Wispr Flow</h2>
-          <span className={`a-conn-state ${wispr ? 'on' : 'off'}`}>{wispr ? 'Connected' : wisprReady() ? 'Not connected' : 'Not set up'}</span>
-        </div>
-        <p className="muted small" style={{ margin: 0 }}>For “Draft from a call → Find it for me”: Claude looks through your Wispr Flow meetings for the call with a lead, reads the notes and transcript, and drafts the email. Read only; nothing in Wispr Flow is changed.</p>
-        {wispr ? (
-          <>
-            <p className="small" style={{ margin: 0 }}>Connected since {fmtDay(wispr.connectedAt.slice(0, 10))}.</p>
-            <form action="/api/admin/disconnect" method="post"><input type="hidden" name="app" value="wispr" /><button className="btn btn-secondary btn-sm" type="submit">Disconnect</button></form>
-          </>
-        ) : wisprReady() ? (
-          <>
-            <a className="btn btn-primary" href="/api/admin/connect/wispr">Connect Wispr Flow</a>
-            <p className="muted small" style={{ margin: 0 }}>You’ll sign in to Wispr Flow and allow access. If Wispr doesn’t accept this site as an app, the reason shows here and nothing else changes.</p>
-          </>
-        ) : (
-          <>
-            <p className="small a-urgent" style={{ margin: 0 }}>WISPR_MCP_URL isn’t set in Vercel yet.</p>
-            <ol className="a-steps small">
-              <li>In Wispr Flow, open Settings → MCP → “All other apps” and copy the Server URL.</li>
-              <li>In Vercel, add <code>WISPR_MCP_URL</code> with that address (no slash at the end), then redeploy.</li>
-              <li>Come back here and press Connect Wispr Flow, then sign in. It comes back to <code>{wisprRedirect()}</code>.</li>
-            </ol>
-          </>
-        )}
-      </section>
+          <li className="ap-conn">
+            <div>
+              <div className="ap-conn-name"><strong>Wispr Flow</strong>{state(Boolean(wispr), wisprReady())}</div>
+              <p className="ap-conn-what">{wispr ? `Connected since ${fmtDate(wispr.connectedAt)}. ` : ''}Lets us find the call with a lead and draft the email from its notes. Read only: nothing in Wispr Flow is changed.</p>
+            </div>
+            <div className="ap-conn-action">{wispr ? disconnect('wispr', 'Wispr Flow') : connect('wispr', 'Wispr Flow')}</div>
+            {!wispr && (
+              <details className="ap-details">
+                <summary>{wisprReady() ? 'How connecting works' : 'Setup steps'}</summary>
+                {wisprReady() ? (
+                  <p className="small m0">You’ll sign in to Wispr Flow and allow access. If Wispr doesn’t accept this site, the reason shows here and nothing else changes.</p>
+                ) : (
+                  <ol className="a-steps small">
+                    <li>In Wispr Flow, open Settings → MCP → “All other apps” and copy the Server URL.</li>
+                    <li>In Vercel, add <code>WISPR_MCP_URL</code> with that address (no slash at the end), then redeploy.</li>
+                    <li>Come back here and press Connect, then sign in. It comes back to <code>{wisprRedirect()}</code>.</li>
+                  </ol>
+                )}
+              </details>
+            )}
+          </li>
 
-      <section className="p-card" aria-labelledby="h-cal">
-        <div className="a-card-head">
-          <h2 id="h-cal" className="a-h2">Google Calendar</h2>
-          <span className={`a-conn-state ${calendarReady() ? 'on' : 'off'}`}>{calendarReady() ? 'Connected' : 'Not set up'}</span>
-        </div>
-        <p className="muted small" style={{ margin: 0 }}>Shoots, travel, meetings and milestones go on a separate “Breaking Ice Projects” calendar, so your own events are never touched. Turn TickTick’s own calendar sync off for these lists, or you’ll see things twice.</p>
-        {calendarReady() ? (
-          <p className="small" style={{ margin: 0 }}>Writing to <code>{adminEnv.calendarId}</code>.</p>
-        ) : (
-          <ol className="a-steps small">
-            <li>In Google Calendar, create a calendar called “Breaking Ice Projects”.</li>
-            <li>
-              In its settings under “Share with specific people”, add {sa ? <code>{sa}</code> : 'the portal’s service account (the client_email in GOOGLE_SERVICE_ACCOUNT)'} with “Make changes to events”.
-            </li>
-            <li>In the Google Cloud project that owns that service account, turn on the Google Calendar API.</li>
-            <li>Copy the Calendar ID (Settings → Integrate calendar) into <code>GOOGLE_CALENDAR_ID</code> in Vercel, then redeploy.</li>
-          </ol>
-        )}
-      </section>
+          <li className="ap-conn">
+            <div>
+              <div className="ap-conn-name"><strong>Google Calendar</strong>{state(calendarReady(), false)}</div>
+              <p className="ap-conn-what">Shoots, travel, meetings and milestones go on a separate “Breaking Ice Projects” calendar, so your own events are never touched.</p>
+            </div>
+            <div className="ap-conn-action">{calendarReady() ? null : checkAgain('Google Calendar')}</div>
+            <details className="ap-details">
+              <summary>{calendarReady() ? 'Details' : 'Setup steps'}</summary>
+              {calendarReady() ? (
+                <p className="small m0">Writing to <code>{adminEnv.calendarId}</code>. Turn TickTick’s own calendar sync off for these lists, or you’ll see things twice.</p>
+              ) : (
+                <ol className="a-steps small">
+                  <li>In Google Calendar, create a calendar called “Breaking Ice Projects”.</li>
+                  <li>
+                    In its settings under “Share with specific people”, add {sa ? <code>{sa}</code> : 'the portal’s service account (the client_email in GOOGLE_SERVICE_ACCOUNT)'} with “Make changes to events”.
+                  </li>
+                  <li>In the Google Cloud project that owns that service account, turn on the Google Calendar API.</li>
+                  <li>Copy the Calendar ID (Settings → Integrate calendar) into <code>GOOGLE_CALENDAR_ID</code> in Vercel, then redeploy.</li>
+                  <li>Turn TickTick’s own calendar sync off for these lists, or you’ll see things twice.</li>
+                </ol>
+              )}
+            </details>
+          </li>
 
-      <section className="p-card" aria-labelledby="h-r2">
-        <div className="a-card-head">
-          <h2 id="h-r2" className="a-h2">Review storage (R2)</h2>
-          <span className={`a-conn-state ${r2Ready() ? 'on' : 'off'}`}>{r2Ready() ? 'Ready' : 'Not set up'}</span>
-        </div>
-        <p className="muted small" style={{ margin: 0 }}>Holds the MP4 review copies for the review room (Finder → a video → Upload for review). Clients and guests watch from short-lived private links; Vimeo links keep working as before.</p>
-        {r2Ready() ? (
-          <p className="small" style={{ margin: 0 }}>Bucket <code>{r2Env.bucket}</code>.</p>
-        ) : (
-          <ol className="a-steps small">
-            <li>In Cloudflare, create a private R2 bucket and an R2 API token with Object Read &amp; Write on that bucket only.</li>
-            <li>Set the bucket’s CORS policy (the JSON is in <code>docs/r2-setup.md</code>) so the browser can upload and play.</li>
-            <li>In Vercel, add <code>R2_ACCOUNT_ID</code>, <code>R2_ACCESS_KEY_ID</code>, <code>R2_SECRET_ACCESS_KEY</code> and <code>R2_BUCKET</code>, then redeploy.</li>
-          </ol>
-        )}
+          <li className="ap-conn">
+            <div>
+              <div className="ap-conn-name"><strong>Review storage</strong>{state(r2Ready(), false, 'Ready')}</div>
+              <p className="ap-conn-what">Holds the review copies for the review room. Clients and guests watch from short-lived private links; Vimeo links keep working as before.</p>
+            </div>
+            <div className="ap-conn-action">{r2Ready() ? null : checkAgain('review storage')}</div>
+            <details className="ap-details">
+              <summary>{r2Ready() ? 'Details' : 'Setup steps'}</summary>
+              {r2Ready() ? (
+                <p className="small m0">Cloudflare R2 bucket <code>{r2Env.bucket}</code>.</p>
+              ) : (
+                <ol className="a-steps small">
+                  <li>In Cloudflare, create a private R2 bucket and an R2 API token with Object Read &amp; Write on that bucket only.</li>
+                  <li>Set the bucket’s CORS policy (the JSON is in <code>docs/r2-setup.md</code>) so the browser can upload and play.</li>
+                  <li>In Vercel, add <code>R2_ACCOUNT_ID</code>, <code>R2_ACCESS_KEY_ID</code>, <code>R2_SECRET_ACCESS_KEY</code> and <code>R2_BUCKET</code>, then redeploy.</li>
+                </ol>
+              )}
+            </details>
+          </li>
+        </ul>
       </section>
 
       <section className="p-card" aria-labelledby="h-access">
         <h2 id="h-access" className="a-h2">Full access</h2>
-        <p className="small" style={{ margin: 0 }}>{adminEnv.emails.join(', ')}</p>
-        <p className="muted small" style={{ margin: 0 }}>Change this with <code>ADMIN_EMAILS</code> in Vercel.</p>
+        <p className="m0">{adminEnv.emails.join(', ')}</p>
+        <details className="ap-details">
+          <summary className="small muted">How to change this</summary>
+          <p className="small muted m0">Set <code>ADMIN_EMAILS</code> in Vercel, then redeploy.</p>
+        </details>
       </section>
 
       <GuestsCard
@@ -174,7 +195,7 @@ export default async function Settings({ searchParams }: Props) {
           ...adminEnv.viewers.map((email) => ({ email, when: 'No end date', fixed: true })),
           ...guests.map((g) => {
             const ended = g.until <= new Date().toISOString()
-            return { key: g._key, email: g.email, name: g.name, ended, when: `${ended ? 'Ended' : 'Through'} ${fmtDay(ymd(new Date(g.until)))}` }
+            return { key: g._key, email: g.email, name: g.name, ended, when: `${ended ? 'Ended' : 'Through'} ${fmtDate(g.until)}` }
           }),
         ]}
       />

@@ -145,7 +145,7 @@ function card(p: OfficeProject, mine: Row[], theirs: Row[], payments: OpenPaymen
     })
   if (!quoteOnly) {
     if (!p.slug)
-      onYou.push({ key: 'no-slug', text: 'No portal address (slug) yet, so they can’t open it. Add one in the Studio.', href: `/studio/portal/structure/clientProject;${encodeURIComponent(p._id)}`, external: true })
+      onYou.push({ key: 'no-slug', text: 'No portal address yet, so they can’t open it. Add one in the editor.', href: `/studio/portal/structure/clientProject;${encodeURIComponent(p._id)}`, external: true })
     if (!p.driveFolderId && p.client._id) onYou.push({ key: 'no-drive', text: 'No Drive folder yet.', href: lib })
     if (!p.deliverables.some((d) => d.status !== 'in-progress') && !(p.links ?? []).length)
       onYou.push({ key: 'nothing-shared', text: 'Nothing shared for review yet.', href: `${projectPage}?tab=portal` })

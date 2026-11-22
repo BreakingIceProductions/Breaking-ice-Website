@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useMemo, useRef, useState } from 'react'
 import type { GallerySet } from '../types'
+import { useConfirm, useNotify } from '@/admin/ui/confirm'
 import { errorText, galleryAction } from './admin-api'
 
 export type AdminPhoto = { key: string; set: string; name: string; thumb: string; w: number; h: number; favs: number }
@@ -11,6 +12,10 @@ export type AdminPhoto = { key: string; set: string; name: string; thumb: string
  * Every photo, set by set. Click to select (shift-click selects a run), then move the
  * selection to another set, make one the cover, or remove them.
  */
+/** Thumbnails fade in once loaded (CSS .is-loading); an image already in the cache shows at once. */
+const shown = (e: React.SyntheticEvent<HTMLImageElement>) => e.currentTarget.classList.remove('is-loading')
+const fadeIn = (img: HTMLImageElement | null) => { if (img?.complete) img.classList.remove('is-loading') }
+
 export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets: GallerySet[]; photos: AdminPhoto[]; coverKey?: string; ro: boolean }) {
   const router = useRouter()
   const [sel, setSel] = useState<Set<string>>(new Set())
@@ -18,6 +23,8 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const last = useRef<string | null>(null)
+  const confirm = useConfirm()
+  const notify = useNotify()
 
   const bySet = useMemo(() => sets.map((s) => ({ set: s, photos: photos.filter((p) => p.set === s._key) })), [sets, photos])
   // The on-screen order, for shift-click runs.
@@ -46,7 +53,8 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
     setSel(next)
   }
 
-  async function run(body: Record<string, unknown>, done: string, clear = true) {
+  /** Runs a change. With `undo`, the notice offers Undo, which runs those changes to put things back. */
+  async function run(body: Record<string, unknown>, done: string, clear = true, undo?: Record<string, unknown>[]) {
     setBusy(true)
     setMsg('')
     const r = await galleryAction(id, body)
@@ -55,6 +63,18 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
     setMsg(done)
     if (clear) setSel(new Set())
     router.refresh()
+    if (undo?.length)
+      notify({
+        text: done,
+        undo: async () => {
+          for (const u of undo) {
+            const back = await galleryAction(id, u)
+            if (!back.ok) return notify({ text: `Couldn’t undo that. ${errorText(back)}`, tone: 'error' })
+          }
+          setMsg('Undone.')
+          router.refresh()
+        },
+      })
   }
 
   const n = selected.length
@@ -64,11 +84,17 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
     const to = target || sets[0]?._key
     const s = sets.find((x) => x._key === to)
     if (!s) return
-    void run({ action: 'move', keys: selected, set: to }, `Moved ${words(n)} to “${s.title}”.`)
+    // Undo sends each photo back to the set it came from.
+    const from = new Map<string, string[]>()
+    for (const k of selected) {
+      const was = photos.find((p) => p.key === k)?.set
+      if (was && was !== to) from.set(was, [...(from.get(was) ?? []), k])
+    }
+    void run({ action: 'move', keys: selected, set: to }, `Moved ${words(n)} to “${s.title}”.`, true, [...from].map(([set, keys]) => ({ action: 'move', keys, set })))
   }
 
-  function removeSel() {
-    if (!window.confirm(`Remove ${words(n)} from the gallery? Their copies on the website are deleted and this can’t be undone. Originals in Google Drive stay where they are.`)) return
+  async function removeSel() {
+    if (!(await confirm({ title: `Remove ${words(n)}?`, body: 'Their copies on the website are deleted, and this can’t be undone. Originals in Google Drive stay where they are.', confirmLabel: `Remove ${words(n)}`, danger: true }))) return
     void run({ action: 'remove-photos', keys: selected }, `Removed ${words(n)}.`)
   }
 
@@ -104,7 +130,7 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
                 return (
                   <li key={p.key}>
                     <button type="button" className={`ga-thumb ${on ? 'on' : ''}`} aria-pressed={ro ? undefined : on} onClick={(e) => click(p.key, e)} title={p.name}>
-                      {p.thumb ? <img src={p.thumb} alt="" loading="lazy" decoding="async" width={p.w} height={p.h} /> : <span className="ga-thumb-missing">No preview</span>}
+                      {p.thumb ? <img src={p.thumb} alt="" loading="lazy" decoding="async" width={p.w} height={p.h} className="is-loading" ref={fadeIn} onLoad={shown} onError={shown} /> : <span className="ga-thumb-missing">No preview</span>}
                       <span className="ga-thumb-name">{p.name}</span>
                       {p.key === coverKey && <span className="ga-badge ga-badge-cover">Cover</span>}
                       {p.favs > 0 && <span className="ga-badge ga-badge-fav" aria-label={`${p.favs} ${p.favs === 1 ? 'favourite' : 'favourites'}`}>♥ {p.favs}</span>}
@@ -115,7 +141,7 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
               })}
             </ul>
           ) : (
-            <p className="muted small" style={{ margin: 0 }}>Empty.</p>
+            <p className="muted small m0">Empty.</p>
           )}
         </div>
       ))}
@@ -132,12 +158,12 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
             </select>
             <button type="button" className="btn btn-secondary btn-sm" onClick={moveSel} disabled={busy}>Move</button>
           </span>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => run({ action: 'update', coverKey: selected[0] }, 'Cover changed.')} disabled={busy || n !== 1} title={n === 1 ? undefined : 'Select one photo'}>Make cover</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => run({ action: 'update', coverKey: selected[0] }, 'Cover changed.', true, coverKey && coverKey !== selected[0] ? [{ action: 'update', coverKey }] : undefined)} disabled={busy || n !== 1} title={n === 1 ? undefined : 'Select one photo'}>Make cover</button>
           <button type="button" className="btn btn-secondary btn-sm ga-danger-btn" onClick={removeSel} disabled={busy}>Remove</button>
           <button type="button" className="linklike" onClick={() => setSel(new Set())}>Clear</button>
         </div>
       )}
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small muted m0" role="status">{msg}</p>}
     </section>
   )
 }

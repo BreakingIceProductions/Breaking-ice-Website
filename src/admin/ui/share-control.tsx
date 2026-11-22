@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import type { Deliverable } from '@/portal/types'
+import { useConfirm } from './confirm'
+import { fmtDate } from '@/admin/dates'
 
 type Share = NonNullable<Deliverable['share']>
 
@@ -9,13 +11,14 @@ type Share = NonNullable<Deliverable['share']>
 export function ShareControl({ projectId, deliverableKey, share: initial, viewOnly }: { projectId: string; deliverableKey: string; share?: Share; viewOnly: boolean }) {
   const [share, setShare] = useState<Share | undefined>(initial)
   const [busy, setBusy] = useState(false)
+  const confirm = useConfirm()
   const [msg, setMsg] = useState('')
   const [origin, setOrigin] = useState('')
   useEffect(() => setOrigin(window.location.origin), [])
   const url = share ? `${origin}/review/${share.token}` : ''
 
   async function act(action: 'create' | 'on' | 'off' | 'renew') {
-    if (action === 'renew' && !window.confirm('Make a new link? The current one stops working straight away, for everyone who has it.')) return
+    if (action === 'renew' && !(await confirm({ title: 'Make a new link?', body: 'The current one stops working straight away, for everyone who has it.', confirmLabel: 'Make a new link', danger: true }))) return
     setBusy(true)
     setMsg('')
     const r = await fetch('/api/admin/review-share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, key: deliverableKey, action }) }).catch(() => null)
@@ -44,18 +47,18 @@ export function ShareControl({ projectId, deliverableKey, share: initial, viewOn
         <h2 id="h-share" className="a-h2">Share link</h2>
         <span className={`a-conn-state ${share?.on ? 'on' : 'off'}`}>{share ? (share.on ? 'On' : 'Off') : 'None yet'}</span>
       </div>
-      <p className="muted small" style={{ margin: 0 }}>
+      <p className="muted small m0">
         For people who aren’t portal contacts (a board member, a colleague). Anyone with the link can watch this version and comment after typing their name. Only the client’s signed-in contacts can approve or ask for changes.
       </p>
       {share ? (
         <>
           <label className="small muted" htmlFor="share-url">Link</label>
           <input id="share-url" className="input" readOnly value={url} onFocus={(e) => e.currentTarget.select()} aria-describedby="share-state" disabled={!share.on} />
-          <p id="share-state" className="small muted" style={{ margin: 0 }}>
-            {share.on ? 'Working.' : 'Switched off: it shows “This link isn’t active”.'} Made {new Date(share.createdAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}.
+          <p id="share-state" className="small muted m0">
+            {share.on ? 'Working.' : 'Switched off: it shows “This link isn’t active”.'} Made {fmtDate(share.createdAt)}.
           </p>
           <div className="btn-row">
-            <button type="button" className="btn btn-primary btn-sm" onClick={copy} disabled={!share.on}>Copy link</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={copy} disabled={!share.on}>Copy link</button>
             {!viewOnly && (
               <>
                 <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act(share.on ? 'off' : 'on')}>{share.on ? 'Switch off' : 'Switch on'}</button>
@@ -65,9 +68,9 @@ export function ShareControl({ projectId, deliverableKey, share: initial, viewOn
           </div>
         </>
       ) : (
-        !viewOnly && <div><button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => act('create')}>Make a share link</button></div>
+        !viewOnly && <div><button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => act('create')}>Make a share link</button></div>
       )}
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small muted m0" role="status">{msg}</p>}
     </section>
   )
 }

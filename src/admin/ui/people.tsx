@@ -19,7 +19,7 @@ const SORTS = [
   { key: 'recent', label: 'Newest' },
 ] as const
 
-type Note = { text: string; bad?: boolean }
+type Note = { text: string; bad?: boolean; /** Shows an Undo button beside the message (in the panel, where the page's own notices can't be reached). */ undo?: () => void }
 type Send = (action: PeopleAction) => Promise<{ key?: string } | null>
 
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`
@@ -124,7 +124,7 @@ export function PeopleTable({ base, store: saved, canEdit, initial }: { base: Ba
   const toggleTag = (t: string) => setPicked(tagsOn.includes(t) ? tagsOn.filter((x) => x !== t) : [...tagsOn, t])
 
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
+    <div className="stack gap-4">
       <div className="row-wrap">
         <input className="input pp-search" type="search" placeholder="Search name, email, company or tag" aria-label="Search people" value={q} onChange={(e) => setQ(e.target.value)} />
         <div className="a-switch" role="group" aria-label="Show">
@@ -154,7 +154,7 @@ export function PeopleTable({ base, store: saved, canEdit, initial }: { base: Ba
           {tagsOn.length > 0 && ` tagged ${tagsOn.join(' and ')}`}
           {!panelOpen && !managing && note && <span className={note.bad ? 'pp-bad' : undefined}> · {note.text}</span>}
         </span>
-        <div className="row-wrap small" style={{ gap: 'var(--space-2)' }}>
+        <div className="row-wrap small gap-2">
           <span className="muted">Sort</span>
           {SORTS.map((s) => <button key={s.key} type="button" className={`pp-sort${sort === s.key ? ' on' : ''}`} aria-pressed={sort === s.key} onClick={() => setSort(s.key)}>{s.label}</button>)}
         </div>
@@ -244,7 +244,7 @@ function Panel({ open, className, labelledBy, onClose, children }: { open: boole
     if (!open && d.open) d.close()
   }, [open])
   return (
-    <dialog ref={ref} className={className} aria-labelledby={labelledBy} onClose={(e) => { if (!e.currentTarget.open) onClose() }} onCancel={(e) => { e.preventDefault(); onClose() }} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+    <dialog ref={ref} className={className} aria-labelledby={labelledBy} onClose={(e) => { if (e.target === e.currentTarget && !e.currentTarget.open) onClose() }} onCancel={(e) => { if (e.target !== e.currentTarget) return; e.preventDefault(); onClose() }} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       {children}
     </dialog>
   )
@@ -294,7 +294,12 @@ function PanelBody({ person, people, allTags, canEdit, busy, note, setNote, send
 
   const tags = isNew ? newTags : person.tags
   const addTag = (t: string) => (isNew ? setNewTags((ts) => (ts.some((x) => sameTag(x, t)) ? ts : [...ts, allTags.find((x) => sameTag(x, t)) ?? t])) : void send({ action: 'tag', ...target, tag: t }))
-  const removeTag = (t: string) => (isNew ? setNewTags((ts) => ts.filter((x) => x !== t)) : void send({ action: 'untag', ...target, tag: t }))
+  const removeTag = (t: string) => {
+    if (isNew) return setNewTags((ts) => ts.filter((x) => x !== t))
+    void send({ action: 'untag', ...target, tag: t }).then((r) => {
+      if (r) setNote({ text: `Removed the tag “${t}”.`, undo: () => void send({ action: 'tag', ...target, tag: t }) })
+    })
+  }
 
   const input = (k: PersonField) => (
     <div className="field" key={k}>
@@ -323,7 +328,7 @@ function PanelBody({ person, people, allTags, canEdit, busy, note, setNote, send
   return (
     <div className="pp-panel-body">
       <div className="pp-panel-head">
-        <div className="stack" style={{ gap: 4, minWidth: 0 }}>
+        <div className="stack gap-4px min0">
           <span className="eyebrow">{isNew ? 'Contacts only' : person.status}</span>
           <h2 id="pp-panel-h" className="a-h2 a-h2-lg">{isNew ? 'Add person' : person.name}</h2>
         </div>
@@ -342,7 +347,7 @@ function PanelBody({ person, people, allTags, canEdit, busy, note, setNote, send
           <p className="pp-explain">
             {person.source === 'client' ? 'Client contacts are managed with the client, so their name, email and company are changed there. ' : 'This person is on a lead, so their name and email are changed on the lead. '}
             {person.source === 'client' && person.studioHref && (
-              <a className="text-link" href={person.studioHref} target="_blank" rel="noopener noreferrer">Edit in the Studio<span className="sr-only"> (opens in a new tab)</span></a>
+              <a className="text-link" href={person.studioHref} target="_blank" rel="noopener noreferrer">Edit contact<span aria-hidden="true"> ↗</span><span className="sr-only"> in the editor (opens in a new tab)</span></a>
             )}
             {person.source === 'lead' && person.leadHref && <Link className="text-link" href={person.leadHref}>Open the lead</Link>}
           </p>
@@ -361,7 +366,7 @@ function PanelBody({ person, people, allTags, canEdit, busy, note, setNote, send
         </form>
       ) : (
         <>
-          <div className="stack" style={{ gap: 'var(--space-2)' }}>
+          <div className="stack gap-2">
             <span className="pp-label">Tags</span>
             {tags.length ? <ul className="pp-tags" aria-label="Tags">{tags.map((t) => <li key={t} className="pp-tag">{t}</li>)}</ul> : <span className="muted small">No tags.</span>}
           </div>
@@ -376,13 +381,13 @@ function PanelBody({ person, people, allTags, canEdit, busy, note, setNote, send
         </>
       )}
 
-      <p className={`small pp-msg${note?.bad ? ' pp-bad' : ' muted'}`} role="status">{note?.text}</p>
+      <p className={`small pp-msg${note?.bad ? ' pp-bad' : ' muted'}`} role="status">{note?.text}{note?.undo && <> <button type="button" className="linklike small" onClick={() => { const u = note.undo; setNote(null); u?.() }}>Undo</button></>}</p>
 
       {canEdit && person?.source === 'only' && person.key && (
         <div className="pp-remove">
           {removing ? (
-            <div className="stack" role="group" aria-label="Confirm removing this person" style={{ gap: 'var(--space-3)' }}>
-              <p style={{ margin: 0 }}>Remove {person.name} from the list? Their tags and note go too, and it can’t be undone.</p>
+            <div className="stack gap-3" role="group" aria-label="Confirm removing this person">
+              <p className="m0">Remove {person.name} from the list? Their tags and note go too, and it can’t be undone.</p>
               <div className="btn-row">
                 <button type="button" className="btn btn-secondary btn-sm" autoFocus onClick={() => setRemoving(false)}>Keep them</button>
                 <button type="button" className="btn btn-primary btn-sm pp-danger-btn" disabled={busy} onClick={async () => { if (await send({ action: 'removePerson', key: person.key })) onDone(`Removed ${person.name}.`) }}>Remove {person.name}</button>
@@ -449,7 +454,7 @@ function TagEditor({ tags, all, busy, onAdd, onRemove, hint }: { tags: string[];
         {hits.map((t) => <button key={t} type="button" className="pp-pick" disabled={busy} onClick={() => add(t)}><span aria-hidden="true">+ </span><span className="sr-only">Add the tag </span>{t}</button>)}
         {typed && !known && <button type="button" className="pp-pick pp-pick-new" disabled={busy} onClick={() => add(typed)}>Create “{typed}”</button>}
       </div>
-      <p id={`${id}-hint`} className="muted small" style={{ margin: 0 }}>Press Enter to add what you typed. {hint}</p>
+      <p id={`${id}-hint`} className="muted small m0">Press Enter to add what you typed. {hint}</p>
     </fieldset>
   )
 }
@@ -478,7 +483,7 @@ function ManageTags({ tags, count, busy, note, send, onDone }: { tags: string[];
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRenaming(null)}>Cancel</button>
                 </form>
               ) : deleting === t ? (
-                <div className="stack" role="group" aria-label={`Confirm deleting ${t}`} style={{ gap: 'var(--space-2)' }}>
+                <div className="stack gap-2" role="group" aria-label={`Confirm deleting ${t}`}>
                   <span>Delete “{t}”? {n ? `It comes off ${people_(n)}.` : 'Nobody has it.'}</span>
                   <div className="btn-row">
                     <button type="button" className="btn btn-secondary btn-sm" autoFocus onClick={() => setDeleting(null)}>Keep it</button>
@@ -487,7 +492,7 @@ function ManageTags({ tags, count, busy, note, send, onDone }: { tags: string[];
                 </div>
               ) : (
                 <>
-                  <span className="stack" style={{ minWidth: 0 }}><strong>{t}</strong><span className="muted small">{people_(n)}</span></span>
+                  <span className="stack min0"><strong>{t}</strong><span className="muted small">{people_(n)}</span></span>
                   <span className="row-wrap small">
                     <button type="button" className="linklike" onClick={() => { setDeleting(null); setTo(t); setRenaming(t) }}>Rename<span className="sr-only"> {t}</span></button>
                     <button type="button" className="linklike pp-danger" onClick={() => { setRenaming(null); setDeleting(t) }}>Delete<span className="sr-only"> {t}</span></button>

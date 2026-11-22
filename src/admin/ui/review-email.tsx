@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useConfirm } from './confirm'
 
 type Item = { key: string; title: string; version: number; emailed: boolean }
 
@@ -12,6 +13,7 @@ export function ReviewEmail({ projectId, items, to }: { projectId: string; items
   const [picked, setPicked] = useState(() => new Set(items.filter((i) => !i.emailed).map((i) => i.key)))
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const confirm = useConfirm()
   const [msg, setMsg] = useState('')
   if (!items.length) return null
 
@@ -23,7 +25,7 @@ export function ReviewEmail({ projectId, items, to }: { projectId: string; items
   })
 
   async function send() {
-    if (!picked.size || !confirm(`Email ${to} about ${picked.size} version${picked.size === 1 ? '' : 's'}?`)) return
+    if (!picked.size || !(await confirm({ title: `Email ${to}?`, body: `About ${picked.size} version${picked.size === 1 ? '' : 's'} ready to review.`, confirmLabel: 'Send' }))) return
     setBusy(true)
     setMsg('')
     const r = await fetch('/api/admin/review-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ projectId, keys: [...picked], note }) }).catch(() => null)
@@ -44,9 +46,9 @@ export function ReviewEmail({ projectId, items, to }: { projectId: string; items
       </span>
     )
   return (
-    <div className="stack" style={{ gap: 8, padding: '12px 0' }}>
-      <p className="small muted" style={{ margin: 0 }}>One email to {to} listing what you tick. Already-emailed versions start unticked.</p>
-      <ul className="stack" style={{ gap: 4, listStyle: 'none', margin: 0, padding: 0 }}>
+    <div className="stack gap-8px py-3">
+      <p className="small muted m0">One email to {to} listing what you tick. Already-emailed versions start unticked.</p>
+      <ul className="stack gap-4px list-reset">
         {items.map((i) => (
           <li key={i.key}>
             <label className="row-wrap small">
@@ -56,7 +58,7 @@ export function ReviewEmail({ projectId, items, to }: { projectId: string; items
           </li>
         ))}
       </ul>
-      <label className="stack small" style={{ gap: 4 }}>
+      <label className="stack small gap-4px">
         Personal note (optional)
         <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
       </label>

@@ -1,5 +1,8 @@
+import '../../../css/admin-pages.css'
 import Link from 'next/link'
+import { PendingLink } from '@/admin/ui/pending-link'
 import { requireAdmin } from '@/admin/auth'
+import { adminSampleMode } from '@/admin/config'
 import { listProjects } from '@/admin/data'
 import { emailCatalog } from '@/admin/email-catalog'
 import { getEmailTemplates, sampleTemplateVars } from '@/admin/email-templates'
@@ -45,16 +48,17 @@ export default async function Library({ searchParams }: Props) {
   return (
     <div className="a-page">
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
+        <div className="stack ap-gap-3">
           <h1 className="a-h1">Library</h1>
-          <p className="muted" style={{ margin: 0 }}>Your documents to sign, the emails clients get, your email templates, and everything out for signature.</p>
+          <p className="muted m0">Your documents to sign, the emails clients get, your email templates, and everything out for signature.</p>
         </div>
       </header>
-      {memoryMode() && <p className="a-sample" role="status" style={{ margin: 0 }}>Sample mode: changes are kept in memory until the dev server restarts. Emails are simulated.</p>}
+      {/* Sample mode already says so in the banner above; this is only for a live site whose document store isn't set up. */}
+      {memoryMode() && !adminSampleMode() && <p className="a-sample m0" role="status">Document signing isn’t set up on this site yet, so changes here aren’t kept and no emails go out.</p>}
 
       <nav className="pj-tabs" aria-label="Library sections">
         {TABS.map((t) => (
-          <Link key={t.key} href={t.key === 'documents' ? '/admin/library' : `/admin/library?tab=${t.key}`} scroll={false} aria-current={tab === t.key ? 'page' : undefined}>{t.label}</Link>
+          <PendingLink key={t.key} href={t.key === 'documents' ? '/admin/library' : `/admin/library?tab=${t.key}`} scroll={false} aria-current={tab === t.key ? 'page' : undefined}>{t.label}</PendingLink>
         ))}
       </nav>
 
@@ -99,14 +103,14 @@ async function Documents({ doc, readOnly, sample }: { doc?: string; readOnly: bo
 async function Emails() {
   const emails = await emailCatalog()
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
-      <p className="muted small" style={{ margin: 0 }}>Every email the portal sends to clients and signers, drawn from the real templates with made-up details. Read only: nothing here sends.</p>
+    <div className="stack ap-gap-4">
+      <p className="muted small m0">Every email the portal sends to clients and signers, drawn from the real templates with made-up details. Read only: nothing here sends.</p>
       <ul className="lb-emails">
         {emails.map((e) => (
           <li key={e.key}>
             <details className="p-card lb-email">
               <summary>
-                <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                <span className="stack ap-tight ap-minw0">
                   <strong>{e.name}</strong>
                   <span className="small">Subject: {e.subject}</span>
                   <span className="muted small">{e.when}</span>
@@ -147,16 +151,16 @@ async function OutAndSigned({ show }: { show?: string }) {
   const c = signCounts(all, now)
   const counts: Record<Filter, number> = { needs: all.filter(pick.needs).length, out: c.out.length, signed: all.filter(pick.signed).length, all: all.length }
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
+    <div className="stack ap-gap-4">
       <nav className="a-switch" aria-label="Show">
         {FILTERS.map((f) => (
-          <Link key={f.key} href={`/admin/library?tab=out&show=${f.key}`} scroll={false} aria-current={filter === f.key ? 'page' : undefined}>
+          <PendingLink key={f.key} href={`/admin/library?tab=out&show=${f.key}`} scroll={false} aria-current={filter === f.key ? 'page' : undefined}>
             {f.label} <span className="muted">{counts[f.key]}</span>
-          </Link>
+          </PendingLink>
         ))}
       </nav>
       <section className="p-card" aria-label={FILTERS.find((f) => f.key === filter)!.label}>
-        {filter === 'needs' && <p className="muted small" style={{ margin: 0 }}>Out {STALE_DAYS} days or more and still not signed: email them again, or void it.</p>}
+        {filter === 'needs' && <p className="muted small m0">Out {STALE_DAYS} days or more and still not signed: email them again, or void it.</p>}
         <RequestTable
           rows={rows.map((r) => requestRow(r, known))}
           empty={filter === 'needs' ? 'Nothing needs you: everything out was sent in the last week.' : filter === 'signed' ? 'Nothing signed yet.' : 'Nothing sent for signing yet. Send a document from a project’s Documents tab or from the Library.'}

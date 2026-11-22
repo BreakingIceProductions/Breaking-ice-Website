@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useConfirm } from '@/admin/ui/confirm'
 import { errorText, fmtDay, galleryAction } from './admin-api'
 import type { ClientOption, ProjectOption } from './admin-new-gallery'
 
@@ -34,6 +35,7 @@ export function GalleryHeader(p: Props) {
   const [projectId, setProjectId] = useState(p.projectId ?? '')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const confirm = useConfirm()
   const theirProjects = p.projects.filter((x) => x.clientId === clientId)
   const clientLabel = p.clientName ?? p.clients.find((c) => c.id === p.clientId)?.name
   const projectLabel = p.projectTitle ?? p.projects.find((x) => x.id === p.projectId)?.title
@@ -52,7 +54,7 @@ export function GalleryHeader(p: Props) {
 
   async function toggleStatus() {
     const next = p.status === 'live' ? 'draft' : 'live'
-    if (next === 'draft' && !window.confirm('Back to draft? The client and anyone with the link will stop seeing this gallery until you make it live again.')) return
+    if (next === 'draft' && !(await confirm({ title: 'Back to draft?', body: 'The client and anyone with the link stop seeing this gallery until you make it live again.', confirmLabel: 'Back to draft' }))) return
     setBusy(true)
     const r = await galleryAction(p.id, { action: 'update', status: next })
     setBusy(false)
@@ -65,14 +67,11 @@ export function GalleryHeader(p: Props) {
 
   return (
     <header className="ga-head">
-      <p className="muted small ga-crumb">
-        <Link className="text-link-plain muted" href="/admin/galleries">Galleries</Link> /
-      </p>
       <div className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
+        <div className="stack gap-2 min0">
           <span className="a-client">{[clientLabel ?? 'No client', projectLabel].filter(Boolean).join(' · ')}</span>
           <h1 className="a-h1 ga-title">{p.title}</h1>
-          <p className="muted small" style={{ margin: 0 }}>{[p.date ? `Shot ${fmtDay(p.date)}` : 'No shoot date', `${p.count} ${p.count === 1 ? 'photo' : 'photos'}`, p.count ? p.size : ''].filter(Boolean).join(' · ')}</p>
+          <p className="muted small m0">{[p.date ? `Shot ${fmtDay(p.date)}` : 'No shoot date', `${p.count} ${p.count === 1 ? 'photo' : 'photos'}`, p.count ? p.size : ''].filter(Boolean).join(' · ')}</p>
         </div>
         <div className="ga-head-side">
           <div className="ga-status" role="group" aria-label="Who can see it">
@@ -143,7 +142,7 @@ export function GalleryHeader(p: Props) {
           </div>
         </form>
       )}
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small muted m0" role="status">{msg}</p>}
     </header>
   )
 }

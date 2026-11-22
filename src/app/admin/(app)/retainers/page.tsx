@@ -1,3 +1,4 @@
+import '../../../css/admin-pages.css'
 import Link from 'next/link'
 import '../../../css/retainer-admin.css'
 import { requireAdmin } from '@/admin/auth'
@@ -27,7 +28,7 @@ export default async function Retainers() {
         <Link className="a-row-main" href={`/admin/retainers/${encodeURIComponent(c._id)}`}>
           <strong><span className="rt-swatch" style={c.retainer.accent ? ({ '--rt-accent': c.retainer.accent } as React.CSSProperties) : undefined} aria-hidden="true" />{c.organizationName}</strong>
           <span className="muted small">
-            {[`${c.retainer.perMonth} a month`, c.retainer.rollover === 'next-month' ? 'unused carry over' : 'starts fresh monthly', c.retainer.publerWorkspaceId ? 'Publer connected' : 'no Publer workspace'].join(' · ')}
+            {[`${c.retainer.perMonth} a month`, c.retainer.rollover === 'next-month' ? 'unused carry over' : 'starts fresh monthly', c.retainer.publerWorkspaceId ? 'social posts linked' : 'no social account linked'].join(' · ')}
           </span>
         </Link>
         <span className="a-row-side">{c.retainer.active ? (v ? <Meter view={v} accent={c.retainer.accent} /> : <span className="muted small">Couldn’t count this month</span>) : <span className="a-stage">Off</span>}</span>
@@ -38,9 +39,9 @@ export default async function Retainers() {
   return (
     <div className="a-page">
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
+        <div className="stack ap-gap-3">
           <h1 className="a-h1">Retainers</h1>
-          <p className="muted" style={{ margin: 0 }}>Monthly clients: what’s done in {monthLabel(month)}, from Publer and what you’ve delivered.</p>
+          <p className="muted m0">Monthly clients: what’s done in {monthLabel(month)}, from social posts and what we’ve delivered.</p>
         </div>
       </header>
 
@@ -49,7 +50,7 @@ export default async function Retainers() {
           <h2 id="h-active" className="a-h2">On retainer</h2>
           <span className="muted small">{active.length}</span>
         </div>
-        {active.length ? <ul className="a-rows">{active.map(row)}</ul> : <p className="muted a-empty">No retainer clients yet. Set one up below.</p>}
+        {active.length ? <ul className="a-rows">{active.map(row)}</ul> : <p className="muted a-empty">No retainer clients yet. Open “Set up a retainer” below and pick a client.</p>}
       </section>
 
       {paused.length > 0 && (
@@ -65,7 +66,7 @@ export default async function Retainers() {
       {without.length > 0 && (
         <section className="p-card" aria-labelledby="h-setup">
           <details>
-            <summary id="h-setup" className="a-h2" style={{ cursor: 'pointer' }}>Set up a retainer</summary>
+            <summary id="h-setup" className="a-h2 ap-pointer">Set up a retainer</summary>
             <p className="muted small">Pick the client, then turn the retainer on and save.</p>
             <ul className="a-rows">
               {without.map((c) => (

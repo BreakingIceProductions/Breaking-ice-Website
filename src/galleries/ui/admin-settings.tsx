@@ -52,7 +52,7 @@ export function ExpiryPanel({ id, title, expiresOn, shareUrl, canLink, recipient
         <h2 id="ga-exp-h" className="a-h2">Closes</h2>
         <span className={`small ${left !== null && left <= 7 ? 'a-urgent' : 'muted'}`}>{status}</span>
       </div>
-      <p className="muted small" style={{ margin: 0 }}>The last day the client can open it. After that the link and the portal show it as closed. Leave empty to keep it open.</p>
+      <p className="muted small m0">The last day the client can open it. After that the link and the portal show it as closed. Leave empty to keep it open.</p>
       <form
         className="ga-copy-row"
         onSubmit={(e) => {
@@ -82,11 +82,11 @@ export function ExpiryPanel({ id, title, expiresOn, shareUrl, canLink, recipient
         )}
       </form>
       {reminder && (
-        <p style={{ margin: 0 }}>
+        <p className="m0">
           <a className="btn btn-secondary btn-sm" href={reminder}>Draft a reminder</a>
         </p>
       )}
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small muted m0" role="status">{msg}</p>}
     </section>
   )
 }
@@ -115,8 +115,8 @@ export function DownloadsPanel({ id, downloads, ro }: { id: string; downloads: G
           </li>
         ))}
       </ul>
-      {!downloads.full && !downloads.web && <p className="muted small" style={{ margin: 0 }}>Both sizes are off, so the client can look but not download.</p>}
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {!downloads.full && !downloads.web && <p className="muted small m0">Both sizes are off, so the client can look but not download.</p>}
+      {msg && <p className="small muted m0" role="status">{msg}</p>}
     </section>
   )
 }
@@ -129,8 +129,8 @@ export function MessagePanel({ id, message, ro }: { id: string; message?: string
     <section className="p-card ga-panel" aria-labelledby="ga-msg-h">
       <h2 id="ga-msg-h" className="a-h2">Message</h2>
       <form
-        className="stack"
-        style={{ gap: 'var(--space-3)' }}
+        className="stack gap-3"
+       
         onSubmit={(e) => {
           e.preventDefault()
           void save({ message: value }, value.trim() ? 'Message saved.' : 'Message removed.')
@@ -144,7 +144,7 @@ export function MessagePanel({ id, message, ro }: { id: string; message?: string
           </div>
         )}
       </form>
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small muted m0" role="status">{msg}</p>}
     </section>
   )
 }

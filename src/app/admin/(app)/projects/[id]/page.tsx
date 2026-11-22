@@ -1,10 +1,14 @@
 import { requireAdmin } from '@/admin/auth'
+import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import Link from 'next/link'
+import { PendingLink } from '@/admin/ui/pending-link'
+import { activityText } from '@/admin/activity-text'
+import '../../../../css/admin-pages.css'
 import { notFound } from 'next/navigation'
 import { checklist, quoteStatus } from '@/admin/board-data'
 import { getProject } from '@/admin/data'
 import { composerSetup } from '@/admin/email-templates'
-import { fmtDay, fmtRange, today, TZ, ymd } from '@/admin/dates'
+import { fmtRange, today, TZ, fmtDate } from '@/admin/dates'
 import { cad } from '@/admin/insights'
 import { isContactLog, isSalesStage } from '@/admin/lead'
 import { MILESTONE_LIST } from '@/admin/milestones'
@@ -65,7 +69,7 @@ const INVOICE_WORD: Record<string, string> = {
 /** Where a version stands, in the back office's words. */
 const REVIEW_WORD = { 'in-progress': 'Not sent yet', 'awaiting-feedback': 'Awaiting feedback', 'changes-requested': 'Notes in', approved: 'Approved' }
 
-const day = (iso?: string) => (iso ? fmtDay(ymd(new Date(iso)), { weekday: 'short', month: 'short', day: 'numeric' }) : '')
+const day = (iso?: string) => fmtDate(iso, 'weekday')
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-CA', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })
 
 /**
@@ -92,7 +96,7 @@ function sentToClient(p: OfficeProject) {
       .map((d) => ({ key: `v-${d._key}`, at: d.notifiedAt!, kind: 'Review email', text: `${d.title} · ${versionLabel({ final: d.final, version: d.notifiedVersion ?? d.version })} ready for review` })),
     ...p.activity
       .filter((a) => a.text.startsWith('Delivered:'))
-      .map((a) => ({ key: a._key, at: a.at, kind: 'Delivery', text: 'Final files ready to download', status: 'The delivery email goes with this, unless it’s switched off for the project in the Studio.' })),
+      .map((a) => ({ key: a._key, at: a.at, kind: 'Delivery', text: 'Final files ready to download', status: 'The delivery email goes with this, unless it’s switched off in the project’s details.' })),
   ]
   // A quote sent before the log kept it still shows, from the quote's own dates.
   const sentAt = q?.lastSentAt ?? q?.sharedAt
@@ -167,10 +171,30 @@ export default async function ProjectPage({ params, searchParams }: Props) {
 
   const log = [...(p.office.log ?? [])].sort((a, b) => b.at.localeCompare(a.at))
   const lastContact = log.find((l) => isContactLog(l.kind))
+  const production = PIPELINE_STAGES.filter((s) => s.group === 'production')
+  const productionAt = production.findIndex((s) => s.value === p.pipelineStage)
+
+  // The one thing to do next, while the stage still has steps open (once they're ticked, Next up offers the move).
+  const stepsOpen = checklist(p).some((c) => !c.done)
+  const reviewable = p.deliverables.find((d) => d.host === 'r2' && d.openComments) ?? p.deliverables.find((d) => d.host === 'r2')
+  // On every tab; it's the page's primary on Overview and secondary elsewhere, where the tab has its own main action (Portal's "View as the client", for one).
+  const nextAction: { label: string; href: string } | undefined = p.archived || !stepsOpen
+    ? undefined
+    : sales
+      ? { label: 'Open the lead page', href: leadPage }
+      : (p.pipelineStage === 'roughcut' || p.pipelineStage === 'finalcut') && reviewable
+        ? { label: 'Open the review room', href: `/admin/review/${encodeURIComponent(p._id)}/${encodeURIComponent(reviewable._key)}` }
+        : p.pipelineStage === 'delivered' || p.pipelineStage === 'paid'
+          ? { label: 'Check the invoices', href: `${base}?tab=money` }
+          : p.pipelineStage === 'shoot'
+            ? { label: 'Open the files', href: lib }
+            : compose
+              ? { label: 'Email the client', href: '?email=1' }
+              : undefined
 
   const menu: MenuLink[] = [
     viewAs && { label: 'View as the client', href: viewAs, newTab: true },
-    { label: 'Edit in the Studio', href: studioHref(p._id), newTab: true },
+    { label: 'Edit details in the editor', href: studioHref(p._id), newTab: true },
     sales && { label: 'Open the lead page', href: leadPage },
   ].filter((x): x is MenuLink => Boolean(x))
 
@@ -200,59 +224,70 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   return (
     <ProjectProgress projectId={p._id} projectTitle={p.title} checks={checklist(p)}>
       <div className="a-page">
-        <Link className="text-link-plain muted small ld-back" href="/admin/pipeline">← Pipeline</Link>
+        <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }]} />
 
         <header className="a-head">
-          <div className="stack" style={{ gap: 'var(--space-2)', minWidth: 0 }}>
+          <div className="stack ap-gap-2 ap-minw0">
             <h1 className="a-h1">{p.title}</h1>
-            <p className="muted" style={{ margin: 0 }}>
+            <p className="muted m0">
               {p.client._id ? <Link className="text-link" href={`/admin/clients/${p.client._id}`}>{p.client.organizationName}</Link> : p.client.organizationName}
             </p>
-          </div>
-          <div className="pj-head-side">
-            <p className="small" style={{ margin: 0 }}>
-              <strong>Last contact:</strong>{' '}
-              {lastContact ? `${lastContact.text}, ${day(lastContact.at)}` : log[0] ? `none logged yet. Latest activity: ${log[0].text}, ${day(log[0].at)}` : 'none logged yet.'}
+            <p className="muted m0 pj-head-line">
+              Last contact:{' '}
+              {lastContact ? `${activityText(lastContact.text)}, ${day(lastContact.at)}` : log[0] ? `none logged yet. Latest activity: ${activityText(log[0].text)}, ${day(log[0].at)}` : 'none logged yet.'}
             </p>
-            <div className="btn-row">
-              {compose && <EmailComposer projectId={p._id} {...compose} startOpen={sp.email === '1'} />}
-              <ProjectMenu projectId={p._id} title={p.title} archived={Boolean(p.archived)} links={menu} />
-            </div>
+          </div>
+          <div className="btn-row">
+            {/* Keyed on ?email=1 so Next up's "Email the client" can open it. */}
+            {compose && <EmailComposer key={sp.email === '1' ? 'open' : 'closed'} projectId={p._id} {...compose} startOpen={sp.email === '1'} />}
+            <ProjectMenu projectId={p._id} title={p.title} archived={Boolean(p.archived)} links={menu} />
           </div>
         </header>
 
         {p.archived && (
-          <p className="a-sample" role="status" style={{ margin: 0 }}>Archived{p.declinedAt ? ` · declined ${fmtDay(p.declinedAt.slice(0, 10))}` : ''}. Bring it back with Unarchive under More.</p>
+          <p className="ap-note" role="status">Archived{p.declinedAt ? ` · declined ${fmtDate(p.declinedAt)}` : ''}. Bring it back with Unarchive under More.</p>
         )}
 
-        <NextUp stage={stage} next={next ? { title: next.title, value: next.value } : undefined} since={day(p.office.stageChangedAt) || undefined} />
+        {/* Next up's one primary: its own "Move to …" once the stage's steps are ticked, otherwise the action below. */}
+        <NextUp
+          stage={stage}
+          next={next ? { title: next.title, value: next.value } : undefined}
+          since={day(p.office.stageChangedAt) || undefined}
+          action={nextAction && nextAction.href !== `${base}?tab=${tab}` ? <Link className={`btn btn-sm ${tab === 'overview' ? 'btn-primary' : 'btn-secondary'}`} href={nextAction.href} scroll={false}>{nextAction.label}</Link> : undefined}
+        />
 
         <section className="p-card ld-stage" aria-label="Where it is">
           {sales ? (
-            <p className="small" style={{ margin: 0 }}>
+            <p className="small m0">
               Still a lead, in <strong>{stage}</strong>. <Link className="text-link" href={leadPage}>Open its lead page</Link> for the call, their details and the sales steps.
             </p>
           ) : (
+            <>
+            <p className="pj-steps-count small m0" aria-hidden="true">Stage {productionAt + 1} of {production.length}</p>
             <StageStrip
               current={p.pipelineStage}
-              stages={PIPELINE_STAGES.filter((s) => s.group === 'production').map((s) => ({ title: s.title, value: s.value, when: history.get(s.value) ? fmtDay(history.get(s.value)!.slice(0, 10)) : undefined }))}
+              stages={production.map((s) => ({ title: s.title, value: s.value, when: history.get(s.value) ? fmtDate(history.get(s.value)!) : undefined }))}
             />
+            </>
           )}
           <div className="pj-stage-foot">
-            <span className="muted small">{sales ? 'Moving it shows a preview first.' : 'Click any stage to move it there. Every move shows a preview first.'}</span>
+            <span className="muted small">{sales ? 'Moving it shows a preview first.' : 'Pick a stage to move it there. Every move shows a preview first.'}</span>
             <StageControl compact archived={p.archived} declined={Boolean(p.declinedAt)} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
           </div>
         </section>
 
+        <div className="a-pending-scope">
         <nav className="pj-tabs" aria-label="Project sections">
           {TABS.map((x) => (
-            <Link key={x.key} href={x.key === 'overview' ? base : `${base}?tab=${x.key}`} scroll={false} aria-current={tab === x.key ? 'page' : undefined}>{x.label}</Link>
+            <PendingLink key={x.key} href={x.key === 'overview' ? base : `${base}?tab=${x.key}`} scroll={false} aria-current={tab === x.key ? 'page' : undefined}>{x.label}</PendingLink>
           ))}
         </nav>
+        <div className="a-pending-body">
 
         {tab === 'overview' && <Overview p={p} stage={stage} si={si} t={t} log={log} />}
-        {tab === 'emails' && <Emails p={p} />}
+        {tab === 'emails' && <div className="pj-body"><Emails p={p} /></div>}
         {tab === 'money' && (
+          <div className="pj-body">
           <Money p={p} si={si} zohoOrg={zohoOrg}>
             <PaymentsCard
               projectId={p._id}
@@ -265,11 +300,12 @@ export default async function ProjectPage({ params, searchParams }: Props) {
               gst={Boolean(gstNumber) && !p.client.noGst}
             />
           </Money>
+          </div>
         )}
         {tab === 'portal' && <Portal p={p} si={si} lib={lib} viewAs={viewAs} clientPath={clientPath} preBooking={preBooking} to={emailed.map((c) => c.name.split(' ')[0]).join(', ') || 'the client'} />}
         {tab === 'documents' && (
-          <div className="stack pj-narrow" style={{ gap: 'var(--space-4)' }}>
-            <p className="small" style={{ margin: 0 }}><strong>Quote:</strong> {quoteStatus(p) ?? 'none yet. Upload the PDF below to send it for signing.'}</p>
+          <div className="stack pj-narrow ap-gap-4 pj-body">
+            <p className="small m0"><strong>Quote:</strong> {quoteStatus(p) ?? 'none yet. Upload the PDF below to send it for signing.'}</p>
             <QuoteCard
               projectId={p._id}
               quote={p.quote}
@@ -279,7 +315,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
               previewHref={p.slug && p.client._id ? `/api/admin/view-as?client=${encodeURIComponent(p.client._id)}&next=${encodeURIComponent(`/portal/quotes/${p.slug}`)}` : undefined}
             />
             {p.quoteUrl && (
-              <p className="small" style={{ margin: 0 }}>
+              <p className="small m0">
                 <a className="text-link" href={p.quoteUrl} target="_blank" rel="noopener noreferrer">The quote file on record<span className="sr-only"> (opens in a new tab)</span></a>
               </p>
             )}
@@ -296,12 +332,14 @@ export default async function ProjectPage({ params, searchParams }: Props) {
                   <SendDocumentToggle templates={docTemplates} projects={sendProjects([{ ...p, archived: false }])} projectId={p._id} />
                 </div>
               )}
-              <p className="muted small" style={{ margin: 0 }}>
+              <p className="muted small m0">
                 Wording lives in the <Link className="text-link" href="/admin/library">Library</Link>. Signed copies are saved to this project’s Drive folder (Contract for the client’s documents, Releases for people’s) when it has one.
               </p>
             </section>
           </div>
         )}
+        </div>
+        </div>
       </div>
     </ProjectProgress>
   )
@@ -319,7 +357,7 @@ function Overview({ p, stage, si, t, log }: { p: OfficeProject; stage: string; s
     ...p.schedule.map((s) => ({ label: s.title + (s.location ? ` · ${s.location}` : ''), value: fmtRange(s.start, s.end), past: (s.end ?? s.start) < t, sort: s.start })),
     ...MILESTONE_LIST.filter((m) => p.milestones[m.key]).map((m) => ({
       label: m.label,
-      value: fmtDay(p.milestones[m.key]),
+      value: fmtDate(p.milestones[m.key]),
       past: si >= stageIndex(m.doneFrom),
       sort: p.milestones[m.key]!,
     })),
@@ -344,7 +382,7 @@ function Overview({ p, stage, si, t, log }: { p: OfficeProject; stage: string; s
         <section className="p-card" aria-labelledby="h-dates">
           <div className="a-card-head">
             <h2 id="h-dates" className="a-h2">Dates and notes</h2>
-            <a className="text-link small" href={studioHref(p._id)} target="_blank" rel="noopener noreferrer">Edit dates<span className="sr-only"> in the Studio (opens in a new tab)</span></a>
+            <a className="text-link small" href={studioHref(p._id)} target="_blank" rel="noopener noreferrer">Edit dates ↗<span className="sr-only"> in the editor (opens in a new tab)</span></a>
           </div>
           {dates.length ? (
             <dl className="key-dates">
@@ -356,9 +394,9 @@ function Overview({ p, stage, si, t, log }: { p: OfficeProject; stage: string; s
               ))}
             </dl>
           ) : (
-            <p className="muted small a-empty">No shoot dates or milestones yet. Add them in the Studio.</p>
+            <p className="muted small a-empty">No shoot dates or milestones yet. Add them with Edit dates.</p>
           )}
-          <p className="muted small" style={{ margin: 0 }}>Changing a date moves its calendar event and TickTick tasks within 10 minutes.</p>
+          <p className="muted small m0">Changing a date moves its calendar event and TickTick tasks within 10 minutes.</p>
           <div className="row-wrap">
             <SyncButton projectId={p._id} />
             {p.office.ticktickProjectId && (
@@ -397,7 +435,7 @@ function Overview({ p, stage, si, t, log }: { p: OfficeProject; stage: string; s
             <div><dt>Type</dt><dd>{PROJECT_TYPES.find((x) => x.value === p.projectType)?.title ?? 'Not set'}</dd></div>
             <div><dt>Region</dt><dd>{REGIONS.find((r) => r.value === p.region)?.title ?? 'Not set'}</dd></div>
             <div><dt>Main contact</dt><dd>{main ? (main.email ? <a className="text-link-plain" href={`mailto:${main.email}`}>{main.name}</a> : main.name) : 'None yet'}</dd></div>
-            <div><dt>Started</dt><dd>{p.startDate ? fmtDay(p.startDate, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No start date'}</dd></div>
+            <div><dt>Started</dt><dd>{p.startDate ? fmtDate(p.startDate) : 'No start date'}</dd></div>
             <div><dt>In {stage} since</dt><dd>{day(p.office.stageChangedAt) || 'Not recorded'}</dd></div>
             <div><dt>Deliverables</dt><dd>{p.deliverables.length ? <Link className="text-link-plain" href={`/admin/projects/${encodeURIComponent(p._id)}?tab=portal`}>{p.deliverables.length} · {p.deliverables.filter((d) => d.status !== 'approved').length} still open</Link> : 'None yet'}</dd></div>
           </dl>
@@ -442,7 +480,7 @@ function Emails({ p }: { p: OfficeProject }) {
         <ul className="a-feed ld-feed">
           {rows.map((r) => (
             <li key={r.key}>
-              <span className="stack" style={{ gap: 2 }}>
+              <span className="stack ap-tight">
                 <span className="a-round-label">{r.kind}</span>
                 <span>{r.text}</span>
                 {r.status && <span className="muted small">{r.status}</span>}
@@ -460,7 +498,7 @@ function Emails({ p }: { p: OfficeProject }) {
       ) : (
         <p className="muted small a-empty">Nothing has been sent to the client on this project yet.</p>
       )}
-      <p className="muted small" style={{ margin: 0 }}>Email opens and replies arrive when Gmail is connected.</p>
+      <p className="muted small m0">Email opens and replies arrive when Gmail is connected.</p>
     </section>
   )
 }
@@ -474,11 +512,11 @@ function Money({ p, si, zohoOrg, children }: { p: OfficeProject; si: number; zoh
   const summary = moneySummary(p)
   const parts = moneyParts(p)
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
-      <div className="stack" style={{ gap: 'var(--space-1)' }}>
+    <div className="stack ap-gap-4">
+      <div className="stack ap-gap-1">
         {summary && <p className="pj-sum">{summary}</p>}
         {parts && <div className="pj-split"><SplitBar parts={parts} /></div>}
-        <p className="muted small" style={{ margin: 0 }}>
+        <p className="muted small m0">
           {summary ? 'Before GST, from the quote total and the invoices on record from Zoho Books. ' : 'No quote total or invoices yet. '}
           {p.client.noGst ? 'No GST is charged to this client.' : 'GST is added on invoices.'}
         </p>
@@ -520,8 +558,8 @@ function Money({ p, si, zohoOrg, children }: { p: OfficeProject; si: number; zoh
                 ))}
               </ul>
             )}
-            {!final && <p className="muted small" style={{ margin: 0 }}>The final invoice is drafted when you move the project to Final delivery.</p>}
-            <p className="muted small" style={{ margin: 0 }}>
+            {!final && <p className="muted small m0">The final invoice is drafted when you move the project to Final delivery.</p>}
+            <p className="muted small m0">
               The quote total and deposit are set on the quote, under <Link className="text-link" href={`/admin/projects/${encodeURIComponent(p._id)}?tab=documents`} scroll={false}>Documents</Link>.
             </p>
           </section>
@@ -558,7 +596,7 @@ function Portal({ p, si, lib, viewAs, clientPath, preBooking, to }: { p: OfficeP
       : 'Hidden from the client. Nothing shows in their portal until a quote is sent or the project reaches Onboarding.'
     : p.slug
       ? 'The client sees this project in their portal.'
-      : 'No portal address (slug) yet, so the client can’t open this project. Add one in the Studio.'
+      : 'No portal address (slug) yet, so the client can’t open this project. Add one with More → Edit details in the editor.'
 
   return (
     <div className="a-split">
@@ -590,8 +628,8 @@ function Portal({ p, si, lib, viewAs, clientPath, preBooking, to }: { p: OfficeP
                   {p.deliverables.map((d) => (
                     <tr key={d._key}>
                       <td>
-                        <Link className="a-strong-link" href={finder(d)}>{d.title}<span className="sr-only"> (opens it in the Finder)</span></Link>
-                        <span className="muted small"> · {categoryOf(d) === 'video' ? 'Video' : 'Document'}{d.feedbackDue && d.status === 'awaiting-feedback' ? ` · feedback ${fmtDay(d.feedbackDue)}` : ''}</span>
+                        <Link className="a-strong-link" href={finder(d)}>{d.title}<span className="sr-only"> (opens it in Clients)</span></Link>
+                        <span className="muted small"> · {categoryOf(d) === 'video' ? 'Video' : 'Document'}{d.feedbackDue && d.status === 'awaiting-feedback' ? ` · feedback ${fmtDate(d.feedbackDue)}` : ''}</span>
                       </td>
                       <td><span className={`pill pill-${d.status}`}>{REVIEW_WORD[d.status] ?? d.status}</span></td>
                       <td>{versionLabel(d)}{d.viewedVersion === d.version && d.status === 'awaiting-feedback' ? ' · opened' : ''}</td>
@@ -618,7 +656,7 @@ function Portal({ p, si, lib, viewAs, clientPath, preBooking, to }: { p: OfficeP
                 <div key={r.n} className={`a-round ${round > r.n ? 'done' : round === r.n ? 'now' : ''}`}>
                   <span className="a-round-label">Round {r.n} of 2 · {round > r.n ? 'Done' : round === r.n ? 'Now' : 'Later'}</span>
                   <strong>{r.title}</strong>
-                  <span className="muted small">{r.due ? `Feedback due ${fmtDay(r.due)}` : 'No due date set'}</span>
+                  <span className="muted small">{r.due ? `Feedback due ${fmtDate(r.due)}` : 'No due date set'}</span>
                 </div>
               ))}
             </div>
@@ -636,7 +674,7 @@ function Portal({ p, si, lib, viewAs, clientPath, preBooking, to }: { p: OfficeP
                 <li key={n.key} className={`fb-${n.action}`}>
                   <p className="fb-meta">
                     <strong>{n.who ?? 'Client'}</strong> {n.action === 'approve' ? 'approved' : 'asked for changes to'}{' '}
-                    <Link className="text-link" href={n.href}>{n.title} · {n.label}</Link> · {fmtDay(n.at.slice(0, 10))}
+                    <Link className="text-link" href={n.href}>{n.title} · {n.label}</Link> · {fmtDate(n.at)}
                   </p>
                   {n.note && <p className="fb-note">{n.note}</p>}
                 </li>
@@ -650,9 +688,9 @@ function Portal({ p, si, lib, viewAs, clientPath, preBooking, to }: { p: OfficeP
             <h2 id="h-files" className="a-h2">Videos, documents and files</h2>
             <span className="muted small">Exactly what the client sees in their portal</span>
           </div>
-          <p className="muted small a-empty">Pick what you’re adding. Each button opens that folder in the Finder with the upload box ready.</p>
+          <p className="muted small a-empty">Pick what you’re adding. Each button opens that folder in Clients with the upload box ready.</p>
           <div className="row-wrap">
-            <Link className="btn btn-primary btn-sm" href={`${lib}/documents`}>Add a document</Link>
+            <Link className="btn btn-secondary btn-sm" href={`${lib}/documents`}>Add a document</Link>
             <Link className="btn btn-secondary btn-sm" href={`${lib}/videos`}>Add a video</Link>
             <Link className="btn btn-secondary btn-sm" href={`${lib}/assets`}>Share reference files</Link>
             <Link className="btn btn-secondary btn-sm" href={`${lib}/finals`}>Finals</Link>
@@ -664,12 +702,12 @@ function Portal({ p, si, lib, viewAs, clientPath, preBooking, to }: { p: OfficeP
       <aside className="stack a-col a-aside" aria-label="The client’s page and links">
         <section className="p-card" aria-labelledby="h-client-page">
           <h2 id="h-client-page" className="a-h2">Client’s page</h2>
-          <p className="small" style={{ margin: 0 }}>{visible}</p>
+          <p className="small m0">{visible}</p>
           <div className="row-wrap">
             {viewAs && <a className="btn btn-primary btn-sm" href={viewAs} target="_blank" rel="noopener noreferrer">View as the client<span className="sr-only"> (opens their portal in a new tab)</span></a>}
             {p.slug && clientPath !== '/portal' && <CopyButton text={`${SITE_URL}${clientPath}`} label="Copy the portal link" />}
           </div>
-          {p.slug && clientPath !== '/portal' && <p className="muted small" style={{ margin: 0 }}>The link asks them to sign in with their email first.</p>}
+          {p.slug && clientPath !== '/portal' && <p className="muted small m0">The link asks them to sign in with their email first.</p>}
         </section>
 
         <section className="p-card" aria-labelledby="h-links">

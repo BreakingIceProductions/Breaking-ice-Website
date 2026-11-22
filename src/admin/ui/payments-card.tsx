@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { methodLabel } from '@/portal/pay-methods'
 import type { PortalPayment } from '@/portal/types'
+import { useConfirm } from './confirm'
+import { fmtDate } from '@/admin/dates'
 
 type Props = {
   projectId: string
@@ -19,7 +21,7 @@ type Props = {
 }
 
 const cad = (n: number) => `$${n.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-const day = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Edmonton' }) : '')
+const day = (iso?: string) => fmtDate(iso)
 const STATUS: Record<PortalPayment['status'], { tone: string; text: string }> = {
   due: { tone: 'awaiting-feedback', text: 'Waiting for payment' },
   processing: { tone: 'in-progress', text: 'Client says it’s sent' },
@@ -31,6 +33,7 @@ const STATUS: Record<PortalPayment['status'], { tone: string; text: string }> = 
 export function PaymentsCard({ projectId, on, payments, balance, deposit, stripeOn, testMode, gst }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
+  const confirm = useConfirm()
   const [msg, setMsg] = useState<{ text: string; err?: boolean }>()
   const hasDeposit = payments.some((p) => p.kind === 'deposit' && p.status !== 'canceled')
   const [kind, setKind] = useState<'deposit' | 'balance' | 'other'>(hasDeposit ? 'balance' : 'deposit')
@@ -60,7 +63,7 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
 
       {!on ? (
         <>
-          <p className="muted small" style={{ margin: 0 }}>This client is invoiced outside the portal (QuickBooks), so they see no pay buttons.</p>
+          <p className="muted small m0">This client is invoiced outside the portal (QuickBooks), so they see no pay buttons.</p>
           <div><button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => call({ action: 'portal-payments', on: true }, 'This client now pays in the portal.')}>Take payments in the portal</button></div>
         </>
       ) : (
@@ -69,7 +72,7 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
             <ul className="a-pay-list">
               {payments.map((p) => (
                 <li key={p._id}>
-                  <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                  <span className="stack gap-2px min0">
                     <strong>{p.label} · {cad(p.total)}</strong>
                     <span className="muted small">
                       {p.gst ? `${cad(p.amount)} + ${cad(p.gst)} GST · ` : ''}
@@ -83,9 +86,9 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
                   </span>
                   <span className={`pill pill-${STATUS[p.status].tone}`}>{STATUS[p.status].text}</span>
                   {(p.status === 'due' || p.status === 'processing') && (
-                    <span className="row-wrap" style={{ gap: 'var(--space-3)' }}>
-                      <button type="button" className="linklike small" disabled={busy} onClick={() => confirm(`Mark ${p.label.toLowerCase()} (${cad(p.total)}) as paid some other way?`) && call({ action: 'mark-paid', id: p._id }, 'Marked paid.')}>Mark paid</button>
-                      <button type="button" className="linklike small" disabled={busy} onClick={() => confirm(`Withdraw the ${p.label.toLowerCase()} request?`) && call({ action: 'cancel', id: p._id }, 'Request withdrawn.')}>Cancel</button>
+                    <span className="row-wrap gap-3">
+                      <button type="button" className="linklike small" disabled={busy} onClick={async () => (await confirm({ title: `Mark the ${p.label.toLowerCase()} as paid?`, body: `${cad(p.total)}${p.gst ? ` (including ${cad(p.gst)} GST)` : ''}, paid some other way than the portal. The client’s portal shows it as paid.`, confirmLabel: 'Mark paid' })) && call({ action: 'mark-paid', id: p._id }, 'Marked paid.')}>Mark paid</button>
+                      <button type="button" className="linklike small" disabled={busy} onClick={async () => (await confirm({ title: `Withdraw the ${p.label.toLowerCase()} request?`, body: `The client stops being asked for ${cad(p.total)} in their portal.`, confirmLabel: 'Withdraw request', cancelLabel: 'Keep it', danger: true })) && call({ action: 'cancel', id: p._id }, 'Request withdrawn.')}>Cancel</button>
                     </span>
                   )}
                   {p.receiptUrl && <a className="text-link small" href={p.receiptUrl} target="_blank" rel="noopener noreferrer">Receipt</a>}
@@ -93,7 +96,7 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
               ))}
             </ul>
           ) : (
-            <p className="muted small" style={{ margin: 0 }}>Nothing asked for yet. Signing the quote asks for the deposit automatically.</p>
+            <p className="muted small m0">Nothing asked for yet. Signing the quote asks for the deposit automatically.</p>
           )}
 
           <form
@@ -123,15 +126,15 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
             </div>
             <button type="submit" className="btn btn-primary btn-sm" disabled={busy || !(amount || suggested)}>{busy ? 'Saving…' : 'Ask in the portal'}</button>
           </form>
-          <p className="muted small" style={{ margin: 0 }}>
+          <p className="muted small m0">
             Each request gets a draft invoice in Zoho Books. The client sees your e-Transfer and EFT details first; paid ones show as paid once Zoho Books has the payment.
             {stripeOn ? ' Card is offered as a fallback, with the processing fee added.' : ' Card payment is off until Stripe is connected.'}{' '}
             {gst ? '5% GST is added.' : 'No GST is added.'} The client gets no email for a new request; tell them, or it shows on their portal home.
           </p>
-          <div><button type="button" className="linklike small" disabled={busy} onClick={() => confirm('Stop taking payments in the portal for this client? Unpaid requests stay hidden from them.') && call({ action: 'portal-payments', on: false }, 'Portal payments switched off for this client.')}>Switch off portal payments for this client</button></div>
+          <div><button type="button" className="linklike small" disabled={busy} onClick={async () => (await confirm({ title: 'Stop taking payments in the portal?', body: 'This client’s portal stops showing pay buttons. Unpaid requests stay hidden from them until you switch it back on.', confirmLabel: 'Switch off', danger: true })) && call({ action: 'portal-payments', on: false }, 'Portal payments switched off for this client.')}>Switch off portal payments for this client</button></div>
         </>
       )}
-      <p className={`small ${msg?.err ? 'err' : 'muted'}`} role="status" style={{ margin: 0 }}>{msg?.text}</p>
+      <p className={`small ${msg?.err ? 'err' : 'muted'} m0`} role="status">{msg?.text}</p>
     </section>
   )
 }

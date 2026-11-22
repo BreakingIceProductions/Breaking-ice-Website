@@ -1,7 +1,11 @@
 import Link from 'next/link'
+import { PendingLink } from '@/admin/ui/pending-link'
 import { notFound } from 'next/navigation'
 import '../../../../css/retainer-admin.css'
+import '../../../../css/admin-pages.css'
+import { fmtDate } from '@/admin/dates'
 import { requireAdmin } from '@/admin/auth'
+import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import { Meter } from '@/admin/ui/retainer-meter'
 import { RetainerItems } from '@/admin/ui/retainer-items'
 import { RetainerRecap } from '@/admin/ui/retainer-recap'
@@ -20,7 +24,7 @@ export async function generateMetadata({ params }: Props) {
 }
 
 const NET: Partial<Record<Network, string>> = { instagram: 'Instagram', facebook: 'Facebook', linkedin: 'LinkedIn', tiktok: 'TikTok', youtube: 'YouTube', twitter: 'X', threads: 'Threads', pinterest: 'Pinterest', google: 'Google Business', bluesky: 'Bluesky', mastodon: 'Mastodon' }
-const when = (iso: string) => new Date(iso).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Edmonton' })
+const when = (iso: string) => fmtDate(iso, 'time')
 const num = (n?: number) => (n === undefined ? undefined : n.toLocaleString('en-CA'))
 
 function Piece({ p }: { p: PublerPiece }) {
@@ -30,7 +34,7 @@ function Piece({ p }: { p: PublerPiece }) {
     <li>
       <div className="rt-piece">
         <p className="rt-piece-text">{p.text.length > 220 ? `${p.text.slice(0, 220)}…` : p.text || <span className="muted">(no text)</span>}</p>
-        <span className="small muted row-wrap" style={{ gap: 6 }}>
+        <span className="small muted row-wrap ap-gap-6px">
           <span className={`rt-tag rt-tag-${p.state}`}>{p.state === 'published' ? 'Published' : 'Scheduled'}</span>
           <time dateTime={p.at}>{when(p.at)}</time>
           <span>·</span>
@@ -47,7 +51,7 @@ function Piece({ p }: { p: PublerPiece }) {
   )
 }
 
-/** One retainer client: settings, a month at a time (items and Publer pieces), and the month-end recap. */
+/** One retainer client: a month at a time (items and social posts), the month-end recap, then the settings folded away. */
 export default async function RetainerClientPage({ params, searchParams }: Props) {
   const admin = await requireAdmin()
   const { clientId: raw } = await params
@@ -70,14 +74,12 @@ export default async function RetainerClientPage({ params, searchParams }: Props
 
   return (
     <div className="a-page" style={accentStyle}>
-      <nav className="small" aria-label="Breadcrumb">
-        <Link className="text-link-plain muted" href="/admin/retainers">Retainers</Link> <span aria-hidden="true" className="muted">/</span> <span aria-current="page">{c.organizationName}</span>
-      </nav>
+      <Breadcrumb trail={[{ label: 'Retainers', href: '/admin/retainers' }]} />
 
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)', minWidth: 0 }}>
-          <span className="eyebrow">Retainer{c.retainer.active ? '' : ' (off)'}</span>
+        <div className="stack ap-gap-3 ap-minw0">
           <h1 className="a-h1"><span className="rt-swatch" aria-hidden="true" />{c.organizationName}</h1>
+          {!c.retainer.active && <p className="ap-note">This retainer is switched off. Turn it back on under Retainer settings.</p>}
           <div className="row-wrap a-chips">
             {!readOnly && (
               <a className="a-chip a-chip-link" href={`/api/admin/view-as?client=${encodeURIComponent(c._id)}&next=${encodeURIComponent(portalPath)}`} target="_blank" rel="noopener noreferrer">
@@ -85,57 +87,51 @@ export default async function RetainerClientPage({ params, searchParams }: Props
               </a>
             )}
             <Link className="a-chip a-chip-link" href={`/admin/clients/${encodeURIComponent(c._id)}`}>Client page</Link>
-            <a className="a-chip a-chip-link" href={`/studio/portal/structure/client;${encodeURIComponent(c._id)}`} target="_blank" rel="noopener noreferrer">Edit in Studio<span className="sr-only"> (opens in a new tab)</span> ↗</a>
+            <a className="a-chip a-chip-link" href={`/studio/portal/structure/client;${encodeURIComponent(c._id)}`} target="_blank" rel="noopener noreferrer">Edit client details<span className="sr-only"> in the editor (opens in a new tab)</span> ↗</a>
             {c.driveFolderId && (
               <a className="a-chip a-chip-link" href={`https://drive.google.com/drive/folders/${c.driveFolderId}`} target="_blank" rel="noopener noreferrer">Drive folder<span className="sr-only"> (opens in a new tab)</span> ↗</a>
             )}
           </div>
         </div>
         {c.retainer.active && (
-          <span className="stack" style={{ gap: 4 }}>
+          <span className="stack ap-gap-1">
             <span className="small muted">{monthLabel(month)}</span>
             <Meter view={view} accent={c.retainer.accent} />
           </span>
         )}
       </header>
 
-      <section className="p-card" aria-labelledby="h-settings">
-        <h2 id="h-settings" className="a-h2">Settings</h2>
-        <RetainerSettingsForm clientId={c._id} settings={c.retainer} readOnly={readOnly} />
-      </section>
-
       <nav aria-label="Month">
         <ul className="rt-months">
           {shownMonths.map((m) => (
             <li key={m}>
-              <Link href={`/admin/retainers/${encodeURIComponent(c._id)}?month=${m}`} aria-current={m === month ? 'page' : undefined} scroll={false}>{monthLabel(m)}</Link>
+              <PendingLink href={`/admin/retainers/${encodeURIComponent(c._id)}?month=${m}`} aria-current={m === month ? 'page' : undefined} scroll={false}>{monthLabel(m)}</PendingLink>
             </li>
           ))}
         </ul>
       </nav>
 
-      <div className="a-grid-2" style={{ alignItems: 'start' }}>
+      <div className="a-grid-2 ap-grid-top">
         <section className="p-card" aria-labelledby="h-items">
           <div className="a-card-head">
-            <h2 id="h-items" className="a-h2">{monthLabel(month)}: items</h2>
-            <span className="muted small">{view.items.filter((i) => i.status === 'delivered').length} delivered</span>
+            <h2 id="h-items" className="a-h2">Items · {view.items.filter((i) => i.status === 'delivered').length} delivered</h2>
           </div>
           <RetainerItems key={month} clientId={c._id} month={month} items={view.items} readOnly={readOnly} />
         </section>
 
         <section className="p-card" aria-labelledby="h-pieces">
           <div className="a-card-head">
-            <h2 id="h-pieces" className="a-h2">From Publer</h2>
-            <span className="muted small">{view.pieces.length} {view.pieces.length === 1 ? 'piece' : 'pieces'}</span>
+            <h2 id="h-pieces" className="a-h2">Social posts</h2>
+            <span className="muted small">{view.pieces.length} {view.pieces.length === 1 ? 'post' : 'posts'}</span>
           </div>
-          {view.publerNote && <p className="small muted" role="note" style={{ margin: 0 }}>{view.publerNote}</p>}
+          {view.publerNote && <p className="small muted m0" role="note">{view.publerNote}</p>}
           {view.pieces.length ? <ul className="a-rows">{view.pieces.map((p) => <Piece key={p.id} p={p} />)}</ul> : <p className="muted a-empty">No social posts scheduled or published this month.</p>}
-          <p className="small muted" style={{ margin: 0 }}>A post sent to several networks at once counts as one piece. Read-only: change posts in Publer.</p>
+          <p className="small muted m0">A post sent to several networks at once counts once. Read only: change posts where you schedule them.</p>
         </section>
       </div>
 
       {recapBefore ? (
-        <p className="small muted" role="note" style={{ margin: 0 }}>No recap for {monthLabel(recapMonth)}: it’s outside this client’s retainer months. The first one is drafted on the 1st after a retainer month ends.</p>
+        <p className="small muted m0" role="note">No recap for {monthLabel(recapMonth)}: it’s outside this client’s retainer months. The first one is drafted on the 1st after a retainer month ends.</p>
       ) : (
       <section className="p-card" aria-labelledby="h-recap">
         <div className="a-card-head">
@@ -145,6 +141,11 @@ export default async function RetainerClientPage({ params, searchParams }: Props
         <RetainerRecap key={recapMonth} clientId={c._id} month={recapMonth} monthName={monthLabel(recapMonth).split(' ')[0]} recap={recapDoc?.recap} to={to} readOnly={readOnly} />
       </section>
       )}
+
+      <details className="p-card ap-details">
+        <summary id="h-settings" className="a-h2">Retainer settings</summary>
+        <RetainerSettingsForm clientId={c._id} settings={c.retainer} readOnly={readOnly} />
+      </details>
     </div>
   )
 }

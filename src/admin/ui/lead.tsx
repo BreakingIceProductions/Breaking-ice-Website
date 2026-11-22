@@ -1,10 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { activityText } from '../activity-text'
 import { useEffect, useId, useRef, useState } from 'react'
 import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
 import { CONTACT_KINDS, LEAD_BUDGETS, LEAD_SOURCES, LOST_REASONS, webHref } from '../lead'
 import type { LeadDetails } from '../types'
+import { useNotify } from './confirm'
 import { StageDialog, type Stage } from './stage-dialog'
 import { TagChips } from './tag-chips'
 
@@ -55,23 +57,46 @@ export function LeadSteps({ projectId, projectTitle, stage, quoteSent }: { proje
 /* ── Details that save when you leave the field ──────────────────────── */
 
 type Patch = Partial<Record<keyof LeadDetails | 'projectType', string>>
-type Saver = (patch: Patch) => Promise<boolean>
+/** Resolves true when it saved, 'sample' when sample data took it without keeping it, false when it failed. */
+type Saver = (patch: Patch) => Promise<boolean | 'sample'>
+
+/** A small "Saved" tick beside a field for a moment after it saves (the status line says it too, for screen readers). */
+function useSavedTick() {
+  const [on, setOn] = useState(false)
+  // The word stays put while it fades out.
+  const [kind, setKind] = useState<'saved' | 'sample'>('saved')
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const show = (r: boolean | 'sample') => {
+    if (!r) return
+    setKind(r === true ? 'saved' : 'sample')
+    setOn(true)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setOn(false), 1800)
+  }
+  const el = <span className={`ld-saved${on ? ' on' : ''}`} aria-hidden="true">{kind === 'sample' ? 'Not kept' : 'Saved'}</span>
+  return [show, el] as const
+}
 
 function TextField({ label, name, value, save, type = 'text', after, placeholder }: { label: string; name: keyof Patch; value?: string; save: Saver; type?: string; after?: (v: string) => React.ReactNode; placeholder?: string }) {
   const id = useId()
   const saved = useRef(value ?? '')
   const [v, setV] = useState(value ?? '')
+  const [tick, tickEl] = useSavedTick()
   const blur = () => {
     const next = v.trim()
     if (next === saved.current) return
     // Remembered only once it saved, so leaving the field again after a failure retries.
-    void save({ [name]: next }).then((ok) => { if (ok) saved.current = next })
+    void save({ [name]: next }).then((ok) => { if (ok) saved.current = next; tick(ok) })
   }
   return (
     <div className="ld-row">
       <label htmlFor={id}>{label}</label>
       <span className="ld-control">
-        <input id={id} className="ld-in" type={type} value={v} placeholder={placeholder ?? 'Add'} onChange={(e) => setV(e.target.value)} onBlur={blur} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} />
+        <span className="ld-field">
+          <input id={id} className="ld-in" type={type} value={v} placeholder={placeholder ?? 'Add'} onChange={(e) => setV(e.target.value)} onBlur={blur} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} />
+          {tickEl}
+        </span>
         {after?.(v)}
       </span>
     </div>
@@ -81,14 +106,18 @@ function TextField({ label, name, value, save, type = 'text', after, placeholder
 function SelectField({ label, name, value, save, options, none }: { label: string; name: keyof Patch; value?: string; save: Saver; options: { title: string; value: string }[]; none: string }) {
   const id = useId()
   const [v, setV] = useState(value ?? '')
+  const [tick, tickEl] = useSavedTick()
   return (
     <div className="ld-row">
       <label htmlFor={id}>{label}</label>
       <span className="ld-control">
-        <select id={id} className="ld-in" value={v} onChange={(e) => { setV(e.target.value); void save({ [name]: e.target.value }) }}>
-          <option value="">{none}</option>
-          {options.map((o) => <option key={o.value} value={o.value}>{o.title}</option>)}
-        </select>
+        <span className="ld-field ld-field-select">
+          <select id={id} className="ld-in" value={v} onChange={(e) => { setV(e.target.value); void save({ [name]: e.target.value }).then(tick) }}>
+            <option value="">{none}</option>
+            {options.map((o) => <option key={o.value} value={o.value}>{o.title}</option>)}
+          </select>
+          {tickEl}
+        </span>
       </span>
     </div>
   )
@@ -124,17 +153,17 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
     setStatus(r.ok ? (r.data.sample ? SAMPLE : 'Saved.') : failed(r.status))
     // The heading and "Next up" read these details too.
     if (r.ok && !r.data.sample) router.refresh()
-    return r.ok
+    return r.ok ? (r.data.sample ? 'sample' : true) : false
   }
 
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
+    <div className="stack gap-4">
       <div className="ld-cols">
         <section className="p-card" aria-labelledby="ld-h-contact">
           <div className="a-card-head">
             <h2 id="ld-h-contact" className="a-h2">Contact</h2>
             {contact.onClient && contact.studioHref && (
-              <a className="text-link small" href={contact.studioHref} target="_blank" rel="noopener noreferrer">Edit in the Studio<span className="sr-only"> (opens in a new tab)</span></a>
+              <a className="text-link small" href={contact.studioHref} target="_blank" rel="noopener noreferrer">Edit client details<span aria-hidden="true"> ↗</span><span className="sr-only"> in the editor (opens in a new tab)</span></a>
             )}
           </div>
           <div className="ld-rows">
@@ -162,7 +191,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
             <SelectField label="Found us" name="source" value={lead.source} save={save} options={LEAD_SOURCES} none="Not asked yet" />
           </div>
           {!contact.onClient && (
-            <p className="muted small" style={{ margin: 0 }}>Not on {contact.company}’s contact list, so they can’t sign in to the portal or get its emails. Add them in the Studio when they should.</p>
+            <p className="muted small m0">Not on {contact.company}’s contact list, so they can’t sign in to the portal or get its emails. Add them to the contact list in the editor when they should.</p>
           )}
         </section>
 
@@ -196,7 +225,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
       </section>
 
       <p className="muted small ld-hint">
-        <span>Click any detail to change it. It saves when you leave the field.</span>
+        <span>Change any detail; it saves when you leave the field.</span>
         <span role="status">{status}</span>
       </p>
     </div>
@@ -260,7 +289,7 @@ export function LeadActivity({ projectId, today, entries }: { projectId: string;
           {shown.map((l) => (
             <li key={l.key}>
               <span className={l.source ? 'stack' : undefined}>
-                <span className={l.note ? 'a-note' : undefined}>{l.text}</span>
+                <span className={l.note ? 'a-note' : undefined}>{l.note ? l.text : activityText(l.text)}</span>
                 {l.source && <span className="muted small">{l.source}</span>}
               </span>
               <span className="muted small ld-when">{l.date}{l.time && <><br />{l.time}</>}</span>
@@ -286,6 +315,7 @@ export function LeadArchive({ projectId, name }: { projectId: string; name: stri
   const [reason, setReason] = useState<(typeof LOST_REASONS)[number] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const notify = useNotify()
 
   useEffect(() => {
     const d = dialog.current
@@ -316,7 +346,7 @@ export function LeadArchive({ projectId, name }: { projectId: string; name: stri
     setBusy(false)
     if (!r.ok) return setError(failed(r.status))
     dialog.current?.close()
-    if (r.data.sample) return alert(SAMPLE)
+    if (r.data.sample) return notify(SAMPLE)
     router.push('/admin/pipeline')
     router.refresh()
   }
@@ -334,12 +364,12 @@ export function LeadArchive({ projectId, name }: { projectId: string; name: stri
         </ul>
       </details>
 
-      <dialog ref={dialog} className="a-dialog" aria-labelledby="ld-archive-h" onClose={() => { setReason(null); setError('') }}>
+      <dialog ref={dialog} className="a-dialog" aria-labelledby="ld-archive-h" onClose={(e) => { if (e.target !== e.currentTarget) return; setReason(null); setError('') }}>
         {reason && (
           <div className="a-dialog-body">
             <span className="eyebrow">Archive · {reason.title}</span>
             <h2 id="ld-archive-h" className="a-h2 a-h2-lg">Archive {name}?</h2>
-            <p className="small" style={{ margin: 0 }}>
+            <p className="small m0">
               They leave the board and stop counting in your pipeline and reminders. Nothing is sent to them, and you can bring them back from the Archive bar on the Pipeline.
               {reason.declined && ' This one counts as declined in your win rate.'}
             </p>
@@ -361,12 +391,20 @@ export function LeadForm() {
   const router = useRouter()
   const [f, setF] = useState({ name: '', email: '', phone: '', company: '', title: '', projectType: '', budget: '', source: '', notes: '' })
   const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ text: string; bad?: boolean } | null>(null)
+  const [msg, setMsg] = useState<{ text: string; bad?: boolean; field?: 'email' } | null>(null)
+  const msgRef = useRef<HTMLParagraphElement>(null)
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF((s) => ({ ...s, [k]: e.target.value }))
   const defaultTitle = `${f.company.trim() || f.name.trim() || 'Company'} project`
+  const badEmail = { text: 'That email doesn’t look right. Check it and try again.', bad: true, field: 'email' as const }
+
+  // An error is announced and focused, so it's never missed below the fold.
+  useEffect(() => { if (msg?.bad) msgRef.current?.focus() }, [msg])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
+    // Email can be left empty, but one that's there has to look like an address (the same check the server makes).
+    const email = f.email.trim()
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setMsg(badEmail)
     setBusy(true)
     setMsg(null)
     const r = await post('/api/admin/lead/new', f)
@@ -379,7 +417,10 @@ export function LeadForm() {
     <form onSubmit={submit} className="p-card ld-form">
       <div className="ld-form-grid">
         <div className="field"><label htmlFor="nl-name">Name</label><input id="nl-name" className="input" required maxLength={120} autoComplete="off" value={f.name} onChange={set('name')} /></div>
-        <div className="field"><label htmlFor="nl-email">Email</label><input id="nl-email" className="input" type="email" required maxLength={200} autoComplete="off" value={f.email} onChange={set('email')} /></div>
+        <div className="field"><label htmlFor="nl-email">Email</label><input id="nl-email" className="input" type="email" required maxLength={200} autoComplete="off" value={f.email} onChange={set('email')}
+          // A malformed address gets the message below instead of the browser's bubble.
+          onInvalid={(e) => { if (e.currentTarget.validity.typeMismatch) { e.preventDefault(); setMsg(badEmail) } }}
+          aria-invalid={msg?.bad && msg.field === 'email' ? true : undefined} aria-describedby={msg?.bad && msg.field === 'email' ? 'nl-msg' : undefined} /></div>
         <div className="field"><label htmlFor="nl-phone">Phone <span className="muted">(optional)</span></label><input id="nl-phone" className="input" type="tel" maxLength={40} autoComplete="off" value={f.phone} onChange={set('phone')} /></div>
         <div className="field"><label htmlFor="nl-company">Company</label><input id="nl-company" className="input" required maxLength={160} autoComplete="off" value={f.company} onChange={set('company')} /></div>
         <div className="field ld-form-wide"><label htmlFor="nl-title">Project title</label><input id="nl-title" className="input" maxLength={160} placeholder={defaultTitle} value={f.title} onChange={set('title')} aria-describedby="nl-title-hint" /><span id="nl-title-hint" className="hint">Leave empty to call it “{defaultTitle}”.</span></div>
@@ -394,8 +435,8 @@ export function LeadForm() {
         </div>
         <div className="field ld-form-wide"><label htmlFor="nl-notes">Notes</label><textarea id="nl-notes" className="input ld-notes" rows={4} maxLength={6000} value={f.notes} onChange={set('notes')} /></div>
       </div>
-      <p className="muted small" style={{ margin: 0 }}>Adding a lead sends them nothing. A company you already have is matched by its name or by this email; otherwise a new client is made with this one contact.</p>
-      {msg && <p className={msg.bad ? 'err' : 'small'} role={msg.bad ? 'alert' : 'status'} style={{ margin: 0 }}>{msg.text}</p>}
+      <p className="muted small m0">Adding a lead sends them nothing. A company you already have is matched by its name or by this email; otherwise a new client is made with this one contact.</p>
+      {msg && <p id="nl-msg" ref={msgRef} tabIndex={-1} className={`m0 ${msg.bad ? 'err' : 'small'}`} role={msg.bad ? 'alert' : 'status'}>{msg.text}</p>}
       <div className="btn-row">
         <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Adding…' : 'Add lead'}</button>
         <a className="btn btn-secondary" href="/admin/pipeline">Cancel</a>

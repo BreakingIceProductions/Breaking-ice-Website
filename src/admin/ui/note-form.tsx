@@ -24,7 +24,7 @@ export function NoteForm({ projectId }: { projectId: string }) {
   }
 
   return (
-    <form onSubmit={save} className="stack" style={{ gap: 'var(--space-2)' }}>
+    <form onSubmit={save} className="stack gap-2">
       <label htmlFor="note" className="small muted">Private note (only you see this)</label>
       <textarea id="note" className="input a-note-input" rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a note…" />
       <div className="row-wrap">

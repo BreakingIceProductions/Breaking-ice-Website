@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { leadFromEnquiry } from '@/admin/capture'
 
 /**
  * Contact form endpoint.
@@ -78,12 +79,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'invalid' }, { status: 400 })
   }
 
+  // Back office: a New lead, or a log line on the lead/client this address belongs to (src/admin/capture.ts). Never throws.
+  const lead = leadFromEnquiry(e).catch((err) => (console.error('[contact] lead capture failed', err), null))
   const jobs: Promise<string>[] = []
   if (process.env.RESEND_API_KEY) jobs.push(sendEmail(e))
-  if (process.env.SLACK_WEBHOOK_URL) jobs.push(sendSlack(e))
+  if (process.env.SLACK_WEBHOOK_URL) jobs.push(lead.then((l) => sendSlack(e, l?.url)))
   if (process.env.SHEET_WEBHOOK_URL) jobs.push(sendSheet(e))
 
   if (!jobs.length) return NextResponse.json({ ok: false, error: 'not-configured' }, { status: 503 })
+  jobs.push(lead.then((l) => (l ? 'lead' : Promise.reject(new Error('lead not saved')))))
 
   const results = await Promise.allSettled(jobs)
   const failed = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[]
@@ -134,7 +138,7 @@ async function sendEmail(e: Enquiry) {
   return check(res, 'email')
 }
 
-async function sendSlack(e: Enquiry) {
+async function sendSlack(e: Enquiry, leadUrl?: string) {
   const res = await fetch(process.env.SLACK_WEBHOOK_URL!, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -144,7 +148,7 @@ async function sendSlack(e: Enquiry) {
         { type: 'header', text: { type: 'plain_text', text: `New enquiry: ${e.name}`.slice(0, 150) } },
         { type: 'section', fields: rows(e).map(([k, v]) => ({ type: 'mrkdwn', text: `*${k}*\n${slackEsc(String(v))}`.slice(0, 2000) })).slice(0, 10) },
         { type: 'section', text: { type: 'mrkdwn', text: `>${slackEsc(e.story.slice(0, 2900)).replace(/\n/g, '\n>')}` } },
-        { type: 'context', elements: [{ type: 'mrkdwn', text: `<mailto:${e.email}|Reply to ${slackEsc(e.name)}>` }] },
+        { type: 'context', elements: [{ type: 'mrkdwn', text: `<mailto:${e.email}|Reply to ${slackEsc(e.name)}>${leadUrl ? ` · <${leadUrl}|Open in the back office>` : ''}` }] },
       ],
     }),
   })

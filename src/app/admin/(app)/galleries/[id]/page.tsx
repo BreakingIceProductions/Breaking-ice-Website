@@ -1,5 +1,8 @@
+import '../../../../css/admin-pages.css'
 import { notFound } from 'next/navigation'
 import { requireAdmin } from '@/admin/auth'
+import { adminSampleMode } from '@/admin/config'
+import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import { listClients, listProjects } from '@/admin/data'
 import { folderUrl } from '@/galleries/drive'
 import { viewUrl } from '@/galleries/files'
@@ -16,7 +19,11 @@ import { Uploader } from '@/galleries/ui/admin-uploader'
 import { SITE_URL } from '@/lib/site'
 import '@/galleries/galleries-admin.css'
 
-export const metadata = { title: 'Gallery' }
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin()
+  const { id } = await params
+  return { title: (await getGallery(id))?.title ?? 'Gallery' }
+}
 
 /** One gallery from the back office: upload, organise, share, and see what the client picked. */
 export default async function GalleryPage({ params }: { params: Promise<{ id: string }> }) {
@@ -44,8 +51,9 @@ export default async function GalleryPage({ params }: { params: Promise<{ id: st
   const canLink = g.status === 'live' && g.share.on
 
   return (
-    <div className="a-page ga-page">
-      {galleriesSampleMode() && <p className="a-sample" role="status" style={{ margin: 0 }}>Sample mode: nothing is saved. Galleries and uploads live in memory until the dev server restarts.</p>}
+    <div className="a-page ga-page ga-page-one">
+      <Breadcrumb trail={[{ label: 'Galleries', href: '/admin/galleries' }]} />
+      {galleriesSampleMode() && !adminSampleMode() && <p className="a-sample m0" role="status">Galleries aren’t connected on this site yet, so nothing here is saved.</p>}
 
       <GalleryHeader
         id={g._id}

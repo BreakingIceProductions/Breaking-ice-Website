@@ -5,6 +5,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { PIPELINE_STAGES } from '@/sanity/portal/office-constants'
 import { fillTemplate, forStage, LIMITS, parseRecipients, PLACEHOLDERS, type EmailTemplate, type SentEmail, type TemplateVars } from '../email-templates-shared'
 import { blockTokens, inlineTokens, insertToken, tidyTokens, type BlockOption } from '../email-blocks-shared'
+import { useConfirm } from './confirm'
+import { fmtDate } from '@/admin/dates'
 
 type Reply = { sample?: boolean; message?: string; warning?: string; html?: string; template?: EmailTemplate }
 const post = (url: string, body: unknown) =>
@@ -13,7 +15,7 @@ const post = (url: string, body: unknown) =>
     .catch(() => ({ ok: false, status: 0, data: { message: 'No connection. Try again.' } as Reply }))
 
 const failed = (status: number, message?: string) =>
-  message || (status === 401 ? 'This sign-in can’t change things, or it has expired.' : 'That didn’t work. Reload the page and try again.')
+  message || (status === 401 ? 'You’ve been signed out, or this sign-in can’t make changes. Sign in again to save.' : 'That didn’t work. Check your connection and try again. What you wrote is still here.')
 const SAMPLE_SENT = 'Sample data: nothing was sent.'
 const SAMPLE_SAVED = 'Sample data: nothing was saved.'
 const NOT_APPROVED = 'Wording not approved yet — check it before sending.'
@@ -57,7 +59,7 @@ function PreviewFrame({ html, bad, message, title }: { html: string; bad?: boole
   return (
     <div className="stack em-preview" aria-label="Live preview">
       <span className="a-round-label">Preview</span>
-      {message && <p className="small err" role="alert" style={{ margin: 0 }}>{message}</p>}
+      {message && <p className="small err m0" role="alert">{message}</p>}
       {html && !message ? <iframe className="lb-email-frame em-frame" title={title} srcDoc={html} sandbox="" /> : !message && <p className="lb-empty-body">{bad ? 'The preview couldn’t be built. You can still send.' : 'Building the preview…'}</p>}
     </div>
   )
@@ -82,6 +84,8 @@ export type ComposerProps = {
   startOpen?: boolean
   label?: string
   small?: boolean
+  /** The open button as the view's primary (solid) instead of secondary. */
+  primary?: boolean
 }
 
 const DRAFTED = 'Drafted from call'
@@ -93,9 +97,10 @@ const BLOCK_KIND: Record<BlockOption['kind'], string> = { portal: 'Sign-in', ver
  * check the branded preview, then press Send. Goes out from Josh's address through the site's sender;
  * replies go to Josh. Nothing is ever sent without the Send press on the confirm step.
  */
-export function EmailComposer({ projectId, to: initialTo = '', stage, templates, vars, blocks = [], granola = false, wispr = false, startOpen = false, label = 'Email', small = true }: ComposerProps) {
+export function EmailComposer({ projectId, to: initialTo = '', stage, templates, vars, blocks = [], granola = false, wispr = false, startOpen = false, label = 'Email', small = true, primary = false }: ComposerProps) {
   const router = useRouter()
   const uid = useId()
+  const confirm = useConfirm()
   const panel = useRef<HTMLDialogElement>(null)
   const opener = useRef<HTMLButtonElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -139,7 +144,11 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
   useEffect(() => {
     const d = panel.current
     if (!open || !d) return
-    if (!d.open) d.show()
+    // Phones and small tablets: a full-screen modal sheet (the page behind is inert). Wider: docked beside the page.
+    if (!d.open) {
+      if (window.matchMedia('(max-width: 820px)').matches) d.showModal()
+      else d.show()
+    }
     document.documentElement.classList.add('em-docked')
     heading.current?.focus()
     return () => document.documentElement.classList.remove('em-docked')
@@ -159,8 +168,8 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
     setSaid('')
   }
 
-  function choose(key: string) {
-    if (dirty && !confirm('Replace what you’ve written with this template?')) return
+  async function choose(key: string) {
+    if (dirty && !(await confirm({ title: 'Use this template?', body: 'It replaces the subject and email you’ve written.', confirmLabel: 'Replace', cancelLabel: 'Keep mine' }))) return
     const t = templates.find((x) => x._key === key)
     setPick(key)
     setSubject(t ? fillTemplate(t.subject, vars) : '')
@@ -169,8 +178,8 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
     setDrafted(null)
   }
 
-  function fillDraft(d: { subject: string; body: string; warning?: string }) {
-    if ((subject.trim() || body.trim()) && !confirm('Replace the subject and email with Claude’s draft?')) return false
+  async function fillDraft(d: { subject: string; body: string; warning?: string }) {
+    if ((subject.trim() || body.trim()) && !(await confirm({ title: 'Use Claude’s draft?', body: 'It replaces the subject and email you’ve written.', confirmLabel: 'Replace', cancelLabel: 'Keep mine' }))) return false
     setSubject(d.subject)
     setBody(d.body)
     setPick('')
@@ -208,8 +217,8 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
     if (!r.data.sample) router.refresh()
   }
 
-  function requestClose() {
-    if (step === 'edit' && dirty && (subject.trim() || body.trim()) && !confirm('Close without sending? What you’ve written will be lost.')) return
+  async function requestClose() {
+    if (step === 'edit' && dirty && (subject.trim() || body.trim()) && !(await confirm({ title: 'Close without sending?', body: 'What you’ve written will be lost.', confirmLabel: 'Close and lose it', cancelLabel: 'Keep writing', danger: true }))) return
     panel.current?.close()
   }
 
@@ -217,9 +226,10 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) {
+      // A confirm box on top handles its own Escape.
+      if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('dialog.a-confirm[open]')) {
         e.preventDefault()
-        requestClose()
+        void requestClose()
       }
     }
     document.addEventListener('keydown', onKey)
@@ -246,16 +256,16 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
 
   return (
     <>
-      <button ref={opener} type="button" className={`btn btn-secondary${small ? ' btn-sm' : ''}`} aria-expanded={open} onClick={() => (open ? heading.current?.focus() : setOpen(true))}>{label}</button>
-      <dialog ref={panel} className="em-panel" aria-labelledby={`${uid}-h`} onClose={onClosed}>
+      <button ref={opener} type="button" className={`btn ${primary ? 'btn-primary' : 'btn-secondary'}${small ? ' btn-sm' : ''}`} aria-expanded={open} onClick={() => (open ? heading.current?.focus() : setOpen(true))}>{label}</button>
+      <dialog ref={panel} className="em-panel" aria-labelledby={`${uid}-h`} onClose={(e) => { if (e.target === e.currentTarget) onClosed() }} onCancel={(e) => { if (e.target === e.currentTarget) e.preventDefault() }}>
         {open && (
           <>
             <div className="em-panel-head">
-              <div className="stack" style={{ gap: 4, minWidth: 0 }}>
+              <div className="stack gap-4px min0">
                 <span className="eyebrow">{step === 'done' ? 'Done' : step === 'confirm' ? 'Check and send' : 'Email · nothing is sent until you press Send'}</span>
                 <h2 id={`${uid}-h`} ref={heading} tabIndex={-1} className="a-h2 a-h2-lg">{step === 'done' ? done : step === 'confirm' ? `Send to ${toLine}?` : 'Write an email'}</h2>
               </div>
-              <button type="button" className="em-close" aria-label="Close the email" onClick={requestClose}>
+              <button type="button" className="em-close" aria-label="Close the email" onClick={() => void requestClose()}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
               </button>
             </div>
@@ -331,11 +341,11 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
                           }}
                           aria-describedby={`${uid}-b-h`}
                         />
-                        <span id={`${uid}-b-h`} className="hint">A blank line starts a new paragraph. Web addresses become links. Portal blocks show here as [[block:…]] lines.</span>
+                        <span id={`${uid}-b-h`} className="hint">A blank line starts a new paragraph. Web addresses become links. Portal blocks show as tags in the text.</span>
                       </div>
-                      {unfilled.length > 0 && <p className="small a-urgent" style={{ margin: 0 }}>Still has {unfilled.map((k) => `{${k}}`).join(', ')} in it, with nothing to fill it with. Replace it before sending.</p>}
-                      {inline.length > 0 && <p className="small a-urgent" style={{ margin: 0 }}>Put {inline.join(', ')} on a line of its own.</p>}
-                      {strange.length > 0 && <p className="small a-urgent" style={{ margin: 0 }}>{strange.join(', ')} isn’t one of this project’s portal blocks. Remove it, or the email won’t send.</p>}
+                      {unfilled.length > 0 && <p className="small a-urgent m0">Still has {unfilled.map((k) => `{${k}}`).join(', ')} in it, with nothing to fill it with. Replace it before sending.</p>}
+                      {inline.length > 0 && <p className="small a-urgent m0">Put {inline.join(', ')} on a line of its own.</p>}
+                      {strange.length > 0 && <p className="small a-urgent m0">{strange.join(', ')} isn’t one of this project’s portal blocks. Remove it, or the email won’t send.</p>}
 
                       <PortalBlocks blocks={blocks} inBody={inBody} onAdd={addBlock} onRemove={removeBlock} />
                     </div>
@@ -350,21 +360,21 @@ export function EmailComposer({ projectId, to: initialTo = '', stage, templates,
                     <div><dt>Subject</dt><dd>{subject}</dd></div>
                     {templateName && <div><dt>Template</dt><dd>{templateName}{chosen && !drafted && !chosen.approved ? ' · not approved' : ''}</dd></div>}
                   </dl>
-                  {chosen && !drafted && !chosen.approved && <p className="small a-urgent" style={{ margin: 0 }}>{NOT_APPROVED}</p>}
-                  {drafted && <p className="small a-urgent" style={{ margin: 0 }}>Drafted by Claude — make sure you’ve read every line.</p>}
-                  {unfilled.length > 0 && <p className="small a-urgent" style={{ margin: 0 }}>It still has {unfilled.map((k) => `{${k}}`).join(', ')} in it.</p>}
-                  <p className="small" style={{ margin: 0 }}>It goes out now from your address, with the Breaking Ice header and footer. Replies come to you.</p>
+                  {chosen && !drafted && !chosen.approved && <p className="small a-urgent m0">{NOT_APPROVED}</p>}
+                  {drafted && <p className="small a-urgent m0">Drafted by Claude — make sure you’ve read every line.</p>}
+                  {unfilled.length > 0 && <p className="small a-urgent m0">It still has {unfilled.map((k) => `{${k}}`).join(', ')} in it.</p>}
+                  <p className="small m0">It goes out now from your address, with the Breaking Ice header and footer. Replies come to you.</p>
                   <PreviewFrame html={preview.html} bad={preview.bad} message={preview.message} title="Preview of the email" />
                 </>
               )}
 
-              {error && <p className="err" role="alert" style={{ margin: 0 }}>{error}</p>}
+              {error && <p className="err m0" role="alert">{error}</p>}
             </div>
 
             <div className="btn-row em-panel-foot">
               {step === 'edit' && (
                 <>
-                  <button type="button" className="btn btn-secondary" onClick={requestClose}>Cancel</button>
+                  <button type="button" className="btn btn-secondary" onClick={() => void requestClose()}>Cancel</button>
                   <button type="button" className="btn btn-primary" disabled={!ready} onClick={() => { setError(''); setStep('confirm') }}>Check and send</button>
                 </>
               )}
@@ -400,9 +410,9 @@ function PortalBlocks({ blocks, inBody, onAdd, onRemove }: { blocks: BlockOption
   const uid = useId()
   return (
     <section className="stack em-blocks" aria-labelledby={`${uid}-h`}>
-      <div className="stack" style={{ gap: 2 }}>
-        <h3 id={`${uid}-h`} className="a-round-label" style={{ margin: 0 }}>Add from the portal</h3>
-        <p className="muted small" style={{ margin: 0 }}>Drag one into the email, or press Add. It fills in from the project when it’s sent.</p>
+      <div className="stack gap-2px">
+        <h3 id={`${uid}-h`} className="a-round-label m0">Add from the portal</h3>
+        <p className="muted small m0">Drag one into the email, or press Add. It fills in from the project when it’s sent.</p>
       </div>
       {blocks.length ? (
         <ul className="em-block-list">
@@ -419,7 +429,7 @@ function PortalBlocks({ blocks, inBody, onAdd, onRemove }: { blocks: BlockOption
                 }}
               >
                 <span className="em-block-kind" aria-hidden="true">{BLOCK_KIND[b.kind]}</span>
-                <span className="stack" style={{ gap: 0, minWidth: 0, flex: 1 }}>
+                <span className="stack gap-0 min0 flex-1">
                   <span className="em-block-label">{b.label}</span>
                   {b.detail && <span className="muted small em-block-detail">{b.detail}</span>}
                 </span>
@@ -445,14 +455,14 @@ const call = (url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     .then(async (r) => ({ ok: r.ok, status: r.status, data: (await r.json().catch(() => ({}))) as DraftReply }))
     .catch(() => ({ ok: false, status: 0, data: { message: 'No connection. Try again.' } as DraftReply }))
-const callDay = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Edmonton', weekday: 'short', month: 'short', day: 'numeric' })
+const callDay = (iso: string) => fmtDate(iso, 'weekday')
 
 /**
  * "Draft from a call": Claude writes the first email after a call, from a Granola note, pasted notes
  * (an email, anything), or "Find it for me" (Claude looks for the call in Wispr Flow, or picks the
  * best-matching Granola note). It only fills the subject and email; nothing is sent.
  */
-function DraftFromCall({ projectId, granola, wispr, onDraft }: { projectId: string; granola: boolean; wispr: boolean; onDraft: (d: { subject: string; body: string; warning?: string }) => boolean }) {
+function DraftFromCall({ projectId, granola, wispr, onDraft }: { projectId: string; granola: boolean; wispr: boolean; onDraft: (d: { subject: string; body: string; warning?: string }) => boolean | Promise<boolean> }) {
   const uid = useId()
   const [shown, setShown] = useState(false)
   const canFind = wispr || granola
@@ -491,7 +501,7 @@ function DraftFromCall({ projectId, granola, wispr, onDraft }: { projectId: stri
     setBusy(false)
     if (!r.ok || !r.data.subject || !r.data.body) return setError(failed(r.status, r.data.message))
     if (r.data.meeting) setUsed(r.data.meeting)
-    if (onDraft({ subject: r.data.subject, body: r.data.body, warning: r.data.warning })) setNote(r.data.sample ? 'Sample data: this is a made-up draft. Nothing was sent to Claude.' : 'Done. It’s in the subject and email below.')
+    if (await onDraft({ subject: r.data.subject, body: r.data.body, warning: r.data.warning })) setNote(r.data.sample ? 'Sample data: this is a made-up draft. Nothing was sent to Claude.' : 'Done. It’s in the subject and email below.')
   }
 
   const canDraft = !busy && (from === 'find' ? canFind : from === 'granola' ? Boolean(noteId) : text.trim().length > 20)
@@ -507,27 +517,27 @@ function DraftFromCall({ projectId, granola, wispr, onDraft }: { projectId: stri
         </div>
 
         {from === 'find' ? (
-          <p className="muted small" style={{ margin: 0 }}>
+          <p className="muted small m0">
             {wispr
               ? 'Claude looks in Wispr Flow for your latest call with them (by email, name, organization and date), reads it, and writes the email.'
               : 'Claude picks your latest Granola call with them and writes the email. Connect Wispr Flow in Settings to search there instead.'}
           </p>
         ) : from === 'granola' ? (
           !granola ? (
-            <p className="small a-urgent" style={{ margin: 0 }}>Connect Granola: add GRANOLA_API_KEY in Vercel. You can paste the notes instead.</p>
+            <p className="small a-urgent m0">Granola isn’t connected yet (see Settings). You can paste the notes instead.</p>
           ) : noteErr ? (
-            <p className="small err" style={{ margin: 0 }}>{noteErr} You can paste the notes instead.</p>
+            <p className="small err m0">{noteErr} You can paste the notes instead.</p>
           ) : !notes ? (
-            <p className="muted small" style={{ margin: 0 }}>Looking for recent calls…</p>
+            <p className="muted small m0">Looking for recent calls…</p>
           ) : !notes.length ? (
-            <p className="muted small" style={{ margin: 0 }}>No Granola notes from the last 60 days. Paste the notes instead.</p>
+            <p className="muted small m0">No Granola notes from the last 60 days. Paste the notes instead.</p>
           ) : (
             <fieldset className="em-calls">
               <legend className="small">Pick the call (last 60 days)</legend>
               {notes.map((n) => (
                 <label key={n.id} className="em-call">
                   <input type="radio" name={`${uid}-call`} value={n.id} checked={noteId === n.id} onChange={() => setNoteId(n.id)} />
-                  <span className="stack" style={{ gap: 0, minWidth: 0 }}>
+                  <span className="stack gap-0 min0">
                     <span>{n.title}</span>
                     <span className="muted small">{callDay(n.at)}{n.match === 'attendee' ? ' · they were on the invite' : n.match === 'title' ? ' · named in the title' : ''}</span>
                   </span>
@@ -550,9 +560,9 @@ function DraftFromCall({ projectId, granola, wispr, onDraft }: { projectId: stri
           <button type="button" className="btn btn-secondary btn-sm" disabled={!canDraft} onClick={draft}>{busy ? (from === 'find' ? 'Finding the call and drafting… (a minute or two)' : 'Drafting… (up to a minute)') : 'Draft it'}</button>
           <span className="muted small">Claude writes it; you read it and send it.</span>
         </div>
-        {error && <p className="err small" role="alert" style={{ margin: 0 }}>{error}</p>}
-        {used && <p className="small" style={{ margin: 0 }}>From the call: <strong>{used.title}</strong>{used.at && !Number.isNaN(Date.parse(used.at)) ? `, ${callDay(used.at)}` : ''}. Not the right one? {granola ? 'Pick it from the Granola list or paste the notes.' : 'Paste the notes instead.'}</p>}
-        {note && <p className="small" role="status" style={{ margin: 0 }}>{note}</p>}
+        {error && <p className="err small m0" role="alert">{error}</p>}
+        {used && <p className="small m0">From the call: <strong>{used.title}</strong>{used.at && !Number.isNaN(Date.parse(used.at)) ? `, ${callDay(used.at)}` : ''}. Not the right one? {granola ? 'Pick it from the Granola list or paste the notes.' : 'Paste the notes instead.'}</p>}
+        {note && <p className="small m0" role="status">{note}</p>}
       </div>
     </details>
   )
@@ -560,7 +570,7 @@ function DraftFromCall({ projectId, granola, wispr, onDraft }: { projectId: stri
 
 /* ── What's been sent ────────────────────────────────────────────────── */
 
-const sentDay = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/Edmonton', weekday: 'short', month: 'short', day: 'numeric' })
+const sentDay = (iso: string) => fmtDate(iso, 'weekday')
 
 /** Emails sent from the composer on this project, newest first. Open one to read what went out. */
 export function SentEmails({ emails }: { emails: SentEmail[] }) {
@@ -575,7 +585,7 @@ export function SentEmails({ emails }: { emails: SentEmail[] }) {
             <li key={e._key}>
               <details>
                 <summary>
-                  <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                  <span className="stack gap-2px min0">
                     <span>{e.subject}</span>
                     <span className="muted small">To {e.to.join(', ')}</span>
                   </span>
@@ -587,7 +597,7 @@ export function SentEmails({ emails }: { emails: SentEmail[] }) {
           ))}
         </ul>
       ) : (
-        <p className="muted small a-empty">None yet. Emails you send with the Email button show here.</p>
+        <p className="muted small a-empty">None yet. Emails you send from this page show here.</p>
       )}
       {emails.length > 5 && (
         <button type="button" className="linklike small ld-more" aria-expanded={all} onClick={() => setAll((a) => !a)}>{all ? 'Show fewer' : `Show ${emails.length - 5} earlier`}</button>
@@ -611,6 +621,7 @@ export function TemplateChip({ t }: { t: EmailTemplate }) {
  */
 export function EmailTemplates({ templates: initial, saved, previews, sampleVars, readOnly }: { templates: EmailTemplate[]; saved: boolean; previews: Record<string, string>; sampleVars: TemplateVars; readOnly?: boolean; /** Sample mode: saves are answered but nothing is kept. */ sample?: boolean }) {
   const router = useRouter()
+  const confirm = useConfirm()
   const [templates, setTemplates] = useState(initial)
   const [current, setCurrent] = useState<string | null>(initial[0]?._key ?? null)
   const [editing, setEditing] = useState<EmailTemplate | 'new' | null>(null)
@@ -625,7 +636,7 @@ export function EmailTemplates({ templates: initial, saved, previews, sampleVars
 
   async function act(action: 'approve' | 'unapprove' | 'delete') {
     if (!t) return
-    if (action === 'delete' && !confirm(`Delete “${t.name}”? It can’t be brought back.`)) return
+    if (action === 'delete' && !(await confirm({ title: `Delete “${t.name}”?`, body: 'It can’t be brought back.', confirmLabel: 'Delete template', danger: true }))) return
     setBusy(true)
     const r = await post('/api/admin/email-templates', { action, key: t._key })
     setBusy(false)
@@ -639,8 +650,8 @@ export function EmailTemplates({ templates: initial, saved, previews, sampleVars
   }
 
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
-      <p className="muted small" style={{ margin: 0 }}>
+    <div className="stack gap-4">
+      <p className="muted small m0">
         Starting points for the Email button on lead and project pages. Fill-ins like {'{firstName}'} are replaced when you pick one. Any template can be used, but one that isn’t approved shows a note to check the wording first.
         {!saved && ' These are the starters: nothing is saved until you change one.'}
       </p>
@@ -691,7 +702,7 @@ export function EmailTemplates({ templates: initial, saved, previews, sampleVars
               <summary className="small">The wording, with its fill-ins</summary>
               <pre>{t.body}</pre>
             </details>
-            {msg && <p className={`small ${msg.err ? 'err' : ''}`} role="status" style={{ margin: 0 }}>{msg.text}</p>}
+            {msg && <p className={`small ${msg.err ? 'err' : ''} m0`} role="status">{msg.text}</p>}
             {!readOnly && (
               <div className="row-wrap">
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setMsg(undefined); setEditing(t) }}>Edit</button>
@@ -700,11 +711,11 @@ export function EmailTemplates({ templates: initial, saved, previews, sampleVars
                 <button type="button" className="linklike small" disabled={busy} onClick={() => act('delete')}>Delete</button>
               </div>
             )}
-            <p className="muted small" style={{ margin: 0 }}>The preview uses made-up details. Sending happens only from a lead or project page, when you press Send.</p>
+            <p className="muted small m0">The preview uses made-up details. Sending happens only from a lead or project page, when you press Send.</p>
           </section>
         ) : (
           <section className="p-card lb-panel">
-            {msg && <p className={`small ${msg.err ? 'err' : ''}`} role="status" style={{ margin: 0 }}>{msg.text}</p>}
+            {msg && <p className={`small ${msg.err ? 'err' : ''} m0`} role="status">{msg.text}</p>}
             <p className="muted small a-empty">{readOnly ? 'No templates.' : 'Pick a template, or add a new one.'}</p>
           </section>
         )}
@@ -762,8 +773,8 @@ function TemplateForm({ template, sampleVars, onCancel, onSaved }: { template?: 
         </div>
         <PreviewFrame html={preview.html} bad={preview.bad} title="Live preview of the template" />
       </div>
-      <p className="muted small" style={{ margin: 0 }}>Changing the subject or wording sets it back to Needs your check.</p>
-      {state.err && <p className="err small" role="alert" style={{ margin: 0 }}>{state.err}</p>}
+      <p className="muted small m0">Changing the subject or wording sets it back to Needs your check.</p>
+      {state.err && <p className="err small m0" role="alert">{state.err}</p>}
       <div className="row-wrap">
         <button type="submit" className="btn btn-primary btn-sm" disabled={state.busy}>{state.busy ? 'Saving…' : 'Save'}</button>
         <button type="button" className="btn btn-secondary btn-sm" onClick={onCancel}>Cancel</button>

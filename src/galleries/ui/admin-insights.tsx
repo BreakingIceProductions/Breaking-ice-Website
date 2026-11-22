@@ -1,6 +1,7 @@
 import type { FavouriteList, GallerySet, Visit } from '../types'
 import { CopyButton } from './admin-copy'
 import type { AdminPhoto } from './admin-grid'
+import { fmtDate } from '@/admin/dates'
 
 /**
  * What clients and guests did with the gallery: their favourites (with file names ready to paste
@@ -9,7 +10,7 @@ import type { AdminPhoto } from './admin-grid'
 
 const STRIP = 12
 const KIND: Record<string, string> = { client: 'Client', guest: 'Guest', admin: 'You' }
-const when = (iso: string) => new Date(iso).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Edmonton' })
+const when = (iso: string) => fmtDate(iso, 'time')
 const stem = (name: string) => name.replace(/\.[^.]+$/, '')
 
 export function Favourites({ favs, photos }: { favs: FavouriteList[]; photos: AdminPhoto[] }) {
@@ -45,7 +46,7 @@ export function Favourites({ favs, photos }: { favs: FavouriteList[]; photos: Ad
                     </div>
                   </>
                 )}
-                {list.length < f.keys.length && <p className="muted small" style={{ margin: 0 }}>{f.keys.length - list.length} of their picks have since been removed from the gallery.</p>}
+                {list.length < f.keys.length && <p className="muted small m0">{f.keys.length - list.length} of their picks have since been removed from the gallery.</p>}
               </li>
             )
           })}
@@ -79,7 +80,7 @@ export function Activity({ visits, photos, sets }: { visits: Visit[]; photos: Ad
                 </div>
                 <span className="small">{v.views} {v.views === 1 ? 'visit' : 'visits'} · {v.downloads.length} {v.downloads.length === 1 ? 'download' : 'downloads'}</span>
               </div>
-              <p className="muted small" style={{ margin: 0 }}>First {when(v.firstAt)} · last {when(v.lastAt)}</p>
+              <p className="muted small m0">First {when(v.firstAt)} · last {when(v.lastAt)}</p>
               {v.downloads.length > 0 && (
                 <ul className="ga-dl-list small">
                   {v.downloads.slice(0, 5).map((d, j) => (

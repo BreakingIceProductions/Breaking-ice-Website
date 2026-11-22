@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { DocText } from '@/portal/sign-doc'
 import { statusLabel, type Audience, type DocField, type SignStatus } from '@/portal/sign-docs'
+import { fmtDate } from '@/admin/dates'
 
 /* ── Shapes the pages hand over (no tokens in lists except the link itself) ── */
 
@@ -28,7 +29,7 @@ export type RequestRow = {
   pdfHref?: string
 }
 
-const day = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', timeZone: 'America/Edmonton' }) : '')
+const day = (iso?: string) => fmtDate(iso)
 
 const post = (body: unknown) =>
   fetch('/api/admin/sign-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -70,7 +71,7 @@ export function RequestTable({ rows, showProject = true, empty }: { rows: Reques
         return (
           <li key={r.id} className={`lb-req${r.status === 'void' ? ' is-void' : ''}`}>
             <div className="lb-req-main">
-              <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+              <span className="stack gap-2px min0">
                 <strong>{r.title}</strong>
                 <span className="small">
                   {r.signer} <span className="muted">· {r.email}</span>
@@ -117,7 +118,7 @@ export function RequestTable({ rows, showProject = true, empty }: { rows: Reques
                 </>
               )}
             </div>
-            {msg?.id === r.id && <p className={`small ${msg.err ? 'err' : 'muted'}`} role="status" style={{ margin: 0, overflowWrap: 'anywhere' }}>{msg.text}</p>}
+            {msg?.id === r.id && <p className={`small ${msg.err ? 'err' : 'muted'} m0 wrap-any`} role="status">{msg.text}</p>}
           </li>
         )
       })}
@@ -180,7 +181,7 @@ export function SendDocument({ templates, projects, projectId: fixedProject, tem
       text = j.emailed?.ok ? (j.emailed.simulated ? 'Created. Sample mode: the email was simulated, nothing was sent.' : 'Created and emailed.') : `Created, but ${j.emailed?.message ?? 'the email didn’t go.'}`
     } else {
       text = (await copy(j.link)) ? 'Created, and the link is copied.' : 'Created. Copy the link below.'
-      if (j.sample) text += ' Sample mode: kept in memory until the dev server restarts.'
+      if (j.sample) text += ' Sample data: kept only until the app restarts.'
     }
     setState({ done: { link: j.link, text } })
     router.refresh()
@@ -189,7 +190,7 @@ export function SendDocument({ templates, projects, projectId: fixedProject, tem
   if (state.done)
     return (
       <div className="stack lb-sent" role="status">
-        <p style={{ margin: 0 }}><strong>{state.done.text}</strong></p>
+        <p className="m0"><strong>{state.done.text}</strong></p>
         <p className="small lb-link"><a className="text-link" href={state.done.link} target="_blank" rel="noopener noreferrer">{state.done.link}<span className="sr-only"> (opens in a new tab)</span></a></p>
         <div className="row-wrap">
           <button type="button" className="btn btn-secondary btn-sm" onClick={async () => { if (await copy(state.done!.link)) setState({ done: { ...state.done!, text: 'Link copied.' } }) }}>Copy link</button>
@@ -246,7 +247,7 @@ export function SendDocument({ templates, projects, projectId: fixedProject, tem
           {!p ? (
             <p className="muted small a-empty">Choose the project first.</p>
           ) : !p.contacts.length ? (
-            <p className="muted small a-empty">This client has no contacts with an email. Add one in the Studio.</p>
+            <p className="muted small a-empty">This client has no contacts with an email. Add one to the client in the editor.</p>
           ) : (
             p.contacts.map((c) => (
               <label key={c.key} className="lb-radio">
@@ -282,29 +283,29 @@ export function SendDocument({ templates, projects, projectId: fixedProject, tem
             <h3 className="lb-preview-title">{t.title}</h3>
             <DocText body={t.body} fields={t.fields} values={values} live choicesInline />
           </div>
-          <p className="muted small" style={{ margin: 0 }}>Underlined gaps are what the signer fills in. Their name goes in when they sign.</p>
+          <p className="muted small m0">Underlined gaps are what the signer fills in. Their name goes in when they sign.</p>
         </details>
       )}
 
-      {state.err && <p className="err small" role="alert" style={{ margin: 0 }}>{state.err}</p>}
-      {missing.length > 0 && t && <p className="muted small" style={{ margin: 0 }}>Still needed: {missing.join(', ')}.</p>}
+      {state.err && <p className="err small m0" role="alert">{state.err}</p>}
+      {missing.length > 0 && t && <p className="muted small m0">Still needed: {missing.join(', ')}.</p>}
       <div className="row-wrap">
         <button type="submit" className="btn btn-primary btn-sm" disabled={missing.length > 0 || Boolean(state.busy)}>{state.busy === 'link' ? 'Creating…' : 'Create and copy link'}</button>
         <button type="button" className="btn btn-secondary btn-sm" disabled={missing.length > 0 || Boolean(state.busy)} onClick={() => create(true)}>{state.busy === 'email' ? 'Sending…' : 'Create and email'}</button>
       </div>
-      <p className="muted small" style={{ margin: 0 }}>Nothing is emailed unless you press Create and email. The text is frozen as it is now, so later edits in the Library don’t change it.</p>
+      <p className="muted small m0">Nothing is emailed unless you press Create and email. The text is frozen as it is now, so later edits in the Library don’t change it.</p>
     </form>
   )
 }
 
-/** A button that opens the send form in place. */
-export function SendDocumentToggle(props: SendProps & { label?: string }) {
+/** A button that opens the send form in place. Secondary unless `primary` (when it's the one main action on the view). */
+export function SendDocumentToggle({ primary, ...props }: SendProps & { label?: string; primary?: boolean }) {
   const [open, setOpen] = useState(false)
   const uid = useId()
   return (
-    <div className="stack" style={{ gap: 'var(--space-3)' }}>
+    <div className="stack gap-3">
       <div>
-        <button type="button" className={`btn btn-sm ${open ? 'btn-secondary' : 'btn-primary'}`} aria-expanded={open} aria-controls={uid} onClick={() => setOpen(!open)}>
+        <button type="button" className={`btn btn-sm ${open || !primary ? 'btn-secondary' : 'btn-primary'}`} aria-expanded={open} aria-controls={uid} onClick={() => setOpen(!open)}>
           {open ? 'Close' : (props.label ?? 'Send a document')}
         </button>
       </div>

@@ -1,6 +1,8 @@
-import Link from 'next/link'
+import '../../../../css/admin-pages.css'
 import { requireAdmin } from '@/admin/auth'
+import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import { LeadForm } from '@/admin/ui/lead'
+import { FormDraft } from '../../_draft'
 
 export const metadata = { title: 'New lead' }
 
@@ -8,15 +10,14 @@ export default async function NewLead() {
   await requireAdmin()
   return (
     <div className="a-page ld-page-narrow">
-      <Link className="text-link-plain muted small" href="/admin/pipeline">← Pipeline</Link>
+      <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }]} />
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">Pipeline</span>
+        <div className="stack ap-gap-3">
           <h1 className="a-h1">New lead</h1>
-          <p className="muted" style={{ margin: 0 }}>Someone got in touch. Add what you know now; the rest can wait for the call.</p>
+          <p className="muted m0">Someone got in touch. Add what you know now; the rest can wait for the call.</p>
         </div>
       </header>
-      <LeadForm />
+      <FormDraft storageKey="bi-draft-new-lead"><LeadForm /></FormDraft>
     </div>
   )
 }

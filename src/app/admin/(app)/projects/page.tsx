@@ -1,59 +1,136 @@
-import { requireAdmin } from '@/admin/auth'
 import Link from 'next/link'
+import { PendingLink } from '@/admin/ui/pending-link'
 import { redirect } from 'next/navigation'
+import '../../../css/admin-pages.css'
+import { requireAdmin } from '@/admin/auth'
 import { listProjects } from '@/admin/data'
-import { fmtDay } from '@/admin/dates'
+import { fmtDate } from '@/admin/dates'
 import { cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { stageIndex } from '@/admin/stages'
-import { Bucket } from '@/admin/ui/bucket'
 import { StageControl } from '@/admin/ui/stage-control'
 import { PIPELINE_STAGES, REGIONS } from '@/sanity/portal/office-constants'
 
-export const metadata = { title: 'Projects' }
+export const metadata = { title: 'All projects' }
 
 type Project = Awaited<ReturnType<typeof listProjects>>[number]
+type Props = { searchParams: Promise<{ view?: string; stage?: string; show?: string; sort?: string }> }
 
-/** A section's projects grouped under each client, A to Z. */
-function clientsOf(list: Project[]) {
-  const groups = new Map<string, { key: string; name: string; clientId?: string; items: Project[] }>()
-  for (const p of list) {
-    const key = p.client._id || p.client.organizationName || 'none'
-    const g = groups.get(key) ?? { key, name: p.client.organizationName || 'No client', clientId: p.client._id || undefined, items: [] }
-    g.items.push(p)
-    groups.set(key, g)
-  }
-  return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name))
+const SORTS = { stage: 'Stage', project: 'Project', client: 'Client', quote: 'Quote' } as const
+type Sort = keyof typeof SORTS
+
+/** The next dated thing on a project: a milestone not reached yet, or a schedule item. */
+function nextDate(p: Project) {
+  return MILESTONE_LIST.filter((m) => p.milestones[m.key] && stageIndex(p.pipelineStage) < stageIndex(m.doneFrom))
+    .map((m) => ({ label: m.label, date: p.milestones[m.key]! }))
+    .concat(p.schedule.map((x) => ({ label: x.title, date: x.start })))
+    .sort((a, b) => a.date.localeCompare(b.date))[0]
 }
 
-function ClientGroups({ id, list }: { id: string; list: Project[] }) {
+/** Every project in one flat table: filter by stage, switch to the archive, sort by a column. The board is on Pipeline. */
+export default async function Projects({ searchParams }: Props) {
+  await requireAdmin()
+  const sp = await searchParams
+  // The board lives on the Pipeline page; only the list and archive live here.
+  if (sp.view !== 'list') redirect('/admin/pipeline')
+  const projects = await listProjects()
+  const archived = sp.show === 'archived'
+  const stage = !archived && PIPELINE_STAGES.some((s) => s.value === sp.stage) ? sp.stage : undefined
+  const sort: Sort = sp.sort && sp.sort in SORTS ? (sp.sort as Sort) : 'stage'
+
+  const live = projects.filter((p) => !p.archived)
+  const pool = archived ? projects.filter((p) => p.archived) : live
+  const byClient = (a: Project, b: Project) => (a.client.organizationName || '').localeCompare(b.client.organizationName || '')
+  const shown = pool
+    .filter((p) => !stage || p.pipelineStage === stage)
+    .sort((a, b) =>
+      sort === 'project'
+        ? a.title.localeCompare(b.title)
+        : sort === 'client'
+          ? byClient(a, b) || a.title.localeCompare(b.title)
+          : sort === 'quote'
+            ? (b.quoteAmount ?? -1) - (a.quoteAmount ?? -1)
+            : stageIndex(a.pipelineStage) - stageIndex(b.pipelineStage) || byClient(a, b),
+    )
+
+  const href = (q: { stage?: string; show?: string; sort?: string }) => {
+    const u = new URLSearchParams({ view: 'list' })
+    if (q.show) u.set('show', q.show)
+    if (q.stage) u.set('stage', q.stage)
+    if (q.sort && q.sort !== 'stage') u.set('sort', q.sort)
+    return `/admin/projects?${u}`
+  }
+  const keep = { stage, show: archived ? 'archived' : undefined }
+  const th = (key: Sort, className?: string) => (
+    <th scope="col" className={className} aria-sort={sort === key ? (key === 'quote' ? 'descending' : 'ascending') : undefined}>
+      <PendingLink className="ap-sort" href={href({ ...keep, sort: key })} scroll={false} data-on={sort === key ? '' : undefined}>
+        {SORTS[key]}
+        <span className="ap-arrow" aria-hidden="true">{key === 'quote' ? '↓' : '↑'}</span>
+        {sort !== key && <span className="sr-only">, sort by this column</span>}
+      </PendingLink>
+    </th>
+  )
+
   return (
-    <>
-      {clientsOf(list).map(({ key, name, clientId, items }) => (
-        <Bucket key={key} id={`${id}:${key}`} title={name} count={items.length} closed nested>
-          {clientId && <Link className="text-link small a-client-link" href={`/admin/clients/${clientId}`}>Client page</Link>}
+    <div className="a-page">
+      <header className="a-head">
+        <div className="stack ap-gap-2">
+          <h1 className="a-h1">All projects</h1>
+          <p className="muted m0">Every lead and project in one list, with the archive.</p>
+        </div>
+        <div className="btn-row">
+          <div className="a-switch" role="group" aria-label="View">
+            <Link href="/admin/pipeline">Board</Link>
+            <Link href="/admin/projects?view=list" aria-current="page">List</Link>
+          </div>
+          <Link className="btn btn-primary" href="/admin/projects/new">New project</Link>
+        </div>
+      </header>
+
+      <nav className="ap-filters" aria-label="Filter projects">
+        <PendingLink className="ap-filter" href={href({ sort })} aria-current={!archived && !stage ? 'true' : undefined} scroll={false}>
+          All <span className="ap-count">{live.length}</span>
+        </PendingLink>
+        {PIPELINE_STAGES.map((s) => {
+          const n = live.filter((p) => p.pipelineStage === s.value).length
+          if (!n) return null
+          return (
+            <PendingLink key={s.value} className="ap-filter" href={href({ stage: s.value, sort })} aria-current={stage === s.value ? 'true' : undefined} scroll={false}>
+              {s.title} <span className="ap-count">{n}</span>
+            </PendingLink>
+          )
+        })}
+        <PendingLink className="ap-filter" href={href({ show: 'archived', sort })} aria-current={archived ? 'true' : undefined} scroll={false}>
+          Archived <span className="ap-count">{projects.length - live.length}</span>
+        </PendingLink>
+      </nav>
+
+      {shown.length ? (
+        <div className="p-card">
           <div className="a-table-scroll">
-            <table className="a-table">
+            <table className="a-table ap-table">
+              <caption className="sr-only">{archived ? 'Archived projects' : stage ? `Projects in ${PIPELINE_STAGES.find((s) => s.value === stage)?.title}` : 'All live projects'}, sorted by {SORTS[sort].toLowerCase()}</caption>
               <thead>
                 <tr>
-                  <th scope="col">Project</th>
-                  <th scope="col">Region</th>
+                  {th('project')}
+                  {th('client')}
                   <th scope="col">Next date</th>
-                  <th scope="col" className="num">Quote</th>
-                  <th scope="col" className="a-stage-col">Stage</th>
+                  {th('quote', 'num')}
+                  {th('stage', 'a-stage-col')}
                 </tr>
               </thead>
               <tbody>
-                {items.map((p) => {
-                  const next = MILESTONE_LIST.filter((m) => p.milestones[m.key] && stageIndex(p.pipelineStage) < stageIndex(m.doneFrom))
-                    .map((m) => ({ label: m.label, date: p.milestones[m.key]! }))
-                    .concat(p.schedule.map((x) => ({ label: x.title, date: x.start })))
-                    .sort((a, b) => a.date.localeCompare(b.date))[0]
+                {shown.map((p) => {
+                  const next = nextDate(p)
+                  const region = REGIONS.find((r) => r.value === p.region)?.title
                   return (
                     <tr key={p._id}>
-                      <td><Link className="a-strong-link" href={`/admin/projects/${p._id}`}>{p.title}</Link></td>
-                      <td>{REGIONS.find((r) => r.value === p.region)?.title ?? '—'}</td>
-                      <td>{p.declinedAt ? `Declined · ${fmtDay(p.declinedAt.slice(0, 10))}` : next ? `${next.label} · ${fmtDay(next.date)}` : '—'}</td>
+                      <td>
+                        <Link className="a-strong-link" href={`/admin/projects/${p._id}`}>{p.title}</Link>
+                        {region && <span className="ap-sub">{region}</span>}
+                      </td>
+                      <td>{p.client._id ? <Link className="text-link-plain" href={`/admin/clients/${p.client._id}`}>{p.client.organizationName}</Link> : p.client.organizationName || '—'}</td>
+                      <td>{p.declinedAt ? `Declined · ${fmtDate(p.declinedAt)}` : next ? `${next.label} · ${fmtDate(next.date)}` : '—'}</td>
                       <td className="num">{p.quoteAmount ? cad(p.quoteAmount) : '—'}</td>
                       <td className="a-stage-col">
                         <StageControl compact archived={p.archived} declined={Boolean(p.declinedAt)} projectId={p._id} projectTitle={p.title} current={p.pipelineStage} stages={PIPELINE_STAGES.map((s) => ({ title: s.title, value: s.value }))} />
@@ -64,58 +141,20 @@ function ClientGroups({ id, list }: { id: string; list: Project[] }) {
               </tbody>
             </table>
           </div>
-        </Bucket>
-      ))}
-    </>
-  )
-}
-
-export default async function Projects({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  await requireAdmin()
-  // The board moved to the Pipeline page; only the list and archive live here now.
-  if ((await searchParams).view !== 'list') redirect('/admin/pipeline')
-  const projects = await listProjects()
-  return (
-    <div className="a-page">
-      <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">New lead to paid</span>
-          <h1 className="a-h1">Projects</h1>
         </div>
-        <div className="btn-row">
-          <div className="a-switch" role="group" aria-label="View">
-            <Link href="/admin/pipeline">Board</Link>
-            <Link href="/admin/projects?view=list" aria-current="page">List and archive</Link>
-          </div>
-          <a className="btn btn-primary" href="/studio/portal/intent/create/template=clientProject;type=clientProject" target="_blank" rel="noopener noreferrer">
-            New project<span className="sr-only"> (opens the Studio)</span>
-          </a>
-        </div>
-      </header>
-
-      {[
-        ...PIPELINE_STAGES.map((s) => ({ id: s.value as string, title: s.title as string, list: projects.filter((p) => !p.archived && p.pipelineStage === s.value) })),
-        { id: 'archived', title: 'Archived', list: projects.filter((p) => p.archived) },
-      ].map(({ id, title, list }) => {
-        if (!list.length) return null
-        return (
-          <Bucket key={id} id={id} title={title} count={list.length} closed={id === 'delivered' || id === 'paid' || id === 'archived'}>
-            {id === 'archived' ? (
-              ([['completed', 'Completed', list.filter((p) => !p.declinedAt)], ['declined', 'Declined', list.filter((p) => p.declinedAt)]] as const).map(([key, label, sub]) =>
-                sub.length ? (
-                  <section key={key} className="a-archive-group" aria-label={`${label} projects`}>
-                    <h3 className="eyebrow a-archive-head">{label} <span className="muted">{sub.length}</span></h3>
-                    <ClientGroups id={`archived-${key}`} list={[...sub]} />
-                  </section>
-                ) : null,
-              )
+      ) : (
+        <div className="p-card">
+          <p className="a-empty m0">
+            {!projects.length ? (
+              <>No projects yet. <Link className="text-link" href="/admin/leads/new">Add a lead</Link> to start one.</>
+            ) : archived ? (
+              'Nothing archived yet.'
             ) : (
-              <ClientGroups id={id} list={list} />
+              <>Nothing in this stage. <Link className="text-link" href={href({ sort })}>Show all projects</Link>.</>
             )}
-          </Bucket>
-        )
-      })}
-      {!projects.length && <p className="muted">No projects yet. Add one in the Studio and it shows up here.</p>}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import '../../../css/admin-pages.css'
 import Link from 'next/link'
 import { requireAdmin } from '@/admin/auth'
 import { boardCard, pipelineTiles } from '@/admin/board-data'
@@ -30,13 +31,17 @@ export default async function Pipeline() {
   return (
     <div className="a-page a-page-wide">
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
-          <span className="eyebrow">New lead to paid</span>
+        <div className="stack ap-gap-3">
           <h1 className="a-h1">Pipeline</h1>
-          <p className="muted" style={{ margin: 0 }}>Every lead and every project, left to right. Drag a card to move it.</p>
+          <p className="muted m0">
+            Every lead and every project, from new lead to paid.<span className="a-hint-desktop"> Drag a card to move it.</span>
+          </p>
         </div>
         <div className="btn-row">
-          <Link className="text-link" href="/admin/projects?view=list">List and archive</Link>
+          <div className="a-switch" role="group" aria-label="View">
+            <Link href="/admin/pipeline" aria-current="page">Board</Link>
+            <Link href="/admin/projects?view=list">List</Link>
+          </div>
           <Link className="btn btn-secondary" href="/admin/proposals/new">Quote builder</Link>
           <Link className="btn btn-primary" href="/admin/leads/new">New lead</Link>
         </div>
@@ -55,7 +60,7 @@ export default async function Pipeline() {
         }
       />
 
-      <section aria-labelledby="going-h" className="stack" style={{ gap: 'var(--space-4)' }}>
+      <section aria-labelledby="going-h" className="stack ap-gap-4">
         <h2 id="going-h" className="a-h2">How it’s going</h2>
         <div className="a-kpis">
           <div className="a-kpi">
@@ -75,9 +80,9 @@ export default async function Pipeline() {
             <span className="a-kpi-num">{cad(t.production.sum)}</span>
             <span className="a-kpi-note">{plural(t.production.count, 'project')}, Onboarding to Final delivery</span>
           </div>
-          <div className={`a-kpi${t.waitingOnDeposit ? ' is-hot' : ''}`}>
+          <div className="a-kpi">
             <span className="a-kpi-label">Waiting on deposit</span>
-            <span className={`a-kpi-num${t.waitingOnDeposit ? ' a-accent' : ''}`}>{t.waitingOnDeposit}</span>
+            <span className="a-kpi-num">{t.waitingOnDeposit}</span>
             <span className="a-kpi-note">In Onboarding with no paid deposit invoice</span>
           </div>
           <div className={`a-kpi${cold ? ' is-hot' : ''}`}>

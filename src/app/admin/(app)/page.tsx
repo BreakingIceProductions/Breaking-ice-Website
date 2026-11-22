@@ -1,17 +1,20 @@
 import Link from 'next/link'
+import '../../css/admin-pages.css'
 import { requireAdmin } from '@/admin/auth'
+import { listSuggestions } from '@/admin/capture'
 import { nextTwoWeeks, pipelineTiles, quoteStatus } from '@/admin/board-data'
-import { TZ, addDays, daysBetween, daysSince, fmtDay, relDays, today, weekday, ymd } from '@/admin/dates'
+import { TZ, addDays, fmtDay, relDays, today, weekday, ymd, fmtDate } from '@/admin/dates'
 import { cad, needsAction, waitingOnClients, type Row } from '@/admin/insights'
-import { fmtTime, isContactLog, isSalesStage, pageHref } from '@/admin/lead'
+import { fmtTime, isSalesStage, pageHref } from '@/admin/lead'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { moneyView, reportView, signing } from '@/admin/money'
+import { depositsDue, followUps } from '@/admin/needs-you'
 import { loadMoney } from '@/admin/money-data'
-import { portalsOverview } from '@/admin/portals'
 import { signCounts } from '@/admin/sign-rows'
-import { STAGE_TASKS, stageIndex, stageTitle } from '@/admin/stages'
+import { stageIndex } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
-import { DismissableRow } from '@/admin/ui/dismissable-row'
+import { DismissableRow, DismissCount } from '@/admin/ui/dismissable-row'
+import { LeadSuggestions } from '@/admin/ui/lead-suggestions'
 import { Bar, DayStrip, MiniCols, SplitBar } from '@/admin/ui/graphics'
 import { TodayTasks } from '@/admin/ui/today-tasks'
 import { portalEnv } from '@/portal/config'
@@ -35,7 +38,7 @@ const hello = () => {
 
 /* ── What the page works out. Pure: everything comes from the one money load. ── */
 
-type Dated = { date: string; time?: string; what: string; kind: 'shoot' | 'travel' | 'meeting' | 'other' | 'milestone' | 'call'; project: OfficeProject }
+type Dated = { date: string; time?: string; what: string; kind: 'shoot' | 'travel' | 'meeting' | 'other' | 'milestone' | 'call'; project: OfficeProject; /** For a milestone: the reminder key Needs you uses for the same date. */ dueKey?: string }
 
 /** Every dated thing from today on: schedule items, milestones not reached yet, and booked discovery calls. Soonest first. */
 function comingUp(projects: OfficeProject[], t: string): Dated[] {
@@ -50,7 +53,7 @@ function comingUp(projects: OfficeProject[], t: string): Dated[] {
     }
     for (const m of MILESTONE_LIST) {
       const date = p.milestones[m.key]
-      if (date && date >= t && si < stageIndex(m.doneFrom)) out.push({ date, what: m.label, kind: 'milestone', project: p })
+      if (date && date >= t && si < stageIndex(m.doneFrom)) out.push({ date, what: m.label, kind: 'milestone', project: p, dueKey: `due-${m.key}-${date}` })
     }
     const lead = p.office.lead
     if (isSalesStage(p.pipelineStage) && lead?.callDate && lead.callDate >= t) out.push({ date: lead.callDate, time: lead.callTime, what: 'Discovery call', kind: 'call', project: p })
@@ -58,29 +61,7 @@ function comingUp(projects: OfficeProject[], t: string): Dated[] {
   return out.sort((a, b) => `${a.date} ${a.time ?? '99'}`.localeCompare(`${b.date} ${b.time ?? '99'}`))
 }
 
-/** The stage checklist step that asks for a testimonial, as it is stored once ticked. */
-const TESTIMONIAL_CHECK = `delivered:${STAGE_TASKS.delivered.findIndex((x) => /testimonial/i.test(x.title))}`
 const DELIVERY_LABEL = MILESTONE_LIST.find((m) => m.key === 'deliveryDue')?.label
-
-type FollowUp = { project: OfficeProject; key: string; detail: string; when: string }
-
-/** Moments after a film is delivered: a week on (testimonial, unless that step is ticked) and a month on. Needs the delivery day in the stage history. */
-function followUps(projects: OfficeProject[], t: string): FollowUp[] {
-  const out: FollowUp[] = []
-  for (const p of projects) {
-    if (p.pipelineStage !== 'delivered' && p.pipelineStage !== 'paid') continue
-    const at = (p.office.stageHistory ?? []).filter((h) => h.to === 'delivered' && !Number.isNaN(Date.parse(h.at))).map((h) => h.at).sort().at(-1)
-    if (!at) continue
-    const day = ymd(new Date(at))
-    const n = daysBetween(day, t)
-    const dismissed = new Set(p.office.dismissed ?? [])
-    const when = `Delivered ${fmtDay(day)} · ${plural(n, 'day')} ago`
-    const add = (key: string, detail: string) => !dismissed.has(key) && out.push({ project: p, key, detail, when })
-    if (n >= 7 && !(p.office.checks ?? []).includes(TESTIMONIAL_CHECK)) add(`followup-testimonial-${day}`, 'A week since delivery. Ask for a testimonial.')
-    if (n >= 30) add(`followup-checkin-${day}`, 'A month since delivery. Check in.')
-  }
-  return out
-}
 
 /** Log and portal activity from the last 14 days, newest first. */
 function lately(projects: OfficeProject[], t: string) {
@@ -95,6 +76,7 @@ function lately(projects: OfficeProject[], t: string) {
   return items.sort((a, b) => b.at.localeCompare(a.at))
 }
 
+
 /* ── Pieces ─────────────────────────────────────────────────────────── */
 
 /** A reminder opens the part of the project it is about: money for invoices, the portal tab for versions, the lead page for a lead. */
@@ -107,73 +89,74 @@ function rowHref(r: Row) {
   return /^(no-invoice|draft)-/.test(k) ? `${page}?tab=money` : /^(fixes|feedback)-/.test(k) ? `${page}?tab=portal` : page
 }
 
-/** The dismissable reminders, as before. View-only sign-ins get the rows without the dismiss button, which would be refused. */
-function RowList({ rows, empty, nudge, canDismiss }: { rows: Row[]; empty: string; nudge?: boolean; canDismiss: boolean }) {
-  if (!rows.length) return <p className="muted small a-empty">{empty}</p>
+/** One row in Needs you. Every source (reminders, follow-ups, deposits, things out with clients) is turned into this, so each thing shows once, in one style. */
+type Need = { id: string; projectId: string; dismissKey?: string; href: string; client?: string; title: string; detail: string; when?: string; urgent?: boolean; nudge?: { email: string; first: string; title: string; client: string } }
+
+function NeedRow({ n }: { n: Need }) {
   return (
-    <ul className="a-rows">
-      {rows.slice(0, 6).map((r, i) => (
-        <DismissableRow key={r.key ?? `${r.project._id}-${i}`} projectId={r.project._id} dismissKey={canDismiss ? r.key : undefined} label={`${r.project.title}: ${r.detail}`}>
-          <Link href={rowHref(r)} className="a-row-main">
-            <span className="a-client">{r.project.client.organizationName}</span>
-            <strong>{r.project.title}</strong>
-            <span className="muted small">{r.detail}</span>
-          </Link>
-          <span className="a-row-side">
-            {!nudge && <span className="a-stage">{stageTitle(r.project.pipelineStage)}</span>}
-            <span className={`small ${r.urgent ? 'a-urgent' : 'muted'}`}>{r.when}</span>
-            {nudge && (
-              <a
-                className="btn btn-secondary btn-sm"
-                href={`mailto:${r.project.client.contacts?.[0]?.email ?? ''}?subject=${encodeURIComponent(r.project.title)}&body=${encodeURIComponent(`Hi ${r.project.client.contacts?.[0]?.name?.split(' ')[0] ?? 'there'},\n\nJust checking in on ${r.project.title}. `)}`}
-              >
-                Nudge<span className="sr-only"> {r.project.client.organizationName} by email</span>
-              </a>
-            )}
-          </span>
-        </DismissableRow>
-      ))}
-    </ul>
+    <DismissableRow projectId={n.projectId} dismissKey={n.dismissKey} label={`${n.title}: ${n.detail}`}>
+      <Link href={n.href} className="a-row-main">
+        {n.client && <span className="a-client">{n.client}</span>}
+        <strong>{n.title}</strong>
+        <span className="muted small">{n.detail}</span>
+      </Link>
+      <span className="a-row-side">
+        {n.when && <span className={`small ${n.urgent ? 'a-urgent' : 'muted'}`}>{n.when}</span>}
+        {n.nudge && (
+          <a className="btn btn-secondary btn-sm" href={`mailto:${n.nudge.email}?subject=${encodeURIComponent(n.nudge.title)}&body=${encodeURIComponent(`Hi ${n.nudge.first},\n\nJust checking in on ${n.nudge.title}. `)}`}>
+            Nudge<span className="sr-only"> {n.nudge.client} by email</span>
+          </a>
+        )}
+      </span>
+    </DismissableRow>
+  )
+}
+
+/** The first few rows, then the rest behind "Show N more" (no script needed, and it stays open while you work down the list). */
+function NeedList({ rows, max, empty }: { rows: Need[]; max: number; empty: string }) {
+  if (!rows.length) return <p className="muted a-empty">{empty}</p>
+  const rest = rows.slice(max)
+  return (
+    <>
+      <ul className="a-rows">{rows.slice(0, max).map((n) => <NeedRow key={n.id} n={n} />)}</ul>
+      {rest.length > 0 && (
+        <details className="ap-more">
+          <summary>Show {rest.length} more</summary>
+          <ul className="a-rows">{rest.map((n) => <NeedRow key={n.id} n={n} />)}</ul>
+        </details>
+      )}
+    </>
   )
 }
 
 type Item = { key: string; href: string; title: string; text: string; side?: string; urgent?: boolean }
 
-function Items({ list, empty, max }: { list: Item[]; empty: string; max?: number }) {
-  if (!list.length) return <p className="muted small a-empty">{empty}</p>
-  const shown = max ? list.slice(0, max) : list
+function Items({ list, max }: { list: Item[]; max: number }) {
+  const row = (x: Item) => (
+    <li key={x.key}>
+      <Link href={x.href} className="td-item">
+        <strong>{x.title}</strong>
+        <span className="muted">{x.text}</span>
+      </Link>
+      {x.side && <span className={`td-side ${x.urgent ? 'a-urgent' : 'muted'}`}>{x.side}</span>}
+    </li>
+  )
+  const rest = list.slice(max)
   return (
-    <ul className="td-list">
-      {shown.map((x) => (
-        <li key={x.key}>
-          <Link href={x.href} className="td-item">
-            <strong>{x.title}</strong>
-            <span className="muted">{x.text}</span>
-          </Link>
-          {x.side && <span className={`td-side ${x.urgent ? 'a-urgent' : 'muted'}`}>{x.side}</span>}
-        </li>
-      ))}
-      {shown.length < list.length && <li className="muted">and {list.length - shown.length} more</li>}
-    </ul>
+    <>
+      <ul className="td-list">{list.slice(0, max).map(row)}</ul>
+      {rest.length > 0 && (
+        <details className="ap-more">
+          <summary>Show {rest.length} more</summary>
+          <ul className="td-list">{rest.map(row)}</ul>
+        </details>
+      )}
+    </>
   )
 }
 
-function CountTile({ title, count, unit, href, items, empty, note }: { title: string; count: number; unit: string; href: string; items: Item[]; empty: string; note?: string }) {
-  return (
-    <div className="p-card td-count">
-      <div className="a-card-head">
-        <h3 className="td-h3">{title}</h3>
-        <Link className="text-link small" href={href}>See all<span className="sr-only">: {title.toLowerCase()}</span></Link>
-      </div>
-      <p className="td-count-num">
-        {count}
-        <span className="sr-only"> {unit}</span>
-      </p>
-      <Items list={items} empty={empty} max={2} />
-      {note && <p className="muted small a-empty">{note}</p>}
-    </div>
-  )
-}
+/** Urgent first; otherwise the order each source already ranks itself in. */
+const ranked = (rows: Need[]) => rows.map((n, i) => ({ n, i })).sort((a, b) => Number(Boolean(b.n.urgent)) - Number(Boolean(a.n.urgent)) || a.i - b.i).map((x) => x.n)
 
 /* ── The page ───────────────────────────────────────────────────────── */
 
@@ -181,7 +164,7 @@ export default async function Today() {
   // Checked here as well as in the layout: a page can be requested on its own.
   const admin = await requireAdmin()
   // One load: the projects, the portal payment records and the goals. Everything below is worked out from it.
-  const [{ projects: all, payments, goals }, signRequests] = await Promise.all([loadMoney(), listRequests().catch(() => [])])
+  const [{ projects: all, payments, goals }, signRequests, suggestions] = await Promise.all([loadMoney(), listRequests().catch(() => []), listSuggestions()])
   // Archived projects are filed away: they raise no reminders and aren't listed. The money history
   // (owed, collected, signed) keeps them, so those figures are the Money page's own.
   const projects = all.filter((p) => !p.archived)
@@ -190,7 +173,7 @@ export default async function Today() {
   // The session carries an email only, so the name comes from settings when one sits beside that address.
   const name = (admin as { name?: string }).name?.trim().split(/\s+/)[0] || firstNameFor(admin.email)
 
-  // Money row
+  /* ── Money: the five figures, each from the same money load as the Money page ── */
   const money = moneyView(all, payments, goals, t)
   const sixMonths = reportView(all, payments, '12m', t).moneyByMonth.slice(-6)
   const tiles = pipelineTiles(projects)
@@ -204,96 +187,141 @@ export default async function Today() {
   // The goal sits at the tick, with room past it for a year that beats the goal.
   const signedScale = Math.max(signed?.share ?? 0, 1) * 1.12
 
-  // Up next and calls
-  const coming = comingUp(projects, t)
-  const next = coming[0]
-  const noDates = projects.filter((p) => stageIndex(p.pipelineStage) >= stageIndex('booked') && stageIndex(p.pipelineStage) < stageIndex('delivered') && !p.schedule.length && !Object.values(p.milestones).some(Boolean)).length
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(t, i))
-  const calls = coming.filter((c) => (c.kind === 'call' || c.kind === 'meeting') && c.date <= weekDays[6])
+  /* ── Needs you: things waiting on you, then things out with clients. Each thing once. ── */
+  // Reminders (new leads to reply to, quotes to write, notes and comments in, invoices to make or send, milestones).
+  const reminders: Need[] = needsAction(projects).map((r, i) => ({
+    id: `r-${r.key ?? `${r.project._id}-${i}`}`,
+    projectId: r.project._id,
+    dismissKey: canDismiss ? r.key : undefined,
+    href: rowHref(r),
+    client: r.project.client.organizationName,
+    title: r.project.title,
+    detail: r.detail,
+    when: r.when,
+    urgent: r.urgent,
+  }))
+  // A week and a month after delivery.
+  const follow: Need[] = followUps(projects, t).map((f) => ({
+    id: `f-${f.project._id}-${f.key}`,
+    projectId: f.project._id,
+    dismissKey: canDismiss ? f.key : undefined,
+    href: pageHref(f.project._id, f.project.pipelineStage),
+    client: f.project.client.organizationName,
+    title: f.project.title,
+    detail: f.detail,
+    when: f.when,
+  }))
+  // Booked with no deposit in, and nothing sent for it (an invoice or request already out counts as owed, on the Money page).
+  const owedIds = new Set(money.owed.rows.map((b) => b.projectId).filter((x): x is string => Boolean(x)))
+  const deposits: Need[] = depositsDue(projects, payments, owedIds)
+    .map((p) => ({ id: `dep-${p._id}`, projectId: p._id, href: projectTab(p._id, 'money'), client: p.client.organizationName, title: p.title, detail: 'Ask for the deposit. Nothing has been sent for it yet.', when: p.depositAmount ? cad(p.depositAmount) : undefined }))
+  const onYou = ranked([...reminders, ...deposits, ...follow])
 
-  // Counts. Waiting on you / on clients are the Client portals page's own lists.
-  const portals = portalsOverview(all, payments.filter((x) => x.status === 'due' || x.status === 'processing'))
-  const cards = [...portals.live, ...portals.quotes]
-  const onYou = cards.flatMap((c) => c.onYou.map((w) => ({ c, w })))
-  const onClient = cards.flatMap((c) => c.onClient.map((w) => ({ c, w })))
-  const asItem = ({ c, w }: (typeof onYou)[number]): Item => ({ key: `${c.id}-${w.key}`, href: w.href && !w.external ? w.href : c.href, title: c.title, text: w.text, side: w.when, urgent: w.urgent })
-  const notes = onYou.filter((x) => /^(fixes|comments)-/.test(x.w.key)).map(asItem)
-  const withClients = onClient.map(asItem)
-  const cutsOut = onClient.filter((x) => x.w.key.startsWith('feedback-')).map((x) => ({ ...asItem(x), href: x.c.quoteOnly ? x.c.href : projectTab(x.c.id, 'portal') }))
-  const owed: Item[] = money.owed.rows.map((b) => ({ key: b.key, href: projectTab(b.projectId, 'money'), title: b.project, text: `${b.label} · ${b.status}`, side: cad(b.owed) }))
-  const newLeads: Item[] = projects
-    .filter((p) => p.pipelineStage === 'lead' && !(p.office.log ?? []).some((l) => isContactLog(l.kind)))
-    .map((p) => {
-      const d = daysSince(p.office.stageChangedAt)
-      return { key: p._id, href: pageHref(p._id, p.pipelineStage), title: p.title, text: p.client.organizationName, side: d === null ? undefined : d ? `${plural(d, 'day')} waiting` : 'In today', urgent: (d ?? 0) >= 2 }
-    })
-
-  // This week
-  const depositsOut: Item[] = projects
-    .filter(
-      (p) =>
-        p.pipelineStage === 'booked' &&
-        !(p.office.invoices ?? []).some((i) => i.kind === 'deposit' && i.status === 'paid') &&
-        !payments.some((x) => x.projectId === p._id && x.kind === 'deposit' && x.status === 'paid') &&
-        // An invoice or payment request already out for it is in the list above.
-        !money.owed.rows.some((b) => b.projectId === p._id),
-    )
-    .map((p) => ({ key: `dep-${p._id}`, href: projectTab(p._id, 'money'), title: p.title, text: 'Deposit not in, and nothing sent for it yet', side: p.depositAmount ? cad(p.depositAmount) : undefined }))
-  const quotesOut: Item[] = projects
-    .filter((p) => isSalesStage(p.pipelineStage) && (p.pipelineStage === 'quoted' || Boolean(p.quote?.sharedAt && !p.quote.signature)))
-    .map((p) => {
-      const d = p.pipelineStage === 'quoted' ? daysSince(p.office.stageChangedAt) : null
-      return { key: `q-${p._id}`, href: pageHref(p._id, p.pipelineStage), title: p.title, text: `Quote out. ${quoteStatus(p) ?? 'No send date recorded'}`, side: d === null ? undefined : plural(d, 'day'), urgent: (d ?? 0) >= 7 }
-    })
-  const since = addDays(t, -14)
-  const signedLately: Item[] = projects
-    .map((p) => ({ p, s: signing(p) }))
-    .filter((x): x is { p: (typeof projects)[number]; s: { on: string; value?: number } } => Boolean(x.s?.on && x.s.on >= since))
-    .sort((a, b) => b.s.on.localeCompare(a.s.on))
-    .map(({ p, s }) => ({ key: `s-${p._id}`, href: pageHref(p._id, p.pipelineStage), title: p.title, text: `Signed ${fmtDay(s.on)}`, side: s.value ? cad(s.value) : undefined }))
-  // Documents sent from the Library: out for signature, and signed in the same 14 days.
+  // Out with clients: cuts waiting on feedback and quotes with no answer (with Nudge), quotes shared before Quote sent, and documents out for signature.
+  const theirs = waitingOnClients(projects)
+  const nudges: Need[] = theirs.map((r, i) => {
+    const c = r.project.client.contacts?.[0]
+    return {
+      id: `w-${r.key ?? `${r.project._id}-${i}`}`,
+      projectId: r.project._id,
+      dismissKey: canDismiss ? r.key : undefined,
+      href: rowHref(r),
+      client: r.project.client.organizationName,
+      title: r.project.title,
+      detail: r.detail,
+      when: r.when,
+      urgent: r.urgent,
+      nudge: { email: c?.email ?? '', first: c?.name?.split(' ')[0] ?? 'there', title: r.project.title, client: r.project.client.organizationName },
+    }
+  })
+  const sharedQuotes: Need[] = projects
+    .filter((p) => isSalesStage(p.pipelineStage) && p.pipelineStage !== 'quoted' && Boolean(p.quote?.sharedAt && !p.quote.signature))
+    .map((p) => ({ id: `q-${p._id}`, projectId: p._id, href: pageHref(p._id, p.pipelineStage), client: p.client.organizationName, title: p.title, detail: `Quote out. ${quoteStatus(p) ?? 'No send date recorded.'}` }))
+  // Documents sent from the Library: out for signature, and signed in the last 14 days.
   const docs = signCounts(signRequests)
   const docHref = (projectId?: string) => (projectId ? projectTab(projectId, 'documents') : '/admin/library?tab=out')
-  const docsOut: Item[] = docs.out.map((r) => ({ key: `d-${r._id}`, href: docHref(r.projectId), title: r.snapshot.title, text: `Out with ${r.recipient.name}${r.viewedAt ? ', opened' : ''}`, side: r.projectTitle }))
-  const docsSigned: Item[] = docs.signed.map((r) => ({ key: `ds-${r._id}`, href: docHref(r.projectId), title: r.snapshot.title, text: `Signed by ${r.signature?.name ?? r.recipient.name} ${fmtDay(ymd(new Date(r.signedAt!)))}`, side: r.projectTitle }))
+  const docsOut: Need[] = docs.out.map((r) => ({ id: `d-${r._id}`, projectId: r.projectId ?? '', href: docHref(r.projectId), client: r.projectTitle, title: r.snapshot.title, detail: `Out for signature with ${r.recipient.name}${r.viewedAt ? '. They’ve opened it.' : '.'}` }))
+  const withClients = ranked([...nudges, ...sharedQuotes, ...docsOut])
+
+  /* ── This week: calls, shoots, deliveries and other dates ── */
+  const coming = comingUp(projects, t)
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(t, i))
   const twoWeeks = nextTwoWeeks(projects)
   const end = addDays(t, 14)
-  // The same two things nextTwoWeeks counts: shoots that start in the window, and delivery dates not reached yet.
-  const shootsAndDeliveries: Item[] = [
-    ...projects.flatMap((p) => p.schedule.filter((s) => s.kind === 'shoot' && s.start >= t && s.start <= end).map((s) => ({ p, date: s.start, what: s.title }))),
-    ...projects
-      .filter((p) => stageIndex(p.pipelineStage) < stageIndex('delivered') && p.milestones.deliveryDue && p.milestones.deliveryDue >= t && p.milestones.deliveryDue <= end)
-      .map((p) => ({ p, date: p.milestones.deliveryDue!, what: DELIVERY_LABEL ?? 'Final delivery' })),
-  ]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((x, i) => ({ key: `sd-${i}`, href: pageHref(x.p._id, x.p.pipelineStage), title: x.p.title, text: x.what, side: `${fmtDay(x.date)} · ${relDays(x.date, t)}` }))
+  // Everything dated in the next seven days, plus shoots and deliveries in the week after (the same two things nextTwoWeeks counts).
+  // A deadline already in Needs you (due within three days) isn't listed twice.
+  const inNeeds = new Set(reminders.map((r) => `${r.projectId} ${r.id.slice(2)}`))
+  const week = coming.filter((c) => (c.date <= weekDays[6] || (c.date <= end && (c.kind === 'shoot' || c.what === DELIVERY_LABEL))) && !(c.dueKey && inNeeds.has(`${c.project._id} ${c.dueKey}`)))
+  const weekItems: Item[] = week.map((c, i) => ({
+    key: `wk-${i}`,
+    href: pageHref(c.project._id, c.project.pipelineStage),
+    title: c.what,
+    text: `${c.project.client.organizationName} · ${c.project.title}`,
+    side: `${fmtDate(c.date, 'weekday')}${c.time ? ` · ${fmtTime(c.time)}` : ''}`,
+  }))
+  const later = coming.find((c) => c.date > end)
+  const noDates = projects.filter((p) => stageIndex(p.pipelineStage) >= stageIndex('booked') && stageIndex(p.pipelineStage) < stageIndex('delivered') && !p.schedule.length && !Object.values(p.milestones).some(Boolean)).length
 
-  // Needs you, follow-ups, lately
-  const mine = needsAction(projects)
-  const theirs = waitingOnClients(projects)
-  const follow = followUps(projects, t)
+  /* ── Lately: signatures and activity from the last 14 days, folded away ── */
+  const since = addDays(t, -14)
+  const signedLately: Item[] = [
+    ...projects
+      .map((p) => ({ p, s: signing(p) }))
+      .filter((x): x is { p: (typeof projects)[number]; s: { on: string; value?: number } } => Boolean(x.s?.on && x.s.on >= since))
+      .sort((a, b) => b.s.on.localeCompare(a.s.on))
+      .map(({ p, s }) => ({ key: `s-${p._id}`, href: pageHref(p._id, p.pipelineStage), title: p.title, text: `Quote signed ${fmtDate(s.on)}`, side: s.value ? cad(s.value) : undefined })),
+    ...docs.signed.map((r) => ({ key: `ds-${r._id}`, href: docHref(r.projectId), title: r.snapshot.title, text: `Signed by ${r.signature?.name ?? r.recipient.name} ${fmtDate(r.signedAt!)}`, side: r.projectTitle })),
+  ]
   const recent = lately(projects, t)
 
   return (
-    <div className="a-page td">
+    <div className="a-page td tdx">
       <header className="a-head">
-        <div className="stack" style={{ gap: 'var(--space-3)' }}>
+        <div className="stack ap-gap-2">
           <h1 className="a-h1">{hello()}{name ? `, ${name}` : ''}.</h1>
-          {/* The Studio makes a project at any stage (work already booked, a retainer month); the lead form only starts one at New lead. */}
-          <div className="btn-row">
-            <Link className="btn btn-primary" href="/admin/leads/new">New lead</Link>
-            <a className="text-link small" href="/studio/portal/intent/create/template=clientProject;type=clientProject" target="_blank" rel="noopener noreferrer">
-              New project in the Studio<span className="sr-only"> (opens in a new tab)</span>
-            </a>
-          </div>
+          <p className="td-date">{fmtDay(t, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
         </div>
-        <p className="td-date">{fmtDay(t, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+        {/* New lead starts someone at the first stage; New project is for work that's already agreed. */}
+        <div className="tdx-head-actions">
+          <Link className="btn btn-primary" href="/admin/leads/new">New lead</Link>
+          <Link className="btn btn-secondary" href="/admin/projects/new">New project</Link>
+        </div>
       </header>
 
-      <section aria-labelledby="td-money-h">
-        <h2 id="td-money-h" className="sr-only">Money</h2>
+      {/* ── 1. Needs you ── */}
+      <section className="tdx-block" aria-labelledby="td-needs-h">
+        <div className="ap-h2-row">
+          <h2 id="td-needs-h" className="a-h2 a-h2-lg">Needs you</h2>
+          <DismissCount className="ap-count" initial={onYou.length} one="thing" none="All clear" />
+        </div>
+
+        {/* People from a call or an email who look like new clients (src/admin/capture.ts). Shows only when some are waiting. */}
+        <LeadSuggestions
+          canAct={canDismiss}
+          items={suggestions
+            .filter((x) => x.status === 'new')
+            .map((x) => ({ key: x._key, source: x.source, name: x.name, company: x.company, email: x.email, summary: x.summary, when: x.when, title: x.title }))}
+        />
+
+        <div className="p-card">
+          <NeedList rows={onYou} max={6} empty="Nothing is waiting on you. New leads, client notes, invoices to send and follow-ups show up here." />
+          {withClients.length > 0 && (
+            <details className="ap-details">
+              <summary>Waiting on clients · {withClients.length}</summary>
+              <NeedList rows={withClients} max={5} empty="" />
+            </details>
+          )}
+        </div>
+      </section>
+
+      {/* ── 2. Money ── */}
+      <section className="tdx-block" aria-labelledby="td-money-h">
+        <div className="ap-h2-row">
+          <h2 id="td-money-h" className="a-h2 a-h2-lg">Money</h2>
+          <Link className="text-link small" href="/admin/money">Open Money</Link>
+        </div>
         <div className="td-money">
-          <Link href="/admin/money" className={`a-kpi td-tile${money.owed.total ? ' is-hot' : ''}`}>
+          <Link href="/admin/money#owed" className="a-kpi td-tile">
             <span className="a-kpi-label">Owed to you</span>
             <span className="a-kpi-num">{cad(money.owed.total)}</span>
             <span className="a-kpi-note">{plural(money.owed.rows.length, 'open invoice or payment', 'open invoices and payments')}{money.owed.clearing ? `, ${money.owed.clearing} clearing` : ''}</span>
@@ -337,165 +365,66 @@ export default async function Today() {
         </div>
       </section>
 
-      <div className="a-grid-2">
-        <section className="p-card" aria-labelledby="td-next-h">
-          <h2 id="td-next-h" className="a-h2">Up next</h2>
-          {next ? (
-            <Link href={pageHref(next.project._id, next.project.pipelineStage)} className="td-next">
-              <span className="a-client">{next.project.client.organizationName}</span>
-              <strong className="td-next-title">{next.project.title}</strong>
-              <span>{next.what}{next.time ? ` at ${fmtTime(next.time)}` : ''}</span>
-              <span className="td-next-when">
-                <strong>{relDays(next.date, t)}</strong> · {fmtDay(next.date, { weekday: 'long', month: 'long', day: 'numeric' })}
-              </span>
-            </Link>
-          ) : (
-            <p className="muted small a-empty">Nothing dated is coming up.</p>
-          )}
-          {noDates > 0 && (
-            <p className="small a-empty">
-              <Link className="text-link" href="/admin/pipeline">{noDates === 1 ? '1 project has no dates yet' : `${noDates} projects have no dates yet`}</Link>
-            </p>
-          )}
-        </section>
-
-        <section className="p-card" aria-labelledby="td-calls-h">
-          <h2 id="td-calls-h" className="a-h2">Calls</h2>
-          <DayStrip
-            label="The next seven days"
-            cells={weekDays.map((d) => {
-              const n = calls.filter((c) => c.date === d).length
-              return {
-                key: d,
-                label: weekday(d),
-                value: <>{Number(d.slice(8))}{d === t && <span className="sr-only"> (today)</span>}</>,
-                note: n ? plural(n, 'call') : <span className="sr-only">no calls</span>,
-                level: n ? Math.min(1, 0.5 + n / 4) : 0,
-                current: d === t,
-              }
-            })}
-          />
-          {calls.length ? (
-            <ul className="td-list">
-              {calls.map((c, i) => (
-                <li key={i}>
-                  <Link href={pageHref(c.project._id, c.project.pipelineStage)} className="td-item">
-                    <strong>{c.what}</strong>
-                    <span className="muted">{c.project.client.organizationName} · {c.project.title}</span>
-                  </Link>
-                  <span className="td-side muted">{fmtDay(c.date, { weekday: 'short', month: 'short', day: 'numeric' })}{c.time ? ` · ${fmtTime(c.time)}` : ''}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="muted small a-empty">No calls this week.</p>
-          )}
-          <p className="muted small a-empty">Booking pages arrive when Google Calendar is connected.</p>
-        </section>
-      </div>
-
-      <section aria-labelledby="td-counts-h">
-        <h2 id="td-counts-h" className="sr-only">What’s waiting</h2>
-        <div className="td-counts">
-          <CountTile
-            title="Review notes in"
-            count={notes.length}
-            unit={notes.length === 1 ? 'set of client notes waiting on you' : 'sets of client notes waiting on you'}
-            href="/admin/portals"
-            items={notes}
-            empty="No client notes waiting on you."
-            note={portals.tiles.onYou ? `${plural(portals.tiles.onYou, 'thing')} waiting on you across portals` : undefined}
-          />
-          <CountTile title="Money due" count={owed.length} unit={owed.length === 1 ? 'invoice or payment owed' : 'invoices and payments owed'} href="/admin/money" items={owed} empty="Nothing owed right now." />
-          <CountTile title="Leads to reply to" count={newLeads.length} unit={newLeads.length === 1 ? 'new lead with no contact logged' : 'new leads with no contact logged'} href="/admin/pipeline" items={newLeads} empty="Every new lead has heard from you." />
-          <CountTile title="Waiting on clients" count={withClients.length} unit={withClients.length === 1 ? 'thing out with clients' : 'things out with clients'} href="/admin/portals" items={withClients} empty="Nothing is out with clients." />
+      {/* ── 3. This week ── */}
+      <section className="tdx-block" aria-labelledby="td-week-h">
+        <div className="ap-h2-row">
+          <h2 id="td-week-h" className="a-h2 a-h2-lg">This week</h2>
+          <span className="ap-count">{plural(twoWeeks.shoots, 'shoot')} and {plural(twoWeeks.deliveries, 'delivery', 'deliveries')} in the next 14 days</span>
         </div>
-      </section>
-
-      <section aria-labelledby="td-week-h" className="stack td-section">
-        <h2 id="td-week-h" className="a-h2">This week</h2>
-        <div className="td-cards">
+        <div className="tdx-week">
           <div className="p-card td-card">
-            <h3 className="td-h3">Money to collect</h3>
-            <p className="td-sum">{plural(owed.length, 'open invoice or payment', 'open invoices and payments')}{depositsOut.length ? `, ${plural(depositsOut.length, 'deposit')} not asked for` : ''}</p>
-            <Items list={[...owed, ...depositsOut]} empty="Nothing to collect right now." max={5} />
+            <DayStrip
+              label="The next seven days"
+              cells={weekDays.map((d) => {
+                const n = coming.filter((c) => c.date === d).length
+                return {
+                  key: d,
+                  label: weekday(d),
+                  value: <>{Number(d.slice(8))}{d === t && <span className="sr-only"> (today)</span>}</>,
+                  note: n ? plural(n, 'thing') : <span className="sr-only">nothing booked</span>,
+                  level: n ? Math.min(1, 0.5 + n / 4) : 0,
+                  current: d === t,
+                }
+              })}
+            />
+            {weekItems.length ? (
+              <Items list={weekItems} max={5} />
+            ) : (
+              <p className="tdx-empty-next">
+                {later ? (
+                  <>Nothing booked in the next two weeks. Next up: <Link className="text-link" href={pageHref(later.project._id, later.project.pipelineStage)}>{later.what}, {later.project.title}</Link>, {fmtDate(later.date, 'weekday')} ({relDays(later.date, t)}).</>
+                ) : (
+                  'Nothing dated is coming up.'
+                )}
+              </p>
+            )}
+            {noDates > 0 && (
+              <p className="small a-empty">
+                <Link className="text-link" href="/admin/pipeline">{noDates === 1 ? '1 booked project has no dates yet' : `${noDates} booked projects have no dates yet`}</Link>
+              </p>
+            )}
           </div>
-          <div className="p-card td-card">
-            <h3 className="td-h3">Signatures</h3>
-            <p className="td-sum">{plural(quotesOut.length, 'quote')} and {plural(docsOut.length, 'document')} out for signature, {signedLately.length + docsSigned.length} signed in the last 14 days</p>
-            <Items list={[...quotesOut, ...docsOut, ...signedLately, ...docsSigned]} empty="Nothing out for signature, and nothing signed lately." max={5} />
-            <p className="small a-empty"><Link className="text-link" href="/admin/library?tab=out&show=out">Everything out and signed</Link></p>
-          </div>
-          <div className="p-card td-card">
-            <h3 className="td-h3">Cuts and feedback</h3>
-            <p className="td-sum">{cutsOut.length} with the client, {notes.length} with notes back for you</p>
-            <Items list={[...notes, ...cutsOut]} empty="No cuts out for review." max={5} />
-          </div>
-          <div className="p-card td-card">
-            <h3 className="td-h3">Shoots and deliveries</h3>
-            <p className="td-sum">{plural(twoWeeks.shoots, 'shoot')} and {plural(twoWeeks.deliveries, 'delivery', 'deliveries')} in the next 14 days</p>
-            <Items list={shootsAndDeliveries} empty="No shoots or deliveries in the next two weeks." max={5} />
-          </div>
+          <TodayTasks />
         </div>
-      </section>
-
-      <TodayTasks />
-
-      <section aria-labelledby="td-todo-h" className="stack td-section">
-        <div className="a-card-head">
-          <h2 id="td-todo-h" className="a-h2">Other to-dos</h2>
-          <span className="muted small">Calls to log, quotes to write and clients to nudge show up here.</span>
-        </div>
-        <div className="a-grid-2">
-          <div className="p-card">
-            <div className="a-card-head">
-              <h3 className="td-h3">Needs you</h3>
-              <span className="muted small">Ball’s in your court</span>
-            </div>
-            <RowList rows={mine} empty="Nothing waiting on you. Nice." canDismiss={canDismiss} />
-          </div>
-          <div className="p-card">
-            <div className="a-card-head">
-              <h3 className="td-h3">Clients to nudge</h3>
-              <span className="muted small">Ball’s in theirs</span>
-            </div>
-            <RowList rows={theirs} empty="No one owes you anything right now." nudge canDismiss={canDismiss} />
-          </div>
-        </div>
-      </section>
-
-      <section className="p-card" aria-labelledby="td-follow-h">
-        <h2 id="td-follow-h" className="a-h2">Follow-ups</h2>
-        {follow.length ? (
-          <ul className="a-rows">
-            {follow.map((f) => (
-              <DismissableRow key={`${f.project._id}-${f.key}`} projectId={f.project._id} dismissKey={canDismiss ? f.key : undefined} label={`${f.project.title}: ${f.detail}`}>
-                <Link href={pageHref(f.project._id, f.project.pipelineStage)} className="a-row-main">
-                  <span className="a-client">{f.project.client.organizationName}</span>
-                  <strong>{f.project.title}</strong>
-                  <span className="muted small">{f.detail}</span>
-                </Link>
-                <span className="a-row-side">
-                  <span className="small muted">{f.when}</span>
-                </span>
-              </DismissableRow>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted small a-empty">No follow-ups due. They show up here when a film hits a real moment: the final, go-live, a month out.</p>
-        )}
       </section>
 
       <details className="p-card a-bucket">
         <summary className="a-card-head">
-          <h2 className="a-h2">Lately · {recent.length} in the last 14 days</h2>
+          <h2 className="a-h2">Lately · {recent.length + signedLately.length} in the last 14 days</h2>
         </summary>
+        {signedLately.length > 0 && (
+          <div className="tdx-signed">
+            <h3 className="tdx-sub">Signed</h3>
+            <Items list={signedLately} max={5} />
+          </div>
+        )}
         {recent.length ? (
           <>
+            {signedLately.length > 0 && <h3 className="tdx-sub">Activity</h3>}
             <ul className="td-lately">
               {recent.slice(0, 30).map((r, i) => (
                 <li key={i}>
-                  <span className="muted">{fmtDay(r.day)}</span>
+                  <span className="muted">{fmtDate(r.day)}</span>
                   <Link className="text-link-plain td-lately-project" href={pageHref(r.project._id, r.project.pipelineStage)}>{r.project.title}</Link>
                   <span>{r.text}</span>
                 </li>

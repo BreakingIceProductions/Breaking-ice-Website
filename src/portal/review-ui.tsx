@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { FileIcon, type FileKind } from './file-icon'
+import { useConfirmDialog } from '@/admin/ui/confirm'
 
 /** Preview of a design or document version; falls back to its file icon when Drive has no preview. */
 export function ReviewThumb({ src, kind, ext }: { src: string; kind: FileKind; ext?: string }) {
@@ -21,10 +22,11 @@ export function FeedbackButtons({ project, deliverable, title, notes = true }: {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [confirm, confirmDialog] = useConfirmDialog('rr-confirm')
 
   async function send(action: 'approve' | 'changes') {
     if (action === 'changes' && !note.trim()) return setMsg('Write a short note so we know what to change.')
-    if (action === 'approve' && !confirm(`Approve ${title} for the next stage?`)) return
+    if (action === 'approve' && !(await confirm({ title: `Approve ${title}?`, body: 'We’ll take it to the next stage.', confirmLabel: 'Approve' }))) return
     setBusy(true)
     setMsg('')
     const r = await fetch('/api/portal/feedback', {
@@ -41,16 +43,17 @@ export function FeedbackButtons({ project, deliverable, title, notes = true }: {
   }
 
   return (
-    <div className="stack" style={{ gap: 'var(--space-3)' }}>
+    <div className="stack rr-fb">
+      {confirmDialog}
       {notes && (
-        <div className="stack" style={{ gap: 'var(--space-2)' }}>
+        <div className="stack rr-fb-notes">
           <label htmlFor={`fb-${deliverable}`} className="small muted">Notes on this version</label>
           <textarea id={`fb-${deliverable}`} className="input" rows={4} value={note} onChange={(e) => setNote(e.target.value)} maxLength={4000} placeholder="What would you like changed?" />
           <div><button type="button" className="btn btn-secondary btn-sm" disabled={busy || !note.trim()} onClick={() => send('changes')}>{busy ? 'Sending…' : 'Send notes'}</button></div>
         </div>
       )}
       <div><button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => send('approve')}>Approve for next stage</button></div>
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small muted" role="status">{msg}</p>}
     </div>
   )
 }
@@ -115,7 +118,7 @@ export function DocLightbox({
     if (!open && d.open) d.close()
   }, [open])
   return (
-    <dialog ref={ref} className="doc-lb" aria-label={title} onClose={onClose} onClick={(e) => e.target === ref.current && onClose()}>
+    <dialog ref={ref} className="doc-lb" aria-label={title} onClose={(e) => { if (e.target === e.currentTarget) onClose() }} onClick={(e) => e.target === ref.current && onClose()}>
       {open && (
         <div className="lb-inner">
           <div className="lb-view">

@@ -16,6 +16,8 @@ export const LEAD_SOURCES = [
   { title: 'Instagram or Facebook', value: 'social' },
   { title: 'AI assistant', value: 'ai' },
   { title: 'Repeat client', value: 'repeat' },
+  // Set on leads made from the website's contact form when "How did you hear about us?" doesn't say more.
+  { title: 'Website form', value: 'website' },
   { title: 'Other', value: 'other' },
 ]
 

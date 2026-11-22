@@ -1,0 +1,296 @@
+/* ═════════════════════════════════════════════════════════
+   Back office page-level pieces (imported by the pages that use them).
+   Shared tokens, buttons, cards and the shell live in admin.css; this file only adds
+   the few layouts the pages need: Today's three blocks, "show more" lists, the flat
+   projects table, Settings connection rows, quiet notes and loading skeletons.
+   Everything is scoped under `.admin`.
+   ═════════════════════════════════════════════════════════ */
+
+/* A quiet status line (archived, view only): no copper. */
+.admin .ap-note { margin: 0; padding: var(--space-2) var(--space-4); border: 1px solid var(--a-hairline); border-radius: var(--a-radius-in); background: var(--a-tint); font-size: var(--a-fs-sm); line-height: 1.4; color: var(--a-strong); }
+
+/* Section heading with a count beside it. */
+.admin .ap-h2-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.admin .ap-count { font-size: var(--a-fs-sm); color: var(--a-muted); font-variant-numeric: tabular-nums; }
+
+/* "Show N more": the rest of a list behind one disclosure. */
+.admin .ap-more { margin-top: var(--space-2); }
+.admin .ap-more > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; list-style: none; font-size: var(--a-fs-sm); font-weight: 600; color: var(--a-text); text-decoration: underline; text-decoration-color: var(--a-hairline-strong); text-underline-offset: 4px; }
+.admin .ap-more > summary::-webkit-details-marker { display: none; }
+.admin .ap-more > summary:hover { text-decoration-color: currentColor; }
+.admin .ap-more[open] > summary { display: none; }
+.admin .ap-more > ul { margin-top: 0; }
+.admin .ap-more > ul > li:first-child { border-top: 1px solid var(--line); padding-top: var(--space-3); }
+
+/* A plain disclosure (settings, method notes, setup steps). */
+.admin .ap-details > summary { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; cursor: pointer; list-style: none; font-weight: 600; }
+.admin .ap-details > summary::-webkit-details-marker { display: none; }
+.admin .ap-details > summary::before { content: ''; width: 7px; height: 7px; border-right: 1.5px solid var(--a-muted); border-bottom: 1.5px solid var(--a-muted); transform: rotate(-45deg); transition: transform .15s; flex: none; margin: 0 4px 0 2px; }
+.admin .ap-details[open] > summary::before { transform: rotate(45deg); }
+.admin .ap-details > :not(summary) { margin-top: var(--space-3); }
+.admin .ap-notes { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--a-fs-sm); color: var(--a-muted); line-height: 1.5; }
+
+/* ── Today ──────────────────────────────────────────────────────── */
+.admin .tdx { gap: var(--space-8); }
+.admin .tdx-block { display: flex; flex-direction: column; gap: var(--a-gap); }
+.admin .tdx-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.admin .tdx-sub { margin: var(--space-4) 0 var(--space-2); font-size: var(--a-fs-label); text-transform: uppercase; letter-spacing: .04em; color: var(--a-muted); font-weight: 600; }
+.admin .tdx-week { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--a-gap); align-items: start; }
+.admin .tdx-week > * { min-width: 0; }
+.admin .tdx-empty-next { margin: 0; font-size: var(--a-fs-body); }
+.admin .tdx-signed { margin-bottom: var(--space-4); }
+@media (max-width: 900px) {
+  .admin .tdx-week { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  /* Phone: the five money tiles become a compact two-column grid of numbers. */
+  .admin .tdx .td-money { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .admin .tdx .td-money .a-kpi { padding: var(--space-3); gap: 2px; }
+  .admin .tdx .td-money .a-kpi-num { font-size: 1.25rem; }
+  .admin .tdx .td-money .gx-wrap, .admin .tdx .td-money .gx-split-wrap, .admin .tdx .td-money .a-kpi-note { display: none; }
+  .admin .tdx .td-money .a-kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .admin .tdx .gx-days { display: none; }
+}
+
+/* ── Projects list: one flat table ─────────────────────────────── */
+.admin .ap-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.admin .ap-filter { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--a-hairline); border-radius: var(--radius-pill); font-size: var(--a-fs-sm); color: var(--a-strong); text-decoration: none; white-space: nowrap; }
+.admin .ap-filter:hover { border-color: var(--a-text); color: var(--a-text); }
+.admin .ap-filter[aria-current] { background: var(--a-sel); border-color: var(--a-sel); color: var(--a-on-sel); }
+.admin .ap-filter .ap-count { color: inherit; opacity: .75; }
+.admin .ap-sort { display: inline-flex; align-items: center; gap: 4px; color: inherit; text-decoration: none; white-space: nowrap; }
+.admin .ap-sort:hover { text-decoration: underline; text-underline-offset: 3px; }
+/* Only the column it's sorted by shows its arrow; the others show one on hover or focus, faintly. */
+.admin .ap-sort .ap-arrow { font-size: .85em; visibility: hidden; }
+.admin .ap-sort[data-on] .ap-arrow { visibility: visible; }
+.admin .ap-sort:hover:not([data-on]) .ap-arrow, .admin .ap-sort:focus-visible:not([data-on]) .ap-arrow { visibility: visible; opacity: .45; }
+.admin .ap-table td { vertical-align: middle; }
+.admin .ap-table .ap-sub { display: block; font-size: var(--a-fs-sm); color: var(--a-muted); }
+@media (pointer: coarse) {
+  .admin .ap-filter { min-height: 44px; }
+}
+
+/* ── Settings: one row per connection ──────────────────────────── */
+.admin .ap-conns { list-style: none; margin: 0; padding: 0; }
+.admin .ap-conn { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: center; padding: var(--space-4) 0; border-top: 1px solid var(--line); }
+.admin .ap-conn:first-child { border-top: 0; padding-top: 0; }
+.admin .ap-conn:last-child { padding-bottom: 0; }
+.admin .ap-conn-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+.admin .ap-conn-name strong { font-size: var(--a-fs-body); }
+.admin .ap-conn-what { margin: 2px 0 0; font-size: var(--a-fs-sm); color: var(--a-muted); line-height: 1.45; }
+.admin .ap-conn-action form { margin: 0; }
+.admin .ap-conn > .ap-details, .admin .ap-conn > .ap-conn-extra { grid-column: 1 / -1; }
+.admin .ap-conn-extra { margin: 0; font-size: var(--a-fs-sm); }
+.admin .ap-conn .ap-details > summary { font-weight: 400; font-size: var(--a-fs-sm); color: var(--a-muted); min-height: 36px; }
+@media (max-width: 560px) {
+  .admin .ap-conn { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── Loading skeletons: same outline as the page, no layout jump ── */
+.admin .ap-skel { display: flex; flex-direction: column; gap: var(--a-gap); }
+.admin .ap-skel-bar { display: block; height: 1rem; border-radius: 6px; background: var(--a-track); }
+.admin .ap-skel-h1 { height: 2.25rem; width: min(22rem, 70%); }
+.admin .ap-skel-sub { width: min(14rem, 45%); }
+.admin .ap-skel-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--a-pad); background: var(--a-card); border: 1px solid var(--a-hairline); border-radius: var(--a-radius); }
+.admin .ap-skel-card .ap-skel-bar:nth-child(2) { width: 85%; }
+.admin .ap-skel-card .ap-skel-bar:nth-child(3) { width: 60%; }
+.admin .ap-skel-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: var(--a-gap); }
+.admin .ap-skel-tiles .ap-skel-card { min-height: 104px; }
+.admin .ap-skel-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--a-gap); }
+.admin .ap-skel-cols .ap-skel-card { min-height: 220px; }
+.admin .ap-skel-shimmer .ap-skel-bar { animation: ap-skel-pulse 1.4s ease-in-out infinite; }
+@keyframes ap-skel-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) {
+  .admin .ap-skel-shimmer .ap-skel-bar { animation: none; }
+}
+
+/* Client portals: five tiles on one row on wide screens. */
+@media (min-width: 1200px) {
+  .admin .ap-kpis-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+
+/* Phone: the stage filters scroll sideways on one line instead of filling the screen. */
+@media (max-width: 560px) {
+  .admin .ap-filters { flex-wrap: nowrap; overflow-x: auto; margin-inline: calc(-1 * var(--space-4)); padding: 0 var(--space-4) 2px; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .admin .ap-filters::-webkit-scrollbar { display: none; }
+  .admin .ap-filter { flex: none; }
+}
+
+/* ── Shared page bits ──────────────────────────────────────────── */
+.admin .ap-head-text { gap: var(--space-3); min-width: 0; }
+
+/* ── New project form ──────────────────────────────────────────── */
+.admin .np-who { margin: 0; padding: 0; border: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.admin .np-who > legend { padding: 0; margin-bottom: var(--space-2); font-weight: 600; font-size: var(--a-fs-body); }
+.admin .np-switch { display: inline-flex; flex-wrap: wrap; gap: var(--space-2); }
+.admin .np-switch label { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--a-hairline); border-radius: var(--radius-pill); cursor: pointer; font-size: var(--a-fs-body); color: var(--a-strong); }
+.admin .np-switch label:hover { border-color: var(--a-text); color: var(--a-text); }
+.admin .np-switch label.on { background: var(--a-sel); border-color: var(--a-sel); color: var(--a-on-sel); }
+.admin .np-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.admin .np-switch label:has(input:focus-visible) { outline: 2px solid var(--a-text); outline-offset: 3px; }
+.admin .ap-kpis-dl dd { margin: 0; }
+.admin .ap-kpi-num-sm { font-size: 1.5rem; }
+.admin .ap-grid-top { align-items: start; }
+.admin .ap-col { gap: var(--space-6); min-width: 0; }
+.admin .ap-tight { gap: 2px; }
+.admin .ap-gap-2 { gap: var(--space-2); }
+.admin .ap-gap-3 { gap: var(--space-3); }
+.admin .ap-gap-4 { gap: var(--space-4); }
+.admin .ap-gap-5 { gap: var(--space-5); }
+.admin .ap-minw0 { min-width: 0; }
+
+/* ── Lead page ─────────────────────────────────────────────────── */
+/* The composer's opener in Next up is the page's one primary action. */
+.admin .ld-compose { display: contents; }
+/* One copper per view: Next up keeps the copper hairline, the current stage goes ink. */
+.admin .ld-stage .ld-steps .current .dot { border-color: var(--a-text); background: var(--a-text); }
+.admin .ld-stage .ld-steps .current button { border-color: var(--a-text); }
+.admin .ap-gap-1 { gap: var(--space-1); }
+.admin .ap-gap-6px { gap: 6px; }
+.admin .ap-col-gap { gap: var(--space-6); }
+.admin .ap-measure { max-width: 70ch; }
+.admin .ap-pointer { cursor: pointer; }
+.admin section[id] { scroll-margin-top: var(--space-6); }
+.admin .ap-skel-w40 { width: 40%; }
+.admin .ap-skel-w30 { width: 30%; }
+.admin .ap-skel-num { height: 1.5rem; width: 60%; }
+
+/* ── Project page ──────────────────────────────────────────────── */
+/* Next up with its action: the copper hairline moves to the wrapper so the button sits inside the card. */
+.admin .pj-steps-count { display: none; color: var(--a-strong); font-weight: 600; }
+@media (max-width: 560px) {
+  /* Phone: the current stage and the next one in a single row, with "Stage 3 of 7" above. The select below moves it anywhere. */
+  .admin .pj-steps-count { display: block; }
+  .admin .ld-stage .pj-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin .ld-stage .pj-steps > li { display: none; }
+  .admin .ld-stage .pj-steps > li.current, .admin .ld-stage .pj-steps > li.current + li { display: block; }
+  .admin .ld-stage .pj-steps > li.current:last-child { grid-column: 1 / -1; }
+  .admin .ld-stage .pj-steps button { min-height: 64px; }
+  /* The tabs scroll sideways, with a fade on the right edge so it's clear there's more. */
+  .admin .pj-tabs { max-width: 100%; -webkit-mask-image: linear-gradient(90deg, #000 80%, transparent); mask-image: linear-gradient(90deg, #000 80%, transparent); scroll-snap-type: x proximity; }
+  .admin .pj-tabs a { scroll-snap-align: start; }
+}
+
+/* ── Gallery page ──────────────────────────────────────────────── */
+/* The page draws the shared breadcrumb; the header's own "Galleries /" line is hidden. */
+.admin .ga-page-one .ga-crumb { display: none; }
+
+/* ── Galleries: "New gallery" folds the form away ──────────────── */
+.admin .ga-new-toggle { display: flex; flex-direction: column; gap: var(--space-4); }
+.admin .ga-new-toggle > summary { align-self: flex-start; list-style: none; cursor: pointer; }
+.admin .ga-new-toggle > summary::-webkit-details-marker { display: none; }
+.admin .ga-new-toggle[open] > summary { background: transparent; color: var(--a-text); border: 1px solid var(--a-hairline-strong); }
+.admin .ga-new-toggle[open] > summary::after { content: ' · close'; font-weight: 400; }
+
+/* Phone: KPI tiles two to a row (Portals, People, Client page, Money), so the content starts on the first screen. */
+@media (max-width: 560px) {
+  .admin .a-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .admin .a-kpis .a-kpi { padding: var(--space-3); min-width: 0; }
+  .admin .a-kpis .a-kpi-num { font-size: 1.25rem; overflow-wrap: anywhere; }
+  .admin .a-kpis .a-kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* ── Money: long lists show their first few rows until "Show all" is open ─── */
+.admin .mn-first-3:not(:has(> .mn-showall-toggle[open])):has(> .mn-showall-toggle) tbody > tr:nth-child(n+4),
+.admin .mn-first-3:not(:has(> .mn-showall-toggle[open])):has(> .mn-showall-toggle) .mn-bill > li:nth-child(n+4) { display: none; }
+.admin .mn-showall-toggle > summary { display: inline-flex; align-items: center; min-height: 44px; margin-top: var(--space-2); cursor: pointer; list-style: none; font-size: var(--a-fs-sm); font-weight: 600; color: var(--a-text); text-decoration: underline; text-decoration-color: var(--a-hairline-strong); text-underline-offset: 4px; }
+.admin .mn-showall-toggle > summary::-webkit-details-marker { display: none; }
+.admin .mn-showall-toggle > summary:hover { text-decoration-color: currentColor; }
+.admin .mn-showall-toggle .mn-when-open, .admin .mn-showall-toggle[open] .mn-when-closed { display: none; }
+.admin .mn-showall-toggle[open] .mn-when-open { display: inline; }
+.admin .mn-breakdown > .mn-grid { margin-top: var(--space-4); }
+.admin .mn-breakdown .p-card { padding: 0; border: 0; background: transparent; }
+.admin .mn-pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--a-gap); align-items: start; }
+.admin .mn-pair > * { min-width: 0; }
+@media (min-width: 1200px) {
+  .admin .mn-pair { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+}
+
+/* ── Quote builder ─────────────────────────────────────────────── */
+/* One primary on the page (Print or save as PDF); "Add a deliverable" reads as secondary. One hint, above the packages. */
+.admin .pb-page .pb .btn-primary { background: transparent; color: var(--a-text); border: 1px solid var(--a-hairline-strong); }
+.admin .pb-page .pb .btn-primary:hover { background: var(--a-tint); color: var(--a-text); }
+.admin .pb-page .pb-hint { display: none; }
+/* Print: only "What the client sees", in ink on paper. */
+@media print {
+  body:has(.pb-page) .a-top, body:has(.pb-page) .a-side, body:has(.pb-page) .skip, body:has(.pb-page) .a-sample,
+  body:has(.pb-page) [class*='toast'], body:has(.pb-page) [class*='insight'],
+  .admin .pb-page > .a-head, .admin .pb-page > .a-crumbs, .admin .pb-print-hint,
+  .admin .pb > section:not(:has(#pb-h-prev)), .admin .pb-packs, .admin .pb section:has(#pb-h-prev) .row-wrap,
+  .admin .pb section:has(#pb-h-prev) > .a-card-head, .admin .pb-print-row { display: none !important; }
+  body:has(.pb-page), body:has(.pb-page) .admin, body:has(.pb-page) .a-main { background: #fff !important; color: #000 !important; }
+  .admin .pb-page { padding: 0 !important; max-width: none !important; }
+  .admin .pb section:has(#pb-h-prev) { border: 0; background: #fff; padding: 0; color: #000; }
+  .admin .pb section:has(#pb-h-prev) * { color: #000 !important; }
+  .admin .pb-table th, .admin .pb-table td { border-color: #bbb !important; }
+}
+/* The current review round is marked in ink, so Next up stays the view's one copper. */
+.admin .a-page:has(.ld-nextup) .a-round.now { border-color: var(--a-text); }
+.admin .a-page:has(.ld-nextup) .a-round.now .a-round-label { color: var(--a-text); }
+
+/* ── Pass 3: reading text at body size where people read to decide ─────────────── */
+/* Client page: project lines, people, activity and the header links read at 16px; dates, counts and amounts stay 14px. */
+.admin .cp-page .a-feed .ap-tight .small, .admin .cp-page .a-empty, .admin .cp-page .key-dates dd,
+.admin .cp-page .a-chip-link, .admin .cp-page .p-card > .small { font-size: var(--a-fs-body); line-height: 1.5; }
+/* Settings: what each connection does is the reading content. */
+.admin .ap-conn-what, .admin .ap-conn-extra { font-size: var(--a-fs-body); line-height: 1.5; }
+.admin .ap-conn .ap-details > summary { min-height: 44px; }
+/* Money and Reports: chart labels, notes and card subtitles at body size; tiny chart axes stay small. */
+.admin .mn .a-kpi-note, .admin .mn .a-card-head > .small, .admin .mn .ap-fold-note, .admin .mn .mn-range-row > .small, .admin .mn .mn-empty,
+.admin .mn .mn-bar-label, .admin .mn .mn-bar-num, .admin .mn .mn-bar-note,
+.admin .mn .gx-legend-label, .admin .mn .gx-legend-num, .admin .mn .gx-legend-note,
+.admin .mn .gx-step-label, .admin .mn .gx-step-note, .admin .mn .gx-caption,
+.admin .mn .a-table .small, .admin .mn .mn-bill .small, .admin .mn .mn-goal-target, .admin .mn .mn-goal-progress { font-size: var(--a-fs-body); line-height: 1.45; }
+/* Project tabs (Money, Emails, Documents): rows and their notes at body size; dates stay 14px. */
+.admin .pj-body .muted.small:not(.ld-when), .admin .pj-body .small.m0, .admin .pj-body .a-links .small,
+.admin .pj-body .a-empty, .admin .pj-body .key-dates dd, .admin .pj-body .lb-email-text > summary { font-size: var(--a-fs-body); line-height: 1.5; }
+
+/* ── A section folded on a phone, open on a wide screen (PhoneFold) ───────────────── */
+.admin .ap-fold > summary { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1) var(--space-3); min-height: 44px; cursor: pointer; list-style: none; }
+.admin .ap-fold > summary::-webkit-details-marker { display: none; }
+.admin .ap-fold > summary::before { content: ''; width: 7px; height: 7px; border-right: 1.5px solid var(--a-muted); border-bottom: 1.5px solid var(--a-muted); transform: rotate(-45deg); transition: transform .15s; flex: none; margin: 0 2px; }
+.admin .ap-fold[open] > summary::before { transform: rotate(45deg); }
+.admin .ap-fold > summary .a-h2 { margin: 0; }
+.admin .ap-fold > summary .ap-fold-note { flex-basis: 100%; padding-left: 19px; }
+.admin .ap-fold[open] > :not(summary) { margin-top: var(--space-4); }
+@media (min-width: 821px) {
+  .admin .ap-fold > summary .ap-fold-note { flex-basis: auto; padding-left: 0; margin-left: auto; }
+}
+@media (max-width: 820px) {
+  .admin .ap-fold:not([data-ready]) > :not(summary) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin .ap-fold > summary::before { transition: none; }
+}
+
+/* ── Client portals: one "waiting" side at a time ─────────────────────────────── */
+.admin .cp-side-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.admin .cp-one .cp-h { margin-bottom: var(--space-2); }
+.admin .cp-quiet { margin: 0; font-size: var(--a-fs-body); line-height: 1.5; color: var(--a-muted); }
+@media (pointer: coarse) {
+  .admin .cp-side-row .a-switch a { min-height: 44px; }
+}
+
+/* ── Drafts kept while you're away (New lead, New project, New client) ────────── */
+.admin .ap-draft-note { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-4); border: 1px solid var(--a-hairline); border-radius: var(--a-radius-in); background: var(--a-tint); font-size: var(--a-fs-body); color: var(--a-strong); }
+.admin .ap-draft-note button { min-height: 44px; padding: 0; border: 0; background: none; color: var(--a-text); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* ── Quote builder: the print button sits with "What the client sees" ─────────── */
+.admin .pb-print-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.admin .pb-print-why { margin: 0; font-size: var(--a-fs-sm); color: var(--a-muted); }
+
+/* Project Documents tab: the quote card's "Save and send" is the one primary; "Send a document" opens a form, so it reads as secondary. */
+.admin .pj-body .pj-sub .btn-primary[aria-expanded] { background: transparent; color: var(--a-text); border: 1px solid var(--a-hairline-strong); }
+.admin .pj-body .pj-sub .btn-primary[aria-expanded]:hover { background: var(--a-tint); }
+.admin .cp-more-list { margin-top: var(--space-2); }
+
+/* Project page header: the last-contact line, the stage names and the move hint read at body size on every tab. */
+.admin .pj-head-line, .admin .pj-stage-foot > .small { font-size: var(--a-fs-body); }
+@media (min-width: 1360px) {
+  .admin .ld-stage .pj-steps button { font-size: var(--a-fs-body); }
+}
+
+/* A switcher and the content it loads (project tabs, Money views, Portals): same rhythm as the page. */
+.admin .a-page > .a-pending-scope { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
+.admin .a-page > .a-pending-scope > .a-pending-body { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }

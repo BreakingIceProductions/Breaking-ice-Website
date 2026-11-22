@@ -1,40 +1,75 @@
-/* Back office: retainer clients (/admin/retainers). Uses the admin tokens; everything is prefixed rt-. */
+/* Back office: retainer clients (/admin/retainers). Uses the admin tokens and type ladder (rem); everything is prefixed rt-.
+   The client's brand colour shows only as a small swatch: the meter is ink, so copper stays the one accent. */
 
 .rt-meter { display: flex; align-items: center; gap: var(--space-3); min-width: 160px; }
-.rt-meter-bar { flex: 1; height: 8px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
-.rt-meter-bar span { display: block; height: 100%; background: var(--rt-accent, var(--copper)); border-radius: inherit; }
-.rt-meter-num { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 14px; }
+.rt-meter-bar { flex: 1; height: 8px; border-radius: var(--radius-pill); background: var(--a-track, var(--line)); overflow: hidden; }
+.rt-meter-bar span { display: block; height: 100%; background: var(--a-text, var(--ink)); border-radius: inherit; }
+.rt-meter-num { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: var(--a-fs-body, 1rem); }
 
 .rt-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--rt-accent, var(--copper)); border: 1px solid var(--line); vertical-align: -1px; margin-right: 6px; }
 
 .rt-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: var(--space-4); align-items: end; }
-.rt-form .input { min-height: 44px; font-size: 15px; }
+.rt-form .input { min-height: 44px; font-size: var(--a-fs-body, 1rem); }
 .rt-form .rt-wide { grid-column: 1 / -1; }
 .rt-color { display: flex; gap: var(--space-2); align-items: center; }
 .rt-color input[type='color'] { width: 44px; height: 44px; padding: 2px; border: 1.5px solid var(--input-line); border-radius: var(--radius-sm); background: var(--surface-raised); }
 
 .rt-months { display: flex; flex-wrap: wrap; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
-.rt-months a { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--radius-pill); text-decoration: none; color: var(--ink); font-size: 14px; }
-.rt-months a[aria-current='page'] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.rt-months a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-pill); text-decoration: none; color: var(--ink); font-size: var(--a-fs-body, 1rem); }
+.rt-months a:hover { border-color: var(--a-hairline-strong, var(--ink)); background: var(--a-tint, transparent); }
+.rt-months a[aria-current='page'] { background: var(--a-sel, var(--ink)); color: var(--a-on-sel, var(--surface)); border-color: var(--a-sel, var(--ink)); font-weight: 600; }
 
 .rt-items { list-style: none; margin: 0; padding: 0; }
 .rt-items > li { padding: var(--space-4) 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--space-2); }
 .rt-items > li:first-child { border-top: 0; padding-top: 0; }
 .rt-item-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2) var(--space-4); align-items: baseline; }
 .rt-item-controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
-.rt-item-controls select, .rt-add select { min-height: 36px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1.5px solid var(--input-line); background: var(--surface-raised); color: var(--ink); font: inherit; font-size: 14px; }
-.rt-files { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: 13px; }
+.rt-item-controls select, .rt-add select { min-height: 36px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1.5px solid var(--input-line); background: var(--surface-raised); color: var(--ink); font: inherit; font-size: var(--a-fs-body, 1rem); }
+.rt-files { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); font-size: var(--a-fs-sm, .875rem); }
 .rt-files li { padding: 2px 10px; border: 1px solid var(--line); border-radius: var(--radius-pill); }
 .rt-add { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-2); align-items: center; }
-.rt-add .input { min-height: 40px; font-size: 15px; }
+.rt-add .input { min-height: 40px; font-size: var(--a-fs-body, 1rem); }
 @media (max-width: 560px) { .rt-add { grid-template-columns: 1fr 1fr; } .rt-add .input { grid-column: 1 / -1; } }
 
 .rt-piece { display: flex; flex-direction: column; gap: 4px; }
 .rt-piece-text { margin: 0; overflow-wrap: anywhere; }
-.rt-tag { display: inline-block; padding: 1px 8px; border-radius: var(--radius-pill); font-size: 12px; border: 1px solid var(--line); }
+.rt-tag { display: inline-block; padding: 1px 8px; border-radius: var(--radius-pill); font-size: var(--a-fs-label, .8125rem); border: 1px solid var(--line); }
 .rt-tag-published { background: var(--ok-bg); border-color: transparent; }
 .rt-tag-scheduled { background: var(--info-bg); border-color: transparent; }
 
 .rt-recap textarea { min-height: 320px; font-family: inherit; line-height: 1.5; }
 .rt-preview { width: 100%; min-height: 560px; border: 1px solid var(--line); border-radius: var(--radius-md); background: #fff; }
-.rt-confirm { padding: var(--space-4); border: 1.5px solid var(--copper); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-3); }
+.rt-confirm { padding: var(--space-4); border: 1px solid var(--a-accent, var(--copper)); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* Reading text: item notes, post text and the recap status read at body size. */
+.rt-piece-text, .rt-items > li { font-size: var(--a-fs-body, 1rem); line-height: 1.5; }
+.rt-item-head { gap: 2px; min-width: 0; }
+.rt-recap { gap: var(--space-4); }
+.rt-recap p, .rt-confirm p, .rt-msg { margin: 0; }
+.rt-msg { min-height: 20px; }
+.rt-stack { gap: var(--space-4); }
+.rt-preview-wrap { gap: var(--space-2); }
+.rt-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.rt-brand-set { margin-top: var(--space-6); }
+.rt-brand-set > legend { padding: 0; margin-bottom: var(--space-2); }
+.rt-brand-note { margin: 0 0 var(--space-4); }
+
+/* Touch: 44px for month pills, status and type selects, and the add form. */
+@media (pointer: coarse) {
+  .rt-months a, .rt-item-controls select, .rt-add select, .rt-add .input, .rt-item-controls .btn { min-height: 44px; }
+  .rt-item-controls select, .rt-add select { padding-inline: var(--space-3); }
+  .rt-files a.text-link-plain { display: inline-flex; align-items: center; min-height: 44px; padding-block: 0; }
+}
+.rt-add-btn { align-self: flex-start; }
+/* A post's networks and dates, an item's type and note, and its actions read at body size; they're what you act on. */
+.rt-piece .small, .rt-item-head .small, .rt-item-controls .small { font-size: var(--a-fs-body, 1rem); line-height: 1.5; }
+
+/* Fix pass 3: the meter fills smoothly when the count changes; month pills and the More menu press. */
+.rt-meter-bar span { transition: width .2s ease-out; }
+.rt-months a { transition: transform .08s ease, background-color .12s ease; }
+.rt-months a:active { transform: translateY(1px) scale(.98); }
+.rt-more > ul { right: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .rt-meter *, .rt-months a { transition: none !important; }
+  .rt-months a:active { transform: none; }
+}

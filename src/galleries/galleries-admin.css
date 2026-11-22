@@ -7,13 +7,13 @@
 
 .ga-page { gap: var(--space-6); }
 .ga-fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
-.ga-h3 { margin: 0; font-size: 15px; line-height: 20px; font-weight: 600; color: var(--a-text); }
-.ga-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; overflow-wrap: anywhere; }
+.ga-h3 { margin: 0; font-size: var(--a-fs-body); line-height: 1.4; font-weight: 600; color: var(--a-text); }
+.ga-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--a-fs-label); overflow-wrap: anywhere; }
 .ga-textarea { min-height: 88px; resize: vertical; }
 
-/* Tags: quiet outline; Live solid; expiring/closed in the accent. */
+/* Tags: quiet outline; Live solid; expiring/closed in the accent. Sizes are the admin rem ladder (12px floor). */
 .ga-tags { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.ga-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border: 1px solid var(--a-hairline-strong); border-radius: var(--radius-pill); font-size: 12px; line-height: 16px; font-weight: 600; color: var(--a-strong); white-space: nowrap; }
+.ga-tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border: 1px solid var(--a-hairline-strong); border-radius: var(--radius-pill); font-size: var(--a-fs-label); line-height: 1.35; font-weight: 600; color: var(--a-strong); white-space: nowrap; }
 .ga-tag-on { background: var(--solid); border-color: var(--solid); color: var(--on-solid); }
 .ga-tag-warn { border-color: var(--a-accent); color: var(--a-accent-text); }
 
@@ -25,9 +25,9 @@
 .admin .ga-item { padding: 0; overflow: hidden; display: flex; flex-direction: column; gap: 0; }
 .ga-item-cover { display: block; aspect-ratio: 3 / 2; background: var(--a-tint); border-bottom: 1px solid var(--a-hairline); }
 .ga-item-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ga-item-empty { display: flex; height: 100%; align-items: center; justify-content: center; font-size: 13px; color: var(--a-faint); }
+.ga-item-empty { display: flex; height: 100%; align-items: center; justify-content: center; font-size: var(--a-fs-sm); color: var(--a-muted); }
 .ga-item-body { display: flex; flex-direction: column; gap: 6px; padding: var(--space-4) var(--a-pad) var(--a-pad); min-width: 0; }
-.ga-item-title { margin: 0; font-size: 17px; line-height: 22px; overflow-wrap: anywhere; }
+.ga-item-title { margin: 0; font-size: var(--a-fs-lg); line-height: 1.3; overflow-wrap: anywhere; }
 .ga-item-meta { margin: 0; }
 
 /* ── Gallery page: header ───────────────────────────────── */
@@ -36,7 +36,7 @@
 .ga-title { overflow-wrap: anywhere; }
 .ga-head-side { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); }
 .ga-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-3); }
-.ga-head-links { justify-content: flex-end; gap: var(--space-2) var(--space-5); font-size: 14px; }
+.ga-head-links { justify-content: flex-end; gap: var(--space-2) var(--space-5); font-size: var(--a-fs-body); }
 .ga-details { display: flex; flex-direction: column; gap: var(--space-4); }
 
 /* Two columns: photos, then settings. One column on narrow screens. */
@@ -46,29 +46,29 @@
 .ga-panel { display: flex; flex-direction: column; }
 .ga-sub { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--a-hairline); }
 .ga-copy-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; }
-.ga-copy-row .input { flex: 1 1 180px; width: auto; min-width: 0; min-height: 40px; padding: 8px 12px; font-size: 14px; }
+.ga-copy-row .input { flex: 1 1 180px; width: auto; min-width: 0; min-height: 40px; padding: 8px 12px; font-size: var(--a-fs-body); }
 .ga-copy-row .input[readonly] { color: var(--a-strong); }
-.ga-toggles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: 14px; }
-.ga-toggles .a-check, .ga-panel > .a-check { align-items: flex-start; font-size: 14px; line-height: 20px; }
+.ga-toggles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--a-fs-body); }
+.ga-toggles .a-check, .ga-panel > .a-check { align-items: flex-start; font-size: var(--a-fs-body); line-height: 1.4; }
 .ga-toggles input, .ga-panel > .a-check input { margin-top: 3px; accent-color: var(--a-accent); }
-.ga-panel .a-check input[type='checkbox'] { width: 16px; height: 16px; flex: none; }
+.ga-panel .a-check input[type='checkbox'] { width: 18px; height: 18px; flex: none; }
 
 /* Sets */
 .ga-sets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .ga-set-row { display: flex; align-items: center; gap: var(--space-2); }
-.admin .ga-set-name { flex: 1; min-width: 0; min-height: 38px; padding: 6px 10px; font-size: 14px; }
+.admin .ga-set-name { flex: 1; min-width: 0; min-height: 40px; padding: 6px 10px; font-size: var(--a-fs-body); }
 .ga-set-count { min-width: 2.5ch; text-align: right; font-variant-numeric: tabular-nums; }
 .ga-set-tools { display: inline-flex; gap: 2px; }
-.ga-icon-btn { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--a-hairline); border-radius: var(--a-radius-in); background: transparent; color: var(--a-text); font: inherit; font-size: 15px; cursor: pointer; }
+.ga-icon-btn { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--a-hairline); border-radius: var(--a-radius-in); background: transparent; color: var(--a-text); font: inherit; font-size: var(--a-fs-body); cursor: pointer; }
 .ga-icon-btn:hover:not(:disabled) { background: var(--a-tint); border-color: var(--a-hairline-strong); }
 .ga-icon-btn:disabled { opacity: .35; cursor: default; }
-.ga-set-remove { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-3); border: 1px solid var(--a-accent); border-radius: var(--a-radius-in); }
+.ga-set-remove { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-3); border: 1px solid var(--a-hairline-strong); border-radius: var(--a-radius-in); }
 .ga-set-remove .a-select { margin-left: 0; }
 
 /* ── Uploader ───────────────────────────────────────────── */
 .ga-up-target { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .ga-up-target .a-select { margin-left: 0; }
-.ga-drop { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-8) var(--space-4); border: 1.5px dashed var(--a-hairline-strong); border-radius: var(--a-radius-in); text-align: center; font-size: 15px; transition: background-color .15s, border-color .15s; }
+.ga-drop { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-8) var(--space-4); border: 1.5px dashed var(--a-hairline-strong); border-radius: var(--a-radius-in); text-align: center; font-size: var(--a-fs-body); transition: background-color .15s, border-color .15s; }
 .ga-drop.over { border-color: var(--a-accent); background: var(--a-tint); }
 .ga-drop.busy { opacity: .6; }
 .ga-progress { display: flex; flex-direction: column; gap: var(--space-2); }
@@ -85,25 +85,27 @@
 .ga-set-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); padding-bottom: var(--space-2); border-bottom: 1px solid var(--a-hairline); }
 .ga-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .ga-thumb { position: relative; display: block; width: 100%; aspect-ratio: 1; padding: 0; border: 0; border-radius: var(--a-radius-in); background: var(--a-tint); overflow: hidden; cursor: pointer; outline-offset: 2px; }
-.ga-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s; }
+.ga-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s, opacity .12s ease-out; }
+/* Thumbnails fade in as they load (admin-grid.tsx marks them .is-loaded); no fade under reduced motion. */
+.ga-thumb img.is-loading { opacity: 0; }
 .ga-thumb:hover img { transform: scale(1.02); }
-.ga-thumb.on { box-shadow: 0 0 0 3px var(--a-accent); }
+.ga-thumb.on { box-shadow: 0 0 0 3px var(--a-sel); }
 .ga-thumb.on img { opacity: .82; }
-.ga-thumb-missing { display: flex; height: 100%; align-items: center; justify-content: center; padding: 6px; font-size: 12px; color: var(--a-faint); overflow-wrap: anywhere; }
+.ga-thumb-missing { display: flex; height: 100%; align-items: center; justify-content: center; padding: 6px; font-size: var(--a-fs-xs); color: var(--a-muted); overflow-wrap: anywhere; }
 /* Overlays sit on photos, so they keep a dark scrim in both themes. */
-.ga-thumb-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 8px 5px; background: linear-gradient(transparent, rgb(15 21 32 / .72)); color: #faf7f2; font-size: 11px; line-height: 14px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity .15s; }
+.ga-thumb-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 8px 5px; background: linear-gradient(transparent, rgb(15 21 32 / .72)); color: #faf7f2; font-size: var(--a-fs-xs); line-height: 1.35; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity .15s; }
 .ga-thumb:hover .ga-thumb-name, .ga-thumb:focus-visible .ga-thumb-name, .ga-thumb.on .ga-thumb-name { opacity: 1; }
-.ga-badge { position: absolute; top: 6px; padding: 2px 8px; border-radius: var(--radius-pill); background: rgb(15 21 32 / .74); color: #faf7f2; font-size: 11px; line-height: 16px; font-weight: 600; }
-.ga-badge-cover { left: 6px; background: var(--a-accent); color: #18202f; }
+.ga-badge { position: absolute; top: 6px; padding: 2px 8px; border-radius: var(--radius-pill); background: rgb(15 21 32 / .74); color: #faf7f2; font-size: var(--a-fs-xs); line-height: 1.35; font-weight: 600; }
+.ga-badge-cover { left: 6px; background: #faf7f2; color: #18202f; }
 .ga-badge-fav { right: 34px; }
 .ga-tick { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #faf7f2; background: rgb(15 21 32 / .35); opacity: 0; transition: opacity .15s; }
 .ga-thumb:hover .ga-tick, .ga-thumb:focus-visible .ga-tick { opacity: 1; }
-.ga-thumb.on .ga-tick { opacity: 1; background: var(--a-accent); border-color: var(--a-accent); }
-.ga-thumb.on .ga-tick::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid #18202f; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.ga-thumb.on .ga-tick { opacity: 1; background: var(--a-sel); border-color: #faf7f2; }
+.ga-thumb.on .ga-tick::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid var(--a-on-sel); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 
 /* Selection bar: sticks to the bottom of the screen while photos are selected. */
 .ga-selbar { position: sticky; bottom: var(--space-4); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); background: var(--a-card); border: 1px solid var(--a-hairline-strong); border-radius: var(--a-radius); box-shadow: 0 10px 30px rgb(15 21 32 / .18); }
-.ga-selbar-n { margin-right: auto; font-size: 14px; }
+.ga-selbar-n { margin-right: auto; font-size: var(--a-fs-body); }
 .ga-selbar-move { display: inline-flex; align-items: center; gap: var(--space-2); }
 .ga-selbar .a-select { margin-left: 0; max-width: 180px; }
 .admin .ga-danger-btn { border-color: var(--danger); color: var(--danger); }
@@ -115,7 +117,7 @@
 .ga-people { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .ga-person { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) 0; border-top: 1px solid var(--a-hairline); }
 .ga-person:first-child { border-top: 0; padding-top: 0; }
-.ga-person-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); font-size: 14px; }
+.ga-person-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); font-size: var(--a-fs-body); }
 .ga-strip { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
 .ga-strip li { width: 52px; height: 52px; border-radius: 6px; overflow: hidden; background: var(--a-tint); }
 .ga-strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -123,6 +125,18 @@
 .ga-dl-list { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 2px; }
 
 .ga-danger { border-color: var(--danger); }
+
+/* ── Touch: 44px targets, and the selection tick always shows (there's no hover to reveal it) ── */
+@media (pointer: coarse) {
+  .ga-icon-btn { width: 44px; height: 44px; }
+  .admin .ga-set-name, .ga-copy-row .input, .ga-selbar .a-select select, .ga-selbar .a-select { min-height: 44px; }
+  .ga-toggles .a-check, .ga-panel > .a-check { min-height: 44px; align-items: center; }
+  .ga-toggles input, .ga-panel > .a-check input { margin-top: 0; }
+  .ga-panel .a-check input[type='checkbox'] { width: 22px; height: 22px; }
+  .ga-tick { opacity: 1; width: 26px; height: 26px; }
+  .ga-thumb.on .ga-tick::after { left: 7px; top: 3px; width: 6px; height: 11px; }
+  .ga-set-head .linklike { padding-block: 12px; margin-block: -12px; }
+}
 
 /* ── Phones ─────────────────────────────────────────────── */
 @media (max-width: 560px) {
@@ -133,7 +147,30 @@
   .ga-selbar-n { flex-basis: 100%; }
   .ga-drop { padding: var(--space-6) var(--space-3); }
 }
+/* ── Fix pass 3 ─────────────────────────────────────────── */
+/* List cards: meta at 14px; a gallery with no photos yet gets a quiet shard pattern instead of a grey box. */
+.admin .ga-item-meta { font-size: var(--a-fs-sm); line-height: 1.45; }
+.ga-item-empty { background:
+  linear-gradient(135deg, transparent 0 46%, color-mix(in srgb, var(--a-hairline-strong) 55%, transparent) 46% 47%, transparent 47%),
+  linear-gradient(35deg, color-mix(in srgb, var(--a-text) 4%, transparent) 0 38%, transparent 38%),
+  linear-gradient(160deg, transparent 0 62%, color-mix(in srgb, var(--a-text) 6%, transparent) 62%); }
+.ga-item-cover img { transition: opacity .12s ease-out; }
+.ga-item:active { background: var(--a-tint); }
+/* The selection bar rises in; buttons and photo tiles show a press. */
+@media (prefers-reduced-motion: no-preference) {
+  .ga-selbar { animation: ga-rise .16s ease-out; }
+  @keyframes ga-rise { from { opacity: 0; transform: translateY(8px); } }
+  .ga-thumb:active img { transform: scale(.98); }
+  .ga-icon-btn:active:not(:disabled) { transform: translateY(1px) scale(.97); }
+  .ga-icon-btn { transition: transform .08s ease, background-color .12s ease; }
+}
+@media (pointer: coarse) {
+  .ga-head-links .text-link, .ga-head-links .linklike { min-height: 44px; display: inline-flex; align-items: center; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .ga-selbar, .ga-item-cover img, .ga-icon-btn { animation: none; transition: none; }
   .ga-thumb img, .ga-thumb-name, .ga-tick, .ga-drop { transition: none; }
+  .ga-thumb img.is-loading { opacity: 1; }
   .ga-thumb:hover img { transform: none; }
 }

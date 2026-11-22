@@ -1,11 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { fmtSize } from '@/portal/resumable'
 import { Uploader } from '@/portal/uploader'
 import type { ItemStatus, ItemType, MonthKey, RetainerItem } from '@/retainer/types'
+import { useNotify, useUndoable } from './confirm'
 import { postJson } from './retainer-settings'
+import { fmtDate } from '@/admin/dates'
 
 const TYPES: { value: ItemType; label: string }[] = [
   { value: 'video', label: 'Video' },
@@ -21,34 +23,66 @@ const STATUSES: { value: ItemStatus; label: string }[] = [
   { value: 'delivered', label: 'Delivered' },
 ]
 
+/** "November 2026" from "2026-11". */
+const monthName = (m: MonthKey) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 15)).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+
 /** One item: status, delivered, files handed over (uploaded to the client's Drive Retainer/<month>). */
 function Item({ clientId, month, item, readOnly, onSaved }: { clientId: string; month: MonthKey; item: RetainerItem; readOnly?: boolean; onSaved: (msg: string) => void }) {
   const [busy, setBusy] = useState(false)
   const [attach, setAttach] = useState(false)
+  const [gone, setGone] = useState(false)
+  const row = useRef<HTMLLIElement>(null)
+  const notify = useNotify()
+  const later = useUndoable()
 
-  async function save(patch: Partial<RetainerItem>) {
+  /** Saves a whole item. Status changes offer Undo, which saves the item as it was. */
+  async function put(next: RetainerItem, done: string, undo?: RetainerItem) {
     setBusy(true)
-    const r = await postJson('/api/admin/retainer/item', { clientId, month, action: 'upsert', item: { ...item, ...patch } })
+    const r = await postJson('/api/admin/retainer/item', { clientId, month, action: 'upsert', item: next })
     setBusy(false)
-    onSaved(r.ok ? (r.sample ? 'Sample data: not saved.' : 'Saved.') : r.message || 'That didn’t save. Try again.')
+    if (!r.ok) return onSaved(r.message || 'That didn’t save. Try again.')
+    onSaved(r.sample ? 'Sample data: not saved.' : done)
+    // Sample data saved nothing, so there's nothing to undo: say the same as the line under the list.
+    if (undo) notify(r.sample ? 'Sample data: not saved.' : { text: `${item.title}: ${done}`, undo: () => void put(undo, 'Put back.') })
   }
 
-  async function remove() {
-    if (!confirm(`Remove “${item.title}” from ${month}? Its files stay in Google Drive.`)) return
-    setBusy(true)
-    const r = await postJson('/api/admin/retainer/item', { clientId, month, action: 'remove', key: item._key })
-    setBusy(false)
-    onSaved(r.ok ? (r.sample ? 'Sample data: not removed.' : 'Removed.') : r.message || 'That didn’t remove. Try again.')
+  // Removing hides the item at once and offers Undo; it's only removed for good after that (files stay in Drive either way).
+  function remove() {
+    // Hand focus to the next item (or the one before, or the Items heading) so the keyboard doesn't fall back to the top of the page.
+    const li = row.current
+    const near = [li?.nextElementSibling, li?.previousElementSibling].map((x) => x?.querySelector<HTMLElement>('select:not(:disabled), summary')).find(Boolean)
+    const heading = li?.closest('section')?.querySelector<HTMLElement>('h2, h3')
+    const to = near ?? heading
+    if (to === heading && heading && !heading.hasAttribute('tabindex')) heading.tabIndex = -1
+    to?.focus({ preventScroll: true })
+    setGone(true)
+    later(`rt-${item._key}`, {
+      text: `Removed “${item.title}” from ${monthName(month)}. Its files stay in Google Drive.`,
+      restore: () => {
+        setGone(false)
+        // Focus back on the item that came back.
+        requestAnimationFrame(() => requestAnimationFrame(() => row.current?.querySelector<HTMLElement>('summary, select')?.focus()))
+      },
+      commit: () =>
+        void postJson('/api/admin/retainer/item', { clientId, month, action: 'remove', key: item._key }).then((r) => {
+          if (r.ok && r.sample) setGone(false)
+          if (r.ok) return onSaved(r.sample ? 'Sample data: not removed.' : 'Removed.')
+          setGone(false)
+          notify({ text: r.message || `“${item.title}” wasn’t removed. Check your connection and try again.`, tone: 'error', retry: remove })
+        }),
+    })
   }
+
+  if (gone) return null
 
   return (
-    <li>
+    <li ref={row}>
       <div className="rt-item-top">
-        <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+        <span className="stack rt-item-head">
           <strong>{item.title}</strong>
           <span className="muted small">
             {TYPES.find((t) => t.value === item.type)?.label ?? item.type}
-            {item.status === 'delivered' && item.deliveredAt ? ` · delivered ${item.deliveredAt}` : ''}
+            {item.status === 'delivered' && item.deliveredAt ? ` · delivered ${fmtDate(item.deliveredAt)}` : ''}
             {item.note ? ` · ${item.note}` : ''}
           </span>
         </span>
@@ -57,14 +91,20 @@ function Item({ clientId, month, item, readOnly, onSaved }: { clientId: string; 
         ) : (
           <span className="rt-item-controls">
             <label className="sr-only" htmlFor={`st-${item._key}`}>Status of {item.title}</label>
-            <select id={`st-${item._key}`} value={item.status} disabled={busy} onChange={(e) => save({ status: e.target.value as ItemStatus, deliveredAt: undefined })}>
+            <select id={`st-${item._key}`} value={item.status} disabled={busy} onChange={(e) => { const st = e.target.value as ItemStatus; void put({ ...item, status: st, deliveredAt: undefined }, `marked ${STATUSES.find((x) => x.value === st)?.label.toLowerCase()}.`, item) }}>
               {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
-            {item.status !== 'delivered' && (
-              <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => save({ status: 'delivered', deliveredAt: undefined })}>Mark delivered</button>
+            {attach ? (
+              <button type="button" className="linklike small" aria-expanded onClick={() => setAttach(false)}>Close<span className="sr-only"> the uploader</span></button>
+            ) : (
+              <details className="ld-menu rt-more">
+                <summary className="btn btn-secondary btn-sm">More<span className="sr-only"> for {item.title}</span></summary>
+                <ul>
+                  <li><button type="button" onClick={(e) => { e.currentTarget.closest('details')?.removeAttribute('open'); setAttach(true) }}>Attach files</button></li>
+                  <li><button type="button" disabled={busy} onClick={remove}>Remove<span className="sr-only"> {item.title}</span></button></li>
+                </ul>
+              </details>
             )}
-            <button type="button" className="linklike small" aria-expanded={attach} onClick={() => setAttach((a) => !a)}>{attach ? 'Close' : 'Attach files'}</button>
-            <button type="button" className="linklike small" disabled={busy} onClick={remove}>Remove<span className="sr-only"> {item.title}</span></button>
           </span>
         )}
       </div>
@@ -123,13 +163,13 @@ export function RetainerItems({ clientId, month, items, readOnly }: { clientId: 
   }
 
   return (
-    <div className="stack" style={{ gap: 'var(--space-4)' }}>
+    <div className="stack rt-stack">
       {items.length ? (
         <ul className="rt-items">
           {items.map((i) => <Item key={i._key} clientId={clientId} month={month} item={i} readOnly={readOnly} onSaved={done} />)}
         </ul>
       ) : (
-        <p className="muted a-empty">No hand-made items for this month yet. Social posts from Publer count on their own.</p>
+        <p className="muted a-empty">No hand-made items for this month yet. Social posts count on their own.</p>
       )}
       {!readOnly && (
         <form className="rt-add" onSubmit={add}>
@@ -139,10 +179,10 @@ export function RetainerItems({ clientId, month, items, readOnly }: { clientId: 
           <select id="rt-new-type" value={type} onChange={(e) => setType(e.target.value as ItemType)}>
             {TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
-          <button type="submit" className="btn btn-primary btn-sm" disabled={busy || !title.trim()}>{busy ? 'Adding…' : 'Add'}</button>
+          <button type="submit" className="btn btn-secondary btn-sm" disabled={busy || !title.trim()}>{busy ? 'Adding…' : 'Add'}</button>
         </form>
       )}
-      <p className="small muted" role="status" style={{ margin: 0, minHeight: 20 }}>{msg}</p>
+      <p className="small muted rt-msg" role="status">{msg}</p>
     </div>
   )
 }

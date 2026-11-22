@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useConfirm } from '@/admin/ui/confirm'
 import { errorText, fmtDay, galleryAction } from './admin-api'
 
 export type Recipient = { name?: string; email: string }
@@ -52,6 +53,7 @@ export function SharePanel(p: Props) {
   const [msg, setMsg] = useState('')
   const [pw, setPw] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const confirm = useConfirm()
   const working = p.status === 'live' && p.shareOn
 
   async function run(body: Record<string, unknown>, done: string) {
@@ -83,8 +85,8 @@ export function SharePanel(p: Props) {
     if (await run({ action: 'password', password: pw }, 'Password set. Anyone opening the link now needs it (people already in are asked again).')) setPw('')
   }
 
-  function newLink() {
-    if (!window.confirm('Make a new link? The current one stops working straight away, for everyone who has it.')) return
+  async function newLink() {
+    if (!(await confirm({ title: 'Make a new link?', body: 'The current one stops working straight away, for everyone who has it. This can’t be undone.', confirmLabel: 'Make a new link', danger: true }))) return
     void run({ action: 'new-link' }, 'New link made. The old one no longer works.')
   }
 
@@ -94,7 +96,7 @@ export function SharePanel(p: Props) {
         <h2 id="ga-share-h" className="a-h2">Share link</h2>
         <span className={`a-conn-state ${working ? 'on' : 'off'}`}>{working ? 'Working' : p.shareOn ? 'On, but gallery is a draft' : 'Off'}</span>
       </div>
-      <p className="muted small" style={{ margin: 0 }}>
+      <p className="muted small m0">
         For anyone without a portal sign-in. The link only works while the gallery is Live and the link is on. Their client contacts also see Live galleries in their portal.
       </p>
       <label className="a-check">
@@ -104,12 +106,12 @@ export function SharePanel(p: Props) {
       <label className="small muted" htmlFor="ga-share-url">Link</label>
       <div className="ga-copy-row">
         <input id="ga-share-url" className="input" readOnly value={p.shareUrl} onFocus={(e) => e.currentTarget.select()} />
-        <button type="button" className="btn btn-primary btn-sm" onClick={copy}>Copy</button>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={copy}>Copy</button>
       </div>
 
       <div className="ga-sub">
         <h3 className="ga-h3">Password</h3>
-        <p className="muted small" style={{ margin: 0 }}>{p.hasPassword ? 'Set. People with the link are asked for it.' : 'None. Anyone with the link can open it.'}</p>
+        <p className="muted small m0">{p.hasPassword ? 'Set. People with the link are asked for it.' : 'None. Anyone with the link can open it.'}</p>
         {!p.ro && (
           <form className="ga-copy-row" onSubmit={savePassword}>
             <label className="sr-only" htmlFor="ga-pw">{p.hasPassword ? 'New password' : 'Password'}</label>
@@ -128,14 +130,14 @@ export function SharePanel(p: Props) {
       <div className="ga-sub">
         <h3 className="ga-h3">Email the client</h3>
         {p.recipients.length ? (
-          <p className="muted small" style={{ margin: 0 }}>Opens a draft in your mail app to {p.recipients.map((r) => r.name || r.email).join(', ')}. Check it, then press Send.</p>
+          <p className="muted small m0">Opens a draft in your mail app to {p.recipients.map((r) => r.name || r.email).join(', ')}. Check it, then press Send.</p>
         ) : (
-          <p className="muted small" style={{ margin: 0 }}>No client contacts on file, so the draft opens without a recipient.</p>
+          <p className="muted small m0">No client contacts on file, so the draft opens without a recipient.</p>
         )}
-        {p.hasPassword && <p className="muted small" style={{ margin: 0 }}>The email says a password is needed but doesn’t include it. Send that separately.</p>}
+        {p.hasPassword && <p className="muted small m0">The email says a password is needed but doesn’t include it. Send that separately.</p>}
         <div className="btn-row">
           {working ? (
-            <a className="btn btn-secondary btn-sm" href={handoverEmail(p)}>Draft the email</a>
+            <a className="btn btn-primary btn-sm" href={handoverEmail(p)}>Draft the email</a>
           ) : (
             <span className="muted small">Make the gallery live and switch the link on first.</span>
           )}
@@ -144,7 +146,7 @@ export function SharePanel(p: Props) {
           )}
         </div>
       </div>
-      {msg && <p className="small muted" role="status" style={{ margin: 0 }}>{msg}</p>}
+      {msg && <p className="small muted m0" role="status">{msg}</p>}
     </section>
   )
 }

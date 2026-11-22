@@ -432,6 +432,7 @@ function Lightbox({ photo, list, fav, showHeart, sizes, downloadHref, onHeart, o
       className="gv-lb"
       aria-label={`${photo.name}, photo ${i + 1} of ${list.length}`}
       onCancel={(e) => {
+        if (e.target !== e.currentTarget) return
         e.preventDefault()
         onClose()
       }}
@@ -512,6 +513,7 @@ function Modal({ label, onCancel, children }: { label: string; onCancel: () => v
       className="gv-modal"
       aria-label={label}
       onCancel={(e) => {
+        if (e.target !== e.currentTarget) return
         e.preventDefault()
         onCancel()
       }}

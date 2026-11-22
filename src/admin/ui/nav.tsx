@@ -1,7 +1,8 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { useSideCollapsed } from './side-toggle'
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -17,6 +18,7 @@ const ICONS: Record<string, React.ReactNode> = {
   retainers: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /><path d="M15 15.5a3 3 0 1 1-1-2.2M15 12.5v1.8h-1.8" /></>,
   // A photo: frame, sun, hills.
   galleries: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="2" /><path d="m21 16-5-5L5 20" /></>,
+  // A folder: each client's projects and files.
   finder: <><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></>,
   // Two books standing and one leaning.
   library: <><path d="M4 4h3.5v16H4zM10 4h3.5v16H10z" /><path d="m15.6 5.2 3.1-.8 3.8 14.6-3.1.8z" /></>,
@@ -27,10 +29,26 @@ const Icon = ({ name }: { name: string }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{ICONS[name]}</svg>
 )
 
+/** A small pulse on the link that was just clicked, until the next page arrives (must sit inside the Link). */
+function Pending() {
+  const { pending } = useLinkStatus()
+  return <span className={`a-nav-pending${pending ? ' on' : ''}`} aria-hidden="true" />
+}
+
 type Item = { href: string; label: string; icon: string; on?: boolean; count?: number; /** Opens in a new tab; the note is read out after the label. */ external?: string }
 
-export function AdminNav({ needs = 0 }: { needs?: number }) {
+/** The menu. `id` keeps label ids unique when it's rendered twice (sidebar and the phone menu sheet). */
+export function AdminNav({ needs: initial = 0, id = 'a-nav' }: { needs?: number; id?: string }) {
   const path = usePathname()
+  // The badge follows Dismiss / Undo on Today (the rows announce them), like the page's own count.
+  const [delta, setDelta] = useState(0)
+  useEffect(() => setDelta(0), [initial])
+  useEffect(() => {
+    const on = (e: Event) => setDelta((d) => d + Number((e as CustomEvent<number>).detail || 0))
+    window.addEventListener('a-dismissed', on)
+    return () => window.removeEventListener('a-dismissed', on)
+  }, [])
+  const needs = Math.max(0, initial + delta)
   // In the icon rail the labels are visually hidden (still read out); a title gives sighted users a tooltip.
   const rail = useSideCollapsed()
   const at = (...roots: string[]) => roots.some((r) => path.startsWith(r))
@@ -52,11 +70,11 @@ export function AdminNav({ needs = 0 }: { needs?: number }) {
       ],
     },
     {
-      label: 'Studio',
+      label: 'Clients and docs',
       items: [
-        { href: '/admin/contacts', label: 'Clients', icon: 'clients', on: at('/admin/contacts') },
-        { href: '/admin/clients', label: 'Finder', icon: 'finder', on: at('/admin/clients') },
-        { href: '/admin/proposals/new', label: 'Quotes', icon: 'proposals', on: at('/admin/proposals') },
+        { href: '/admin/clients', label: 'Clients', icon: 'finder', on: at('/admin/clients') },
+        { href: '/admin/contacts', label: 'People', icon: 'clients', on: at('/admin/contacts') },
+        { href: '/admin/proposals/new', label: 'Quote builder', icon: 'proposals', on: at('/admin/proposals') },
         { href: '/admin/library', label: 'Library', icon: 'library', on: at('/admin/library') },
       ],
     },
@@ -64,7 +82,7 @@ export function AdminNav({ needs = 0 }: { needs?: number }) {
       end: true,
       items: [
         { href: '/admin/settings', label: 'Settings', icon: 'settings', on: at('/admin/settings') },
-        { href: '/studio/portal', label: 'Studio', icon: 'studio', external: 'opens in a new tab' },
+        { href: '/studio/portal', label: 'Editor', icon: 'studio', external: 'opens the content editor in a new tab' },
       ],
     },
   ]
@@ -72,8 +90,8 @@ export function AdminNav({ needs = 0 }: { needs?: number }) {
     <div className="a-nav">
       {groups.map((g, n) => (
         <div key={n} className={`a-nav-group${g.end ? ' a-nav-end' : ''}`}>
-          {g.label && <p className="a-nav-label" id={`a-nav-${n}`}>{g.label}</p>}
-          <ul aria-labelledby={g.label ? `a-nav-${n}` : undefined}>
+          {g.label && <p className="a-nav-label" id={`${id}-${n}`}>{g.label}</p>}
+          <ul aria-labelledby={g.label ? `${id}-${n}` : undefined}>
             {g.items.map((i) => (
               <li key={i.href}>
                 {i.external ? (
@@ -86,6 +104,7 @@ export function AdminNav({ needs = 0 }: { needs?: number }) {
                     <Icon name={i.icon} />
                     <span className="a-nav-text">{i.label}</span>
                     {i.count ? <span className="a-badge" aria-label={`${i.count} need you`}>{i.count}</span> : null}
+                    <Pending />
                   </Link>
                 )}
               </li>
