@@ -7,7 +7,6 @@ import { JsonLd, ORG_ID, breadcrumbLd, real } from '@/components/json-ld'
 import { getLocation, getSettings, pick } from '@/lib/data'
 import { SITE_NAME, SITE_URL } from '@/lib/site'
 import { urlFor } from '@/sanity/client'
-import { ALBERTA_PLACEHOLDER } from '@/lib/placeholders'
 
 export async function LocationPage({ slug }: { slug: string }) {
   const [{ loc, projects }, s] = await Promise.all([getLocation(slug), getSettings()])
@@ -61,7 +60,7 @@ export async function LocationPage({ slug }: { slug: string }) {
               <Btn href="/stories" variant="secondary">{s.secondaryCta}</Btn>
             </div>
           </div>
-          <Still image={loc.heroImage} label={`${loc.title}: hero image`} ratio="ratio-45" width={1000} priority fallback={slug === 'alberta' ? ALBERTA_PLACEHOLDER : undefined} />
+          <Still image={loc.heroImage} label={`${loc.title}: hero image`} ratio="ratio-45" width={1000} priority />
         </div>
       </section>
 

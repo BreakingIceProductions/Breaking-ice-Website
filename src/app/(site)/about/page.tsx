@@ -8,7 +8,6 @@ import { seoMeta } from '@/lib/seo'
 import { vimeoPoster } from '@/lib/vimeo'
 import { urlFor } from '@/sanity/client'
 import { WHO_WE_ARE } from '@/lib/offers'
-import { ALBERTA_PLACEHOLDER } from '@/lib/placeholders'
 
 export async function generateMetadata() {
   const a = await getAbout()
@@ -86,7 +85,7 @@ export default async function AboutPage() {
               </span>
             </Link>
             <Link href="/alberta" className="loc-card">
-              <Still image={a.journeyAlbertaImage} label="Stony Plain" ratio="ratio-169" width={1000} fallback={ALBERTA_PLACEHOLDER} />
+              <Still image={a.journeyAlbertaImage} label="Stony Plain" ratio="ratio-169" width={1000} />
               <span className="stack" style={{ gap: 'var(--space-2)' }}>
                 <span className="eyebrow">{pick(a.journeyAlbertaText, 'Where we are now')}</span>
                 <span className="h2">Stony Plain · Edmonton region</span>
