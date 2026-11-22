@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: 'Breaking Ice Productions', template: '%s · Breaking Ice Productions' },
   description: 'Video production for the human stories inside organizations. Alberta and the Northwest Territories.',
-  // Pre-launch: keep everything out of search engines.
-  robots: { index: false, follow: false },
+  // Live: public pages are open to search engines. Private areas (admin, portal, review, sign, galleries) set their own noindex.
+  robots: { index: true, follow: true },
 }
 
 export const viewport: Viewport = {
