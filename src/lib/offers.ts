@@ -347,6 +347,7 @@ export const COPY = {
       'You get professional cameras, sound and lighting, without a film set taking over your floor. We plan around your schedule and work quietly, so your people keep doing their jobs. That is how we capture the work as it really happens.',
   },
   /** Story Kit filmstrip (Home and the Story Kit page). */
+  // (Frame mockup kinds and their labels: FILMSTRIP_KINDS / FILMSTRIP_MOCK below.)
   filmstrip: {
     title: 'One shoot. A whole kit of stories.',
     intro: 'We plan the story with you, film it once and turn it into everything below.',
@@ -381,6 +382,15 @@ export const COPY = {
     hookTitle: 'Watch',
     otherOffersTitle: 'Other ways to work with us',
     kindsTitle: 'Kinds of film this can include',
+  },
+  locations: {
+    eyebrow: 'Locations',
+    headline: 'Where we work',
+    intro: 'We are based in Stony Plain, Alberta, and Norman Wells, Northwest Territories. We travel for the right project, in Canada and beyond.',
+    seoTitle: 'Locations: Alberta and the Northwest Territories',
+    seoDescription: 'Video production from Stony Plain, Alberta, and Norman Wells, NWT. We film across Alberta and the Northwest Territories, and we travel for the right project.',
+    /** Link on each region card: “See Alberta”. */
+    cardLink: 'See',
   },
   faq: {
     eyebrow: 'Questions',
@@ -474,4 +484,23 @@ export const FALLBACK_TRAINING_SERVICE: Service = {
     title: 'Training videos in Alberta and the NWT | Breaking Ice',
     description: 'Training, safety and onboarding videos filmed on your site with your own people. Clear, plain and made to be watched. Alberta and the NWT.',
   },
+}
+
+/** Filmstrip frame mockups, in the default order of the six frames. */
+export const FILMSTRIP_KINDS = ['film', 'cuts', 'social', 'photos', 'web', 'plan'] as const
+
+/**
+ * Labels drawn inside the filmstrip mockups. Format labels only (clip lengths, a sample timecode, a generic web address
+ * and a sample schedule), not claims about any client.
+ */
+export const FILMSTRIP_MOCK = {
+  timecode: '0:48 / 2:30',
+  cutLengths: ['0:30', '1:00'],
+  url: 'yourwebsite.com',
+  plan: [
+    { piece: 'Main film', where: 'Website', when: 'Week 1' },
+    { piece: 'Social clip', where: 'Instagram', when: 'Week 2' },
+    { piece: 'Short cut', where: 'Email', when: 'Week 3' },
+    { piece: 'Photos', where: 'LinkedIn', when: 'Week 4' },
+  ],
 }

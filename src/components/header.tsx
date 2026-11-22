@@ -100,7 +100,7 @@ export function Header({ locations, cta, social = {} }: { locations: NavLoc[]; c
           <Link href="/stories" aria-current={cur('/stories')}>Stories</Link>
           <Link href="/services" aria-current={cur('/services')}>Services</Link>
           <Link href="/about" aria-current={cur('/about')}>About</Link>
-          <Link href="/#locations" aria-current={locations.some((l) => cur(`/${l.slug}`)) ? 'page' : undefined}>Locations</Link>
+          <Link href="/locations" aria-current={cur('/locations') ?? (locations.some((l) => cur(`/${l.slug}`)) ? 'page' : undefined)}>Locations</Link>
           <Link href="/contact" aria-current={cur('/contact')}>Contact</Link>
         </nav>
         <div className="header-tools">
@@ -133,7 +133,7 @@ export function Header({ locations, cta, social = {} }: { locations: NavLoc[]; c
             <Link href="/stories">Stories</Link>
             <Link href="/services">Services</Link>
             <Link href="/about">About</Link>
-            <span className="eyebrow" style={{ marginTop: 16 }}>Locations</span>
+            <Link href="/locations">Locations</Link>
             {locations.map((l) => (
               <Link key={l._id} href={`/${l.slug}`} className="small">{l.title}</Link>
             ))}

@@ -146,6 +146,22 @@ export const homePage = defineType({
                 defineField({ name: 'title', type: 'string', validation: (r) => r.required() }),
                 defineField({ name: 'line', title: 'One line', type: 'string' }),
                 defineField({ name: 'image', title: 'Still', type: 'altImage', description: 'Optional. Leave empty to use a still from a featured story.' }),
+                defineField({
+                  name: 'kind',
+                  title: 'Show the picture as',
+                  type: 'string',
+                  description: 'Leave empty to follow the frame’s position (1 film, 2 short cuts, 3 social, 4 photos, 5 website, 6 plan).',
+                  options: {
+                    list: [
+                      { title: 'Video player (main film)', value: 'film' },
+                      { title: 'Stacked clips (short cuts)', value: 'cuts' },
+                      { title: 'Phone (social clips)', value: 'social' },
+                      { title: 'Printed photos', value: 'photos' },
+                      { title: 'Browser window (website)', value: 'web' },
+                      { title: 'Schedule card (rollout plan)', value: 'plan' },
+                    ],
+                  },
+                }),
               ],
               preview: { select: { title: 'title', subtitle: 'line', media: 'image' } },
             }),
@@ -310,6 +326,8 @@ const simplePage = (name: string, title: string) =>
   })
 
 export const storiesPage = simplePage('storiesPage', 'Stories page')
+/** The /locations landing page (both regions). Empty fields use the built-in words in src/lib/offers.ts (COPY.locations). */
+export const locationsPage = simplePage('locationsPage', 'Locations page')
 export const faqPage = defineType({
   name: 'faqPage',
   title: 'FAQ page',

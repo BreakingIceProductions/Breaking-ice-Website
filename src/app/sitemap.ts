@@ -20,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     page('/services', 0.9),
     ...offers.map((o) => page(`/services/${o.slug}`, 0.9, 'monthly', o._updatedAt)),
     ...services.map((s) => page(`/services/${s.slug}`, 0.9, 'monthly', s._updatedAt)),
+    page('/locations', 0.8),
     page('/alberta', 0.9),
     page('/northwest-territories', 0.8),
     page('/stories', 0.8, 'weekly'),

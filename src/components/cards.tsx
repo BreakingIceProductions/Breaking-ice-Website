@@ -56,14 +56,22 @@ export function ServiceCard({ s }: { s: Service }) {
   )
 }
 
-export function LocationCard({ l }: { l: Location }) {
+/** A region card. The Locations page adds a few of its places and a “See …” link. */
+export function LocationCard({ l, places, cta, headingLevel = 'h3' }: { l: Location; places?: string[]; cta?: string; headingLevel?: 'h2' | 'h3' }) {
+  const H = headingLevel
   return (
     <Link href={`/${l.slug}`} className="loc-card">
       <Still image={l.cardImage} label={l.title} ratio="ratio-169" />
       <div className="stack" style={{ gap: 8 }}>
         <span className="eyebrow">{l.baseLine}</span>
-        <h3 className="h2">{l.title}</h3>
+        <H className="h2">{l.title}</H>
         {l.summary && <p className="muted" style={{ margin: 0 }}>{l.summary}</p>}
+        {places && places.length > 0 && (
+          <ul className="loc-card-places" aria-label={`Places in ${l.title}`}>
+            {places.map((p) => <li key={p}>{p}</li>)}
+          </ul>
+        )}
+        {cta && <span className="link-arrow" style={{ marginTop: 'var(--space-2)' }}>{cta} <span aria-hidden="true">→</span></span>}
       </div>
     </Link>
   )

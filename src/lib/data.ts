@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { sanityFetch } from '@/sanity/client'
 import { DEFAULT_SETTINGS, SAMPLE_LOCATIONS, SAMPLE_PROJECTS, SAMPLE_SERVICES, SAMPLE_TESTIMONIALS } from './samples'
-import { COPY, FALLBACK_FAQ, FALLBACK_OFFERS, FALLBACK_TRAINING_SERVICE, OFFER_FAQ_CATEGORY, RETIRED_SERVICE_SLUGS, WHO_WE_ARE } from './offers'
-import type { FaqItem, FeaturedStory, Filmstrip, Img, Location, Offer, ProjectCard, Service, Settings, Testimonial } from './types'
+import { COPY, FALLBACK_FAQ, FILMSTRIP_KINDS, FALLBACK_OFFERS, FALLBACK_TRAINING_SERVICE, OFFER_FAQ_CATEGORY, RETIRED_SERVICE_SLUGS, WHO_WE_ARE } from './offers'
+import type { FaqItem, FeaturedStory, Filmstrip, FilmstripKind, Img, Location, Offer, ProjectCard, Service, Settings, Testimonial } from './types'
 
 /** Use the Sanity value when it has content, otherwise the fallback. */
 const pick = <T,>(value: T | null | undefined, fallback: T): T => {
@@ -198,12 +198,12 @@ export async function getServiceBySlug(slug: string): Promise<Service | null> {
 export async function getFilmstrip(): Promise<Filmstrip> {
   const data = await sanityFetch<any>(`{
     "f": *[_id == "homePage"][0].filmstrip,
-    "stills": *[_type == "project" && featuredOnHome == true && defined(slug.current)] | order(coalesce(order, 999) asc)[0...6]{ "img": coalesce(caseStudy->gallery[2], thumbnail) }
+    "stills": *[_type == "project" && featuredOnHome == true && defined(slug.current)] | order(coalesce(order, 999) asc)[0...6]{ "img": coalesce(caseStudy->gallery[2], thumbnail), "extra": coalesce(caseStudy->gallery[3], caseStudy->gallery[1], thumbnail) }
   }`)
   const f = data?.f ?? {}
   const c = COPY.filmstrip
-  const stills: Img[] = (data?.stills ?? []).map((x: { img?: Img }) => x?.img).filter((x: Img) => x?.asset)
-  const frames: { _key?: string; title?: string; line?: string; image?: Img }[] = pick(f.frames, c.frames)
+  const rows: { img?: Img; extra?: Img }[] = (data?.stills ?? []).filter((x: { img?: Img }) => x?.img?.asset)
+  const frames: { _key?: string; title?: string; line?: string; kind?: FilmstripKind; image?: Img }[] = pick(f.frames, c.frames)
   return {
     title: pick(f.title, c.title),
     intro: pick(f.intro, c.intro),
@@ -213,7 +213,11 @@ export async function getFilmstrip(): Promise<Filmstrip> {
       _key: fr._key ?? `f${i}`,
       title: fr.title ?? '',
       line: fr.line,
-      image: fr.image?.asset ? fr.image : stills.length ? stills[i % stills.length] : null,
+      // How the picture is shown: the frame's own choice, else by position (main film, short cuts, social, photos, website, plan).
+      kind: fr.kind ?? FILMSTRIP_KINDS[i % FILMSTRIP_KINDS.length],
+      image: fr.image?.asset ? fr.image : rows.length ? (rows[i % rows.length].img ?? null) : null,
+      // A neighbouring still from the same film, for the mockups that show two pictures (short cuts, photos).
+      extra: rows.length ? (rows[i % rows.length].extra ?? null) : null,
     })),
   }
 }
@@ -280,6 +284,18 @@ export async function getOfferFaq(offer: Offer): Promise<{ _key: string; questio
   const cat = OFFER_FAQ_CATEGORY[offer.slug]
   const all = await getFaqItems()
   return all.filter((q) => q.category === cat).map((q) => ({ _key: q._id, question: q.question, answer: q.answer }))
+}
+
+/** Locations page singleton: words from Sanity, fallbacks in COPY.locations. */
+export async function getLocationsPage() {
+  const p = (await sanityFetch<any>(`*[_id == "locationsPage"][0]{ eyebrow, headline, intro, seo }`)) ?? {}
+  const c = COPY.locations
+  return {
+    eyebrow: pick<string>(p.eyebrow, c.eyebrow),
+    headline: pick<string>(p.headline, c.headline),
+    intro: pick<string>(p.intro, c.intro),
+    seo: p.seo ?? null,
+  }
 }
 
 export async function getFaqPage() {

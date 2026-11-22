@@ -171,5 +171,8 @@ export type Filmstrip = {
   lead: string
   /** Small note under the strip. */
   note?: string
-  frames: { _key: string; title: string; line?: string; image: Img }[]
+  frames: { _key: string; title: string; line?: string; kind: FilmstripKind; image: Img; extra: Img }[]
 }
+
+/** How a filmstrip frame shows its picture: as the real thing it stands for. */
+export type FilmstripKind = 'film' | 'cuts' | 'social' | 'photos' | 'web' | 'plan'

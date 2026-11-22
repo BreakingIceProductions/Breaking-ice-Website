@@ -34,8 +34,13 @@ export async function LocationPage({ slug }: { slug: string }) {
 
   return (
     <>
-      <JsonLd data={[ld, breadcrumbLd([[loc.title, `/${slug}`]])]} />
+      <JsonLd data={[ld, breadcrumbLd([['Locations', '/locations'], [loc.title, `/${slug}`]])]} />
       <section className="page-head">
+        <div className="wrap">
+          <nav className="breadcrumb" aria-label="Breadcrumb">
+            <Link href="/">Home</Link> / <Link href="/locations">Locations</Link> / <span aria-current="page">{loc.title}</span>
+          </nav>
+        </div>
         <div className="wrap grid-2" style={{ alignItems: 'center' }}>
           <div className="stack">
             <Eyebrow>{loc.baseLine}</Eyebrow>

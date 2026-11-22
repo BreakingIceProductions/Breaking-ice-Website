@@ -19,6 +19,7 @@ export const structure: StructureResolver = (S) =>
               singleton(S, 'servicesPage', 'Services'),
               singleton(S, 'contactPage', 'Contact'),
               singleton(S, 'faqPage', 'FAQ'),
+              singleton(S, 'locationsPage', 'Locations'),
               S.documentTypeListItem('legalPage').title('Legal pages'),
             ]),
         ),

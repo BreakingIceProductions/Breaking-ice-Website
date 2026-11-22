@@ -1,14 +1,15 @@
 import Image from 'next/image'
 import { Eyebrow, Still } from '@/components/brand'
 import { FitChecklist, StoryCarousel, type CarouselStory } from '@/components/home-client'
-import { COPY } from '@/lib/offers'
+import { COPY, FILMSTRIP_MOCK } from '@/lib/offers'
 import { CATEGORY_LABELS } from '@/lib/video'
-import type { FeaturedStory, Filmstrip as FilmstripData, Img } from '@/lib/types'
+import type { FeaturedStory, Filmstrip as FilmstripData, FilmstripKind, Img } from '@/lib/types'
 import { urlFor } from '@/sanity/client'
 
 /**
- * Story Kit filmstrip (Home and the Story Kit page): a navy band with a strip of film running across it.
- * A lead frame (“One shoot”), then one frame per piece of the kit, each a real still, a number, a title and a line.
+ * Story Kit segments (Home and the Story Kit page): a row of seven cards on the navy brand band.
+ * A lead frame (“One shoot”), then one frame per piece of the kit: a number, a title, a line, and the real still shown
+ * as the thing it stands for (a player, stacked clips, a phone, prints, a browser, a schedule). See FrameMock.
  * Phones: the strip scrolls sideways and snaps to each frame.
  */
 export function Filmstrip({ data, id = 'filmstrip-title' }: { data: FilmstripData; id?: string }) {
@@ -22,25 +23,22 @@ export function Filmstrip({ data, id = 'filmstrip-title' }: { data: FilmstripDat
       </div>
       <div className="fs-scroller" tabIndex={0} role="region" aria-label={data.title}>
         <ol className="fs-strip">
-          <li className="fs-frame fs-lead">
-            <span className="fs-lead-text">{data.lead}</span>
-            <span className="fs-lead-arrow" aria-hidden="true">→</span>
-          </li>
-          {data.frames.map((f, i) => (
-            <li key={f._key} className="fs-frame">
-              <div className="fs-pic">
-                {f.image?.asset ? (
-                  <Image src={urlFor(f.image).width(640).height(480).fit('crop').url()} alt={f.image.alt ?? ''} fill sizes="(max-width: 820px) 70vw, 220px" style={{ objectFit: 'cover' }} />
-                ) : (
-                  <div className="media-pattern" aria-hidden="true" />
-                )}
-              </div>
-              <span className="fs-num">{String(i + 1).padStart(2, '0')}</span>
-              <h3 className="fs-title">{f.title}</h3>
-              {f.line && <p className="fs-line">{f.line}</p>}
+            <li className="fs-frame fs-lead">
+              <span className="fs-lead-text">{data.lead}</span>
+              <span className="fs-lead-arrow" aria-hidden="true">→</span>
             </li>
-          ))}
-        </ol>
+            {data.frames.map((f, i) => {
+              const n = String(i + 1).padStart(2, '0')
+              return (
+                <li key={f._key} className="fs-frame">
+                  <FrameMock kind={f.kind} title={f.title} image={f.image} extra={f.extra} />
+                  <span className="fs-num">{n}</span>
+                  <h3 className="fs-title">{f.title}</h3>
+                  {f.line && <p className="fs-line">{f.line}</p>}
+                </li>
+              )
+            })}
+          </ol>
       </div>
       {data.note && (
         <div className="wrap">
@@ -48,6 +46,97 @@ export function Filmstrip({ data, id = 'filmstrip-title' }: { data: FilmstripDat
         </div>
       )}
     </section>
+  )
+}
+
+/** A still cropped to a shape, for the mockups. Decorative inside them: the frame's label carries the meaning. */
+function Pic({ image, w, h, pos, sizes = '(max-width: 820px) 60vw, 180px' }: { image: Img; w: number; h: number; pos?: string; sizes?: string }) {
+  if (!image?.asset) return <span className="media-pattern" />
+  return <Image src={urlFor(image).width(w).height(h).fit('crop').url()} alt="" fill sizes={sizes} style={{ objectFit: 'cover', objectPosition: pos }} />
+}
+
+/**
+ * The picture area of one filmstrip frame: the same fixed box for every frame, with a small CSS mockup of the real thing
+ * centred in it. All chrome is decorative; the box is one image with a label (title + the still's own alt text).
+ */
+function FrameMock({ kind, title, image, extra }: { kind: FilmstripKind; title: string; image: Img; extra: Img }) {
+  const label = [title, image?.alt].filter(Boolean).join(': ')
+  const second = extra?.asset ? extra : image
+  let mock: React.ReactNode
+  switch (kind) {
+    case 'film':
+      mock = (
+        <span className="mk mk-player">
+          <Pic image={image} w={640} h={360} />
+          <span className="mk-play"><svg viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg></span>
+          <span className="mk-bar">
+            <span className="mk-track"><span className="mk-played" /></span>
+            <span className="mk-time">{FILMSTRIP_MOCK.timecode}</span>
+          </span>
+        </span>
+      )
+      break
+    case 'cuts':
+      mock = (
+        <span className="mk mk-cuts">
+          {FILMSTRIP_MOCK.cutLengths.map((len, k) => (
+            <span key={len} className={`mk-cut mk-cut-${k + 1}`}>
+              <Pic image={k === 1 ? second : image} w={480} h={270} pos={k === 0 ? '30% 50%' : undefined} />
+              <span className="mk-dur">{len}</span>
+            </span>
+          ))}
+        </span>
+      )
+      break
+    case 'social':
+      mock = (
+        <span className="mk mk-phone">
+          <span className="mk-screen">
+            <Pic image={image} w={270} h={480} />
+            <span className="mk-ticks"><span className="on" /><span className="on" /><span /></span>
+          </span>
+          <span className="mk-pill" />
+        </span>
+      )
+      break
+    case 'photos':
+      mock = (
+        <span className="mk mk-prints">
+          <span className="mk-print mk-print-1"><span className="mk-print-pic"><Pic image={second} w={360} h={360} /></span></span>
+          <span className="mk-print mk-print-2"><span className="mk-print-pic"><Pic image={image} w={360} h={360} /></span></span>
+        </span>
+      )
+      break
+    case 'web':
+      mock = (
+        <span className="mk mk-browser">
+          <span className="mk-chrome">
+            <span className="mk-dots"><span /><span /><span /></span>
+            <span className="mk-url">{FILMSTRIP_MOCK.url}</span>
+          </span>
+          <span className="mk-page">
+            <Pic image={image} w={640} h={400} />
+            <span className="mk-headline"><span /><span /></span>
+          </span>
+        </span>
+      )
+      break
+    default:
+      mock = (
+        <span className="mk mk-plan">
+          {FILMSTRIP_MOCK.plan.map((r) => (
+            <span key={r.when} className="mk-row">
+              <span className="mk-what"><b>{r.piece}</b> · {r.where}</span>
+              <span className="mk-week">{r.when}</span>
+            </span>
+          ))}
+        </span>
+      )
+  }
+  return (
+    <div className={`fs-pic fs-pic-${kind}`} role="img" aria-label={label}>
+      <span aria-hidden="true" className="fs-mock">{mock}</span>
+    </div>
   )
 }
 

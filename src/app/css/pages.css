@@ -47,6 +47,11 @@
   .legal-toc { position: sticky; top: calc(var(--header-h) + var(--space-6)); align-self: start; }
 }
 
+/* Locations page: a few places under each region card */
+.loc-card-places { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.loc-card-places li { padding: 4px 12px; border: 1px solid var(--line); border-radius: var(--radius-pill); font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+.loc-card .link-arrow { align-self: flex-start; }
+
 /* Home · the plain, quotable who-we-are line */
 .who-we-are { margin: 0; max-width: 62ch; padding-top: var(--space-5); border-top: 1px solid var(--line); font-size: 17px; line-height: 26px; color: var(--ink-muted); }
 
@@ -76,23 +81,79 @@
 .home-logos { padding: 0 0 var(--section); }
 .home-hero:has(+ .home-logos) { padding-bottom: var(--space-16); }
 
-/* Story Kit filmstrip: a strip of film across a navy band. Copper sprocket holes, one frame per piece of the kit. */
-.filmstrip-band { --fs-film: var(--scrim-media); --fs-hole: var(--accent-fill); padding: var(--section) 0; overflow: hidden; }
+/* Story Kit segments: the copper lead card and six cards in one row, on the navy band with the faint brand shard
+   pattern. Literal colours on purpose: identical in light and dark themes. */
+.filmstrip-band {
+  --fs-frame: #222b3d;  /* cards: a step lighter than the band */
+  padding: var(--section) 0; overflow: hidden;
+  background: radial-gradient(ellipse 80% 70% at 50% 55%, rgb(15 21 32 / .68), rgb(15 21 32 / .93)), url('/brand/shard-field-deep.svg') 0 0 / 64px 64px repeat, #0f1520;
+}
 .filmstrip-band .sec-head { margin-bottom: var(--space-12); }
 .fs-scroller { padding: 0 var(--gutter); }
 .fs-scroller:focus-visible { outline-offset: -4px; }
-.fs-strip { position: relative; list-style: none; margin: 0 auto; width: min(100%, 1560px); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; padding: 32px 12px; background: var(--fs-film); border: 1px solid var(--line-dark); border-radius: var(--radius-xs); }
-.fs-strip::before, .fs-strip::after { content: ''; position: absolute; left: 6px; right: 6px; height: 12px; pointer-events: none;
-  background-image: radial-gradient(ellipse 5px 3.6px at center, var(--fs-hole) 92%, transparent 100%); background-size: 22px 12px; background-repeat: repeat-x; background-position: 0 50%; }
-.fs-strip::before { top: 10px; }
-.fs-strip::after { bottom: 10px; }
-.fs-frame { min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 8px 8px 16px; background: var(--navy); border-radius: 3px; color: var(--ink-inverse); }
-.fs-pic { position: relative; aspect-ratio: 4 / 3; margin-bottom: 8px; overflow: hidden; border-radius: 2px; background: var(--navy-raised); }
+.fs-strip { list-style: none; margin: 0 auto; padding: 0; width: min(100%, 1560px); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-3); }
+.fs-frame { min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: var(--space-3) var(--space-3) var(--space-5); background: var(--fs-frame); border: 1px solid rgb(250 247 242 / .08); border-radius: var(--radius-md); color: var(--ink-inverse); }
+.fs-pic { position: relative; aspect-ratio: 4 / 3; margin-bottom: 8px; overflow: hidden; border-radius: var(--radius-sm); background: radial-gradient(120% 90% at 50% 40%, #2a3448, #1b2232); container-type: size; }
 .fs-pic .media-pattern { position: absolute; inset: 0; }
+
+/* Filmstrip mockups: each frame shows its piece as the real thing. Sized in container units so they scale with the frame. */
+.fs-mock { position: absolute; inset: 0; display: grid; place-items: center; }
+.mk { position: relative; display: block; }
+.mk img { display: block; }
+/* 01 · player */
+.mk-player { width: 90cqw; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 1.6cqw; background: var(--scrim-media); box-shadow: 0 2cqw 5cqw rgb(0 0 0 / .45), 0 0 0 1px rgb(250 247 242 / .12); }
+.mk-play { position: absolute; left: 50%; top: 46%; translate: -50% -50%; width: 17cqw; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: var(--accent-fill); color: var(--on-accent); box-shadow: 0 1cqw 3cqw rgb(0 0 0 / .35); }
+.mk-play svg { width: 48%; height: 48%; margin-left: 8%; }
+.mk-bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 2.4cqw; padding: 5cqw 3cqw 2.4cqw; background: linear-gradient(180deg, transparent, rgb(14 19 28 / .78)); }
+.mk-track { flex: 1; height: max(2px, 1.1cqw); border-radius: 9px; background: rgb(250 247 242 / .35); overflow: hidden; }
+.mk-played { display: block; width: 38%; height: 100%; background: var(--accent-fill); }
+.mk-time { font-size: 4.2cqw; line-height: 1; color: var(--warm-white); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 02 · short cuts: three offset clips */
+.mk-cuts { position: absolute; inset: 0; }
+.mk-cut { position: absolute; width: 62cqw; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 1.4cqw; background: var(--scrim-media); box-shadow: 0 1.6cqw 4cqw rgb(0 0 0 / .5), 0 0 0 1px rgb(250 247 242 / .14); }
+.mk-cut-1 { left: 6cqw; top: 9cqh; z-index: 1; rotate: -2deg; }
+.mk-cut-2 { left: 32cqw; top: 42cqh; z-index: 2; rotate: 1.5deg; }
+.mk-dur { position: absolute; right: 1.6cqw; bottom: 1.6cqw; padding: .6cqw 1.4cqw; border-radius: 1cqw; background: rgb(14 19 28 / .85); color: var(--warm-white); font-size: 4cqw; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* 03 · social: a vertical phone */
+.mk-phone { height: 90cqh; aspect-ratio: 9 / 18; border: 1.6cqw solid var(--scrim-media); border-radius: 5.5cqw; background: var(--scrim-media); box-shadow: 0 2cqw 5cqw rgb(0 0 0 / .5), 0 0 0 1px rgb(250 247 242 / .2); }
+.mk-screen { position: absolute; inset: 0; overflow: hidden; border-radius: 4cqw; }
+.mk-pill { position: absolute; top: 1.6cqw; left: 50%; translate: -50% 0; width: 10cqw; height: 2.4cqw; border-radius: 9px; background: var(--scrim-media); }
+.mk-ticks { position: absolute; top: 6cqw; left: 2.4cqw; right: 2.4cqw; display: flex; gap: 1cqw; }
+.mk-ticks span { flex: 1; height: max(1.5px, .8cqw); border-radius: 9px; background: rgb(250 247 242 / .4); }
+.mk-ticks span.on { background: var(--warm-white); }
+/* 04 · photos: two prints */
+.mk-prints { position: absolute; inset: 0; }
+.mk-print { position: absolute; width: 42cqw; padding: 2.4cqw 2.4cqw 8cqw; background: var(--warm-white); border-radius: .6cqw; box-shadow: 0 2cqw 4.5cqw rgb(0 0 0 / .5); }
+.mk-print-pic { position: relative; display: block; aspect-ratio: 1; overflow: hidden; background: var(--navy-raised); }
+.mk-print-1 { left: 11cqw; top: 9cqh; rotate: -7deg; }
+.mk-print-2 { left: 45cqw; top: 15cqh; rotate: 6deg; }
+/* 05 · website: a browser window */
+.mk-browser { width: 90cqw; aspect-ratio: 16 / 11; display: flex; flex-direction: column; overflow: hidden; border-radius: 1.8cqw; background: var(--warm-white); box-shadow: 0 2cqw 5cqw rgb(0 0 0 / .45); }
+.mk-chrome { flex: none; display: flex; align-items: center; gap: 3cqw; padding: 1.8cqw 2.6cqw; background: rgb(24 32 47 / .08); }
+.mk-dots { display: flex; gap: 1.2cqw; }
+.mk-dots span { width: 2.2cqw; height: 2.2cqw; border-radius: 50%; background: rgb(24 32 47 / .25); }
+.mk-dots span:first-child { background: var(--accent-fill); }
+.mk-url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: .7cqw 2.2cqw; border-radius: 9px; background: rgb(255 255 255 / .9); border: 1px solid rgb(24 32 47 / .1); color: var(--slate); font-size: 3.8cqw; line-height: 1.2; }
+.mk-page { position: relative; flex: 1; overflow: hidden; }
+.mk-headline { position: absolute; left: 5cqw; bottom: 5cqw; display: flex; flex-direction: column; gap: 1.4cqw; }
+.mk-headline span { display: block; width: 34cqw; height: 2.8cqw; border-radius: 9px; background: var(--warm-white); box-shadow: 0 .5cqw 2cqw rgb(0 0 0 / .3); }
+.mk-headline span + span { width: 20cqw; background: var(--accent-fill); }
+/* 06 · rollout plan: a schedule card */
+.mk-plan { width: 90cqw; padding: 2cqw 3.6cqw; border-radius: 1.8cqw; background: var(--warm-white); color: var(--navy); box-shadow: 0 2cqw 5cqw rgb(0 0 0 / .45); }
+.mk-row { display: flex; align-items: center; justify-content: space-between; gap: 2cqw; padding: 2.3cqw 0; }
+.mk-row + .mk-row { border-top: 1px solid rgb(24 32 47 / .12); }
+.mk-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 4.6cqw; line-height: 1.2; color: rgb(24 32 47 / .78); }
+.mk-what b { color: var(--navy); font-weight: 700; }
+.mk-week { flex: none; padding: .7cqw 2.2cqw; border-radius: 9px; background: var(--accent-fill); color: var(--on-accent); font-size: 4cqw; line-height: 1.2; font-weight: 700; white-space: nowrap; }
+/* A small lift on hover, desktop only and never for reduced motion. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .fs-mock > .mk { transition: translate .35s cubic-bezier(.2, .7, .2, 1); }
+  .fs-frame:hover .fs-mock > .mk { translate: 0 -3px; }
+}
 .fs-num { font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: 13px; letter-spacing: .08em; color: var(--accent-on-dark); }
 .fs-title { margin: 0; font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: 17px; line-height: 1.2; }
 .fs-line { margin: 0; font-size: 14px; line-height: 20px; color: var(--ink-inverse-muted); }
-.fs-lead { justify-content: space-between; gap: var(--space-4); padding: var(--space-5) var(--space-4); background: var(--accent-fill); color: var(--on-accent); }
+.fs-lead { justify-content: space-between; gap: var(--space-4); padding: var(--space-5) var(--space-4); background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
 .fs-lead-text { font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: clamp(22px, 1.9vw, 30px); line-height: 1.05; text-wrap: balance; }
 .fs-lead-arrow { font-size: 26px; line-height: 1; }
 .fs-note { margin: var(--space-6) 0 0; font-size: 15px; line-height: 22px; color: var(--ink-inverse-muted); }
