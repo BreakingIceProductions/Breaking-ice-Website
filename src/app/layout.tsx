@@ -30,6 +30,8 @@ export const metadata: Metadata = {
   description: 'Video production for the human stories inside organizations. Alberta and the Northwest Territories.',
   // Live: public pages are open to search engines. Private areas (admin, portal, review, sign, galleries) set their own noindex.
   robots: { index: true, follow: true },
+  // Google Search Console ownership (URL-prefix property). Keep this tag: removing it unverifies the site.
+  verification: { google: 'l-2p_QFvj0SpWYpVjbbFciax45R5AxCj3S1ge9CJZP8' },
 }
 
 export const viewport: Viewport = {
