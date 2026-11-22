@@ -23,6 +23,8 @@ type Props = {
   clients: ClientOption[]
   projects: ProjectOption[]
   ro: boolean
+  /** The Settings drawer and its button (share link, closes, downloads, message, sets, files, delete). */
+  settings?: React.ReactNode
 }
 
 /** Top of a gallery: its name and who it's for (editable), Draft ↔ Live, and the ways to look at it as the client does. */
@@ -75,8 +77,9 @@ export function GalleryHeader(p: Props) {
         </div>
         <div className="ga-head-side">
           <div className="ga-status" role="group" aria-label="Who can see it">
-            <span className={`ga-tag ${p.status === 'live' ? 'ga-tag-on' : ''}`}>{p.status === 'live' ? 'Live' : 'Draft'}</span>
-            <span className="muted small">{p.status === 'live' ? 'The client can see it' : 'Only you can see it'}</span>
+            <span className={`ga-tag ${p.status === 'live' ? 'ga-tag-on' : ''}`} title={p.status === 'live' ? 'The client can see it' : 'Only you can see it'}>
+              {p.status === 'live' ? 'Live' : 'Draft'}<span className="sr-only">: {p.status === 'live' ? 'the client can see it' : 'only you can see it'}</span>
+            </span>
             {!p.ro && (
               <button type="button" className={`btn btn-sm ${p.status === 'live' ? 'btn-secondary' : 'btn-primary'}`} onClick={toggleStatus} disabled={busy}>
                 {p.status === 'live' ? 'Back to draft' : 'Make it live'}
@@ -88,13 +91,14 @@ export function GalleryHeader(p: Props) {
             {canOpenLink ? (
               <a className="text-link" href={p.shareUrl} target="_blank" rel="noopener noreferrer">Open share link<span className="sr-only"> (opens in a new tab)</span></a>
             ) : (
-              <span className="muted small" title="The share link works once the gallery is live and the link is switched on">Share link not working yet</span>
+              <span className="ga-tag" title="The share link works once the gallery is live and the link is switched on">Link off</span>
             )}
             {!p.ro && (
               <button type="button" className="linklike" onClick={() => setEditing((v) => !v)} aria-expanded={editing} aria-controls="ga-details">
                 {editing ? 'Close details' : 'Edit details'}
               </button>
             )}
+            {p.settings}
           </div>
         </div>
       </div>

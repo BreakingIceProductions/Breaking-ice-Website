@@ -1,0 +1,259 @@
+/* ═════════════════════════════════════════════════════════
+   Back office, simplified ("Direction A: calm cards, one action each").
+   Today (/admin) and the project page. Imported by those two pages; reads the admin tokens from admin.css,
+   so it follows light and dark. Classes are `.sa-*`, plus two small graphics (`.gx-seg`, `.gx-dot`) that
+   live in src/admin/ui/graphics.tsx.
+   Rules: one copper button per screen (.sa-copper), statuses are dots and chips, 44px touch targets.
+   ═════════════════════════════════════════════════════════ */
+
+/* ── Type and basics ───────────────────────────────────── */
+.admin .sa-h1 { font-size: clamp(1.875rem, 1.2rem + 1.8vw, 2.5rem); line-height: 1.15; }
+.admin .sa-h2 { margin: 0; font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: 1.375rem; line-height: 1.25; color: var(--a-text); }
+.admin .sa-h3 { margin: 0; font-family: var(--font-sans); font-stretch: 100%; font-weight: 600; font-size: var(--a-fs-lg); line-height: 1.35; color: var(--a-text); text-transform: none; letter-spacing: 0; }
+.admin .sa-muted { color: var(--a-muted); }
+.admin .sa-count { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 8px; margin-left: 6px; border-radius: 999px; background: var(--a-tint); font-family: var(--font-sans); font-stretch: 100%; font-size: var(--a-fs-sm); font-weight: 600; vertical-align: middle; }
+.admin .sa-block, .admin .sa-section { display: flex; flex-direction: column; gap: var(--space-3); }
+.admin .sa-stack { display: flex; flex-direction: column; gap: var(--space-5, 24px); margin-top: var(--space-4); }
+.admin .sa-h2-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.admin .sa-card { display: flex; flex-direction: column; gap: var(--space-3); padding: 20px 24px; border: 1px solid var(--a-hairline); border-radius: 20px; background: var(--a-card); min-width: 0; }
+.admin .sa-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.admin .sa-more { align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; color: var(--a-text); text-decoration: underline; text-decoration-color: var(--a-hairline-strong); text-underline-offset: 4px; }
+
+/* The one copper button on a screen. Navy text on copper, as the brand sets it. */
+.admin .btn.sa-copper { min-height: 44px; border: 0; background: var(--a-accent); color: #18202f; font-weight: 600; }
+.admin .btn.sa-copper:hover { background: color-mix(in srgb, var(--a-accent) 86%, #faf7f2); color: #18202f; }
+.admin .btn.sa-copper:focus-visible { outline: 2px solid var(--a-text); outline-offset: 2px; }
+
+/* ── Chips ─────────────────────────────────────────────── */
+.admin .sa-chips { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.admin .sa-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--a-tint); color: var(--a-strong); font-size: var(--a-fs-sm); line-height: 1.4; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.admin .sa-chip.is-hot { background: color-mix(in srgb, var(--a-accent) 16%, transparent); color: var(--a-accent-text); font-weight: 600; }
+.admin .sa-chip.is-past { background: transparent; box-shadow: inset 0 0 0 1px var(--a-hairline); color: var(--a-muted); }
+.admin .sa-chip.is-past::before { content: '✓'; font-size: .8em; color: var(--a-faint); }
+.admin .sa-chip-lg { padding: 6px 12px; border-radius: 10px; font-size: var(--a-fs-body); white-space: normal; }
+
+/* ── Small graphics (graphics.tsx: Segments, Dot) ──────── */
+.admin .gx-seg { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.admin .gx-seg > span { width: 24px; height: 6px; border-radius: 3px; background: var(--a-track); }
+.admin .gx-seg > .is-done { background: var(--a-text); }
+.admin .gx-seg > .is-current { background: var(--a-accent); }
+.admin .gx-seg-big > span { flex: 1; width: auto; height: 12px; border-radius: 6px; }
+.admin .gx-dot { flex: none; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--a-faint); }
+.admin .gx-dot-accent { background: var(--a-accent); }
+.admin .gx-dot-done { background: var(--a-text); }
+.admin .gx-dot-wait { background: transparent; border: 2px solid var(--a-accent); }
+.admin .gx-dot-quiet { background: var(--a-track); border: 1.5px solid var(--a-faint); }
+
+/* ── "?" help and reveal ───────────────────────────────── */
+.admin .sa-help { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.admin .sa-help-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--a-hairline-strong); border-radius: 50%; background: transparent; color: var(--a-muted); font: inherit; font-size: var(--a-fs-sm); font-weight: 700; line-height: 1; cursor: pointer; position: relative; }
+/* 44px to touch, 28px to see. */
+.admin .sa-help-btn::after { content: ''; position: absolute; inset: -8px; }
+.admin .sa-help-btn:hover, .admin .sa-help-btn[aria-expanded='true'] { color: var(--a-text); border-color: var(--a-text); }
+.admin .sa-help-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.admin .sa-help-text:not([hidden]) { display: block; flex-basis: 100%; max-width: 46ch; padding: 8px 12px; border-radius: var(--a-radius-in); background: var(--a-tint); font-size: var(--a-fs-sm); line-height: 1.45; font-weight: 400; color: var(--a-strong); text-transform: none; letter-spacing: 0; }
+.admin .a-card-head .sa-help, .admin .sa-chips .sa-help { justify-content: flex-end; }
+.admin .a-card-head:has(.sa-help-btn[aria-expanded='true']) { flex-wrap: wrap; }
+.admin .sa-reveal { display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
+.admin .sa-reveal-btn { min-height: 44px; }
+.admin .sa-reveal-body { align-self: stretch; }
+
+/* ── Folds ─────────────────────────────────────────────── */
+.admin .sa-fold { padding: 4px 0; }
+.admin .sa-fold > summary .sa-h2 { display: inline-flex; align-items: center; }
+.admin .sa-fold-link { font-weight: 600; color: var(--a-text); text-decoration: underline; text-decoration-color: var(--a-hairline-strong); text-underline-offset: 4px; }
+.admin .sa-list-fold > summary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-weight: 600; font-size: var(--a-fs-sm); color: var(--a-text); }
+.admin .sa-list-fold > summary { list-style: none; }
+.admin .sa-list-fold > summary::-webkit-details-marker { display: none; }
+.admin .sa-list-fold > summary::before { content: ''; width: 7px; height: 7px; border-right: 1.5px solid var(--a-muted); border-bottom: 1.5px solid var(--a-muted); transform: rotate(-45deg); transition: transform .15s; margin: 0 2px; }
+.admin .sa-list-fold[open] > summary::before { transform: rotate(45deg); }
+.admin .sa-list-fold > summary:focus-visible, .admin .sa-fold > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+
+/* ═════ Today ═════════════════════════════════════════════ */
+.admin .sa.tdx { gap: var(--space-6, 32px); }
+.admin .sa-glance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.admin .sa-tile { display: flex; flex-wrap: wrap; align-items: center; column-gap: 14px; row-gap: 4px; min-height: 44px; padding: 18px 22px; border: 1px solid var(--a-hairline); border-radius: 20px; background: var(--a-card); color: var(--a-text); text-decoration: none; min-width: 0; }
+.admin .sa-tile:hover { border-color: var(--a-hairline-strong); }
+.admin .sa-tile:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.admin .sa-tile-num { font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: clamp(1.75rem, 0.9rem + 1.5vw, 2.5rem); line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.admin .sa-tile-label { font-size: var(--a-fs-lg); color: var(--a-muted); line-height: 1.3; }
+
+/* Needs you: one card per thing. */
+.admin .sa-needs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.admin .sa-needs > li.a-row-x { display: flex; align-items: center; gap: 4px; padding: 0 6px 0 0; border: 1px solid var(--a-hairline); border-radius: 20px; background: var(--a-card); transition: opacity .2s ease, transform .2s ease; }
+.admin .sa-needs > li.a-row-x.is-leaving { opacity: 0; transform: translateX(12px); }
+.admin .sa-needs .a-dismiss-btn { flex: none; width: 44px; height: 44px; }
+.admin .sa-need { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 12px 8px 12px 20px; color: var(--a-text); text-decoration: none; border-radius: 20px; }
+.admin .sa-need:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.admin .sa-need:hover strong { text-decoration: underline; text-decoration-color: var(--a-accent); text-underline-offset: 3px; }
+.admin .sa-need-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.admin .sa-need-text strong { font-size: var(--a-fs-lg); font-weight: 600; line-height: 1.35; }
+.admin .sa-need-sub { font-size: var(--a-fs-sm); line-height: 1.4; color: var(--a-muted); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.admin .sa-verb { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; background: var(--solid); color: var(--on-solid); font-weight: 600; font-size: var(--a-fs-sm); white-space: nowrap; text-decoration: none; }
+.admin a.sa-verb-out:hover { background: var(--a-strong); color: var(--on-solid); }
+.admin a.sa-verb-out:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.admin .sa-empty { display: flex; align-items: center; gap: 10px; margin: 0; padding: 18px 22px; border: 1px dashed var(--a-hairline-strong); border-radius: 20px; color: var(--a-muted); }
+.admin .sa-block .td-sugg { border-radius: 20px; }
+
+/* Jobs in motion: one row per booked project, its stage as a bar. */
+.admin .sa-jobs { list-style: none; margin: 0; padding: 4px 20px; border: 1px solid var(--a-hairline); border-radius: 20px; background: var(--a-card); }
+.admin .sa-jobs li + li { border-top: 1px solid var(--a-hairline); }
+.admin .sa-jobs a { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 56px; padding: 10px 0; color: var(--a-text); text-decoration: none; }
+.admin .sa-jobs a:hover strong { text-decoration: underline; text-decoration-color: var(--a-accent); text-underline-offset: 3px; }
+.admin .sa-jobs a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.admin .sa-job-name { flex: 1 1 220px; min-width: 0; font-size: var(--a-fs-body); }
+.admin .sa-job-name .sa-muted { font-weight: 400; }
+.admin .sa-job-stage { width: 112px; font-size: var(--a-fs-sm); color: var(--a-muted); }
+
+/* This week: dots instead of "2 things". */
+.admin .sa-daydots { display: inline-flex; gap: 3px; justify-content: center; min-height: 8px; }
+.admin .sa-daydots > span { width: 6px; height: 6px; border-radius: 50%; background: var(--a-text); }
+.admin .sa-week { border-radius: 20px; }
+
+/* ═════ Project page ══════════════════════════════════════ */
+.admin .sa-head { align-items: flex-end; }
+.admin .sa-eyebrow { color: var(--a-accent-text); }
+.admin .sa-eyebrow a { color: inherit; text-decoration: none; }
+.admin .sa-eyebrow a:hover { text-decoration: underline; }
+
+/* Stage: one bar of segments, each a button that opens the move preview. */
+.admin .sa-stage { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: var(--space-3) var(--space-5, 24px); }
+.admin .sa-stage > .sa-stages { flex: 1 1 520px; min-width: 0; }
+.admin .sa-stages { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(var(--sa-n, 7), minmax(0, 1fr)); gap: 8px; }
+.admin .sa-stages button { width: 100%; min-height: 44px; display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 6px 0; border: 0; background: transparent; color: var(--a-muted); font: inherit; text-align: left; cursor: pointer; border-radius: 6px; }
+.admin .sa-stages button:disabled { cursor: default; }
+.admin .sa-stages button:not(:disabled):hover .sa-stage-bar { box-shadow: 0 0 0 2px var(--a-hairline-strong); }
+.admin .sa-stages button:not(:disabled):hover .sa-stage-name { color: var(--a-text); }
+.admin .sa-stages button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.admin .sa-stage-bar { display: block; height: 8px; border-radius: 4px; background: var(--a-track); }
+.admin .sa-stages .is-done .sa-stage-bar, .admin .sa-rounds .is-done .sa-stage-bar, .admin .sa-qsteps .is-done .sa-stage-bar { background: var(--a-text); }
+.admin .sa-stages .is-current .sa-stage-bar, .admin .sa-rounds .is-current .sa-stage-bar, .admin .sa-qsteps .is-current .sa-stage-bar { background: var(--a-accent); }
+.admin .sa-stage-name { font-size: var(--a-fs-sm); line-height: 1.3; overflow-wrap: anywhere; }
+.admin .sa-stages .is-current .sa-stage-name { color: var(--a-text); font-weight: 600; }
+.admin .sa-stage-when { font-size: var(--a-fs-xs); color: var(--a-faint); font-variant-numeric: tabular-nums; }
+.admin .sa-stage-now { display: none; margin: 0; font-weight: 600; font-size: var(--a-fs-body); }
+.admin .sa-stage-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+.admin .sa-move select { min-height: 44px; }
+
+/* Next up: the one dark card, one copper button. Solid ink in both themes. */
+.admin .sa-next { display: flex; flex-direction: column; gap: var(--space-3); padding: 20px 28px; border-radius: 20px; background: var(--solid); color: var(--on-solid); }
+.admin .sa-next-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.admin .sa-next-main { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.admin .sa-next .sa-next-eyebrow { color: #e2a273; }
+:root[data-theme='dark'] .admin .sa-next .sa-next-eyebrow { color: #a35a2a; }
+.admin .sa-next-title { font-family: var(--font-display); font-stretch: 125%; font-weight: 700; font-size: 1.375rem; line-height: 1.25; overflow-wrap: anywhere; }
+.admin .sa-ring-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.admin .sa-ring-btn .gx-ring { width: 56px; max-width: 56px; }
+.admin .sa-ring-btn .gx-ring-track { stroke: color-mix(in srgb, var(--on-solid) 22%, transparent); }
+.admin .sa-ring-btn .gx-ring-mid { color: var(--on-solid); font-size: var(--a-fs-sm); }
+.admin .sa-ring-btn:hover .gx-ring-track { stroke: color-mix(in srgb, var(--on-solid) 40%, transparent); }
+.admin .sa-ring-btn:focus-visible { outline: 2px solid var(--a-accent); outline-offset: 2px; }
+.admin .sa-next .btn.sa-copper:focus-visible { outline-color: var(--on-solid); }
+.admin .sa-next-steps:not([hidden]) { padding: 12px 16px; border-radius: 12px; background: color-mix(in srgb, var(--on-solid) 8%, transparent); color: inherit; }
+.admin .sa-next-steps .pj-check, .admin .sa-next-steps .muted { color: inherit; }
+
+/* Cuts: poster-frame cards with a status dot. */
+.admin .sa-cuts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+.admin .sa-cuts-detail { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.admin .sa-cuts-detail .sa-poster { aspect-ratio: 16 / 7; }
+.admin .sa-cut { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--a-hairline); border-radius: 20px; background: var(--a-card); overflow: hidden; }
+.admin .sa-cut-main { display: flex; flex-direction: column; color: var(--a-text); text-decoration: none; }
+.admin .sa-cut-main:hover strong { text-decoration: underline; text-decoration-color: var(--a-accent); text-underline-offset: 3px; }
+.admin .sa-cut-main:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: 20px; }
+.admin .sa-poster { position: relative; display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 9; background: color-mix(in srgb, var(--a-text) 12%, var(--a-card)); overflow: hidden; }
+.admin .sa-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.admin .sa-poster-icon { font-size: 1.5rem; color: var(--a-muted); }
+.admin .sa-badge { position: absolute; top: 10px; left: 10px; padding: 2px 9px; border-radius: 999px; background: var(--solid); color: var(--on-solid); font-size: var(--a-fs-label); font-weight: 600; }
+.admin .sa-cut-foot { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 14px; }
+.admin .sa-cut-foot strong { flex: 1; min-width: 0; font-size: var(--a-fs-body); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin .sa-cut-state { flex: none; font-size: var(--a-fs-sm); color: var(--a-muted); }
+.admin .sa-cut-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 0 14px 12px; }
+.admin .sa-cut-meta .text-link { display: inline-flex; align-items: center; min-height: 32px; margin-left: auto; }
+.admin .sa-cut-add { border: 2px dashed var(--a-hairline-strong); background: transparent; }
+.admin .sa-cut-add a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 120px; color: var(--a-muted); font-weight: 600; text-decoration: none; }
+.admin .sa-cut-add a span { font-size: 1.5rem; line-height: 1; }
+.admin .sa-cut-add a:hover { color: var(--a-text); }
+.admin .sa-cut-addlink { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 600; color: var(--a-text); text-decoration: underline; text-decoration-color: var(--a-hairline-strong); text-underline-offset: 4px; }
+.admin .sa-cut-add a:focus-visible { outline: 2px solid var(--focus); outline-offset: -4px; border-radius: 18px; }
+
+/* Dates and Paid, side by side. */
+.admin .sa-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.admin .sa-datechips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.admin .sa-two .gx-split { height: 12px; }
+.admin .sa-two .gx-split > span { border-radius: 6px; }
+.admin .sa-details[open] > .a-split { margin-top: var(--space-3); }
+
+/* Emails: icon, subject, date chip. */
+.admin .sa-feed { list-style: none; margin: 0; padding: 0; }
+.admin .sa-feed li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--a-hairline); }
+.admin .sa-feed li:first-child { border-top: 0; padding-top: 0; }
+.admin .sa-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: var(--a-tint); color: var(--a-strong); font-size: 1rem; font-weight: 700; }
+.admin .sa-feed-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.admin .sa-feed-text strong { font-weight: 600; overflow-wrap: anywhere; }
+.admin .sa-feed .sa-chip { margin-top: 6px; }
+
+/* Revision rounds and quote steps: short tracks. */
+.admin .sa-rounds, .admin .sa-qsteps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.admin .sa-qsteps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.admin .sa-rounds li, .admin .sa-qsteps li { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.admin .sa-rounds .sa-stage-bar, .admin .sa-qsteps .sa-stage-bar { align-self: stretch; margin-bottom: 4px; }
+.admin .sa-qsteps li:not(.is-done):not(.is-current) strong { color: var(--a-muted); font-weight: 500; }
+
+/* ═════ Phone ═════════════════════════════════════════════ */
+@media (max-width: 720px) {
+  .admin .sa-two { grid-template-columns: minmax(0, 1fr); }
+  .admin .sa-glance { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .admin .sa-glance > :nth-child(3) { grid-column: 1 / -1; flex-direction: row !important; align-items: baseline !important; gap: 10px !important; }
+  .admin .sa-tile { flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 14px; border-radius: 16px; }
+  .admin .sa-tile-num { font-size: 1.625rem; }
+  .admin .sa-tile-label { font-size: var(--a-fs-sm); }
+  .admin .sa-need { flex-wrap: wrap; gap: 6px 10px; padding: 12px 4px 12px 16px; }
+  .admin .sa-need .gx-dot { margin-top: 2px; }
+  .admin .sa-need-text { flex-basis: calc(100% - 24px); }
+  .admin .sa-need .sa-chip { margin-left: 20px; }
+  .admin .sa-need .sa-verb { margin-left: auto; min-height: 40px; }
+  /* The dot calendar stays on a phone (the list under it is folded). */
+  .admin .sa.tdx .gx-days { display: grid; gap: 3px; }
+  .admin .sa.tdx .gx-days li { min-height: 56px; padding: 6px 0; }
+  .admin .sa-jobs { padding: 2px 16px; }
+  .admin .sa-jobs a { flex-wrap: nowrap; gap: 12px; min-height: 52px; }
+  .admin .sa-job-name { flex: 1 1 auto; line-height: 1.35; }
+  .admin .sa-job-name .sa-muted { display: block; font-size: var(--a-fs-sm); }
+  .admin .sa-job-name .sa-sep { display: none; }
+  .admin .sa-jobs .gx-seg { gap: 3px; }
+  .admin .sa-jobs .gx-seg > span { width: 11px; }
+  .admin .sa-job-stage { display: none; }
+  .admin .sa .td-sugg-summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .admin .sa-stages { gap: 4px; }
+  .admin .sa-stage-name, .admin .sa-stage-when { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .admin .sa-stages button { min-height: 32px; padding: 12px 0; }
+  .admin .sa-stage { align-items: center; gap: 8px 12px; }
+  .admin .sa-stage > .sa-stages { flex-basis: 100%; }
+  .admin .sa-stage-now { display: block; flex: 1 1 auto; }
+  .admin .sa-stage-foot { flex: none; }
+  .admin .sa-next { padding: 18px 20px; }
+  .admin .sa-next-title { font-size: 1.1875rem; }
+  .admin .sa-next-row { gap: 12px; }
+  .admin .sa-next-main { flex: 1 1 calc(100% - 80px); }
+  .admin .sa-next-row > .btn { flex: 1 1 100%; }
+  .admin .sa-poster { aspect-ratio: 16 / 8; }
+  .admin .sa-card { padding: 16px 18px; }
+  .admin .sa-cuts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .admin .sa-cut { border-radius: 16px; }
+  .admin .sa-cut-foot { flex-wrap: wrap; gap: 4px 8px; padding: 8px 10px; }
+  .admin .sa-cut-foot strong { flex-basis: calc(100% - 20px); white-space: normal; font-size: var(--a-fs-sm); }
+  .admin .sa-cut-state { font-size: var(--a-fs-xs); margin-left: 18px; }
+  .admin .sa-cut-add a { min-height: 96px; }
+  .admin .sa-qsteps { gap: 8px; }
+  .admin .sa-feed li { flex-wrap: wrap; }
+  .admin .sa-feed-text { flex: 1 1 calc(100% - 48px); }
+  .admin .sa-feed .sa-chip { margin: 0 0 0 48px; }
+  /* Documents to sign: rows become stacked cards, not a table. */
+  .admin .sa-docs table, .admin .sa-docs thead, .admin .sa-docs tbody, .admin .sa-docs tr, .admin .sa-docs td { display: block; width: 100%; }
+  .admin .sa-docs thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .admin .sa-docs tr { padding: 10px 0; border-top: 1px solid var(--a-hairline); }
+  .admin .sa-docs td { padding: 2px 0; border: 0; text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin .sa-needs > li.a-row-x { transition: none; }
+}

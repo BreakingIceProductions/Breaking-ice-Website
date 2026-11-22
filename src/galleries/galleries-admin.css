@@ -179,3 +179,16 @@
    Activity and favourites keep their small date lines. */
 .admin :is([aria-labelledby='ga-share-h'], [aria-labelledby='ga-exp-h'], [aria-labelledby='ga-dl-h'], [aria-labelledby='ga-sets-h'], [aria-labelledby='ga-danger-h']) :is(p.small, span.small) { font-size: var(--a-fs-body); line-height: 1.5; }
 .admin :is([aria-labelledby='ga-fav-h'], [aria-labelledby='ga-act-h']) > p.small:not([role='status']) { font-size: var(--a-fs-body); line-height: 1.5; }
+
+/* ── Simplified pass (Nov 22): photos first, setup in the Settings drawer ── */
+.ga-page-one .ga-main { display: flex; flex-direction: column; gap: var(--space-4); }
+.ga-up-closed { display: flex; }
+.ga-up-closed .btn { min-height: 44px; gap: 6px; }
+.ga-thumb-name { display: none; }
+.ga-head-links { align-items: center; }
+.admin .sb-drawer .ga-panel { border-radius: 16px; }
+.admin .sb-drawer .ga-danger { margin-top: var(--space-4); }
+.ga-h3 .ga-tag { margin-left: 6px; vertical-align: 1px; }
+.ga-grid-wrap > .a-card-head { justify-content: flex-start; gap: var(--space-3); }
+.ga-page-one .ga-head-side { align-items: flex-start; }
+.ga-page-one .ga-status, .ga-page-one .ga-head-links { justify-content: flex-start; }

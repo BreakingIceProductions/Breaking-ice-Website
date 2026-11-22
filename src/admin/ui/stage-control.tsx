@@ -9,7 +9,7 @@ import { StageDialog, type Stage } from './stage-dialog'
  * "Move to …" button. Asks the server for a preview of everything the move will
  * do, lets you untick any step, and only then runs it.
  */
-export function StageControl({ projectId, projectTitle, current, next, stages, compact, archived, declined, onRun }: { projectId: string; projectTitle: string; current: string; next?: Stage; stages: Stage[]; compact?: boolean; archived?: boolean; declined?: boolean; /** Optimistic placement on a board: called when Confirm is pressed and when the move ends. */ onRun?: (to: Stage, phase: 'start' | 'done' | 'failed') => void }) {
+export function StageControl({ projectId, projectTitle, current, next, stages, compact, prompt, archived, declined, onRun }: { projectId: string; projectTitle: string; current: string; next?: Stage; stages: Stage[]; compact?: boolean; /** Compact only: a small "Move stage" picker (the current stage shows elsewhere; archiving lives in the More menu). */ prompt?: string; archived?: boolean; declined?: boolean; /** Optimistic placement on a board: called when Confirm is pressed and when the move ends. */ onRun?: (to: Stage, phase: 'start' | 'done' | 'failed') => void }) {
   const router = useRouter()
   const [target, setTarget] = useState<Stage | null>(null)
   const [busy, setBusy] = useState(false)
@@ -29,10 +29,10 @@ export function StageControl({ projectId, projectTitle, current, next, stages, c
   return (
     <>
       {compact ? (
-        <label className="a-select a-select-sm">
-          <span className="sr-only">Stage of {projectTitle}</span>
+        <label className={`a-select a-select-sm${prompt ? ' sa-move' : ''}`}>
+          <span className="sr-only">{prompt ? `${prompt}: ${projectTitle}` : `Stage of ${projectTitle}`}</span>
           <select
-            value={archived ? '__archived' : current}
+            value={prompt ? '' : archived ? '__archived' : current}
             disabled={busy}
             onChange={(e) => {
               const v = e.target.value
@@ -43,12 +43,13 @@ export function StageControl({ projectId, projectTitle, current, next, stages, c
               if (s) open(s)
             }}
           >
-            {archived && <option value="__archived" disabled>{declined ? 'Archived · declined' : 'Archived'}</option>}
+            {prompt && <option value="" disabled>{prompt}</option>}
+            {!prompt && archived && <option value="__archived" disabled>{declined ? 'Archived · declined' : 'Archived'}</option>}
             {stages.map((s) => (
-              <option key={s.value} value={s.value} disabled={!archived && s.value === current}>{s.value === current && !archived ? s.title : `Move to ${s.title}`}</option>
+              <option key={s.value} value={s.value} disabled={!archived && s.value === current}>{prompt ? (s.value === current && !archived ? `${s.title} (now)` : s.title) : s.value === current && !archived ? s.title : `Move to ${s.title}`}</option>
             ))}
-            <option disabled>──────────</option>
-            {archived ? (
+            {!prompt && <option disabled>──────────</option>}
+            {prompt ? null : archived ? (
               <option value="__unarchive">Unarchive</option>
             ) : (
               <>

@@ -1,21 +1,24 @@
 import Link from 'next/link'
 import '../../css/admin-pages.css'
+import '../../css/admin-simple-a.css'
 import { requireAdmin } from '@/admin/auth'
 import { listSuggestions } from '@/admin/capture'
-import { nextTwoWeeks, pipelineTiles, quoteStatus } from '@/admin/board-data'
-import { TZ, addDays, fmtDay, relDays, today, weekday, ymd, fmtDate } from '@/admin/dates'
+import { nextTwoWeeks, quoteStatus } from '@/admin/board-data'
+import { TZ, addDays, fmtDay, today, weekday, ymd, fmtDate } from '@/admin/dates'
 import { cad, needsAction, waitingOnClients, type Row } from '@/admin/insights'
 import { fmtTime, isSalesStage, pageHref } from '@/admin/lead'
 import { MILESTONE_LIST } from '@/admin/milestones'
-import { moneyView, reportView, signing } from '@/admin/money'
+import { moneyView, signing } from '@/admin/money'
 import { depositsDue, followUps } from '@/admin/needs-you'
 import { loadMoney } from '@/admin/money-data'
 import { signCounts } from '@/admin/sign-rows'
 import { stageIndex } from '@/admin/stages'
+import { PIPELINE_STAGES } from '@/sanity/portal/office-constants'
 import type { OfficeProject } from '@/admin/types'
-import { DismissableRow, DismissCount } from '@/admin/ui/dismissable-row'
+import { DismissableRow } from '@/admin/ui/dismissable-row'
 import { LeadSuggestions } from '@/admin/ui/lead-suggestions'
-import { Bar, DayStrip, MiniCols, SplitBar } from '@/admin/ui/graphics'
+import { DayStrip, Dot, Segments } from '@/admin/ui/graphics'
+import { PhoneFold } from './_fold'
 import { TodayTasks } from '@/admin/ui/today-tasks'
 import { portalEnv } from '@/portal/config'
 import { listRequests } from '@/portal/sign-store'
@@ -90,39 +93,55 @@ function rowHref(r: Row) {
 }
 
 /** One row in Needs you. Every source (reminders, follow-ups, deposits, things out with clients) is turned into this, so each thing shows once, in one style. */
-type Need = { id: string; projectId: string; dismissKey?: string; href: string; client?: string; title: string; detail: string; when?: string; urgent?: boolean; nudge?: { email: string; first: string; title: string; client: string } }
+type Need = { id: string; projectId: string; dismissKey?: string; href: string; client?: string; title: string; detail: string; when?: string; urgent?: boolean; /** The one thing to do, as a word or two on the row's button. */ verb: string; waiting?: boolean; nudge?: { email: string; first: string; title: string; client: string } }
 
+/** The word on a reminder's button, from the kind of reminder it is (its key). */
+const VERBS: [RegExp, string][] = [
+  [/^lead-/, 'Reply'],
+  [/^proposal-/, 'Write quote'],
+  [/^fixes-/, 'Start fixes'],
+  [/^comments-/, 'Read notes'],
+  [/^no-invoice-/, 'Make invoice'],
+  [/^draft-/, 'Send invoice'],
+  [/^approved-/, 'Move it on'],
+  [/^followup-testimonial-/, 'Ask'],
+  [/^followup-checkin-/, 'Check in'],
+]
+const verbFor = (key?: string) => VERBS.find(([re]) => re.test(key ?? ''))?.[1] ?? 'Open'
+
+/** One card: a status dot, the project and what it's about, how long, and the one thing to do. */
 function NeedRow({ n }: { n: Need }) {
   return (
     <DismissableRow projectId={n.projectId} dismissKey={n.dismissKey} label={`${n.title}: ${n.detail}`}>
-      <Link href={n.href} className="a-row-main">
-        {n.client && <span className="a-client">{n.client}</span>}
-        <strong>{n.title}</strong>
-        <span className="muted small">{n.detail}</span>
+      <Link href={n.href} className="sa-need">
+        <Dot tone={n.urgent ? 'accent' : n.waiting ? 'wait' : 'done'} label={n.urgent ? 'Urgent' : undefined} />
+        <span className="sa-need-text">
+          <strong>{n.title}</strong>
+          <span className="sa-need-sub">{n.client ? `${n.client} · ` : ''}{n.detail}</span>
+        </span>
+        {n.when && <span className={`sa-chip${n.urgent ? ' is-hot' : ''}`}>{n.when}</span>}
+        {!n.nudge && <span className="sa-verb">{n.verb}</span>}
       </Link>
-      <span className="a-row-side">
-        {n.when && <span className={`small ${n.urgent ? 'a-urgent' : 'muted'}`}>{n.when}</span>}
-        {n.nudge && (
-          <a className="btn btn-secondary btn-sm" href={`mailto:${n.nudge.email}?subject=${encodeURIComponent(n.nudge.title)}&body=${encodeURIComponent(`Hi ${n.nudge.first},\n\nJust checking in on ${n.nudge.title}. `)}`}>
-            Nudge<span className="sr-only"> {n.nudge.client} by email</span>
-          </a>
-        )}
-      </span>
+      {n.nudge && (
+        <a className="sa-verb sa-verb-out" href={`mailto:${n.nudge.email}?subject=${encodeURIComponent(n.nudge.title)}&body=${encodeURIComponent(`Hi ${n.nudge.first},\n\nJust checking in on ${n.nudge.title}. `)}`}>
+          Nudge<span className="sr-only"> {n.nudge.client} by email</span>
+        </a>
+      )}
     </DismissableRow>
   )
 }
 
 /** The first few rows, then the rest behind "Show N more" (no script needed, and it stays open while you work down the list). */
 function NeedList({ rows, max, empty }: { rows: Need[]; max: number; empty: string }) {
-  if (!rows.length) return <p className="muted a-empty">{empty}</p>
+  if (!rows.length) return <p className="sa-empty"><Dot tone="done" /> {empty}</p>
   const rest = rows.slice(max)
   return (
     <>
-      <ul className="a-rows">{rows.slice(0, max).map((n) => <NeedRow key={n.id} n={n} />)}</ul>
+      <ul className="sa-needs">{rows.slice(0, max).map((n) => <NeedRow key={n.id} n={n} />)}</ul>
       {rest.length > 0 && (
         <details className="ap-more">
-          <summary>Show {rest.length} more</summary>
-          <ul className="a-rows">{rest.map((n) => <NeedRow key={n.id} n={n} />)}</ul>
+          <summary>{rest.length} more</summary>
+          <ul className="sa-needs">{rest.map((n) => <NeedRow key={n.id} n={n} />)}</ul>
         </details>
       )}
     </>
@@ -173,19 +192,8 @@ export default async function Today() {
   // The session carries an email only, so the name comes from settings when one sits beside that address.
   const name = (admin as { name?: string }).name?.trim().split(/\s+/)[0] || firstNameFor(admin.email)
 
-  /* ── Money: the five figures, each from the same money load as the Money page ── */
+  /* ── Money: only what's owed, from the same money load as the Money page (the rest lives there) ── */
   const money = moneyView(all, payments, goals, t)
-  const sixMonths = reportView(all, payments, '12m', t).moneyByMonth.slice(-6)
-  const tiles = pipelineTiles(projects)
-  const signed = money.goalLines.find((g) => g.key === 'signedYear')
-  // Pictures for the tiles, from the same figures: quotes to write against quotes out, what's been paid on the work in production, and signed against the goal.
-  const toWrite = projects.filter((p) => p.pipelineStage === 'proposal').length
-  const quoted = projects.filter((p) => p.pipelineStage === 'quoted').length
-  const quotedWork = money.toBill.rows.filter((r) => r.total !== undefined)
-  const paidOnWork = quotedWork.reduce((n, r) => n + r.paid, 0)
-  const quotedTotal = quotedWork.reduce((n, r) => n + (r.total ?? 0), 0)
-  // The goal sits at the tick, with room past it for a year that beats the goal.
-  const signedScale = Math.max(signed?.share ?? 0, 1) * 1.12
 
   /* ── Needs you: things waiting on you, then things out with clients. Each thing once. ── */
   // Reminders (new leads to reply to, quotes to write, notes and comments in, invoices to make or send, milestones).
@@ -199,6 +207,7 @@ export default async function Today() {
     detail: r.detail,
     when: r.when,
     urgent: r.urgent,
+    verb: verbFor(r.key),
   }))
   // A week and a month after delivery.
   const follow: Need[] = followUps(projects, t).map((f) => ({
@@ -210,11 +219,12 @@ export default async function Today() {
     title: f.project.title,
     detail: f.detail,
     when: f.when,
+    verb: verbFor(f.key),
   }))
   // Booked with no deposit in, and nothing sent for it (an invoice or request already out counts as owed, on the Money page).
   const owedIds = new Set(money.owed.rows.map((b) => b.projectId).filter((x): x is string => Boolean(x)))
   const deposits: Need[] = depositsDue(projects, payments, owedIds)
-    .map((p) => ({ id: `dep-${p._id}`, projectId: p._id, href: projectTab(p._id, 'money'), client: p.client.organizationName, title: p.title, detail: 'Ask for the deposit. Nothing has been sent for it yet.', when: p.depositAmount ? cad(p.depositAmount) : undefined }))
+    .map((p) => ({ id: `dep-${p._id}`, projectId: p._id, href: projectTab(p._id, 'money'), client: p.client.organizationName, title: p.title, detail: 'Deposit not asked for yet', when: p.depositAmount ? cad(p.depositAmount) : undefined, verb: 'Ask for deposit' }))
   const onYou = ranked([...reminders, ...deposits, ...follow])
 
   // Out with clients: cuts waiting on feedback and quotes with no answer (with Nudge), quotes shared before Quote sent, and documents out for signature.
@@ -231,17 +241,19 @@ export default async function Today() {
       detail: r.detail,
       when: r.when,
       urgent: r.urgent,
+      verb: 'Open',
+      waiting: true,
       // No Nudge button when the first contact has no email (a lead saved with only a name).
       nudge: c?.email ? { email: c.email, first: c.name?.split(' ')[0] ?? 'there', title: r.project.title, client: r.project.client.organizationName } : undefined,
     }
   })
   const sharedQuotes: Need[] = projects
     .filter((p) => isSalesStage(p.pipelineStage) && p.pipelineStage !== 'quoted' && Boolean(p.quote?.sharedAt && !p.quote.signature))
-    .map((p) => ({ id: `q-${p._id}`, projectId: p._id, href: pageHref(p._id, p.pipelineStage), client: p.client.organizationName, title: p.title, detail: `Quote out. ${quoteStatus(p) ?? 'No send date recorded.'}` }))
+    .map((p) => ({ id: `q-${p._id}`, projectId: p._id, href: pageHref(p._id, p.pipelineStage), client: p.client.organizationName, title: p.title, detail: `Quote out. ${quoteStatus(p) ?? 'No send date recorded.'}`, verb: 'Open', waiting: true }))
   // Documents sent from the Library: out for signature, and signed in the last 14 days.
   const docs = signCounts(signRequests)
   const docHref = (projectId?: string) => (projectId ? projectTab(projectId, 'documents') : '/admin/library?tab=out')
-  const docsOut: Need[] = docs.out.map((r) => ({ id: `d-${r._id}`, projectId: r.projectId ?? '', href: docHref(r.projectId), client: r.projectTitle, title: r.snapshot.title, detail: `Out for signature with ${r.recipient.name}${r.viewedAt ? '. They’ve opened it.' : '.'}` }))
+  const docsOut: Need[] = docs.out.map((r) => ({ id: `d-${r._id}`, projectId: r.projectId ?? '', href: docHref(r.projectId), client: r.projectTitle, title: r.snapshot.title, detail: `With ${r.recipient.name} to sign${r.viewedAt ? ' · opened' : ''}`, verb: 'Open', waiting: true }))
   const withClients = ranked([...nudges, ...sharedQuotes, ...docsOut])
 
   /* ── This week: calls, shoots, deliveries and other dates ── */
@@ -275,26 +287,46 @@ export default async function Today() {
   ]
   const recent = lately(projects, t)
 
+  /* ── Jobs in motion: every booked project, as a stage bar ── */
+  const production = PIPELINE_STAGES.filter((s) => s.group === 'production')
+  const jobs = projects
+    .map((p) => ({ p, at: production.findIndex((s) => s.value === p.pipelineStage) }))
+    .filter((x) => x.at >= 0 && x.p.pipelineStage !== 'paid')
+    .sort((a, b) => b.at - a.at)
+
   return (
-    <div className="a-page td tdx">
+    <div className="a-page td tdx sa">
       <header className="a-head">
         <div className="stack ap-gap-2">
-          <h1 className="a-h1">{hello()}{name ? `, ${name}` : ''}.</h1>
-          <p className="td-date">{fmtDay(t, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+          <h1 className="a-h1 sa-h1">{hello()}{name ? `, ${name}` : ''}.</h1>
+          <p className="td-date">{fmtDay(t, { weekday: 'long', month: 'long', day: 'numeric' })}</p>
         </div>
         {/* New lead starts someone at the first stage; New project is for work that's already agreed. */}
         <div className="tdx-head-actions">
-          <Link className="btn btn-primary" href="/admin/leads/new">New lead</Link>
+          <Link className="btn sa-copper" href="/admin/leads/new">New lead</Link>
           <Link className="btn btn-secondary" href="/admin/projects/new">New project</Link>
         </div>
       </header>
 
+      {/* ── At a glance: three numbers. The rest of the money lives on the Money page. ── */}
+      <section className="sa-glance" aria-label="At a glance">
+        <a className="sa-tile" href="#td-needs-h">
+          <span className="sa-tile-num">{onYou.length}</span>
+          <span className="sa-tile-label">need you</span>
+        </a>
+        <a className="sa-tile" href="#td-waiting">
+          <span className="sa-tile-num">{withClients.length}</span>
+          <span className="sa-tile-label">waiting on clients</span>
+        </a>
+        <Link className="sa-tile" href="/admin/money#owed">
+          <span className="sa-tile-num">{cad(money.owed.total)}</span>
+          <span className="sa-tile-label">owed to you<span className="sr-only">: {plural(money.owed.rows.length, 'open invoice or payment', 'open invoices and payments')}{money.owed.clearing ? `, ${money.owed.clearing} clearing` : ''}. Open Money</span></span>
+        </Link>
+      </section>
+
       {/* ── 1. Needs you ── */}
-      <section className="tdx-block" aria-labelledby="td-needs-h">
-        <div className="ap-h2-row">
-          <h2 id="td-needs-h" className="a-h2 a-h2-lg">Needs you</h2>
-          <DismissCount className="ap-count" initial={onYou.length} one="thing" none="All clear" />
-        </div>
+      <section className="sa-block" aria-labelledby="td-needs-h">
+        <h2 id="td-needs-h" className="sa-h2">Needs you</h2>
 
         {/* People from a call or an email who look like new clients (src/admin/capture.ts). Shows only when some are waiting. */}
         <LeadSuggestions
@@ -304,76 +336,46 @@ export default async function Today() {
             .map((x) => ({ key: x._key, source: x.source, name: x.name, company: x.company, email: x.email, summary: x.summary, when: x.when, title: x.title }))}
         />
 
-        <div className="p-card">
-          <NeedList rows={onYou} max={6} empty="Nothing is waiting on you. New leads, client notes, invoices to send and follow-ups show up here." />
-          {withClients.length > 0 && (
-            <details className="ap-details">
-              <summary>Waiting on clients · {withClients.length}</summary>
-              <NeedList rows={withClients} max={5} empty="" />
-            </details>
-          )}
-        </div>
+        <NeedList rows={onYou} max={3} empty="All clear" />
       </section>
 
-      {/* ── 2. Money ── */}
-      <section className="tdx-block" aria-labelledby="td-money-h">
-        <div className="ap-h2-row">
-          <h2 id="td-money-h" className="a-h2 a-h2-lg">Money</h2>
-          <Link className="text-link small" href="/admin/money">Open Money</Link>
-        </div>
-        <div className="td-money">
-          <Link href="/admin/money#owed" className="a-kpi td-tile">
-            <span className="a-kpi-label">Owed to you</span>
-            <span className="a-kpi-num">{cad(money.owed.total)}</span>
-            <span className="a-kpi-note">{plural(money.owed.rows.length, 'open invoice or payment', 'open invoices and payments')}{money.owed.clearing ? `, ${money.owed.clearing} clearing` : ''}</span>
-          </Link>
-          <Link href="/admin/money" className="a-kpi td-tile">
-            <span className="a-kpi-label">Collected this month</span>
-            <span className="a-kpi-num">{cad(money.collectedMonth.total)}</span>
-            <span className="a-kpi-note">{plural(money.collectedMonth.count, 'payment')} in {money.monthLabel}</span>
-            <span className="gx-wrap" role="img" aria-label={`Collected in the last six months: ${sixMonths.map((m) => `${m.label} ${cad(m.collected)}`).join(', ')}.`}>
-              <MiniCols cols={sixMonths.map((m, i) => ({ label: m.label.slice(0, 1), value: m.collected, current: i === sixMonths.length - 1 }))} />
-            </span>
-          </Link>
-          <Link href="/admin/pipeline" className="a-kpi td-tile">
-            <span className="a-kpi-label">Open pipeline</span>
-            <span className="a-kpi-num">{cad(tiles.inPlay.sum)}</span>
-            <span className="a-kpi-note">{plural(tiles.inPlay.count, 'quote')} in play{tiles.inPlay.missing ? `, ${tiles.inPlay.missing} with no total yet` : ''}</span>
-            {toWrite + quoted > 0 && <SplitBar parts={[{ label: 'To write', value: toWrite, text: String(toWrite), tone: 'soft' }, { label: 'Out', value: quoted, text: String(quoted), tone: 'accent' }]} />}
-          </Link>
-          <Link href="/admin/pipeline" className="a-kpi td-tile">
-            <span className="a-kpi-label">In production</span>
-            <span className="a-kpi-num">{cad(tiles.production.sum)}</span>
-            <span className="a-kpi-note">{plural(tiles.production.count, 'project')}, Onboarding to Final delivery</span>
-            {quotedTotal > 0 && (
-              <span className="gx-wrap">
-                <Bar value={paidOnWork / quotedTotal} />
-                <span className="gx-caption">{cad(paidOnWork)} paid of {cad(quotedTotal)} quoted</span>
-              </span>
-            )}
-          </Link>
-          <Link href="/admin/money" className="a-kpi td-tile">
-            <span className="a-kpi-label">Signed this year</span>
-            <span className="a-kpi-num">{cad(signed?.value ?? 0)}</span>
-            <span className="a-kpi-note">{signed?.goal && signed.share !== undefined ? `${Math.round(signed.share * 100)}% of the ${cad(signed.goal)} goal` : 'No goal set'}</span>
-            {signed?.goal && signed.share !== undefined ? (
-              <span className="gx-wrap">
-                <Bar value={signed.share / signedScale} tick={1 / signedScale} />
-                <span className="gx-caption">The tick is the goal</span>
-              </span>
-            ) : null}
-          </Link>
-        </div>
-      </section>
+      {/* ── Out with clients: folded, opened by its tile ── */}
+      {withClients.length > 0 && (
+        <PhoneFold id="td-waiting" folded className="sa-fold" summary={<h2 className="sa-h2">Waiting on clients <span className="sa-count">{withClients.length}</span></h2>}>
+          <NeedList rows={withClients} max={5} empty="" />
+        </PhoneFold>
+      )}
+
+      {/* ── 2. Jobs in motion ── */}
+      {jobs.length > 0 && (
+        // Open on a wide screen, folded on a phone.
+        <PhoneFold id="td-jobs" className="sa-fold" labelledBy="td-jobs-h" summary={<h2 id="td-jobs-h" className="sa-h2">Jobs in motion <span className="sa-count">{jobs.length}</span></h2>}>
+          <ul className="sa-jobs">
+            {jobs.slice(0, 6).map(({ p, at }) => (
+              <li key={p._id}>
+                <Link href={pageHref(p._id, p.pipelineStage)}>
+                  <span className="sa-job-name"><strong>{p.title}</strong> <span className="sa-muted"><span className="sa-sep">· </span>{p.client.organizationName}</span></span>
+                  <Segments total={production.length} done={at} current={at} label={`Stage ${at + 1} of ${production.length}, ${production[at].title}`} />
+                  <span className="sa-job-stage" aria-hidden="true">{production[at].title}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {jobs.length > 6 && <Link className="sa-more" href="/admin/projects">All {jobs.length} projects</Link>}
+        </PhoneFold>
+      )}
 
       {/* ── 3. This week ── */}
-      <section className="tdx-block" aria-labelledby="td-week-h">
-        <div className="ap-h2-row">
-          <h2 id="td-week-h" className="a-h2 a-h2-lg">This week</h2>
-          <span className="ap-count">{plural(twoWeeks.shoots, 'shoot')} and {plural(twoWeeks.deliveries, 'delivery', 'deliveries')} in the next 14 days</span>
+      <section className="sa-block" aria-labelledby="td-week-h">
+        <div className="sa-h2-row">
+          <h2 id="td-week-h" className="sa-h2">This week</h2>
+          <span className="sa-chips" aria-label={`In the next 14 days: ${plural(twoWeeks.shoots, 'shoot')} and ${plural(twoWeeks.deliveries, 'delivery', 'deliveries')}`}>
+            <span className="sa-chip" aria-hidden="true">{plural(twoWeeks.shoots, 'shoot')}</span>
+            <span className="sa-chip" aria-hidden="true">{plural(twoWeeks.deliveries, 'delivery', 'deliveries')}</span>
+          </span>
         </div>
         <div className="tdx-week">
-          <div className="p-card td-card">
+          <div className="p-card td-card sa-week">
             <DayStrip
               label="The next seven days"
               cells={weekDays.map((d) => {
@@ -382,26 +384,29 @@ export default async function Today() {
                   key: d,
                   label: weekday(d),
                   value: <>{Number(d.slice(8))}{d === t && <span className="sr-only"> (today)</span>}</>,
-                  note: n ? plural(n, 'thing') : <span className="sr-only">nothing booked</span>,
+                  note: n ? <><span className="sa-daydots" aria-hidden="true">{Array.from({ length: Math.min(n, 4) }, (_, i) => <span key={i} />)}</span><span className="sr-only">{plural(n, 'thing')}</span></> : <span className="sr-only">nothing booked</span>,
                   level: n ? Math.min(1, 0.5 + n / 4) : 0,
                   current: d === t,
                 }
               })}
             />
             {weekItems.length ? (
-              <Items list={weekItems} max={5} />
+              <details className="sa-list-fold">
+                <summary>{plural(weekItems.length, 'date')}</summary>
+                <Items list={weekItems} max={5} />
+              </details>
             ) : (
               <p className="tdx-empty-next">
                 {later ? (
-                  <>Nothing booked in the next two weeks. Next up: <Link className="text-link" href={pageHref(later.project._id, later.project.pipelineStage)}>{later.what}, {later.project.title}</Link>, {fmtDate(later.date, 'weekday')} ({relDays(later.date, t)}).</>
+                  <>Next: <Link className="text-link" href={pageHref(later.project._id, later.project.pipelineStage)}>{later.what}, {later.project.title}</Link> <span className="sa-chip">{fmtDate(later.date, 'weekday')}</span></>
                 ) : (
-                  'Nothing dated is coming up.'
+                  'Nothing dated coming up'
                 )}
               </p>
             )}
             {noDates > 0 && (
               <p className="small a-empty">
-                <Link className="text-link" href="/admin/pipeline">{noDates === 1 ? '1 booked project has no dates yet' : `${noDates} booked projects have no dates yet`}</Link>
+                <Link className="text-link" href="/admin/pipeline">{noDates === 1 ? '1 booked project has no dates' : `${noDates} booked projects have no dates`}</Link>
               </p>
             )}
           </div>
@@ -411,7 +416,7 @@ export default async function Today() {
 
       <details className="p-card a-bucket">
         <summary className="a-card-head">
-          <h2 className="a-h2">Lately · {recent.length + signedLately.length} in the last 14 days</h2>
+          <h2 className="a-h2">Lately · {recent.length + signedLately.length}</h2>
         </summary>
         {signedLately.length > 0 && (
           <div className="tdx-signed">
@@ -431,10 +436,10 @@ export default async function Today() {
                 </li>
               ))}
             </ul>
-            {recent.length > 30 && <p className="muted small a-empty">Showing the newest 30.</p>}
+            {recent.length > 30 && <p className="muted small a-empty">Newest 30</p>}
           </>
         ) : (
-          <p className="muted small a-empty">Nothing logged in the last 14 days.</p>
+          <p className="muted small a-empty">Nothing in the last 14 days</p>
         )}
       </details>
     </div>

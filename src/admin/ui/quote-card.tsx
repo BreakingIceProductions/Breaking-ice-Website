@@ -5,6 +5,7 @@ import { useRef, useState } from 'react'
 import type { OfficeQuote } from '@/admin/types'
 import { coverImage } from '@/portal/pdf-view'
 import { fmtDate } from '@/admin/dates'
+import { HelpTip } from './help-tip'
 
 type Props = {
   projectId: string
@@ -24,7 +25,8 @@ const cad = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { minimumFraction
 export function QuoteCard({ projectId, quote: q, total, deposit, recipients, previewHref }: Props) {
   const router = useRouter()
   const form = useRef<HTMLFormElement>(null)
-  const [editing, setEditing] = useState(!q)
+  // The form stays closed until asked for: with no quote yet, "Upload quote" opens it.
+  const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState('')
   const [msg, setMsg] = useState<{ text: string; err?: boolean }>()
   const file = (q?.fileName ?? 'Quote.pdf').replace(/\.pdf$/i, '')
@@ -61,22 +63,46 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
     router.refresh()
   }
 
-  const status = q?.signature
-    ? { tone: 'approved', text: `Signed by ${q.signature.name} · ${day(q.signature.at)}` }
-    : q?.viewedAt
-      ? { tone: 'awaiting-feedback', text: `Opened by ${q.viewedBy ?? 'the client'} · ${day(q.viewedAt)}` }
-      : q?.sharedAt
-        ? { tone: 'awaiting-feedback', text: `Sent ${day(q.lastSentAt ?? q.sharedAt)} · not opened yet` }
-        : q
-          ? { tone: 'in-progress', text: 'Not sent yet' }
-          : null
+  // Sent › Opened › Signed, each with its date once it's happened.
+  const steps = q
+    ? [
+        { key: 'sent', label: 'Sent', on: Boolean(q.sharedAt), when: q.sharedAt ? day(q.lastSentAt ?? q.sharedAt) : undefined },
+        { key: 'opened', label: 'Opened', on: Boolean(q.viewedAt || q.signature), when: q.viewedAt ? `${day(q.viewedAt)}${q.viewedBy ? ` · ${q.viewedBy}` : ''}` : undefined },
+        { key: 'signed', label: 'Signed', on: Boolean(q.signature), when: q.signature ? `${day(q.signature.at)} · ${q.signature.name}` : undefined },
+      ]
+    : []
+  const reached = steps.filter((x) => x.on).length
 
   return (
     <section className="p-card" aria-labelledby="h-quote">
       <div className="a-card-head">
         <h2 id="h-quote" className="a-h2">Quote</h2>
-        {status && <span className={`pill pill-${status.tone}`}>{status.text}</span>}
+        {!q?.signature && (
+          <HelpTip label="About sending the quote">
+            {recipients.length
+              ? `Sending emails ${recipients.join(', ')} a link to review and sign it in their portal. Signing moves the project to Onboarding.`
+              : 'Add a contact for this client in the editor before sending.'}
+          </HelpTip>
+        )}
       </div>
+
+      {q ? (
+        <ol className="sa-qsteps" aria-label={`Quote: ${reached ? steps[reached - 1].label.toLowerCase() : 'not sent yet'}`}>
+          {steps.map((x, i) => (
+            <li key={x.key} className={x.on ? (i === reached - 1 ? 'is-current' : 'is-done') : ''}>
+              <span className="sa-stage-bar" aria-hidden="true" />
+              <strong>{x.label}</strong>
+              <span className="sa-muted small">{x.when ?? (i === 0 && !x.on ? 'Not yet' : ' ')}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        !editing && (
+          <div className="row-wrap">
+            <button type="button" className="btn sa-copper" onClick={() => setEditing(true)}>Upload quote</button>
+          </div>
+        )
+      )}
 
       {q && (
         <dl className="key-dates">
@@ -158,18 +184,12 @@ export function QuoteCard({ projectId, quote: q, total, deposit, recipients, pre
             <button type="button" className="btn btn-primary btn-sm" disabled={Boolean(busy) || !recipients.length} onClick={() => form.current?.reportValidity() && post('save', true)}>
               {busy === 'Sending…' ? busy : q?.sharedAt ? 'Save and send again' : 'Save and send to client'}
             </button>
-            {q && <button type="button" className="linklike small" onClick={() => setEditing(false)} disabled={Boolean(busy)}>Cancel</button>}
+            <button type="button" className="linklike small" onClick={() => setEditing(false)} disabled={Boolean(busy)}>Cancel</button>
           </div>
         </form>
       )}
 
-      {!q?.signature && (
-        <p className="muted small m0">
-          {recipients.length
-            ? `Sending emails ${recipients.join(', ')} a link to review and sign it in their portal. Signing moves the project to Onboarding.`
-            : 'Add a contact for this client in the editor before sending.'}
-        </p>
-      )}
+      {!q?.signature && !recipients.length && <p className="sa-muted small m0">Add a client contact before sending</p>}
       <p className={`small ${msg?.err ? 'err' : 'muted'} m0`} role="status">{busy || msg?.text}</p>
     </section>
   )

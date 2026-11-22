@@ -52,7 +52,7 @@ export function Favourites({ favs, photos }: { favs: FavouriteList[]; photos: Ad
           })}
         </ul>
       ) : (
-        <p className="muted small a-empty">No favourites yet. When the client or a guest hearts a photo, their picks show up here.</p>
+        <p className="muted small a-empty">♡ None yet</p>
       )}
     </section>
   )
@@ -95,7 +95,7 @@ export function Activity({ visits, photos, sets }: { visits: Visit[]; photos: Ad
           ))}
         </ul>
       ) : (
-        <p className="muted small a-empty">Nobody has opened it yet.</p>
+        <p className="muted small a-empty">Not opened yet</p>
       )}
     </section>
   )

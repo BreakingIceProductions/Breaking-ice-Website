@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { daysLeft, type GalleryDownloads } from '../types'
 import { errorText, fmtDay, galleryAction } from './admin-api'
 import { mailto, type Recipient } from './admin-share'
+import { HelpTip } from '@/admin/ui/viz'
 
 /** Saves one change and refreshes the page's server data; returns a status line to show. */
 function useSave(id: string) {
@@ -51,8 +52,8 @@ export function ExpiryPanel({ id, title, expiresOn, shareUrl, canLink, recipient
       <div className="a-card-head">
         <h2 id="ga-exp-h" className="a-h2">Closes</h2>
         <span className={`small ${left !== null && left <= 7 ? 'a-urgent' : 'muted'}`}>{status}</span>
+        <HelpTip label="closing">The last day the client can open it. After that the link and the portal show it as closed. Leave empty to keep it open.</HelpTip>
       </div>
-      <p className="muted small m0">The last day the client can open it. After that the link and the portal show it as closed. Leave empty to keep it open.</p>
       <form
         className="ga-copy-row"
         onSubmit={(e) => {
@@ -106,16 +107,16 @@ export function DownloadsPanel({ id, downloads, ro }: { id: string; downloads: G
       <ul className="ga-toggles">
         {DL.map((d) => (
           <li key={d.k}>
-            <label className="a-check">
+            <label className="a-check" title={d.note}>
               <input type="checkbox" checked={downloads[d.k]} disabled={ro || busy} onChange={(e) => save({ downloads: { [d.k]: e.target.checked } }, `${d.label} ${e.target.checked ? 'on' : 'off'}.`)} />
               <span>
-                {d.label} <span className="muted small">· {d.note}</span>
+                {d.label}<span className="sr-only">: {d.note}</span>
               </span>
             </label>
           </li>
         ))}
       </ul>
-      {!downloads.full && !downloads.web && <p className="muted small m0">Both sizes are off, so the client can look but not download.</p>}
+      {!downloads.full && !downloads.web && <p className="muted small m0">View only</p>}
       {msg && <p className="small muted m0" role="status">{msg}</p>}
     </section>
   )
@@ -136,7 +137,7 @@ export function MessagePanel({ id, message, ro }: { id: string; message?: string
           void save({ message: value }, value.trim() ? 'Message saved.' : 'Message removed.')
         }}
       >
-        <label className="muted small" htmlFor="ga-msg">Shown under the title. Keep it short.</label>
+        <label className="muted small" htmlFor="ga-msg">Shown under the title</label>
         <textarea id="ga-msg" className="input ga-textarea" rows={3} maxLength={1000} value={value} onChange={(e) => setValue(e.target.value)} disabled={ro || busy} placeholder="Thanks for having us out. Here are the highlights." />
         {!ro && (
           <div>

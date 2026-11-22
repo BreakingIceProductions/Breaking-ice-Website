@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { MonthKey, RetainerMonth } from '@/retainer/types'
 import { useConfirm } from './confirm'
 import { postJson } from './retainer-settings'
+import { HelpTip } from './viz'
 import { fmtDate } from '@/admin/dates'
 
 type Recap = NonNullable<RetainerMonth['recap']>
@@ -64,8 +65,10 @@ export function RetainerRecap({ clientId, month, monthName, recap, to, readOnly 
         <input id="rt-subject" className="input" value={subject} onChange={(e) => setSubject(e.target.value)} disabled={locked} maxLength={200} />
       </div>
       <div className="field">
-        <label htmlFor="rt-body">Email</label>
-        <span className="hint">Plain text. A blank line starts a new paragraph. “Add a button” puts a button line at the end: change its words and its link.</span>
+        <span className="row-wrap ap-gap-6px">
+          <label htmlFor="rt-body">Email</label>
+          <HelpTip label="writing the email">Plain text. A blank line starts a new paragraph. “Add a button” puts a button line at the end: change its words and its link.</HelpTip>
+        </span>
         <textarea id="rt-body" className="input" value={body} onChange={(e) => setBody(e.target.value)} disabled={locked} maxLength={10000} />
         {!locked && <button type="button" className="linklike small rt-add-btn" onClick={() => setBody((b) => `${b.trimEnd()}${b.trim() ? '\n\n' : ''}[button: Button words](https://)`)}>Add a button</button>}
       </div>

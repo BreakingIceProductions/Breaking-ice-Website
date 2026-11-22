@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { fmtDate } from '@/admin/dates'
+import { HelpTip } from './help-tip'
 
 export type SuggestionRow = { key: string; source: 'wispr' | 'email' | 'manual'; name: string; company?: string; email?: string; summary: string; when: string; title?: string }
 
@@ -52,7 +53,7 @@ export function LeadSuggestions({ items, canAct }: { items: SuggestionRow[]; can
     <section className="p-card td-sugg" aria-labelledby="td-sugg-h">
       <div className="a-card-head">
         <h2 id="td-sugg-h" className="a-h2">Possible new leads</h2>
-        <span className="muted small">Found in calls and emails. Nothing has been sent to them.</span>
+        <HelpTip label="About possible new leads">Found in calls and emails. Nothing has been sent to them.</HelpTip>
       </div>
       {added && (
         <p className="small td-sugg-note" role="status">

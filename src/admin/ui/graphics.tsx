@@ -134,3 +134,23 @@ export function DayStrip({ cells, label }: { cells: DayCell[]; label: string }) 
     </ol>
   )
 }
+
+/**
+ * Equal segments in a row: the first `done` filled, then the `current` one copper, the rest empty.
+ * For a stage (6 of 7) or a count (1 of 2 payments). Unlike the drawings above it carries its own
+ * text, as `label` (role="img"), so it can stand alone.
+ */
+export function Segments({ total, done, current, label, big }: { total: number; done: number; /** Index of the copper segment, if any. */ current?: number; label: string; big?: boolean }) {
+  return (
+    <span className={`gx-seg${big ? ' gx-seg-big' : ''}`} role="img" aria-label={label}>
+      {Array.from({ length: Math.max(0, total) }, (_, i) => (
+        <span key={i} className={i === current ? 'is-current' : i < done ? 'is-done' : undefined} />
+      ))}
+    </span>
+  )
+}
+
+/** A status dot. `tone`: copper for "with you", ink for done, hollow for waiting, faint for not started. */
+export function Dot({ tone = 'quiet', label }: { tone?: 'accent' | 'done' | 'wait' | 'quiet'; label?: string }) {
+  return <span className={`gx-dot gx-dot-${tone}`} {...(label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true })} />
+}

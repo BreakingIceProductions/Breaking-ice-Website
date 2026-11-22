@@ -16,12 +16,15 @@ const TYPES: { value: ItemType; label: string }[] = [
   { value: 'social', label: 'Social' },
   { value: 'other', label: 'Other' },
 ]
-const STATUSES: { value: ItemStatus; label: string }[] = [
-  { value: 'planned', label: 'Planned' },
-  { value: 'in-progress', label: 'In progress' },
-  { value: 'scheduled', label: 'Scheduled' },
-  { value: 'delivered', label: 'Delivered' },
+const STATUSES: { value: ItemStatus; label: string; tone: string }[] = [
+  { value: 'planned', label: 'Planned', tone: 'muted' },
+  { value: 'in-progress', label: 'In progress', tone: 'warm' },
+  { value: 'scheduled', label: 'Scheduled', tone: 'info' },
+  { value: 'delivered', label: 'Delivered', tone: 'ok' },
 ]
+
+/** Closes the menu a button sits in. */
+const closeMenu = (el: HTMLElement) => el.closest('details')?.removeAttribute('open')
 
 /** "November 2026" from "2026-11". */
 const monthName = (m: MonthKey) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 15)).toLocaleDateString('en-CA', { month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -50,7 +53,7 @@ function Item({ clientId, month, item, readOnly, onSaved }: { clientId: string; 
   function remove() {
     // Hand focus to the next item (or the one before, or the Items heading) so the keyboard doesn't fall back to the top of the page.
     const li = row.current
-    const near = [li?.nextElementSibling, li?.previousElementSibling].map((x) => x?.querySelector<HTMLElement>('select:not(:disabled), summary')).find(Boolean)
+    const near = [li?.nextElementSibling, li?.previousElementSibling].map((x) => x?.querySelector<HTMLElement>('summary')).find(Boolean)
     const heading = li?.closest('section')?.querySelector<HTMLElement>('h2, h3')
     const to = near ?? heading
     if (to === heading && heading && !heading.hasAttribute('tabindex')) heading.tabIndex = -1
@@ -74,33 +77,48 @@ function Item({ clientId, month, item, readOnly, onSaved }: { clientId: string; 
   }
 
   if (gone) return null
+  const status = STATUSES.find((s) => s.value === item.status) ?? STATUSES[0]
 
   return (
     <li ref={row}>
       <div className="rt-item-top">
         <span className="stack rt-item-head">
           <strong>{item.title}</strong>
-          <span className="muted small">
-            {TYPES.find((t) => t.value === item.type)?.label ?? item.type}
-            {item.status === 'delivered' && item.deliveredAt ? ` · delivered ${fmtDate(item.deliveredAt)}` : ''}
-            {item.note ? ` · ${item.note}` : ''}
+          <span className="rt-item-meta">
+            <span className="rt-type">{TYPES.find((t) => t.value === item.type)?.label ?? item.type}</span>
+            {item.status === 'delivered' && item.deliveredAt ? <span className="rt-type" title={`Delivered ${fmtDate(item.deliveredAt)}`}><span className="sr-only">Delivered </span>{fmtDate(item.deliveredAt)}</span> : null}
+            {item.note ? <span className="muted small">{item.note}</span> : null}
           </span>
         </span>
         {readOnly ? (
-          <span className="a-stage">{STATUSES.find((s) => s.value === item.status)?.label}</span>
+          <span className={`sb-chip sb-${status.tone}`}><span className="sb-dot" aria-hidden="true" />{status.label}</span>
         ) : (
           <span className="rt-item-controls">
-            <label className="sr-only" htmlFor={`st-${item._key}`}>Status of {item.title}</label>
-            <select id={`st-${item._key}`} value={item.status} disabled={busy} onChange={(e) => { const st = e.target.value as ItemStatus; void put({ ...item, status: st, deliveredAt: undefined }, `marked ${STATUSES.find((x) => x.value === st)?.label.toLowerCase()}.`, item) }}>
-              {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+            <details className="ld-menu rt-status">
+              <summary className={`sb-chip sb-${status.tone} rt-status-chip`} aria-disabled={busy || undefined}>
+                <span className="sb-dot" aria-hidden="true" />
+                {status.label}
+                <span className="sr-only">: change the status of {item.title}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+              </summary>
+              <ul>
+                {STATUSES.map((s) => (
+                  <li key={s.value}>
+                    <button type="button" aria-pressed={s.value === item.status} disabled={busy} onClick={(e) => { closeMenu(e.currentTarget); if (s.value !== item.status) void put({ ...item, status: s.value, deliveredAt: undefined }, `marked ${s.label.toLowerCase()}.`, item) }}>
+                      <span className={`sb-chip sb-${s.tone} rt-status-opt`}><span className="sb-dot" aria-hidden="true" />{s.label}</span>
+                      {s.value === item.status && <span className="rt-check" aria-hidden="true">✓</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </details>
             {attach ? (
               <button type="button" className="linklike small" aria-expanded onClick={() => setAttach(false)}>Close<span className="sr-only"> the uploader</span></button>
             ) : (
               <details className="ld-menu rt-more">
-                <summary className="btn btn-secondary btn-sm">More<span className="sr-only"> for {item.title}</span></summary>
+                <summary className="sb-icon-btn rt-more-btn" title="More"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg><span className="sr-only">More for {item.title}</span></summary>
                 <ul>
-                  <li><button type="button" onClick={(e) => { e.currentTarget.closest('details')?.removeAttribute('open'); setAttach(true) }}>Attach files</button></li>
+                  <li><button type="button" onClick={(e) => { closeMenu(e.currentTarget); setAttach(true) }}>Attach files</button></li>
                   <li><button type="button" disabled={busy} onClick={remove}>Remove<span className="sr-only"> {item.title}</span></button></li>
                 </ul>
               </details>
@@ -169,9 +187,11 @@ export function RetainerItems({ clientId, month, items, readOnly }: { clientId: 
           {items.map((i) => <Item key={i._key} clientId={clientId} month={month} item={i} readOnly={readOnly} onSaved={done} />)}
         </ul>
       ) : (
-        <p className="muted a-empty">No hand-made items for this month yet. Social posts count on their own.</p>
+        <p className="muted a-empty" title="Social posts count on their own">None yet</p>
       )}
       {!readOnly && (
+        <details className="rt-add-fold" open={!items.length}>
+        <summary className="btn btn-secondary btn-sm"><span aria-hidden="true">+</span> Plan an item</summary>
         <form className="rt-add" onSubmit={add}>
           <label className="sr-only" htmlFor="rt-new-title">New item title</label>
           <input id="rt-new-title" className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Plan an item, e.g. Pilot profile video" maxLength={140} />
@@ -181,6 +201,7 @@ export function RetainerItems({ clientId, month, items, readOnly }: { clientId: 
           </select>
           <button type="submit" className="btn btn-secondary btn-sm" disabled={busy || !title.trim()}>{busy ? 'Adding…' : 'Add'}</button>
         </form>
+        </details>
       )}
       <p className="small muted rt-msg" role="status">{msg}</p>
     </div>

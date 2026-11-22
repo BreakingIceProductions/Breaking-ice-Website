@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useRef, useState } from 'react'
 import type { GallerySet } from '../types'
 import { useConfirm, useNotify } from '@/admin/ui/confirm'
+import { HelpTip } from '@/admin/ui/viz'
 import { errorText, galleryAction } from './admin-api'
 
 export type AdminPhoto = { key: string; set: string; name: string; thumb: string; w: number; h: number; favs: number }
@@ -102,7 +103,7 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
     return (
       <section className="p-card" aria-labelledby="ga-grid-h">
         <h2 id="ga-grid-h" className="a-h2">Photos</h2>
-        <p className="muted small a-empty">No photos yet. Add some with the uploader above.</p>
+        <p className="muted small a-empty">No photos yet</p>
       </section>
     )
   }
@@ -111,7 +112,7 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
     <section className="ga-grid-wrap" aria-labelledby="ga-grid-h">
       <div className="a-card-head">
         <h2 id="ga-grid-h" className="a-h2 a-h2-lg">Photos ({photos.length})</h2>
-        {!ro && <span className="muted small">Click to select, shift-click to select a run.</span>}
+        {!ro && <HelpTip label="selecting photos">Click a photo to select it, shift-click to select a run. Then move, make cover or remove.</HelpTip>}
       </div>
       {bySet.map(({ set, photos: list }) => (
         <div key={set._key} className="ga-set-block">
@@ -130,8 +131,7 @@ export function PhotoGrid({ id, sets, photos, coverKey, ro }: { id: string; sets
                 return (
                   <li key={p.key}>
                     <button type="button" className={`ga-thumb ${on ? 'on' : ''}`} aria-pressed={ro ? undefined : on} onClick={(e) => click(p.key, e)} title={p.name}>
-                      {p.thumb ? <img src={p.thumb} alt="" loading="lazy" decoding="async" width={p.w} height={p.h} className="is-loading" ref={fadeIn} onLoad={shown} onError={shown} /> : <span className="ga-thumb-missing">No preview</span>}
-                      <span className="ga-thumb-name">{p.name}</span>
+                      {p.thumb ? <img src={p.thumb} alt={p.name} loading="lazy" decoding="async" width={p.w} height={p.h} className="is-loading" ref={fadeIn} onLoad={shown} onError={shown} /> : <span className="ga-thumb-missing" aria-label={p.name}>No preview</span>}
                       {p.key === coverKey && <span className="ga-badge ga-badge-cover">Cover</span>}
                       {p.favs > 0 && <span className="ga-badge ga-badge-fav" aria-label={`${p.favs} ${p.favs === 1 ? 'favourite' : 'favourites'}`}>♥ {p.favs}</span>}
                       {!ro && <span className="ga-tick" aria-hidden="true" />}

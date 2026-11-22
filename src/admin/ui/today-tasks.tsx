@@ -36,10 +36,10 @@ export function TodayTasks() {
         {state.status === 'loading' ? (
           <p className="muted small a-empty">Checking TickTick…</p>
         ) : state.status === 'error' ? (
-          <p className="muted small a-empty">Couldn’t reach TickTick just now. Reload to try again.</p>
+          <p className="muted small a-empty">Couldn’t reach TickTick. Reload to retry.</p>
         ) : !state.connected ? (
           <p className="muted small a-empty">
-            <Link className="text-link" href="/admin/settings">Connect TickTick</Link> to see what’s due today.
+            <Link className="text-link" href="/admin/settings">Connect TickTick</Link>
           </p>
         ) : state.tasks.length ? (
           <ul className="a-tasks">
@@ -57,10 +57,9 @@ export function TodayTasks() {
             ))}
           </ul>
         ) : (
-          <p className="muted small a-empty">Nothing due today.</p>
+          <p className="muted small a-empty">Nothing due</p>
         )}
       </div>
-      {connected && <p className="muted small a-empty">Tick things off in TickTick.</p>}
     </section>
   )
 }

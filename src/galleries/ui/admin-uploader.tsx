@@ -130,7 +130,8 @@ async function put(url: string, body: Blob, type: string, signal: AbortSignal) {
   throw new Error(last || 'upload failed')
 }
 
-export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySet[]; sample: boolean; ro: boolean }) {
+export function Uploader({ id, sets, sample, ro, startOpen = true }: { id: string; sets: GallerySet[]; sample: boolean; ro: boolean; /** Closed, it's one "Add photos" button (dragging photos over it opens it). */ startOpen?: boolean }) {
+  const [open, setOpen] = useState(startOpen)
   const router = useRouter()
   const [setKey, setSetKey] = useState(sets[0]?._key ?? '')
   const [running, setRunning] = useState(false)
@@ -308,11 +309,20 @@ export function Uploader({ id, sets, sample, ro }: { id: string; sets: GallerySe
   const pct = p && p.total ? Math.round(((p.done + p.failed) / p.total) * 100) : 0
 
   if (ro) return null
+  if (!open && !running)
+    return (
+      <div className="ga-up-closed" onDragEnter={() => setOpen(true)}>
+        <button type="button" className="btn btn-secondary btn-sm" aria-expanded={false} onClick={() => setOpen(true)}>
+          <span aria-hidden="true">+</span> Add photos
+        </button>
+      </div>
+    )
   return (
     <section className="p-card ga-panel ga-uploader" aria-labelledby="ga-up-h">
       <div className="a-card-head">
         <h2 id="ga-up-h" className="a-h2">Add photos</h2>
-        <span className="muted small">JPEG, PNG or WebP, up to {formatBytes(MAX_PHOTO_BYTES)} each</span>
+        <span className="muted small">JPEG, PNG or WebP · up to {formatBytes(MAX_PHOTO_BYTES)}</span>
+        {!running && <button type="button" className="linklike small" aria-expanded onClick={() => setOpen(false)}>Close<span className="sr-only"> the uploader</span></button>}
       </div>
       {sample && <p className="a-sample m0">This is the made-up sample shoot. Make a new gallery to try uploading.</p>}
       <div className="ga-up-target">

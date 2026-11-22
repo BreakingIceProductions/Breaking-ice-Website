@@ -6,6 +6,7 @@ import { methodLabel } from '@/portal/pay-methods'
 import type { PortalPayment } from '@/portal/types'
 import { useConfirm } from './confirm'
 import { fmtDate } from '@/admin/dates'
+import { HelpTip, Reveal } from './help-tip'
 
 type Props = {
   projectId: string
@@ -58,12 +59,21 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
     <section className="p-card" aria-labelledby="h-pay">
       <div className="a-card-head">
         <h2 id="h-pay" className="a-h2">Portal payments</h2>
-        {on && testMode && <span className="pill pill-in-progress">Stripe test mode</span>}
+        <span className="sa-chips">
+          {on && testMode && <span className="sa-chip">Stripe test mode</span>}
+          {on && (
+            <HelpTip label="About portal payments">
+              Signing the quote asks for the deposit automatically. Each request gets a draft invoice in Zoho Books. The client sees your e-Transfer and EFT details first; paid ones show as paid once Zoho Books has the payment.
+              {stripeOn ? ' Card is offered as a fallback, with the processing fee added.' : ' Card payment is off until Stripe is connected.'}{' '}
+              {gst ? '5% GST is added.' : 'No GST is added.'} The client gets no email for a new request; tell them, or it shows on their portal home.
+            </HelpTip>
+          )}
+        </span>
       </div>
 
       {!on ? (
         <>
-          <p className="muted small m0">This client is invoiced outside the portal (QuickBooks), so they see no pay buttons.</p>
+          <p className="sa-chips m0"><span className="sa-chip">Invoiced outside the portal</span><HelpTip label="About invoicing outside the portal">This client is invoiced outside the portal (QuickBooks), so they see no pay buttons.</HelpTip></p>
           <div><button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => call({ action: 'portal-payments', on: true }, 'This client now pays in the portal.')}>Take payments in the portal</button></div>
         </>
       ) : (
@@ -96,9 +106,10 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
               ))}
             </ul>
           ) : (
-            <p className="muted small m0">Nothing asked for yet. Signing the quote asks for the deposit automatically.</p>
+            <p className="sa-muted small m0">None asked for yet</p>
           )}
 
+          <Reveal label="Ask for a payment" openLabel="Close">
           <form
             className="a-pay-form"
             onSubmit={(e) => {
@@ -126,11 +137,7 @@ export function PaymentsCard({ projectId, on, payments, balance, deposit, stripe
             </div>
             <button type="submit" className="btn btn-primary btn-sm" disabled={busy || !(amount || suggested)}>{busy ? 'Saving…' : 'Ask in the portal'}</button>
           </form>
-          <p className="muted small m0">
-            Each request gets a draft invoice in Zoho Books. The client sees your e-Transfer and EFT details first; paid ones show as paid once Zoho Books has the payment.
-            {stripeOn ? ' Card is offered as a fallback, with the processing fee added.' : ' Card payment is off until Stripe is connected.'}{' '}
-            {gst ? '5% GST is added.' : 'No GST is added.'} The client gets no email for a new request; tell them, or it shows on their portal home.
-          </p>
+          </Reveal>
           <div><button type="button" className="linklike small" disabled={busy} onClick={async () => (await confirm({ title: 'Stop taking payments in the portal?', body: 'This client’s portal stops showing pay buttons. Unpaid requests stay hidden from them until you switch it back on.', confirmLabel: 'Switch off', danger: true })) && call({ action: 'portal-payments', on: false }, 'Portal payments switched off for this client.')}>Switch off portal payments for this client</button></div>
         </>
       )}

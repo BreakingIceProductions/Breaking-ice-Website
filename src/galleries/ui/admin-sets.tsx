@@ -101,7 +101,6 @@ export function SetsPanel({ id, sets, counts, ro }: { id: string; sets: GalleryS
   return (
     <section className="p-card ga-panel" aria-labelledby="ga-sets-h">
       <h2 id="ga-sets-h" className="a-h2">Sets</h2>
-      <p className="muted small m0">Groups of photos the client can flick between, in this order.</p>
       <ol className="ga-sets" ref={list}>
         {sets.map((s, i) => {
           const n = counts[s._key] ?? 0

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { saveFailed, useConfirm, useNotify } from './confirm'
 import { StageDialog, type Stage } from './stage-dialog'
+import { Ring } from './graphics'
 
 const SAMPLE = 'Sample data: nothing was saved.'
 
@@ -52,50 +53,65 @@ export function ProjectProgress({ projectId, projectTitle, checks, children }: {
   )
 }
 
-/** The first unticked step of the stage; once they're all ticked, the move to the next stage. */
-/** `action`: the card's one primary action (e.g. a button or link to the next thing to do). It replaces the
- *  "Move to …" button, which shows only when nothing else is given. */
-export function NextUp({ stage, next, since, action }: { stage: string; next?: Stage; since?: string; action?: React.ReactNode }) {
+/**
+ * Next up: the first unticked step of the stage (once they're all ticked, the move to the next stage),
+ * a ring for how many steps are done (press it for the steps themselves), and the one action.
+ * `action` replaces the "Move to …" button, which shows only when nothing else is given.
+ */
+export function NextUp({ stage, next, action }: { stage: string; next?: Stage; action?: React.ReactNode }) {
   const { checks, isDone, move } = useProgress()
+  const [showSteps, setShowSteps] = useState(false)
   const open = checks.find((c) => !isDone(c))
   const done = checks.filter(isDone).length
   return (
-    <section className="bd-nextup ld-nextup" aria-label="Next up">
-      <div className="stack gap-2px min0" aria-live="polite">
-        <span className="eyebrow">Next up</span>
-        <strong className="ld-next-title">{open ? open.label : next ? `${stage} is done. Move it on to ${next.title}.` : `${stage} is done. Nothing left to do.`}</strong>
-        {open && <span className="small">{done} of {checks.length} done in {stage}</span>}
-        {since && <span className="small muted">In {stage} since {since}</span>}
+    <section className="sa-next" aria-label="Next up">
+      <div className="sa-next-row">
+        <div className="sa-next-main" aria-live="polite">
+          <span className="eyebrow sa-next-eyebrow">Next up</span>
+          <strong className="sa-next-title">{open ? open.label : next ? `Move it on to ${next.title}` : `${stage} is done`}</strong>
+        </div>
+        {checks.length > 0 && (
+          <button type="button" className="sa-ring-btn" aria-expanded={showSteps} aria-controls="sa-next-steps" onClick={() => setShowSteps((x) => !x)}>
+            <Ring value={Math.round((done / checks.length) * 100)}>{done}/{checks.length}</Ring>
+            <span className="sr-only">{done} of {checks.length} steps done in {stage}. {showSteps ? 'Hide' : 'Show'} the steps</span>
+          </button>
+        )}
+        {action ?? (!open && next && <button type="button" className="btn sa-copper" onClick={() => move(next)}>Move to {next.title}</button>)}
       </div>
-      {action ?? (!open && next && <button type="button" className="btn btn-primary btn-sm" onClick={() => move(next)}>Move to {next.title}</button>)}
+      <div id="sa-next-steps" className="sa-next-steps" hidden={!showSteps}>
+        <StageChecklist />
+      </div>
     </section>
   )
 }
 
-/** The production stages. Clicking one opens the stage preview for it. */
+/** The stages as a bar of segments, one button each: clicking one opens the stage preview for it. */
 export function StageStrip({ stages, current }: { stages: (Stage & { when?: string })[]; current: string }) {
   const { move } = useProgress()
   const at = stages.findIndex((s) => s.value === current)
   return (
-    <ol className="ld-steps pj-steps" aria-label={`Stage ${at + 1} of ${stages.length}: ${stages[at]?.title ?? current}`}>
+    <>
+    <ol className="sa-stages" style={{ '--sa-n': String(stages.length) } as React.CSSProperties} aria-label={`Stage ${at + 1} of ${stages.length}: ${stages[at]?.title ?? current}`}>
       {stages.map((s, i) => (
-        <li key={s.value} className={i < at ? 'done' : i === at ? 'current' : ''} aria-current={i === at ? 'step' : undefined}>
+        <li key={s.value} className={i < at ? 'is-done' : i === at ? 'is-current' : ''} aria-current={i === at ? 'step' : undefined}>
           <button type="button" disabled={i === at} onClick={() => move({ title: s.title, value: s.value })}>
-            <span className="dot" aria-hidden="true" />
-            <span className="name">{s.title}</span>
-            <span className="when">{i === at ? 'Now' : s.when ?? ''}</span>
+            <span className="sa-stage-bar" aria-hidden="true" />
+            <span className="sa-stage-name">{s.title}</span>
+            {s.when && i !== at && <span className="sa-stage-when">{s.when}</span>}
             <span className="sr-only">{i === at ? ' (it is here)' : i < at ? ' (done). Move it back here' : '. Move it here'}</span>
           </button>
         </li>
       ))}
     </ol>
+    <p className="sa-stage-now" aria-hidden="true">{stages[at]?.title} · {at + 1} of {stages.length}</p>
+    </>
   )
 }
 
 /** "Left in <stage>": the stage's steps, ticked off here or on the board. */
 export function StageChecklist() {
   const { checks, isDone, tick } = useProgress()
-  if (!checks.length) return <p className="muted small m0">Nothing on the list for this stage.</p>
+  if (!checks.length) return <p className="muted small m0">No steps for this stage</p>
   return (
     <div className="stack gap-3">
       {checks.map((c) => (

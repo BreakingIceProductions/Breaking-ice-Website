@@ -73,3 +73,62 @@
   .rt-meter *, .rt-months a { transition: none !important; }
   .rt-months a:active { transform: none; }
 }
+
+/* ── Simplified pass (Nov 22): ring in the header, post tiles, status chips, recap folded ── */
+.rt-ring { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.rt-ring-cap { font-size: var(--a-fs-label); color: var(--a-muted); }
+.rt-head-side { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-left: auto; }
+.ap-fold > summary .rt-head-side { margin-left: auto; }
+.rt-links > ul { left: 0; right: auto; }
+.rt-links > summary { gap: 4px; }
+
+/* Posts: a grid of tiles; the caption opens on click. */
+.rt-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: var(--space-3); }
+.rt-tile { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-3); border: 1px solid var(--a-hairline); border-radius: 14px; background: var(--a-page); }
+.rt-tile-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.rt-tile-day { font-size: var(--a-fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rt-nets { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.rt-net { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 8px; background: var(--a-tint); box-shadow: inset 0 0 0 1px var(--a-hairline); color: var(--a-text); font-size: var(--a-fs-label); font-weight: 700; text-decoration: none; }
+a.rt-net:hover { box-shadow: inset 0 0 0 1.5px var(--a-text); }
+a.rt-net:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rt-tile-num { margin: 0; font-family: var(--font-display); font-stretch: 112%; font-weight: 700; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.rt-tile-unit { font-family: var(--font-sans); font-stretch: 100%; font-weight: 400; font-size: var(--a-fs-sm); color: var(--a-muted); }
+.rt-caption { margin-top: auto; }
+.rt-caption > summary { display: inline-flex; align-items: center; min-height: 32px; cursor: pointer; list-style: none; font-size: var(--a-fs-sm); color: var(--a-muted); text-decoration: underline; text-decoration-color: var(--a-hairline-strong); text-underline-offset: 4px; }
+.rt-caption > summary::-webkit-details-marker { display: none; }
+.rt-caption > summary:hover { color: var(--a-text); }
+.rt-caption[open] > summary { color: var(--a-text); }
+.rt-caption > p { margin: var(--space-2) 0 0; font-size: var(--a-fs-sm); line-height: 1.45; }
+
+/* Items: type and date as small chips; status as a chip that opens its menu. */
+.rt-item-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rt-type { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border: 1px solid var(--a-hairline); border-radius: var(--radius-pill); font-size: var(--a-fs-label); color: var(--a-strong); }
+.rt-item-head .rt-item-meta .small { font-size: var(--a-fs-sm); }
+.rt-status > summary.rt-status-chip { min-height: 36px; padding: 0 12px; cursor: pointer; }
+.rt-status > summary.rt-status-chip:hover { box-shadow: inset 0 0 0 1px var(--a-hairline-strong); }
+.rt-status > summary:focus-visible, .rt-more > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.rt-status > ul { min-width: 190px; }
+.rt-status > ul button { justify-content: space-between; }
+.rt-status-opt { background: transparent !important; padding: 0; }
+.rt-check { font-weight: 700; }
+.rt-more-btn { width: 40px; height: 40px; }
+.rt-add-fold > summary { list-style: none; gap: 6px; }
+.rt-add-fold > summary::-webkit-details-marker { display: none; }
+.rt-add-fold[open] > summary { margin-bottom: var(--space-3); }
+@media (pointer: coarse) {
+  .rt-status > summary.rt-status-chip, .rt-more-btn, .rt-add-fold > summary, .rt-caption > summary { min-height: 44px; }
+  .rt-more-btn { width: 44px; height: 44px; }
+  .rt-net { min-width: 44px; height: 44px; }
+}
+@media (max-width: 560px) {
+  .rt-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+}
+/* Phone: ring beside the name, month pills in one scrolling row, tighter tiles. */
+@media (max-width: 560px) {
+  .rt-page > .a-head { flex-wrap: nowrap; align-items: flex-start; }
+  .rt-page > .a-head .rt-ring .sb-ring { --sb-ring: 56px !important; }
+  .rt-months { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: calc(var(--space-4) * -1); padding-inline: var(--space-4); }
+  .rt-months li { flex: none; }
+  .rt-tile { padding: var(--space-2) var(--space-3); gap: 6px; }
+  .rt-tile-num { font-size: 1.0625rem; }
+}
