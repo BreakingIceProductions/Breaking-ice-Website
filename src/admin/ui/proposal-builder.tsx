@@ -120,7 +120,7 @@ export function ProposalBuilder() {
           <h2 id="pb-h-items" className="a-h2">Deliverables</h2>
           <span className="muted small">{s.items.length}</span>
         </div>
-        <p className="muted small m0">Price each one, then drag it into a package. One deliverable can sit in more than one package.</p>
+        <p className="muted small m0 pb-how">Price each one, then <span className="pb-on-mouse">drag it into a package</span><span className="pb-on-touch">tap 1, 2 or 3 to add it to a package</span>. One deliverable can sit in more than one package.</p>
         <ul className="pb-list">
           {s.items.map((i) => (
             <li key={i.id} className={`pb-item${used.has(i.id) ? '' : ' is-unused'}`}>
@@ -169,7 +169,7 @@ export function ProposalBuilder() {
                   </li>
                 )
               })}
-              {!k.ids.length && <li className="pb-empty">Drag deliverables here</li>}
+              {!k.ids.length && <li className="pb-empty"><span className="pb-on-mouse">Drag deliverables here</span><span className="pb-on-touch">Tap {n + 1} on a deliverable to add it here</span></li>}
             </ul>
             {n > 0 && <button type="button" className="linklike small" onClick={() => setPack(n, { ids: [...new Set([...s.packs[n - 1].ids, ...k.ids])] })}>Include everything in {s.packs[n - 1].name}</button>}
 

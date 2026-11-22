@@ -206,12 +206,60 @@
 @media (min-width: 1200px) {
   .admin .mn-pair { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
 }
+/* Money view: ink marks, so "Owed to you" (when something is owed) stays the page's one copper.
+   Goal meters fill in ink; only the small pace tick is copper. Collected reads as a quieter ink, dashed with square dots. */
+.admin .mn-goals .gx-fill { background: var(--a-text); }
+.admin .mn-goals .gx-tick { width: 3px; margin-left: -1.5px; background: var(--a-accent); }
+.admin .mn-money .gx-t0 { --gx-c: var(--a-text); }
+.admin .mn-money .gx-t1 { --gx-c: color-mix(in srgb, var(--a-text) 80%, var(--a-card)); }
+.admin .mn-money .gx-t2 { --gx-c: color-mix(in srgb, var(--a-text) 62%, var(--a-card)); }
+.admin .mn-money .gx-t3 { --gx-c: color-mix(in srgb, var(--a-text) 45%, var(--a-card)); }
+.admin .mn-money .gx-t4 { --gx-c: color-mix(in srgb, var(--a-text) 28%, var(--a-card)); }
+.admin .mn-money .gx-col.is-current .gx-col-fill { background: var(--a-text); }
+.admin .mn-money .mn-line-collected { stroke: var(--a-mark-quiet); }
+.admin .mn-money .mn-dot-collected { fill: var(--a-mark-quiet); }
+.admin .mn-money .mn-fill { background: var(--a-text); }
+.admin .mn-money .mn-fill.mn-alt { background: repeating-linear-gradient(135deg, var(--a-mark-quiet) 0 3px, transparent 3px 5px); box-shadow: inset 0 0 0 1px var(--a-mark-quiet); }
+/* A folded section's summary carries its key total, so it can stay closed. */
+.admin .mn-breakdown > summary { flex-wrap: wrap; }
+.admin .mn-breakdown > summary > span:first-child { flex: 1 1 0; min-width: 12em; }
+.admin .mn-sum-note { flex-basis: 100%; padding-left: 21px; font-weight: 400; font-size: var(--a-fs-body); color: var(--a-muted); }
+@media (min-width: 821px) {
+  .admin .mn-sum-note { flex-basis: auto; padding-left: 0; margin-left: auto; }
+}
 
 /* ── Quote builder ─────────────────────────────────────────────── */
 /* One primary on the page (Print or save as PDF); "Add a deliverable" reads as secondary. One hint, above the packages. */
 .admin .pb-page .pb .btn-primary { background: transparent; color: var(--a-text); border: 1px solid var(--a-hairline-strong); }
 .admin .pb-page .pb .btn-primary:hover { background: var(--a-tint); color: var(--a-text); }
 .admin .pb-page .pb-hint { display: none; }
+/* Touch screens can't drag: the hint names the 1, 2, 3 buttons instead. */
+.admin .pb-on-touch { display: none; }
+@media (pointer: coarse) {
+  .admin .pb-on-mouse { display: none; }
+  .admin .pb-on-touch { display: inline; }
+  /* Dragging doesn't work by touch, so the grips go and the row gets the width. */
+  .admin .pb-grip { display: none; }
+  .admin .pb-item-acts > .muted { white-space: nowrap; }
+}
+/* Phone: no boxes inside boxes. Deliverables and package rows sit on hairlines; the preview table stays the one boxed element. */
+@media (max-width: 820px) {
+  .admin .pb { gap: var(--space-4); }
+  .admin .pb .p-card { gap: var(--space-3); }
+  .admin .pb-list { gap: 0; }
+  .admin .pb-item, .admin .pb-item.is-unused { padding: var(--space-3) 0; border: 0; border-top: 1px solid var(--a-hairline); border-radius: 0; }
+  .admin .pb-item:first-child { border-top: 0; padding-top: 0; }
+  .admin .pb-handle { margin: calc(var(--space-3) * -1) 0 calc(var(--space-3) * -1) 0; padding-left: 0; }
+  .admin .pb-item-body { gap: 2px; }
+  .admin .pb-drop { gap: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; }
+  .admin .pb-chip { padding: 2px 0; border: 0; border-top: 1px solid var(--a-hairline); border-radius: 0; background: transparent; }
+  .admin .pb-chip:first-child { border-top: 0; }
+  .admin .pb-empty { padding: var(--space-2) 0; text-align: left; }
+  .admin .pb-math > div { min-height: 32px; }
+  .admin .pb-item .pb-in-num { width: 72px; }
+  .admin .pb-why { min-height: 64px; }
+  .admin .pb-transcript { min-height: 96px; }
+}
 /* Print: only "What the client sees", in ink on paper. */
 @media print {
   body:has(.pb-page) .a-top, body:has(.pb-page) .a-side, body:has(.pb-page) .skip, body:has(.pb-page) .a-sample,
@@ -232,7 +280,7 @@
 /* ── Pass 3: reading text at body size where people read to decide ─────────────── */
 /* Client page: project lines, people, activity and the header links read at 16px; dates, counts and amounts stay 14px. */
 .admin .cp-page .a-feed .ap-tight .small, .admin .cp-page .a-empty, .admin .cp-page .key-dates dd,
-.admin .cp-page .a-chip-link, .admin .cp-page .p-card > .small { font-size: var(--a-fs-body); line-height: 1.5; }
+.admin .cp-page .a-chip-link, .admin .cp-page .p-card > .small, .admin .cp-page .a-kpi-note { font-size: var(--a-fs-body); line-height: 1.5; }
 /* Settings: what each connection does is the reading content. */
 .admin .ap-conn-what, .admin .ap-conn-extra { font-size: var(--a-fs-body); line-height: 1.5; }
 .admin .ap-conn .ap-details > summary { min-height: 44px; }
@@ -294,3 +342,19 @@
 /* A switcher and the content it loads (project tabs, Money views, Portals): same rhythm as the page. */
 .admin .a-page > .a-pending-scope { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
 .admin .a-page > .a-pending-scope > .a-pending-body { display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
+
+/* Lead page, The project: unset details wait behind "Add details", which reads as a quiet text control. */
+.admin .ld-more > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-2); min-height: 44px; padding-top: 10px; cursor: pointer; list-style: none; font-size: var(--a-fs-body); font-weight: 600; color: var(--a-text); }
+.admin .ld-more > summary::-webkit-details-marker { display: none; }
+.admin .ld-more > summary::before { content: '+'; width: 1em; text-align: center; color: var(--a-muted); font-weight: 400; }
+.admin .ld-more[open] > summary::before { content: '\2212'; }
+.admin .ld-more-what { flex-basis: 100%; padding-left: calc(1em + var(--space-2)); font-weight: 400; color: var(--a-muted); }
+.admin .ld-more[open] .ld-more-what { display: none; }
+.admin .ld-rows + .ld-more { border-top: 1px solid var(--line); }
+
+/* Pipeline: the "Going cold" flags on the cards are the one copper. The Going cold tile is marked in ink
+   (a heavier neutral border and an ink label), and the charts and card progress bars draw in ink. */
+.admin .pl-page .a-kpi.is-hot { border-color: var(--a-hairline-strong); box-shadow: inset 0 0 0 1px var(--a-hairline-strong); }
+.admin .pl-page .a-kpi.is-hot .a-kpi-label { color: var(--a-text); }
+.admin .pl-page .gx-t0 { --gx-c: var(--a-text); }
+.admin .pl-page .gx-fill { background: var(--a-text); }

@@ -146,6 +146,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
   const [status, setStatus] = useState('')
   const notesSaved = useRef(lead.notes ?? '')
   const [notes, setNotes] = useState(lead.notes ?? '')
+  const [firstSet] = useState(() => [projectType && 'Type', lead.budget && 'Budget', lead.startDate && 'Start date', lead.callDate && 'Call date', lead.callTime && 'Call time'].filter(Boolean) as string[])
 
   const save: Saver = async (patch) => {
     setStatus('Saving…')
@@ -155,6 +156,18 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
     if (r.ok && !r.data.sample) router.refresh()
     return r.ok ? (r.data.sample ? 'sample' : true) : false
   }
+
+  // The project section shows what's been set; the rest wait behind "Add details". Sorted once, from the
+  // first render, so a field doesn't jump out from under you while you fill it in.
+  const projectFields = [
+    { label: 'Type', el: <SelectField key="type" label="Type" name="projectType" value={projectType} save={save} options={PROJECT_TYPES} none="Not set" /> },
+    { label: 'Budget', el: <SelectField key="budget" label="Budget" name="budget" value={lead.budget} save={save} options={LEAD_BUDGETS} none="Not discussed" /> },
+    { label: 'Start date', el: <TextField key="start" label="Start date" name="startDate" type="date" value={lead.startDate} save={save} /> },
+    { label: 'Call date', el: <TextField key="callDate" label="Call date" name="callDate" type="date" value={lead.callDate} save={save} /> },
+    { label: 'Call time', el: <TextField key="callTime" label="Call time" name="callTime" type="time" value={lead.callTime} save={save} /> },
+  ]
+  const projectSet = projectFields.filter((f) => firstSet.includes(f.label))
+  const projectUnset = projectFields.filter((f) => !firstSet.includes(f.label))
 
   return (
     <div className="stack gap-4">
@@ -197,13 +210,13 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
 
         <section className="p-card" aria-labelledby="ld-h-project">
           <h2 id="ld-h-project" className="a-h2">The project</h2>
-          <div className="ld-rows">
-            <SelectField label="Type" name="projectType" value={projectType} save={save} options={PROJECT_TYPES} none="Not set" />
-            <SelectField label="Budget" name="budget" value={lead.budget} save={save} options={LEAD_BUDGETS} none="Not discussed" />
-            <TextField label="Start date" name="startDate" type="date" value={lead.startDate} save={save} />
-            <TextField label="Call date" name="callDate" type="date" value={lead.callDate} save={save} />
-            <TextField label="Call time" name="callTime" type="time" value={lead.callTime} save={save} />
-          </div>
+          {projectSet.length > 0 && <div className="ld-rows">{projectSet.map((f) => f.el)}</div>}
+          {projectUnset.length > 0 && (
+            <details className="ld-more">
+              <summary>Add details <span className="ld-more-what">{projectUnset.map((f) => f.label.toLowerCase()).join(', ')}</span></summary>
+              <div className="ld-rows">{projectUnset.map((f) => f.el)}</div>
+            </details>
+          )}
         </section>
       </div>
 

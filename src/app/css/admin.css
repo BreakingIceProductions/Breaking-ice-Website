@@ -326,6 +326,16 @@
 /* Sign-in */
 .a-signin { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--space-6) var(--space-4); }
 .a-signin-card { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: var(--space-8); padding: var(--space-8); background: var(--a-card); border: 1px solid var(--a-hairline); border-radius: var(--a-radius); }
+/* Error, notice and help read at body size; the card's padding tightens on a phone so the code field has room. */
+.a-signin .err, .a-signin .notice { font-size: var(--a-fs-body); line-height: 1.5; }
+.a-signin .err { align-items: flex-start; }
+.a-signin .btn-row { align-items: center; }
+@supports (min-height: 100dvh) { .a-signin { min-height: 100dvh; } }
+@media (max-width: 480px) {
+  .a-signin { padding: var(--space-4); }
+  .a-signin-card { gap: var(--space-6); padding: var(--space-6) var(--space-5); }
+  .a-signin .code-input { max-width: none; width: 100%; }
+}
 
 /* Collapsible buckets and the per-row stage menu */
 .a-bucket > summary { list-style: none; cursor: pointer; justify-content: flex-start; align-items: center; }

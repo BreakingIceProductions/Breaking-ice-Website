@@ -29,7 +29,7 @@ export default async function Pipeline() {
   const toWrite = cards.filter((c) => c.stage === 'proposal').length
   const quoted = cards.filter((c) => c.stage === 'quoted').length
   return (
-    <div className="a-page a-page-wide">
+    <div className="a-page a-page-wide pl-page">
       <header className="a-head">
         <div className="stack ap-gap-3">
           <h1 className="a-h1">Pipeline</h1>
@@ -87,7 +87,7 @@ export default async function Pipeline() {
           </div>
           <div className={`a-kpi${cold ? ' is-hot' : ''}`}>
             <span className="a-kpi-label">Going cold</span>
-            <span className={`a-kpi-num${cold ? ' a-accent' : ''}`}>{cold}</span>
+            <span className="a-kpi-num">{cold}</span>
             <span className="a-kpi-note">New lead 3+ days, call or quote to write 5+, quoted 7+</span>
           </div>
           <div className="a-kpi">

@@ -174,3 +174,8 @@
   .ga-thumb img.is-loading { opacity: 1; }
   .ga-thumb:hover img { transform: none; }
 }
+
+/* Explanations people read to decide (share link, password, email, closes, downloads, sets, delete) at body size.
+   Activity and favourites keep their small date lines. */
+.admin :is([aria-labelledby='ga-share-h'], [aria-labelledby='ga-exp-h'], [aria-labelledby='ga-dl-h'], [aria-labelledby='ga-sets-h'], [aria-labelledby='ga-danger-h']) :is(p.small, span.small) { font-size: var(--a-fs-body); line-height: 1.5; }
+.admin :is([aria-labelledby='ga-fav-h'], [aria-labelledby='ga-act-h']) > p.small:not([role='status']) { font-size: var(--a-fs-body); line-height: 1.5; }

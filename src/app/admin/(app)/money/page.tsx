@@ -30,7 +30,7 @@ export default async function Money({ searchParams }: Props) {
   const range: RangeKey = RANGES.find((r) => r.key === one(sp.range))?.key ?? '12m'
   const data = await loadMoney()
   return (
-    <div className="a-page mn">
+    <div className={`a-page mn${view === 'money' ? ' mn-money' : ''}`}>
       <header className="a-head">
         <div className="stack ap-gap-3">
           <h1 className="a-h1">Money</h1>
@@ -80,11 +80,14 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
     { label: 'Left to bill', value: left, text: cad(left), tone: 'dashed' as const },
   ]
   const sumOf = (pick: (r: (typeof quotedWork)[number]) => number) => quotedWork.reduce((n, r) => n + pick(r), 0)
+  // The total of this year's paid list, for the folded sections' summary lines.
+  const paidTotal = v.paidRows.reduce((n, b) => n + b.amount, 0)
+  const paidLine = v.paidRows.length ? `${cad(paidTotal)} from ${plural(v.paidRows.length, 'payment')}` : 'Nothing recorded as paid yet'
   return (
     <>
       <section aria-labelledby="mn-goals-h" className="stack mn-section">
         <h2 id="mn-goals-h" className="a-h2">Goals for {v.year}</h2>
-        <div className="a-kpis">
+        <div className="a-kpis mn-goals">
           {v.goalLines.map((g) => (
             <div className="a-kpi" key={g.key}>
               <span className="a-kpi-label">{g.label}</span>
@@ -200,7 +203,7 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
 
       {/* The breakdowns behind "Collected": folded away, one click to open. */}
       <details className="p-card ap-details mn-breakdown">
-        <summary>By month, by payment method and by client</summary>
+        <summary><span>By month, by payment method and by client</span> <span className="mn-sum-note">{paidLine} in {v.year}</span></summary>
       <div className="mn-grid">
         <section className="p-card" aria-labelledby="mn-months-h">
           <div className="a-card-head">
@@ -240,7 +243,7 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
       </div>
       </details>
 
-      <PhoneFold className="p-card" id="paid" labelledBy="mn-paid-h" summary={<h2 id="mn-paid-h" className="a-h2">Paid this year</h2>}>
+      <PhoneFold className="p-card" id="paid" folded labelledBy="mn-paid-h" summary={<><h2 id="mn-paid-h" className="a-h2">Paid this year</h2><span className="muted small ap-fold-note">{paidLine}</span></>}>
         {v.paidRows.length > 0 && <p className="m0"><a className="text-link" href="/api/admin/money/csv" download>Download CSV<span className="sr-only"> of the paid list</span></a></p>}
         {v.paidRows.length ? (
           <ShowAll rows={v.paidRows} head={<tr><th scope="col">Paid</th><th scope="col">Client</th><th scope="col">Project</th><th scope="col">What</th><th scope="col">How</th><th scope="col" className="num">Amount</th></tr>} row={(b) => (
