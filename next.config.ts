@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
       // Every other old project post goes to the stories page.
       { source: '/:old(20\\d\\d-[a-z0-9-]+|ongoing-[a-z0-9-]+)', destination: '/stories', permanent: true },
       { source: '/:old(feed|comments/feed|author/.*|category/.*)', destination: '/', permanent: true },
+      // Imperial closure series renamed to its title (Nov 2026).
+      { source: '/stories/imperial-oil-a-century-at-norman-wells-and-the-next-chapter', destination: '/stories/closing-a-century', permanent: true },
       // Retainers became the Brand Engine offer (Nov 2026).
       { source: '/services/retainers', destination: '/services/brand-engine', permanent: true },
     ]
