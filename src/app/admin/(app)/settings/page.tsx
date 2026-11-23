@@ -7,7 +7,7 @@ import { StateDot } from '@/admin/ui/viz-d'
 import { requireAdmin } from '@/admin/auth'
 import { adminEnv, calendarReady, googleOAuthReady, icloudReady, ticktickReady, zohoReady } from '@/admin/config'
 import { allCalendars, calendarPrefs } from '@/admin/calendar-feed'
-import { googleConnection, googleRedirect } from '@/admin/gcal'
+import { googleConnection, googleRedirect, hasGmailScope } from '@/admin/gcal'
 import { fmtDate } from '@/admin/dates'
 import { listGuests } from '@/admin/guests'
 import { GuestsCard } from '@/admin/ui/guests-card'
@@ -22,7 +22,7 @@ export const metadata = { title: 'Settings' }
 
 type Props = { searchParams: Promise<Record<string, string | undefined>> }
 
-const NAMES: Record<string, string> = { ticktick: 'TickTick', zoho: 'Zoho Books', wispr: 'Wispr Flow', google: 'Google calendars' }
+const NAMES: Record<string, string> = { ticktick: 'TickTick', zoho: 'Zoho Books', wispr: 'Wispr Flow', google: 'Google' }
 
 export default async function Settings({ searchParams }: Props) {
   const admin = await requireAdmin()
@@ -159,20 +159,21 @@ export default async function Settings({ searchParams }: Props) {
 
           <li className="sd-conn">
             <div className="sd-conn-name">
-              <strong>Google calendars</strong>
-              <HelpTip label="About Google calendars">{gcal ? `Connected${gcal.email ? ` as ${gcal.email}` : ''} since ${fmtDate(gcal.connectedAt)}. ` : ''}Every calendar on your Google account shows on the Calendar page, and you can add and change events there. New calendars appear on their own.</HelpTip>
+              <strong>Google</strong>
+              <HelpTip label="About Google">{gcal ? `Connected${gcal.email ? ` as ${gcal.email}` : ''} since ${fmtDate(gcal.connectedAt)}. ` : ''}Covers Calendar and Email. Every calendar on your Google account shows on the Calendar page, and you can add and change events there. Email from the people at your clients and leads shows on the Emails page, and replies you write there are sent from your Gmail, so they’re in your Sent folder and in Spark too.</HelpTip>
             </div>
             {state(Boolean(gcal), googleOAuthReady(), 'Connected', gcal ? `Connected${gcal.email ? ` as ${gcal.email}` : ''} since ${fmtDate(gcal.connectedAt)}` : undefined)}
-            <div className="sd-conn-action">{gcal ? disconnect('google', 'Google calendars') : googleOAuthReady() ? <a className="btn btn-secondary btn-sm" href="/api/admin/google/connect">Connect<span className="sr-only"> Google calendars</span></a> : checkAgain('Google calendars')}</div>
+            <div className="sd-conn-action">{gcal ? disconnect('google', 'Google') : googleOAuthReady() ? <a className="btn btn-secondary btn-sm" href="/api/admin/google/connect">Connect<span className="sr-only"> Google</span></a> : checkAgain('Google')}</div>
+            <p className="sd-conn-extra">{gcal && !hasGmailScope(gcal) ? <>Covers: Calendar. Email isn’t included yet. <a className="text-link" href="/api/admin/google/connect">Reconnect Google to include email</a></> : 'Covers: Calendar (read and change events) and Email (read client mail, mark it read, send replies)'}</p>
             {gcal && googleProblem && <p className="sd-conn-extra err">{googleProblem}</p>}
             {!gcal && (
               <details className="ap-details sd-conn-more">
                 <summary>{googleOAuthReady() ? 'How connecting works' : 'Setup steps'}</summary>
                 {googleOAuthReady() ? (
-                  <p className="small m0">You’ll sign in to Google and allow calendar access. Only you can connect it; guests and view-only sign-ins can’t.</p>
+                  <p className="small m0">You’ll sign in to Google and allow calendar and Gmail access. Only you can connect it; guests and view-only sign-ins can’t.</p>
                 ) : (
                   <ol className="a-steps small">
-                    <li>In <a className="text-link" href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noopener noreferrer">Google Cloud</a>, in the project that has the portal’s service account, turn on the Google Calendar API.</li>
+                    <li>In <a className="text-link" href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noopener noreferrer">Google Cloud</a>, in the project that has the portal’s service account, turn on the Google Calendar API and the Gmail API.</li>
                     <li>Under APIs &amp; Services → OAuth consent screen, set it up as <strong>Internal</strong> (or External and press <strong>Publish app</strong>: apps left in Testing are signed out every 7 days).</li>
                     <li>Under Credentials, create an OAuth client ID of type <strong>Web application</strong>. Authorized redirect URIs: <code>{googleRedirect()}</code> and <code>http://localhost:3107/api/admin/google/callback</code></li>
                     <li>In Vercel, add <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code>, then redeploy.</li>

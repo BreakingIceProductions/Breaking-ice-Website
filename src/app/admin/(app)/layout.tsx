@@ -30,6 +30,7 @@ export default async function AdminApp({ children }: { children: React.ReactNode
     { group: 'Go to', label: 'Today', href: '/admin' },
     { group: 'Go to', label: 'Calendar', sub: 'Google, iCloud and project dates', href: '/admin/calendar' },
     { group: 'Go to', label: 'Pipeline', sub: 'Leads and projects on one board', href: '/admin/pipeline' },
+    { group: 'Go to', label: 'Emails', sub: 'Client conversations from Gmail', href: '/admin/emails' },
     { group: 'Go to', label: 'Client portals', sub: 'What each portal is waiting on', href: '/admin/portals' },
     { group: 'Go to', label: 'Projects list and archive', href: '/admin/projects?view=list' },
     { group: 'Go to', label: 'Clients', sub: 'Each client’s projects and files', href: '/admin/clients' },

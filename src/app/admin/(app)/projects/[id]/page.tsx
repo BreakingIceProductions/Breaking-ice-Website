@@ -558,7 +558,10 @@ function Emails({ p }: { p: OfficeProject }) {
   const rows = sentToClient(p)
   return (
     <section className="p-card pj-narrow" aria-labelledby="h-emails">
-      <h2 id="h-emails" className="a-h2">Sent to the client</h2>
+      <div className="a-card-head">
+        <h2 id="h-emails" className="a-h2">Sent to the client</h2>
+        {p.client._id && <Link className="text-link small" href={`/admin/emails?client=${encodeURIComponent(p.client._id)}`}>Open the full conversation</Link>}
+      </div>
       {rows.length ? (
         <ul className="sa-feed">
           {rows.map((r) => (

@@ -12,7 +12,9 @@ import { getConnection, saveConnection } from './data'
  */
 
 // Read and write events on every calendar, list the calendars, and the address (to show which account).
-const SCOPES = ['https://www.googleapis.com/auth/calendar', 'openid', 'email'].join(' ')
+// Gmail: read client mail and mark it read (modify), and send replies from Josh's own mailbox (send). See gmail.ts.
+export const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/gmail.send']
+const SCOPES = ['https://www.googleapis.com/auth/calendar', ...GMAIL_SCOPES, 'openid', 'email'].join(' ')
 const API = 'https://www.googleapis.com/calendar/v3'
 
 /** Google only sends people back to addresses registered on the OAuth client: the live site, or localhost in development. */
@@ -22,7 +24,14 @@ export function googleRedirect(reqUrl?: string) {
   return `${local ? u.origin : SITE_URL}/api/admin/google/callback`
 }
 
-type Conn = { access: string; refresh: string; exp: number; email?: string; connectedAt: string }
+/** `scope` is what Google says was granted (space separated); connections made before email was added have none. */
+type Conn = { access: string; refresh: string; exp: number; email?: string; connectedAt: string; scope?: string }
+
+/** True when this sign-in allowed reading and sending email (both Gmail scopes). */
+export const hasGmailScope = (c: { scope?: string } | null | undefined) => {
+  const granted = new Set((c?.scope ?? '').split(/\s+/))
+  return GMAIL_SCOPES.every((s) => granted.has(s))
+}
 
 export function googleAuthorizeUrl(state: string, reqUrl: string) {
   const u = new URL('https://accounts.google.com/o/oauth2/v2/auth')
@@ -40,7 +49,7 @@ export function googleAuthorizeUrl(state: string, reqUrl: string) {
   return u.toString()
 }
 
-type TokenReply = { access_token?: string; refresh_token?: string; expires_in?: number; id_token?: string; error?: string; error_description?: string }
+type TokenReply = { access_token?: string; refresh_token?: string; expires_in?: number; id_token?: string; scope?: string; error?: string; error_description?: string }
 
 export class GoogleAuthError extends Error {}
 
@@ -76,6 +85,7 @@ export async function googleExchange(code: string, reqUrl: string) {
     exp: Date.now() + t.expires_in * 1000,
     email: emailOf(t.id_token),
     connectedAt: new Date().toISOString(),
+    scope: t.scope,
   } satisfies Conn)
   cache.clear()
 }
@@ -94,7 +104,7 @@ async function liveConnection(): Promise<Conn> {
   refreshing ??= (async () => {
     try {
       const t = await token({ grant_type: 'refresh_token', refresh_token: c.refresh })
-      const next = { ...c, access: t.access_token, exp: Date.now() + t.expires_in * 1000 }
+      const next = { ...c, access: t.access_token, exp: Date.now() + t.expires_in * 1000, ...(t.scope && { scope: t.scope }) }
       await saveConnection('google', next)
       return next
     } finally {
@@ -102,6 +112,12 @@ async function liveConnection(): Promise<Conn> {
     }
   })()
   return refreshing
+}
+
+/** A fresh access token for other Google APIs on the same sign-in (Gmail), with what it was granted. */
+export async function googleAccess() {
+  const c = await liveConnection()
+  return { token: c.access, scope: c.scope, email: c.email }
 }
 
 export class GoogleConflict extends Error {}
