@@ -28,6 +28,7 @@ export default async function AdminApp({ children }: { children: React.ReactNode
     { group: 'Actions', label: 'New lead', sub: 'Add someone who got in touch', href: '/admin/leads/new' },
     { group: 'Actions', label: 'New project', sub: 'Start a project for a client', href: '/admin/projects/new' },
     { group: 'Go to', label: 'Today', href: '/admin' },
+    { group: 'Go to', label: 'Calendar', sub: 'Google, iCloud and project dates', href: '/admin/calendar' },
     { group: 'Go to', label: 'Pipeline', sub: 'Leads and projects on one board', href: '/admin/pipeline' },
     { group: 'Go to', label: 'Client portals', sub: 'What each portal is waiting on', href: '/admin/portals' },
     { group: 'Go to', label: 'Projects list and archive', href: '/admin/projects?view=list' },

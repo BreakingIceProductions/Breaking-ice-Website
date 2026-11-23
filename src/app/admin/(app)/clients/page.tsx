@@ -10,6 +10,7 @@ import { r2Ready } from '@/portal/r2'
 import { listClients } from '@/admin/data'
 import { stageTitle } from '@/admin/stages'
 import { AdminLibrary, type LibProject } from '@/admin/ui/library'
+import { ClientsTabs } from '@/admin/ui/clients-tabs'
 
 export const metadata = { title: 'Clients' }
 
@@ -32,8 +33,11 @@ export default async function Clients() {
   )
   return (
     <div className="a-page a-page-wide">
-      <header className="a-head">
-        <h1 className="a-h1">Clients</h1>
+      <header className="a-head sc-chead">
+        <div className="sc-title">
+          <h1 className="a-h1">Clients</h1>
+          <ClientsTabs on="clients" />
+        </div>
         <Link className="btn btn-secondary" href="/admin/clients/new">New client</Link>
       </header>
       <div className="sc-clients">

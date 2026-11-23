@@ -154,3 +154,8 @@
 .admin .sc-kpi-mark .gx-seg { flex-wrap: wrap; }
 .admin .sc-kpi-mark .gx-seg > span { width: 16px; }
 .admin .cp-page .a-row-side { align-items: flex-end; gap: 4px; }
+
+/* Clients | People: one sidebar item, two pages; the switch sits beside the H1 (under it when there's no room). */
+.admin .sc-chead { align-items: center; }
+.admin .sc-chead .sc-title { column-gap: var(--space-4); }
+.admin .pj-tabs.sc-ctabs { align-self: center; -webkit-mask-image: none; mask-image: none; padding-right: 4px; }

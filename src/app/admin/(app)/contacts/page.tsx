@@ -10,6 +10,7 @@ import { getPeople } from '@/admin/people'
 import { mergePeople, type BasePerson } from '@/admin/people-shared'
 import { stageIndex, stageTitle } from '@/admin/stages'
 import { PeopleTable } from '@/admin/ui/people'
+import { ClientsTabs } from '@/admin/ui/clients-tabs'
 
 export const metadata = { title: 'People' }
 
@@ -68,12 +69,13 @@ export default async function Contacts({ searchParams }: Props) {
   const one = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v)
   return (
     <div className="a-page">
-      <header className="a-head">
+      <header className="a-head sc-chead">
         <div className="sc-title">
           <h1 className="a-h1">People</h1>
           <span className="sa-count" title={`${people.length} ${people.length === 1 ? 'person' : 'people'} at ${clients.length} ${clients.length === 1 ? 'company' : 'companies'}`}>
             {people.length}<span className="sr-only"> {people.length === 1 ? 'person' : 'people'} at {clients.length} {clients.length === 1 ? 'company' : 'companies'}</span>
           </span>
+          <ClientsTabs on="people" />
         </div>
         <Link className="btn btn-secondary" href="/admin/clients/new?from=people">New client</Link>
       </header>

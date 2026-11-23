@@ -56,7 +56,7 @@ export function AdminNav({ needs: initial = 0, id = 'a-nav' }: { needs?: number;
     {
       items: [
         { href: '/admin', label: 'Today', icon: 'dash', on: path === '/admin', count: needs },
-        { href: 'https://calendar.google.com', label: 'Calendar', icon: 'calendar', external: 'opens Google Calendar' },
+        { href: '/admin/calendar', label: 'Calendar', icon: 'calendar', on: at('/admin/calendar') },
       ],
     },
     {
@@ -72,8 +72,8 @@ export function AdminNav({ needs: initial = 0, id = 'a-nav' }: { needs?: number;
     {
       label: 'Clients and docs',
       items: [
-        { href: '/admin/clients', label: 'Clients', icon: 'finder', on: at('/admin/clients') },
-        { href: '/admin/contacts', label: 'People', icon: 'clients', on: at('/admin/contacts') },
+        // Clients and People are one item: the two pages switch with the "Clients | People" pill in their header.
+        { href: '/admin/clients', label: 'Clients', icon: 'finder', on: at('/admin/clients', '/admin/contacts') },
         { href: '/admin/proposals/new', label: 'Quote builder', icon: 'proposals', on: at('/admin/proposals') },
         { href: '/admin/library', label: 'Library', icon: 'library', on: at('/admin/library') },
       ],

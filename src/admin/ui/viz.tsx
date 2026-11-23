@@ -34,7 +34,7 @@ export type Col = {
   /** What sits under the column (e.g. "J"). Defaults to the label. */
   short?: string
   value: number
-  /** A second series drawn beside the first, striped. */
+  /** A second series drawn beside the first, in grey. */
   value2?: number
   /** Hover text for the column. */
   title?: string
@@ -47,30 +47,34 @@ export type Col = {
 /**
  * Columns on one scale. `label` is the whole chart as one sentence for screen readers, so the columns
  * themselves are decorative; the numbers are also in a folded table or the `text` above each column.
+ * With `goal`, a dashed line marks it across the columns and the columns that reach it are copper.
+ * `wrap` lets long labels under the columns wrap instead of being cut short.
  */
-export function ColChart({ cols, label, height = 160, legend }: { cols: Col[]; label: string; height?: number; legend?: [string, string] }) {
-  const max = Math.max(...cols.flatMap((c) => [c.value, c.value2 ?? 0]), 0)
-  const h = (v: number) => `${max > 0 ? Math.max(v > 0 ? 3 : 0, (v / max) * 100) : 0}%`
+export function ColChart({ cols, label, height = 160, legend, goal, wrap }: { cols: Col[]; label: string; height?: number; legend?: [string, string]; goal?: { value: number; text: string }; wrap?: boolean }) {
+  const max = Math.max(...cols.flatMap((c) => [c.value, c.value2 ?? 0]), goal?.value ?? 0, 0)
+  const pct = (v: number) => (max > 0 ? (v / max) * 100 : 0)
+  const h = (v: number) => `${max > 0 ? Math.max(v > 0 ? 3 : 0, pct(v)) : 0}%`
   return (
     <figure className="sb-cols-wrap">
+      <div className={`sb-cols${goal ? ' sb-cols-goal' : ''}${wrap ? ' sb-cols-wrapping' : ''}`} role="img" aria-label={label} style={{ '--sb-n': String(cols.length), '--sb-h': `${height}px` } as CSSProperties}>
+        {cols.map((c, i) => (
+          <span key={`${c.label}-${i}`} className={`sb-col${c.current ? ' is-current' : ''}${c.future ? ' is-future' : ''}${goal && c.value >= goal.value ? ' is-hit' : ''}`} title={c.title}>
+            {c.text !== undefined && <span className="sb-col-num" aria-hidden="true">{c.text}</span>}
+            <span className="sb-col-plot" aria-hidden="true">
+              <span className="sb-col-bar" style={{ height: c.future ? '4%' : h(c.value) }} />
+              {c.value2 !== undefined && <span className="sb-col-bar sb-alt" style={{ height: h(c.value2) }} />}
+              {goal && <span className="sb-col-goal" style={{ bottom: `${pct(goal.value)}%` }}>{i === 0 && <span className="sb-goal-text">{goal.text}</span>}</span>}
+            </span>
+            <span className="sb-col-label" aria-hidden="true">{c.short ?? c.label}</span>
+          </span>
+        ))}
+      </div>
       {legend && (
         <ul className="sb-legend" aria-hidden="true">
           <li><span className="sb-key" />{legend[0]}</li>
           <li><span className="sb-key sb-alt" />{legend[1]}</li>
         </ul>
       )}
-      <div className="sb-cols" role="img" aria-label={label} style={{ '--sb-n': String(cols.length), '--sb-h': `${height}px` } as CSSProperties}>
-        {cols.map((c, i) => (
-          <span key={`${c.label}-${i}`} className={`sb-col${c.current ? ' is-current' : ''}${c.future ? ' is-future' : ''}`} title={c.title}>
-            {c.text !== undefined && <span className="sb-col-num" aria-hidden="true">{c.text}</span>}
-            <span className="sb-col-plot" aria-hidden="true">
-              <span className="sb-col-bar" style={{ height: c.future ? '4%' : h(c.value) }} />
-              {c.value2 !== undefined && <span className="sb-col-bar sb-alt" style={{ height: c.future ? '4%' : h(c.value2) }} />}
-            </span>
-            <span className="sb-col-label" aria-hidden="true">{c.short ?? c.label}</span>
-          </span>
-        ))}
-      </div>
     </figure>
   )
 }

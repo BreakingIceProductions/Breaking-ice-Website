@@ -2,7 +2,7 @@ import 'server-only'
 import { methodLabel } from '@/portal/pay-methods'
 import type { PortalPayment } from '@/portal/types'
 import { PIPELINE_STAGES, PROJECT_TYPES } from '@/sanity/portal/office-constants'
-import { daysBetween, today, ymd } from './dates'
+import { addDays, daysBetween, today, ymd } from './dates'
 import { LEAD_SOURCES } from './lead'
 import type { OfficeProject } from './types'
 
@@ -37,6 +37,7 @@ export type Period = { from?: string; to: string }
 const within = (d: string | undefined, r: Period) => (r.from ? Boolean(d && d >= r.from && d <= r.to) : true)
 
 export const RANGES = [
+  { key: '30d', label: 'Last 30 days' },
   { key: '12m', label: 'Last 12 months' },
   { key: 'year', label: 'This year' },
   { key: 'all', label: 'All time' },
@@ -46,6 +47,7 @@ export type RangeKey = (typeof RANGES)[number]['key']
 /** "Last 12 months" is this month and the eleven before it, so it lines up with the month charts. */
 export function periodFor(range: RangeKey, t = today()): Period {
   if (range === 'all') return { to: t }
+  if (range === '30d') return { from: addDays(t, -29), to: t }
   if (range === 'year') return { from: `${t.slice(0, 4)}-01-01`, to: t }
   return { from: `${addMonths(t.slice(0, 7), -11)}-01`, to: t }
 }
@@ -427,6 +429,43 @@ export function reportView(projects: MoneyProject[], payments: PortalPayment[], 
     collected: sum(paid.filter((x) => x.paidOn!.startsWith(b)).map((x) => x.amount)),
   }))
 
+  // New leads by month across the period, the same way. All time starts at the first dated lead.
+  const leadFirst = r.from ?? [...dated].sort()[0]
+  const leadMonths = leadFirst ? monthsFrom(leadFirst.slice(0, 7), t.slice(0, 7)) : []
+  const leadsByYear = leadMonths.length > 24
+  const leadSpans = new Set(leadMonths.map((m) => m.slice(0, 4))).size > 1
+  const leadsByMonth = (leadsByYear ? [...new Set(leadMonths.map((m) => m.slice(0, 4)))] : leadMonths).map((b) => ({
+    label: leadsByYear ? b : monthLabel(b, leadSpans),
+    count: dated.filter((d) => d.startsWith(b)).length,
+  }))
+
+  // How fast deals sign: days from the lead (and from the quote going out) to the signing, for projects signed in the period.
+  const signedHere = projects.map((p) => ({ p, on: signing(p)?.on })).filter((x): x is { p: MoneyProject; on: string } => Boolean(x.on && within(x.on, r)))
+  const quotedOn = (p: MoneyProject) => day(((p.office.stageHistory ?? []).filter((h) => h.to === 'quoted').map((h) => h.at).filter(Boolean) as string[]).sort()[0])
+  const spans = (from: (p: MoneyProject) => string | undefined) => {
+    const list = signedHere.map(({ p, on }) => { const f = from(p); return f ? daysBetween(f, on) : null }).filter((n): n is number => n !== null && n >= 0).sort((a, b) => a - b)
+    const mid = list.length >> 1
+    return {
+      count: list.length,
+      median: list.length ? Math.round(list.length % 2 ? list[mid] : (list[mid - 1] + list[mid]) / 2) : null,
+      average: list.length ? Math.round(sum(list) / list.length) : null,
+    }
+  }
+  const typeTitle = (v?: string) => PROJECT_TYPES.find((x) => x.value === v)?.title ?? 'Not recorded'
+  const valued = projects.map((p) => ({ p, s: signing(p) })).filter((x) => x.s && within(x.s.on, r) && x.s.value)
+  const byType = new Map<string, { label: string; count: number; value: number }>()
+  for (const { p, s } of valued) {
+    const row = byType.get(typeTitle(p.projectType)) ?? { label: typeTitle(p.projectType), count: 0, value: 0 }
+    row.count += 1
+    row.value += s!.value!
+    byType.set(row.label, row)
+  }
+  const speed = {
+    contact: spans(leadDay),
+    quote: spans(quotedOn),
+    byType: [...byType.values()].map((x) => ({ ...x, average: x.value / x.count })).sort((a, b) => b.average - a.average),
+  }
+
   const pipeline = PIPELINE_STAGES.filter((s) => s.group === 'sales').map((s) => ({ label: s.title as string, count: projects.filter((p) => !p.archived && p.pipelineStage === s.value).length }))
 
   return {
@@ -443,6 +482,9 @@ export function reportView(projects: MoneyProject[], payments: PortalPayment[], 
     weekdayCount: dated.length,
     moneyByMonth,
     byYear,
+    leadsByMonth,
+    leadsByYear,
+    speed,
     pipeline,
     gaps: gaps(projects, all),
   }

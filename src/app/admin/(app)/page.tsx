@@ -409,6 +409,7 @@ export default async function Today() {
                 <Link className="text-link" href="/admin/pipeline">{noDates === 1 ? '1 booked project has no dates' : `${noDates} booked projects have no dates`}</Link>
               </p>
             )}
+            <Link className="sa-more" href="/admin/calendar?view=week">Open the calendar</Link>
           </div>
           <TodayTasks />
         </div>

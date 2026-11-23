@@ -516,7 +516,8 @@ function open<T>(sealed?: string): T | null {
 }
 
 // wisprClient is the app registration Wispr Flow gave us (registered once); wispr is the sign-in.
-export type Connection = 'ticktick' | 'zoho' | 'wispr' | 'wisprClient'
+// google is the calendar sign-in; calendarPrefs holds the calendar page's settings (default calendar).
+export type Connection = 'ticktick' | 'zoho' | 'wispr' | 'wisprClient' | 'google' | 'calendarPrefs'
 
 export async function getConnection<T>(name: Connection): Promise<T | null> {
   if (sample() || !portalEnv.secret) return null

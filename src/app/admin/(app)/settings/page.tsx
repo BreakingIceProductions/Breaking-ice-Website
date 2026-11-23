@@ -1,10 +1,13 @@
 import '../../../css/admin-pages.css'
 import '../../../css/admin-simple-a.css'
 import '../../../css/admin-simple-d.css'
+import '../../../css/admin-calendar.css'
 import { HelpTip } from '@/admin/ui/help-tip'
 import { StateDot } from '@/admin/ui/viz-d'
 import { requireAdmin } from '@/admin/auth'
-import { adminEnv, calendarReady, ticktickReady, zohoReady } from '@/admin/config'
+import { adminEnv, calendarReady, googleOAuthReady, icloudReady, ticktickReady, zohoReady } from '@/admin/config'
+import { allCalendars, calendarPrefs } from '@/admin/calendar-feed'
+import { googleConnection, googleRedirect } from '@/admin/gcal'
 import { fmtDate } from '@/admin/dates'
 import { listGuests } from '@/admin/guests'
 import { GuestsCard } from '@/admin/ui/guests-card'
@@ -19,15 +22,30 @@ export const metadata = { title: 'Settings' }
 
 type Props = { searchParams: Promise<Record<string, string | undefined>> }
 
-const NAMES: Record<string, string> = { ticktick: 'TickTick', zoho: 'Zoho Books', wispr: 'Wispr Flow' }
+const NAMES: Record<string, string> = { ticktick: 'TickTick', zoho: 'Zoho Books', wispr: 'Wispr Flow', google: 'Google calendars' }
 
 export default async function Settings({ searchParams }: Props) {
   const admin = await requireAdmin()
   const sp = await searchParams
-  const [tt, zoho, wispr, guests] = await Promise.all([ticktickConnection().catch(() => null), zohoConnection().catch(() => null), wisprConnection().catch(() => null), listGuests()])
+  const [tt, zoho, wispr, guests, gcal, cals, prefs] = await Promise.all([
+    ticktickConnection().catch(() => null),
+    zohoConnection().catch(() => null),
+    wisprConnection().catch(() => null),
+    listGuests(),
+    googleConnection().catch(() => null),
+    allCalendars().catch(() => null),
+    calendarPrefs().catch(() => ({ defaultCalendar: undefined })),
+  ])
+  const writable = (cals?.calendars ?? []).filter((c) => c.writable)
+  const icloudProblem = cals?.problems.find((p) => p.source === 'icloud')?.text
+  const googleProblem = cals?.problems.find((p) => p.source === 'google')?.text
   const sa = serviceAccountEmail()
   const notice = sp.connected
     ? `${NAMES[sp.connected] ?? sp.connected} is connected.`
+    : sp.saved === 'calendar'
+      ? 'Saved. New events go to that calendar unless you pick another.'
+    : sp.error === 'calendar'
+      ? 'That calendar can’t take new events. Pick another.'
     : sp.disconnected
       ? 'Disconnected.'
       : sp.error === 'sample'
@@ -141,11 +159,60 @@ export default async function Settings({ searchParams }: Props) {
 
           <li className="sd-conn">
             <div className="sd-conn-name">
-              <strong>Google Calendar</strong>
-              <HelpTip label="About Google Calendar">Shoots, travel, meetings and milestones go on a separate “Breaking Ice Projects” calendar, so your own events are never touched.</HelpTip>
+              <strong>Google calendars</strong>
+              <HelpTip label="About Google calendars">{gcal ? `Connected${gcal.email ? ` as ${gcal.email}` : ''} since ${fmtDate(gcal.connectedAt)}. ` : ''}Every calendar on your Google account shows on the Calendar page, and you can add and change events there. New calendars appear on their own.</HelpTip>
+            </div>
+            {state(Boolean(gcal), googleOAuthReady(), 'Connected', gcal ? `Connected${gcal.email ? ` as ${gcal.email}` : ''} since ${fmtDate(gcal.connectedAt)}` : undefined)}
+            <div className="sd-conn-action">{gcal ? disconnect('google', 'Google calendars') : googleOAuthReady() ? <a className="btn btn-secondary btn-sm" href="/api/admin/google/connect">Connect<span className="sr-only"> Google calendars</span></a> : checkAgain('Google calendars')}</div>
+            {gcal && googleProblem && <p className="sd-conn-extra err">{googleProblem}</p>}
+            {!gcal && (
+              <details className="ap-details sd-conn-more">
+                <summary>{googleOAuthReady() ? 'How connecting works' : 'Setup steps'}</summary>
+                {googleOAuthReady() ? (
+                  <p className="small m0">You’ll sign in to Google and allow calendar access. Only you can connect it; guests and view-only sign-ins can’t.</p>
+                ) : (
+                  <ol className="a-steps small">
+                    <li>In <a className="text-link" href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noopener noreferrer">Google Cloud</a>, in the project that has the portal’s service account, turn on the Google Calendar API.</li>
+                    <li>Under APIs &amp; Services → OAuth consent screen, set it up as <strong>Internal</strong> (or External and press <strong>Publish app</strong>: apps left in Testing are signed out every 7 days).</li>
+                    <li>Under Credentials, create an OAuth client ID of type <strong>Web application</strong>. Authorized redirect URIs: <code>{googleRedirect()}</code> and <code>http://localhost:3107/api/admin/google/callback</code></li>
+                    <li>In Vercel, add <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code>, then redeploy.</li>
+                    <li>Come back here and press Connect.</li>
+                  </ol>
+                )}
+              </details>
+            )}
+          </li>
+
+          <li className="sd-conn">
+            <div className="sd-conn-name">
+              <strong>iCloud calendars</strong>
+              <HelpTip label="About iCloud calendars">Your Apple calendars show on the Calendar page, and you can add and change events there. Repeating iCloud events open in Apple Calendar to change.</HelpTip>
+            </div>
+            {state(icloudReady() && !icloudProblem, false, 'Connected')}
+            <div className="sd-conn-action">{icloudReady() && !icloudProblem ? null : checkAgain('iCloud calendars')}</div>
+            {icloudReady() && icloudProblem && <p className="sd-conn-extra err">{icloudProblem}</p>}
+            <details className="ap-details sd-conn-more">
+              <summary>{icloudReady() ? 'Details' : 'Setup steps'}</summary>
+              {icloudReady() ? (
+                <p className="small m0">Signed in with the Apple ID in <code>ICLOUD_APPLE_ID</code> and an app-specific password. To stop it, revoke that password at appleid.apple.com.</p>
+              ) : (
+                <ol className="a-steps small">
+                  <li>Go to <a className="text-link" href="https://account.apple.com" target="_blank" rel="noopener noreferrer">account.apple.com</a> and sign in.</li>
+                  <li>Open <strong>Sign-In and Security</strong> → <strong>App-Specific Passwords</strong>, press +, and call it “Breaking Ice back office”. Copy the password it shows.</li>
+                  <li>In Vercel, add <code>ICLOUD_APPLE_ID</code> (your Apple ID email) and <code>ICLOUD_APP_PASSWORD</code> (that password), then redeploy.</li>
+                  <li>Come back here and press Check again.</li>
+                </ol>
+              )}
+            </details>
+          </li>
+
+          <li className="sd-conn">
+            <div className="sd-conn-name">
+              <strong>Project dates calendar</strong>
+              <HelpTip label="About the project dates calendar">Shoots, travel, meetings and milestones go on a separate “Breaking Ice Projects” Google calendar, so your phone has them too. Your own events are never touched.</HelpTip>
             </div>
             {state(calendarReady(), false)}
-            <div className="sd-conn-action">{calendarReady() ? null : checkAgain('Google Calendar')}</div>
+            <div className="sd-conn-action">{calendarReady() ? null : checkAgain('the project dates calendar')}</div>
             <details className="ap-details sd-conn-more">
               <summary>{calendarReady() ? 'Details' : 'Setup steps'}</summary>
               {calendarReady() ? (
@@ -185,6 +252,33 @@ export default async function Settings({ searchParams }: Props) {
             </details>
           </li>
         </ul>
+      </section>
+
+      <section className="p-card" aria-labelledby="h-cal" id="calendars">
+        <div className="a-card-head">
+          <h2 id="h-cal" className="a-h2">Calendar</h2>
+          <HelpTip label="About the main work calendar">New events on the Calendar page go here unless you pick another calendar for that event. Changes to an existing event always go back to the calendar it came from.</HelpTip>
+        </div>
+        {writable.length ? (
+          <form action="/api/admin/calendar/default" method="post" className="sd-cal-form">
+            <div className="field">
+              <label htmlFor="sd-cal">Main work calendar</label>
+              <select id="sd-cal" name="calendar" className="input" defaultValue={writable.some((c) => c.id === prefs.defaultCalendar) ? prefs.defaultCalendar : writable[0].id} disabled={admin.viewOnly}>
+                {['Google', 'iCloud'].map((acct) => {
+                  const list = writable.filter((c) => c.account === acct)
+                  return list.length ? (
+                    <optgroup key={acct} label={acct}>
+                      {list.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </optgroup>
+                  ) : null
+                })}
+              </select>
+            </div>
+            <button type="submit" className="btn btn-secondary" disabled={admin.viewOnly}>Save</button>
+          </form>
+        ) : (
+          <p className="m0 small">Connect Google or iCloud above to pick where new events go.</p>
+        )}
       </section>
 
       <section className="p-card" aria-labelledby="h-access">

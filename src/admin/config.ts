@@ -36,6 +36,12 @@ export const adminEnv = {
   zohoCardAccountId: process.env.ZOHO_CARD_ACCOUNT_ID || '',
   /** The "Breaking Ice Projects" calendar, shared with the service account ("Make changes to events"). */
   calendarId: process.env.GOOGLE_CALENDAR_ID || '',
+  /** Google sign-in (OAuth web client) for the in-app calendar: every calendar on Josh's Google account. */
+  googleOAuthId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
+  googleOAuthSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
+  /** iCloud calendars over CalDAV: the Apple ID and an app-specific password (appleid.apple.com). */
+  icloudAppleId: process.env.ICLOUD_APPLE_ID || '',
+  icloudPassword: process.env.ICLOUD_APP_PASSWORD || '',
   timeZone: 'America/Edmonton',
 }
 
@@ -51,3 +57,5 @@ export const adminSampleMode = () => !portalReady() && process.env.NODE_ENV !== 
 export const ticktickReady = () => Boolean(adminEnv.ticktickId && adminEnv.ticktickSecret)
 export const zohoReady = () => Boolean(adminEnv.zohoId && adminEnv.zohoSecret)
 export const calendarReady = () => Boolean(adminEnv.calendarId && portalEnv.googleServiceAccount)
+export const googleOAuthReady = () => Boolean(adminEnv.googleOAuthId && adminEnv.googleOAuthSecret)
+export const icloudReady = () => Boolean(adminEnv.icloudAppleId && adminEnv.icloudPassword)
