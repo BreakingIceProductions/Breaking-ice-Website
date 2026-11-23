@@ -210,6 +210,15 @@
   .a-shell[data-side='collapsed'] .a-signout:hover { background: rgb(250 247 242 / .08); }
   .a-shell[data-side='collapsed'] .a-signout-icon { display: block; }
 }
+/* Folded sidebar, hovered or focused: it opens over the page (a 64px spacer holds the rail's place, so nothing moves). */
+@media (min-width: 821px) {
+  .a-shell[data-peek]::before { content: ''; flex: 0 0 64px; }
+  .a-shell[data-peek] .a-side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 60; width: 248px; height: auto; box-shadow: 12px 0 32px rgb(10 14 22 / .28); animation: a-peek .16s ease-out; }
+}
+@keyframes a-peek { from { width: 64px; } to { width: 248px; } }
+@media (min-width: 821px) and (prefers-reduced-motion: reduce) {
+  .a-shell[data-peek] .a-side { animation: none; }
+}
 @media (min-width: 821px) and (prefers-reduced-motion: reduce) {
   .a-side { transition: none; }
 }

@@ -106,6 +106,28 @@ function TextField({ label, name, value, save, type = 'text', after, placeholder
   )
 }
 
+/**
+ * "Came in" on a project's Details: the day the lead first got in touch, so jobs entered after the fact
+ * can count in Reports. Saves on leaving the field, like the lead page's fields.
+ */
+export function CameInField({ projectId, value }: { projectId: string; value?: string }) {
+  const router = useRouter()
+  const [status, setStatus] = useState('')
+  const save: Saver = async (patch) => {
+    setStatus('Saving…')
+    const r = await post('/api/admin/lead', { projectId, patch })
+    setStatus(r.ok ? (r.data.sample ? SAMPLE : '') : failed(r.status))
+    if (r.ok && !r.data.sample) router.refresh()
+    return r.ok ? (r.data.sample ? 'sample' : true) : false
+  }
+  return (
+    <>
+      <TextField label="Came in" name="cameIn" type="date" value={value} save={save} />
+      {status && <span className="small muted" role="status">{status}</span>}
+    </>
+  )
+}
+
 function SelectField({ label, name, value, save, options, none }: { label: string; name: keyof Patch; value?: string; save: Saver; options: { title: string; value: string }[]; none: string }) {
   const id = useId()
   const [v, setV] = useState(value ?? '')
@@ -157,7 +179,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
   const editBtn = useRef<HTMLButtonElement>(null)
   const firstEdit = useRef(false)
   // What the facts show: the saved values, updated as each field saves (sample data included, so the page reads true).
-  const [vals, setVals] = useState<Patch>({ name: contact.name, email: contact.email, phone: lead.phone, website: lead.website, source: lead.source, projectType, budget: lead.budget, startDate: lead.startDate, callDate: lead.callDate, callTime: lead.callTime, notes: lead.notes })
+  const [vals, setVals] = useState<Patch>({ name: contact.name, email: contact.email, phone: lead.phone, website: lead.website, source: lead.source, projectType, budget: lead.budget, startDate: lead.startDate, callDate: lead.callDate, callTime: lead.callTime, cameIn: lead.cameIn, notes: lead.notes })
   useEffect(() => {
     if (!firstEdit.current) { firstEdit.current = true; return }
     if (!editing) editBtn.current?.focus()
@@ -165,7 +187,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
   const [status, setStatus] = useState('')
   const notesSaved = useRef(lead.notes ?? '')
   const [notes, setNotes] = useState(lead.notes ?? '')
-  const [firstSet] = useState(() => [projectType && 'Type', lead.budget && 'Budget', lead.startDate && 'Start date', lead.callDate && 'Call date', lead.callTime && 'Call time'].filter(Boolean) as string[])
+  const [firstSet] = useState(() => [projectType && 'Type', lead.budget && 'Budget', lead.startDate && 'Start date', lead.callDate && 'Call date', lead.callTime && 'Call time', lead.cameIn && 'Came in'].filter(Boolean) as string[])
 
   const save: Saver = async (patch) => {
     setStatus('Saving…')
@@ -185,6 +207,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
     { label: 'Start date', el: <TextField key="start" label="Start date" name="startDate" type="date" value={vals.startDate} save={save} /> },
     { label: 'Call date', el: <TextField key="callDate" label="Call date" name="callDate" type="date" value={vals.callDate} save={save} /> },
     { label: 'Call time', el: <TextField key="callTime" label="Call time" name="callTime" type="time" value={vals.callTime} save={save} /> },
+    { label: 'Came in', el: <TextField key="cameIn" label="Came in" name="cameIn" type="date" value={vals.cameIn} save={save} /> },
   ]
   const projectSet = projectFields.filter((f) => firstSet.includes(f.label))
   const projectUnset = projectFields.filter((f) => !firstSet.includes(f.label))
@@ -199,6 +222,7 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
     ['Found us', titleOf(LEAD_SOURCES, vals.source)],
     ['Type', titleOf(PROJECT_TYPES, vals.projectType)],
     ['Budget', titleOf(LEAD_BUDGETS, vals.budget)],
+    ['Came in', dayText(vals.cameIn)],
     ['Start date', dayText(vals.startDate)],
     ['Call', vals.callDate || vals.callTime ? [dayText(vals.callDate), vals.callTime && fmtTime(vals.callTime)].filter(Boolean).join(' · ') : undefined],
   ]

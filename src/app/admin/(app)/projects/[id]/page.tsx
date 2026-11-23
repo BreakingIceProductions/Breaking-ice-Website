@@ -19,7 +19,7 @@ import { EmailComposer } from '@/admin/ui/email'
 import { Dot, SplitBar } from '@/admin/ui/graphics'
 import { HelpTip } from '@/admin/ui/help-tip'
 import { PhoneFold } from '../../_fold'
-import { LeadActivity, type LeadLogEntry } from '@/admin/ui/lead'
+import { CameInField, LeadActivity, type LeadLogEntry } from '@/admin/ui/lead'
 import { NoteForm } from '@/admin/ui/note-form'
 import { PaymentsCard } from '@/admin/ui/payments-card'
 import { CopyButton, NextUp, ProjectMenu, ProjectProgress, StageStrip, type MenuLink } from '@/admin/ui/project'
@@ -489,6 +489,9 @@ function Overview({ p, stage, si, t, log, lastContact, lib, base }: { p: OfficeP
                 <div><dt>Region</dt><dd>{REGIONS.find((r) => r.value === p.region)?.title ?? 'Not set'}</dd></div>
                 <div><dt>Main contact</dt><dd>{main ? (main.email ? <a className="text-link-plain" href={`mailto:${main.email}`}>{main.name}</a> : main.name) : 'None yet'}</dd></div>
                 <div><dt>Started</dt><dd>{p.startDate ? fmtDate(p.startDate) : 'No start date'}</dd></div>
+              </dl>
+              <CameInField projectId={p._id} value={p.office.lead?.cameIn} />
+              <dl className="key-dates">
                 <div><dt>In {stage} since</dt><dd>{day(p.office.stageChangedAt) || 'Not recorded'}</dd></div>
                 <div><dt>Last contact</dt><dd>{lastContact ? `${activityText(lastContact.text)}, ${day(lastContact.at)}` : log[0] ? `None logged. Latest: ${activityText(log[0].text)}, ${day(log[0].at)}` : 'None logged'}</dd></div>
                 <div><dt>Deliverables</dt><dd>{p.deliverables.length ? <Link className="text-link-plain" href={`${base}?tab=portal`}>{p.deliverables.length} · {p.deliverables.filter((d) => d.status !== 'approved').length} still open</Link> : 'None yet'}</dd></div>

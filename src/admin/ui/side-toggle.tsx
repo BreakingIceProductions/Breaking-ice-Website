@@ -25,7 +25,11 @@ function save(collapsed: boolean) {
 export function SideShell({ initial, children }: { initial: boolean; children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(initial)
 
+  // Folded: hovering the rail with a mouse, or tabbing into it, opens it over the page until the pointer or focus leaves.
+  const [peek, setPeek] = useState(false)
+
   const toggle = useCallback(() => {
+    setPeek(false)
     setCollapsed((c) => {
       save(!c)
       return !c
@@ -56,9 +60,42 @@ export function SideShell({ initial, children }: { initial: boolean; children: R
     return () => window.removeEventListener('keydown', onKey)
   }, [toggle])
 
+  useEffect(() => {
+    const side = document.getElementById('a-side')
+    if (!side || !collapsed) { setPeek(false); return }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const later = (open: boolean, ms: number) => { clearTimeout(timer); timer = setTimeout(() => setPeek(open), ms) }
+    const enter = (e: PointerEvent) => { if (e.pointerType === 'mouse') later(true, 120) }
+    // Focus from the keyboard keeps it open; focus left behind by a mouse click doesn't.
+    const keyFocus = () => Boolean(side.querySelector(':focus-visible'))
+    const leave = (e: PointerEvent) => { if (e.pointerType === 'mouse' && !keyFocus()) later(false, 180) }
+    const focusIn = (e: FocusEvent) => { if ((e.target as HTMLElement).matches(':focus-visible')) later(true, 0) }
+    // Picking a page closes it, so the new page isn't covered.
+    const pick = (e: MouseEvent) => { if ((e.target as HTMLElement).closest('a')) later(false, 0) }
+    const focusOut = (e: FocusEvent) => { if (!side.contains(e.relatedTarget as Node | null) && !side.matches(':hover')) later(false, 0) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { clearTimeout(timer); setPeek(false); (document.activeElement as HTMLElement | null)?.blur() } }
+    side.addEventListener('pointerenter', enter)
+    side.addEventListener('pointerleave', leave)
+    side.addEventListener('focusin', focusIn)
+    side.addEventListener('focusout', focusOut)
+    side.addEventListener('keydown', esc)
+    side.addEventListener('click', pick)
+    return () => {
+      clearTimeout(timer)
+      side.removeEventListener('pointerenter', enter)
+      side.removeEventListener('pointerleave', leave)
+      side.removeEventListener('focusin', focusIn)
+      side.removeEventListener('focusout', focusOut)
+      side.removeEventListener('keydown', esc)
+      side.removeEventListener('click', pick)
+    }
+  }, [collapsed])
+
+  // While it peeks, the sidebar shows its open layout; `collapsed` (and the toggle's label) stay as chosen.
+  const open = !collapsed || peek
   return (
     <SideContext.Provider value={{ collapsed, toggle }}>
-      <div className="a-shell" data-side={collapsed ? 'collapsed' : 'open'}>{children}</div>
+      <div className="a-shell" data-side={open ? 'open' : 'collapsed'} data-peek={collapsed && peek ? '' : undefined}>{children}</div>
     </SideContext.Provider>
   )
 }

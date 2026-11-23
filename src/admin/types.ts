@@ -78,6 +78,8 @@ export type LeadDetails = {
   source?: string
   /** A value from LEAD_BUDGETS; empty means not discussed. */
   budget?: string
+  /** The day the lead first got in touch (YYYY-MM-DD), set by hand. Wins over the recorded dates for the Reports counts. */
+  cameIn?: string
   /** When they'd like to start (YYYY-MM-DD). Not the project's own start date, which names its folders. */
   startDate?: string
   callDate?: string

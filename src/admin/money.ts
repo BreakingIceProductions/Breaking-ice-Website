@@ -71,9 +71,15 @@ const monthLabel = (m: string, withYear: boolean) => `${MONTHS[Number(m.slice(5,
 /** The quote total before GST: the signed total when there is one, else the amount on the project. Retainers have none. */
 export const quoteTotal = (p: OfficeProject) => (p.projectType === 'retainer' ? undefined : p.quote?.signature?.total ?? p.quoteAmount) || undefined
 
-/** The day a lead came in: its first stage-history entry, its "Lead added" log line, or the day its record was made. */
+/**
+ * The day a lead came in, or undefined when the project never came in as a lead (a job entered after the fact).
+ * In order: the "Came in" date set by hand on the lead page; the "Lead added" log line written by New lead,
+ * the website form and Slack; or a first stage-history entry that starts the record at Lead.
+ */
 export function leadDay(p: MoneyProject) {
-  const stamps = [...(p.office.stageHistory ?? []).map((h) => h.at), ...(p.office.log ?? []).filter((l) => l.kind === 'lead').map((l) => l.at), p._createdAt]
+  if (p.office.lead?.cameIn) return p.office.lead.cameIn
+  const first = [...(p.office.stageHistory ?? [])].sort((a, b) => (a.at < b.at ? -1 : 1))[0]
+  const stamps = [...(p.office.log ?? []).filter((l) => l.kind === 'lead').map((l) => l.at), first && !first.from && first.to === 'lead' ? first.at : undefined]
   return day((stamps.filter(Boolean) as string[]).sort()[0])
 }
 
@@ -387,7 +393,7 @@ export function reportView(projects: MoneyProject[], payments: PortalPayment[], 
   const r = periodFor(range, t)
   const all = bills(projects, payments)
   // The leads that came in during the period. The sections below follow these same leads through.
-  const cohort = projects.filter((p) => within(leadDay(p), r))
+  const cohort = projects.filter((p) => { const d = leadDay(p); return Boolean(d) && within(d, r) })
   const signed = signedIn(projects, r)
   const win = winRate(projects, r)
 

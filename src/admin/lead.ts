@@ -53,7 +53,7 @@ export const typeTitle = (value?: string) => PROJECT_TYPES.find((t) => t.value =
 /** Log kinds written by "Log contact" are "contact-<kind>"; emails sent from the back office (the composer, review emails) are "email". */
 export const isContactLog = (kind?: string) => Boolean(kind?.startsWith('contact-')) || kind === 'email'
 
-const TEXT: Record<Exclude<keyof LeadDetails, 'source' | 'budget' | 'lostReason' | 'startDate' | 'callDate' | 'callTime'>, number> = {
+const TEXT: Record<Exclude<keyof LeadDetails, 'source' | 'budget' | 'lostReason' | 'startDate' | 'callDate' | 'callTime' | 'cameIn'>, number> = {
   name: 120,
   email: 200,
   phone: 40,
@@ -76,7 +76,7 @@ export function cleanLeadPatch(input: unknown): Partial<Record<keyof LeadDetails
     else if (k in LISTS) {
       if (v && !LISTS[k as keyof typeof LISTS].some((x) => x.value === v)) return null
       out[k as keyof typeof LISTS] = v
-    } else if (k === 'startDate' || k === 'callDate') {
+    } else if (k === 'startDate' || k === 'callDate' || k === 'cameIn') {
       if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null
       out[k] = v
     } else if (k === 'callTime') {

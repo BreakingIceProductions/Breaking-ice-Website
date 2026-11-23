@@ -392,7 +392,7 @@ function Gaps({ gaps }: { gaps: ReturnType<typeof moneyView>['gaps'] }) {
     gaps.signedNoDay && `${plural(gaps.signedNoDay, 'signed project')} with no stage history or signature to date ${gaps.signedNoDay === 1 ? 'it' : 'them'} (work from before the back office kept history). Counted in All time only.`,
     gaps.signedNoValue && `${plural(gaps.signedNoValue, 'signed project')} with no quote total (retainers are billed monthly). Counted as signed, with no dollar value.`,
     gaps.paidNoDay && `${plural(gaps.paidNoDay, 'paid invoice')} (${cad(gaps.paidNoDayAmount)}) with no recorded paid date. Counted in All time only.`,
-    gaps.leadNoDay && `${plural(gaps.leadNoDay, 'project')} with no recorded start date. Counted in All time only.`,
+    gaps.leadNoDay && `${plural(gaps.leadNoDay, 'project')} entered without a lead date, so not counted as leads. Set “Came in” on a project’s lead page to count it.`,
     gaps.partlyPaid && `${plural(gaps.partlyPaid, 'part-paid invoice')}: the paid part isn’t on record separately, so it counts once the invoice is paid in full.`,
   ].filter(Boolean) as string[]
   if (!lines.length) return null
