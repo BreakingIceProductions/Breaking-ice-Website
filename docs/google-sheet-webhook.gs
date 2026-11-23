@@ -14,7 +14,8 @@
  *    then redeploy.
  */
 
-const HEADERS = ['Received', 'Name', 'Email', 'Organization', 'Needs', 'Budget', 'Timeline', 'Heard about us', 'Story', 'Page', 'Status']
+// Offer was added last (Nov 2026) so older rows keep their columns.
+const HEADERS = ['Received', 'Name', 'Email', 'Organization', 'Needs', 'Budget', 'Timeline', 'Heard about us', 'Story', 'Page', 'Status', 'Offer']
 
 function doPost(e) {
   const data = JSON.parse(e.postData.contents)
@@ -26,11 +27,14 @@ function doPost(e) {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(HEADERS)
     sheet.setFrozenRows(1)
+  } else if (sheet.getRange(1, HEADERS.length).getValue() !== HEADERS[HEADERS.length - 1]) {
+    // Older sheets: add any missing header cells (e.g. Offer) without touching existing rows.
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS])
   }
   sheet.appendRow([
     new Date(data.received || Date.now()),
     data.name, data.email, data.organization, data.type, data.budget,
-    data.timeline, data.heard, data.story, data.page, 'New',
+    data.timeline, data.heard, data.story, data.page, 'New', data.offer || '',
   ])
   return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON)
 }
