@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BackLink } from '@/components/back-link'
 import { notFound } from 'next/navigation'
 import { Btn, Eyebrow, Still, ArrowLink } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
@@ -38,7 +39,7 @@ export async function LocationPage({ slug }: { slug: string }) {
       <section className="page-head">
         <div className="wrap">
           <nav className="breadcrumb" aria-label="Breadcrumb">
-            <Link href="/">Home</Link> / <Link href="/locations">Locations</Link> / <span aria-current="page">{loc.title}</span>
+            <BackLink /> <span className="crumb-sep" aria-hidden="true">·</span> <Link href="/">Home</Link> / <Link href="/locations">Locations</Link> / <span aria-current="page">{loc.title}</span>
           </nav>
         </div>
         <div className="wrap grid-2" style={{ alignItems: 'center' }}>

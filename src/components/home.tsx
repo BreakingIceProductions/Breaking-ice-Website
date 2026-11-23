@@ -14,7 +14,7 @@ import { urlFor } from '@/sanity/client'
  */
 export function Filmstrip({ data, id = 'filmstrip-title' }: { data: FilmstripData; id?: string }) {
   return (
-    <section className="filmstrip-band dark" aria-labelledby={id}>
+    <section className="filmstrip-band" aria-labelledby={id}>
       <div className="wrap">
         <div className="sec-head">
           <h2 id={id} className="h2">{data.title}</h2>
@@ -188,7 +188,7 @@ export function FeaturedStories({ stories, eyebrow, title, line, jobLabel }: { s
 /** “Is this you?” A navy band with a white card of ticks. */
 export function FitSection({ eyebrow, title, helper, items, closing, cta }: { eyebrow: string; title: string; helper: string; items: { line: string; subline?: string }[]; closing: string; cta: string }) {
   return (
-    <section className="section fit-band dark" aria-labelledby="fit-title">
+    <section className="section fit-band" aria-labelledby="fit-title">
       <div className="wrap fit-grid">
         <div className="sec-head">
           <Eyebrow>{eyebrow}</Eyebrow>

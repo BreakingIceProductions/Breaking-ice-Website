@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BackLink } from '@/components/back-link'
 import { notFound } from 'next/navigation'
 import { Btn, Eyebrow, Mark, Still, ArrowLink } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
@@ -94,8 +95,9 @@ export default async function ProjectPage({ params }: Props) {
       {/* Title and "Watch the film" first, then the film right under them, then the summary. */}
       <section className="page-head story-head">
         <div className="wrap">
-          <nav className="breadcrumb" aria-label="Breadcrumb">
-            <Link href="/stories">← All stories</Link>
+          {/* Back to wherever the visitor came from on this site (else to all stories). */}
+          <nav className="breadcrumb" aria-label="Back">
+            <BackLink />
           </nav>
           {p.sample && <p className="sample-flag" style={{ margin: '0 0 8px' }}>Sample project · replace in the Studio</p>}
           <Eyebrow>{CATEGORY_LABELS[p.category ?? ''] ?? 'Story'}</Eyebrow>

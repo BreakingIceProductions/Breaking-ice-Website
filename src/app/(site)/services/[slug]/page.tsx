@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BackLink } from '@/components/back-link'
 import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
 import { SITE_URL } from '@/lib/site'
 import { notFound } from 'next/navigation'
@@ -95,7 +96,7 @@ export default async function ServicePage({ params }: Props) {
       <section className="page-head after-film">
         <div className="wrap">
           <nav className="breadcrumb" aria-label="Breadcrumb">
-            <Link href="/">Home</Link> / <Link href="/services">Services</Link> / <span aria-current="page">{sv.title}</span>
+            <BackLink /> <span className="crumb-sep" aria-hidden="true">·</span> <Link href="/">Home</Link> / <Link href="/services">Services</Link> / <span aria-current="page">{sv.title}</span>
           </nav>
           <div className="grid-2" style={{ alignItems: 'center' }}>
             <div className="stack" style={{ gap: 0 }}>

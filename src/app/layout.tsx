@@ -46,7 +46,9 @@ const themeScript = `(function(){try{var t=localStorage.getItem('bi-theme');if(t
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-CA" className={`${archivo.variable} ${newsreader.variable}`} suppressHydrationWarning>
+    // data-scroll-behavior="smooth": Next turns smooth scrolling off during route changes, so Back restores the
+    // scroll position instantly instead of animating from the top. In-page anchors stay smooth (globals.css).
+    <html lang="en-CA" className={`${archivo.variable} ${newsreader.variable}`} data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

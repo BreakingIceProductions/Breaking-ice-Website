@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { BackLink } from '@/components/back-link'
 import { Btn, Eyebrow, ArrowLink, Still } from '@/components/brand'
 import { StoryCard } from '@/components/cards'
 import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
@@ -80,7 +81,7 @@ export async function OfferPage({
       <section className="page-head after-film">
         <div className="wrap">
           <nav className="breadcrumb" aria-label="Breadcrumb">
-            <Link href="/">Home</Link> / <Link href="/services">Services</Link> / <span aria-current="page">{o.name}</span>
+            <BackLink /> <span className="crumb-sep" aria-hidden="true">·</span> <Link href="/">Home</Link> / <Link href="/services">Services</Link> / <span aria-current="page">{o.name}</span>
           </nav>
           <div className="grid-2" style={{ alignItems: 'center' }}>
             <div className="stack" style={{ gap: 0 }}>

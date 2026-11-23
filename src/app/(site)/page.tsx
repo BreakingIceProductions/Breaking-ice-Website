@@ -34,9 +34,10 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* 1 · Logo splash: full-bleed navy, just the name, then a cue down to the film */}
-      <section className="splash dark" aria-label="Breaking Ice Productions">
-        <Lockup variant="vertical" tone="dark" height={300} className="splash-logo" />
+      {/* 1 · Logo splash: full-bleed, just the name, then a cue down to the film (follows the theme) */}
+      <section className="splash" aria-label="Breaking Ice Productions">
+        {/* Theme-aware lockup: navy ink on the light page, the on-dark version in dark mode. */}
+        <Lockup variant="vertical" height={300} className="splash-logo" />
         <p className="splash-line">{h.heroEyebrow}</p>
         <a href="#film" className="scroll-cue splash-cue">{h.splashCue} <span aria-hidden="true">↓</span></a>
       </section>
