@@ -502,6 +502,9 @@ details.transcript summary { cursor: pointer; font-weight: 600; min-height: 44px
 .contact-facts dd { margin: 0; }
 .contact-facts a, .contact-direct a { overflow-wrap: anywhere; }
 .contact-direct a { text-decoration: none; }
+/* Email and phone stay on one line: sized to the panel width, never wrapped. */
+.contact-direct { container-type: inline-size; }
+.contact-direct a { font-size: min(1.125rem, 4.3cqi); white-space: nowrap; overflow-wrap: normal; }
 
 /* Contact */
 .contact-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: var(--space-16); align-items: start; }
