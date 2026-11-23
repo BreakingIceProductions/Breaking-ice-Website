@@ -10,6 +10,7 @@ import { seoMeta } from '@/lib/seo'
 import { JsonLd, ORG_ID, breadcrumbLd } from '@/components/json-ld'
 import { SITE_URL } from '@/lib/site'
 import { CATEGORY_LABELS, embedUrl } from '@/lib/video'
+import { COPY } from '@/lib/offers'
 import { urlFor } from '@/sanity/client'
 import type { Img, ProjectCard } from '@/lib/types'
 
@@ -99,6 +100,16 @@ export default async function ProjectPage({ params }: Props) {
           {p.sample && <p className="sample-flag" style={{ margin: '0 0 8px' }}>Sample project · replace in the Studio</p>}
           <Eyebrow>{CATEGORY_LABELS[p.category ?? ''] ?? 'Story'}</Eyebrow>
           <h1 className="h1">{p.title}</h1>
+          {(() => {
+            // "The job": what the film had to do. Only approved lines (Sanity jobLine or the featured-story list), never a guessed result.
+            const job = (p as { jobLine?: string }).jobLine || COPY.home.storyJobs[p.slug as keyof typeof COPY.home.storyJobs]
+            return job ? (
+              <p className="story-job">
+                <span className="story-job-label">{COPY.home.storiesJobLabel}</span>
+                <span>{job}</span>
+              </p>
+            ) : null
+          })()}
           {!isPhoto && (
             <PlayerButton url={p.heroVideo} className="btn btn-secondary" trackAs={`Story: ${p.title}`} captions={Boolean(captionsUrl)}>
               <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M8 5l12 7-12 7z" fill="currentColor" /></svg>

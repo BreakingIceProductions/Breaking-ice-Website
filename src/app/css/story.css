@@ -72,3 +72,7 @@
   .gallery.stills-rail { scroll-behavior: auto; }
 }
 @keyframes stills-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* "The job" line under the story title: what the film had to do. */
+.story-job { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: var(--space-4) 0 var(--space-6); max-width: 60ch; font-size: 1.125rem; line-height: 1.45; color: var(--ink); }
+.story-job-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; color: var(--copper, var(--accent)); }
