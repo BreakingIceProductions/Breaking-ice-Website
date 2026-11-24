@@ -58,9 +58,10 @@ export async function POST(req: Request) {
   if (e.bot_id || e.subtype || !e.user || e.user !== slackEnv.ownerId || !e.channel || !e.ts || !e.text?.trim()) return ok()
   if (botUserId && e.user === botUserId) return ok()
 
-  // A reply in a client's portal-chat thread goes to their portal (top-level messages there are Josh's own notes).
-  if (e.type === 'message' && e.channel_type !== 'im' && e.channel !== slackEnv.channelId && e.thread_ts && e.thread_ts !== e.ts) {
-    const reply = { channel: e.channel, threadTs: e.thread_ts, ts: e.ts, text: e.text }
+  // Josh's messages in a client's portal-chat channel (top-level or in a thread) go to their portal.
+  // joshReplied checks the channel belongs to a client and skips ones starting with "note:".
+  if (e.type === 'message' && e.channel_type === 'group' && e.channel !== slackEnv.channelId) {
+    const reply = { channel: e.channel, threadTs: e.thread_ts && e.thread_ts !== e.ts ? e.thread_ts : undefined, ts: e.ts, text: e.text }
     after(() => joshReplied(reply).then(() => undefined).catch((err) => console.error('[slack] portal chat reply failed', err)))
     return ok()
   }

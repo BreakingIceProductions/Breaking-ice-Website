@@ -260,13 +260,12 @@ export async function maybeSummarize(clientId: string): Promise<number> {
  * Returns false when the message isn't a portal chat reply.
  */
 export async function joshReplied(e: { channel: string; threadTs?: string; ts: string; text: string }): Promise<boolean> {
-  if (!e.threadTs) return false // top-level channel messages are Josh's own notes
+  // "note: …" (any case) stays an internal note in Slack; everything else in the channel goes to the client.
+  if (/^\s*note\s*:/i.test(e.text)) return false
   const client = await portalClient.fetch<PortalClient | null>(`*[_type == "client" && chat.slackChannelId == $c][0]{_id, organizationName, contacts[]{_key, name, email, role, getsEmails}, chat}`, { c: e.channel }).catch(() => null)
   if (!client) return false
   const doc = await getChat(client._id)
   const msgs = doc.messages ?? []
-  const known = doc.threadTs === e.threadTs || msgs.some((m) => m.slackTs === e.threadTs)
-  if (!known) return false
   if (msgs.some((m) => m.slackTs === e.ts)) return true
   const text = e.text.replace(/<(https?:\/\/[^|>]+)\|([^>]+)>/g, '$2 ($1)').replace(/<(https?:\/\/[^>]+)>/g, '$1').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').slice(0, 4000)
   const settings = await getPortalSettings()
