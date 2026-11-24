@@ -64,6 +64,13 @@ export type Deliverable = {
   /** The review copy's object key in the R2 bucket. */
   r2Key?: string
   r2Size?: number
+  /** The thumbnail grabbed from the video at upload, a JPEG next to it in R2. */
+  r2Thumb?: string
+  /** A finished file's copy on Vimeo, for the website (uploads for delivery). Separate from shareUrl, which is for playback. */
+  vimeoUrl?: string
+  vimeoUri?: string
+  vimeoState?: 'uploading' | 'ready' | 'failed'
+  vimeoError?: string
   durationSec?: number
   /** Frame rate of the review copy, for timecode: 23.976, 24, 25, 29.97, 30, 50, 59.94 or 60. */
   fps?: number

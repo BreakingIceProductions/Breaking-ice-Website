@@ -2,6 +2,7 @@ import 'server-only'
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 import { portalEnv } from '@/portal/config'
 import { portalClient, STATE_FIELDS } from '@/portal/data'
+import { r2ThumbUrl } from '@/portal/r2'
 import { nextVersion, today, type Category } from '@/portal/library'
 import type { Deliverable } from '@/portal/types'
 import type { PipelineStage } from '@/sanity/portal/office-constants'
@@ -55,7 +56,8 @@ function normalize(p: Raw): OfficeProject {
     deliverables: (p.deliverables ?? []).map((d) => {
       const st = portalState?.deliverables?.find((x) => x._key === d._key)
       const open = (reviewOpen ?? []).filter((r) => r.k === d._key && r.v === (d.version || 1)).length
-      return { ...d, ...Object.fromEntries(STATE_FIELDS.map((f) => [f, st?.[f]])), version: d.version || 1, ...(open ? { openComments: open } : {}) }
+      const thumbUrl = d.r2Thumb && !d.thumbnail ? r2ThumbUrl(d.r2Thumb) : undefined
+      return { ...d, ...Object.fromEntries(STATE_FIELDS.map((f) => [f, st?.[f]])), version: d.version || 1, ...(open ? { openComments: open } : {}), ...(thumbUrl ? { thumbUrl } : {}) }
     }),
     activity: portalState?.activity ?? [],
     office: office ?? { _id: officeId(p._id) },
@@ -435,8 +437,10 @@ export async function addVersion(
     fileName?: string
     notes?: string
     send: boolean
+    /** Marks it Final (a finished file uploaded for delivery). */
+    final?: boolean
     /** A review copy uploaded to our storage, under the key chosen when the upload started. */
-    r2?: { key: string; r2Key: string; r2Size?: number; durationSec?: number; fps?: number; width?: number; height?: number; version?: number }
+    r2?: { key: string; r2Key: string; r2Size?: number; r2Thumb?: string; durationSec?: number; fps?: number; width?: number; height?: number; version?: number }
   },
 ) {
   if (sample()) return
@@ -454,8 +458,9 @@ export async function addVersion(
     ...(v.shareUrl ? { shareUrl: v.shareUrl } : {}),
     ...(v.fileUrl ? { fileUrl: v.fileUrl, fileName: v.fileName } : {}),
     ...(v.notes ? { notes: v.notes } : {}),
+    ...(v.final ? { final: true } : {}),
     ...(v.r2?.durationSec ? { length: `${Math.floor(v.r2.durationSec / 60)}:${String(Math.floor(v.r2.durationSec % 60)).padStart(2, '0')}` } : {}),
-    ...(v.r2 ? { host: 'r2', r2Key: v.r2.r2Key, r2Size: v.r2.r2Size, durationSec: v.r2.durationSec, fps: v.r2.fps, width: v.r2.width, height: v.r2.height } : {}),
+    ...(v.r2 ? { host: 'r2', r2Key: v.r2.r2Key, r2Size: v.r2.r2Size, ...(v.r2.r2Thumb ? { r2Thumb: v.r2.r2Thumb } : {}), durationSec: v.r2.durationSec, fps: v.r2.fps, width: v.r2.width, height: v.r2.height } : {}),
   }
   await portalClient.patch(projectId).setIfMissing({ deliverables: [] }).append('deliverables', [entry]).commit({ autoGenerateArrayKeys: false })
   return entry

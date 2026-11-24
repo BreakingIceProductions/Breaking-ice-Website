@@ -75,6 +75,7 @@ export function ReviewRoom(props: Props) {
   const retried = useRef(0)
 
   const [src, setSrc] = useState<string | null>(null)
+  const [poster, setPoster] = useState<string>()
   const [loadError, setLoadError] = useState('')
   const [playing, setPlaying] = useState(false)
   const [time, setTime] = useState(0)
@@ -120,9 +121,10 @@ export function ReviewRoom(props: Props) {
 
   const loadSrc = useCallback(async () => {
     const r = await fetch(`/api/review/play?${query}`, { cache: 'no-store' }).catch(() => null)
-    const j = (await r?.json().catch(() => null)) as { url?: string; error?: string } | null
+    const j = (await r?.json().catch(() => null)) as { url?: string; poster?: string; error?: string } | null
     if (r?.ok && j?.url) {
       setSrc(j.url)
+      if (j.poster) setPoster(j.poster)
       setLoadError('')
     } else setLoadError(j?.error === 'not-ready' ? 'This video isn’t ready to play yet.' : 'The video couldn’t be loaded. Reload the page to try again.')
   }, [query])
@@ -512,6 +514,7 @@ export function ReviewRoom(props: Props) {
               <video
                 ref={video}
                 src={src}
+                poster={poster}
                 playsInline
                 preload="auto"
                 onLoadedMetadata={(e) => {

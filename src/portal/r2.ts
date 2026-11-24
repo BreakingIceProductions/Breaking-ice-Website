@@ -68,9 +68,10 @@ export function presign(i: PresignInput) {
 
 const host = () => `${r2Env.accountId}.r2.cloudflarestorage.com`
 
-function r2Url(method: string, key: string, query: Record<string, string> = {}, expires = 900) {
+function r2Url(method: string, key: string, query: Record<string, string> = {}, expires = 900, now?: Date) {
   if (!r2Ready()) throw new Error('R2 is not set up')
   return presign({
+    now,
     method,
     host: host(),
     path: `/${r2Env.bucket}/${key.replace(/^\/+/, '')}`,
@@ -90,6 +91,20 @@ export function presignGet(key: string, opts: { expires?: number; download?: str
     query['response-content-disposition'] = `attachment; filename="${ascii}"; filename*=UTF-8''${enc(opts.download)}`
   }
   return r2Url('GET', key, query, opts.expires ?? 2 * 3600)
+}
+
+/** Where an R2 version's thumbnail sits: next to its video. */
+export const thumbKeyFor = (videoKey: string) => videoKey.replace(/\/[^/]+$/, '/thumb.jpg')
+
+/**
+ * A thumbnail's address, valid 7 days (the most a signed link allows). Signed from the start
+ * of the day (UTC), so the address stays the same all day and browsers can cache the image.
+ */
+export function r2ThumbUrl(key?: string) {
+  if (!key || key.startsWith('sample/') || !r2Ready()) return undefined
+  const day = new Date()
+  day.setUTCHours(0, 0, 0, 0)
+  return r2Url('GET', key, {}, 7 * 24 * 3600, day)
 }
 
 /** A single PUT of a whole (small) object. */

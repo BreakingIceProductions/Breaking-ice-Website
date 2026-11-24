@@ -1,6 +1,7 @@
 import 'server-only'
 import { portalEnv, vimeoReady } from './config'
-import { addActivity, updateDeliverable, updateDeliverableState } from './data'
+import { addActivity, portalClient, updateDeliverable, updateDeliverableState } from './data'
+import { presignGet } from './r2'
 import type { ClientProject } from './types'
 
 /**
@@ -101,4 +102,77 @@ export async function vimeoDownloadLink(url?: string) {
   const link = pick(v.download) ?? pick(v.files)
   if (!link) console.warn('[portal] vimeo download reply', JSON.stringify({ keys: Object.keys(v), download: v.download?.length, files: v.files?.length, raw: JSON.stringify(v).slice(0, 300) }))
   return link
+}
+
+/* ── Finished files: a copy to Vimeo for the website ─────────────────── */
+
+export type VimeoCopy = { vimeoState: 'uploading' | 'ready' | 'failed'; vimeoUrl?: string; vimeoUri?: string; vimeoError?: string }
+
+/** Vimeo's answer in a sentence Josh can act on. A 401/403 almost always means the token can't upload. */
+function copyError(e: unknown) {
+  const s = String(e instanceof Error ? e.message : e)
+  if (/ (401|403):/.test(s)) return 'Vimeo needs a token with upload access (the upload and edit scopes). Make a new one in Vimeo, then try again.'
+  if (/ 429:/.test(s)) return 'Vimeo is busy (too many requests). Try again in a few minutes.'
+  return s.replace(/^Error: /, '').slice(0, 160)
+}
+
+/**
+ * Hands a finished file in R2 to Vimeo with a "pull" upload: Vimeo fetches it from a signed
+ * link, so no bytes pass through our server. The link lasts 7 days, the longest a signed link
+ * can (SigV4), in case Vimeo queues the fetch. Saves the outcome on the version in vimeoUrl,
+ * vimeoUri and vimeoState, never shareUrl (that one takes over playback). Never throws.
+ */
+export async function pushToVimeo(projectId: string, d: { _key: string; r2Key?: string; r2Size?: number }, name: string): Promise<VimeoCopy> {
+  let result: VimeoCopy
+  if (!d.r2Key || !d.r2Size) result = { vimeoState: 'failed', vimeoError: 'This version has no stored file to copy.' }
+  else if (!vimeoReady()) result = { vimeoState: 'failed', vimeoError: 'Vimeo isn’t connected (no token set).' }
+  else {
+    try {
+      const v = await vimeo<{ uri?: string; link?: string }>('/me/videos?fields=uri,link', {
+        method: 'POST',
+        body: JSON.stringify({
+          upload: { approach: 'pull', size: d.r2Size, link: presignGet(d.r2Key, { expires: 7 * 24 * 3600 }) },
+          name: name.slice(0, 128),
+          privacy: { view: 'unlisted', embed: 'public' },
+        }),
+      })
+      result = { vimeoState: 'uploading', vimeoUri: v.uri, vimeoUrl: v.link }
+    } catch (e) {
+      console.error('[vimeo] pull upload failed', e)
+      result = { vimeoState: 'failed', vimeoError: copyError(e) }
+    }
+  }
+  await saveCopy(projectId, d._key, result).catch((e) => console.error('[vimeo] saving copy state failed', e))
+  return result
+}
+
+async function saveCopy(projectId: string, key: string, c: VimeoCopy) {
+  const at = `deliverables[_key=="${key.replace(/[^\w-]/g, '')}"]`
+  const set: Record<string, unknown> = { [`${at}.vimeoState`]: c.vimeoState }
+  if (c.vimeoUri) set[`${at}.vimeoUri`] = c.vimeoUri
+  if (c.vimeoUrl) set[`${at}.vimeoUrl`] = c.vimeoUrl
+  if (c.vimeoError) set[`${at}.vimeoError`] = c.vimeoError
+  const patch = portalClient.patch(projectId).set(set)
+  if (!c.vimeoError) patch.unset([`${at}.vimeoError`])
+  await patch.commit()
+}
+
+/** Flips copies still on their way to Vimeo to ready (or failed). Only looks at versions marked 'uploading'. */
+export async function checkVimeoCopies(p: ClientProject, log: string[]) {
+  if (!vimeoReady()) return
+  for (const d of p.deliverables ?? []) {
+    if (d.vimeoState !== 'uploading' || !d.vimeoUri) continue
+    try {
+      const v = await vimeo<{ upload?: { status?: string }; transcode?: { status?: string } }>(`${d.vimeoUri}?fields=transcode.status,upload.status`)
+      if (v.upload?.status === 'error' || v.transcode?.status === 'error') {
+        await saveCopy(p._id, d._key, { vimeoState: 'failed', vimeoError: v.upload?.status === 'error' ? 'Vimeo couldn’t fetch the file.' : 'Vimeo couldn’t process the file.' })
+        log.push(`vimeo copy failed: ${p.title} / ${d.title}`)
+      } else if (v.upload?.status === 'complete' && v.transcode?.status === 'complete') {
+        await saveCopy(p._id, d._key, { vimeoState: 'ready' })
+        log.push(`vimeo copy ready: ${p.title} / ${d.title}`)
+      }
+    } catch (e) {
+      log.push(`vimeo copy check skipped ${p.title} / ${d.title}: ${String(e).slice(0, 80)}`)
+    }
+  }
 }

@@ -9,6 +9,8 @@ import { REVIEW_FPS } from '@/portal/types'
  * 8–16 MB parts, three at a time, each retried if it fails. The file's length and size
  * are read here first with a hidden video element. Parts already sent are remembered in
  * this browser, so after a reload choosing the same file again carries on where it stopped.
+ * A thumbnail is grabbed from the video here too and goes up next to it; if that fails, the
+ * version simply has no thumbnail. "Upload for delivery" is the same upload with delivery: true.
  */
 
 type Meta = { duration: number; width: number; height: number }
@@ -56,6 +58,65 @@ function readMeta(file: File): Promise<Meta> {
   })
 }
 
+/**
+ * A JPEG of one frame, 1280 px wide: about 10% in, or 3 s if that's earlier (never before 0.5 s),
+ * to skip black first frames. Resolves null if the browser can't do it; it's never a reason to stop.
+ */
+function grabThumb(file: File, duration: number): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const v = document.createElement('video')
+    v.preload = 'auto'
+    v.muted = true
+    v.playsInline = true
+    let settled = false
+    const done = (b: Blob | null) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      URL.revokeObjectURL(url)
+      v.removeAttribute('src')
+      v.load()
+      resolve(b)
+    }
+    const timer = setTimeout(() => done(null), 15_000)
+    v.onloadedmetadata = () => {
+      v.currentTime = Math.min(Math.max(0.5, Math.min(duration * 0.1, 3)), Math.max(0, duration - 0.1))
+    }
+    v.onseeked = () => {
+      try {
+        const w = 1280
+        const h = Math.round((w * v.videoHeight) / Math.max(1, v.videoWidth)) || 720
+        const c = document.createElement('canvas')
+        c.width = w
+        c.height = h
+        const ctx = c.getContext('2d')
+        if (!ctx) return done(null)
+        ctx.drawImage(v, 0, 0, w, h)
+        c.toBlob((b) => done(b), 'image/jpeg', 0.82)
+      } catch {
+        done(null)
+      }
+    }
+    v.onerror = () => done(null)
+    v.src = url
+  })
+}
+
+/** Grabs the thumbnail and puts it next to the video. Resolves with its key, or undefined on any failure. */
+async function uploadThumb(projectId: string, s: Started, file: File, duration: number): Promise<string | undefined> {
+  try {
+    const blob = await grabThumb(file, duration)
+    if (!blob) return undefined
+    const r = await post('thumb', { projectId, objectKey: s.objectKey, uploadId: s.uploadId })
+    if (!r.ok || !r.url || !r.key) return undefined
+    const put = await fetch(r.url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob })
+    return put.ok ? (r.key as string) : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** One PUT of one part. Resolves with the ETag R2 gives back. */
 function putPart(url: string, blob: Blob, onBytes: (n: number) => void, track: (x: XMLHttpRequest) => void): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -76,7 +137,7 @@ function putPart(url: string, blob: Blob, onBytes: (n: number) => void, track: (
   })
 }
 
-export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId: string; title: string; notes: string; send: boolean; onAdded: (msg: string) => void }) {
+export function R2Upload({ projectId, title, notes, send, delivery = false, onAdded }: { projectId: string; title: string; notes: string; send: boolean; delivery?: boolean; onAdded: (msg: string) => void }) {
   const input = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [meta, setMeta] = useState<Meta | null>(null)
@@ -87,13 +148,14 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
   const cancelled = useRef(false)
   const xhrs = useRef(new Set<XMLHttpRequest>())
   const current = useRef<Started | null>(null)
+  const thumb = useRef<Promise<string | undefined> | null>(null)
 
   async function choose(f: File) {
     setFile(null)
     setMeta(null)
     setNote('')
     setState('idle')
-    if (!/\.mp4$/i.test(f.name) && f.type !== 'video/mp4') return setNote('Pick an MP4 (H.264). Export a review copy from Resolve first.')
+    if (!/\.mp4$/i.test(f.name) && f.type !== 'video/mp4') return setNote('Pick an MP4 (H.264). Export one from Resolve first.')
     try {
       setMeta(await readMeta(f))
       setFile(f)
@@ -126,6 +188,8 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
       if (!s.sample) save(k, saved)
     }
     current.current = s
+    // The thumbnail goes up alongside the parts; finish() waits for it, and a failure only means no thumbnail.
+    thumb.current = s.sample ? null : uploadThumb(projectId, s, file, meta.duration)
     const total = Math.ceil(file.size / s.partSize)
     const t0 = Date.now()
 
@@ -208,6 +272,7 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
   async function finish(s: Started, parts: { n: number; etag: string }[], k: string) {
     setState('finishing')
     setNote('Finishing…')
+    const thumbKey = thumb.current ? await thumb.current.catch(() => undefined) : undefined
     const r = await post('complete', {
       projectId,
       objectKey: s.objectKey,
@@ -217,6 +282,8 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
       title: title.trim(),
       notes,
       send,
+      delivery,
+      thumbKey,
       fps,
       durationSec: meta?.duration,
       width: meta?.width,
@@ -233,7 +300,10 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
     setSent(0)
     setNote('')
     current.current = null
-    onAdded(r.sample ? 'Sample mode: nothing was uploaded or saved.' : send ? 'Uploaded and sent. The client gets the email after the 10-minute hold.' : 'Uploaded, not sent yet.')
+    thumb.current = null
+    const base = r.sample ? 'Sample mode: nothing was uploaded or saved.' : send ? 'Uploaded and sent. The client gets the email after the 10-minute hold.' : 'Uploaded, not sent yet.'
+    const copy = !delivery || r.sample ? '' : r.vimeo === 'failed' ? ` The Vimeo copy didn’t start: ${r.vimeoError ?? 'unknown problem'}` : ' Copying to Vimeo now.'
+    onAdded(base + copy)
   }
 
   async function cancel() {
@@ -259,7 +329,7 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
     <div className="stack gap-3">
       <div className="dropzone dropzone-compact">
         <p className="m0">
-          {file ? <strong>{file.name}</strong> : <strong>An MP4 review copy</strong>}{' '}
+          {file ? <strong>{file.name}</strong> : <strong>{delivery ? 'The final MP4' : 'An MP4 review copy'}</strong>}{' '}
           {!busy && <button type="button" className="linklike" onClick={() => input.current?.click()}>{file ? 'choose another' : 'choose a file'}</button>}
         </p>
         <p className="muted small m0">{meta && file ? `${mins} · ${meta.width}×${meta.height} · ${fmtSize(file.size)}` : 'H.264 MP4. It plays as uploaded: nothing is re-encoded.'}</p>
@@ -288,7 +358,7 @@ export function R2Upload({ projectId, title, notes, send, onAdded }: { projectId
       {!busy && note && <p className="small muted m0" role="status">{note}</p>}
       {!busy && (
         <div>
-          <button type="button" className="btn btn-primary btn-sm" disabled={!file || !meta || !title.trim()} onClick={start}>Upload for review</button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={!file || !meta || !title.trim()} onClick={start}>{delivery ? 'Upload for delivery' : 'Upload for review'}</button>
           {!title.trim() && file && <span className="small muted"> Add a title first.</span>}
         </div>
       )}

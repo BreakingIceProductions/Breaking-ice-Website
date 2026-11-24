@@ -1,4 +1,5 @@
 import { json } from '@/portal/http'
+import { r2ThumbUrl } from '@/portal/r2'
 import { playUrl, resolveReview } from '@/portal/review'
 
 export const runtime = 'nodejs'
@@ -15,5 +16,5 @@ export async function GET(req: Request) {
   if (!r) return json({ ok: false }, 404)
   const url = playUrl(r.target)
   if (!url) return json({ ok: false, error: 'not-ready' }, 503)
-  return json({ ok: true, url, expiresAt: new Date(Date.now() + 2 * 3600_000 - 60_000).toISOString() })
+  return json({ ok: true, url, poster: r2ThumbUrl(r.target.d.r2Thumb), expiresAt: new Date(Date.now() + 2 * 3600_000 - 60_000).toISOString() })
 }

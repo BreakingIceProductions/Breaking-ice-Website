@@ -5,6 +5,7 @@ import { createClient } from 'next-sanity'
 import { apiVersion, projectId } from '@/sanity/env'
 import { PRE_PORTAL_STAGES } from '@/sanity/portal/office-constants'
 import { portalEnv, portalReady } from './config'
+import { r2ThumbUrl } from './r2'
 import { DEFAULT_PORTAL, SAMPLE_CLIENT, samplePayments, sampleProjects, sampleQuotes } from './samples'
 import type { ClientProject, Deliverable, PortalClient, PortalPayment, PortalQuote, PortalSettings, SanityImage, Session } from './types'
 
@@ -70,8 +71,8 @@ const decorate = (p: ClientProject & { state?: Partial<StateDoc> | null }): Clie
     deliverables: (p.deliverables ?? []).map((d) => {
       const st = state?.deliverables?.find((x) => x._key === d._key)
       const auto = Object.fromEntries(STATE_FIELDS.map((f) => [f, st?.[f]]))
-      // Your own thumbnail and length win; Vimeo's fill the gaps.
-      return { ...d, ...auto, version: d.version || 1, length: d.length || st?.vimeoLength, thumbUrl: portalImage(d.thumbnail, 480, 270) ?? st?.vimeoThumb }
+      // Your own thumbnail and length win; then the frame grabbed at upload (R2), then Vimeo's.
+      return { ...d, ...auto, version: d.version || 1, length: d.length || st?.vimeoLength, thumbUrl: portalImage(d.thumbnail, 480, 270) ?? r2ThumbUrl(d.r2Thumb) ?? st?.vimeoThumb }
     }),
   }
 }

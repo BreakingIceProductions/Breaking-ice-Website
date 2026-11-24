@@ -142,9 +142,12 @@ function ProjectPanel({ p }: { p: LibProject }) {
   )
 }
 
-/** Add a version: a Vimeo link or an upload to the review room for videos, a file for documents. */
+/**
+ * Add a version. Videos go up to our storage, for review (the review room) or for delivery (the
+ * finished file: marked Final, with a copy pushed to Vimeo). Without storage set up, a Vimeo link. Documents: a file.
+ */
 function AddVersion({ project, category, title: fixedTitle, reviewUpload = false, onAdded }: { project: LibProject; category: Category; title?: string; reviewUpload?: boolean; onAdded: () => void }) {
-  const [how, setHow] = useState<'vimeo' | 'upload'>('vimeo')
+  const [how, setHow] = useState<'review' | 'delivery'>('review')
   const [title, setTitle] = useState(fixedTitle ?? '')
   const [url, setUrl] = useState('')
   const [notes, setNotes] = useState('')
@@ -181,13 +184,17 @@ function AddVersion({ project, category, title: fixedTitle, reviewUpload = false
       )}
       {category === 'video' && reviewUpload && (
         <div className="a-switch" role="group" aria-label="How to add it">
-          <button type="button" aria-pressed={how === 'vimeo'} onClick={() => setHow('vimeo')}>Vimeo link</button>
-          <button type="button" aria-pressed={how === 'upload'} onClick={() => setHow('upload')}>Upload for review</button>
+          <button type="button" aria-pressed={how === 'review'} onClick={() => setHow('review')}>Upload for review</button>
+          <button type="button" aria-pressed={how === 'delivery'} onClick={() => setHow('delivery')}>Upload for delivery</button>
         </div>
       )}
-      {category === 'video' && how === 'upload' && reviewUpload ? (
+      {category === 'video' && reviewUpload ? (
         <div className="stack gap-3">
-          <p className="muted small m0">Plays in our own review room: the client (and anyone you share a link with) comments on exact frames and can draw on the picture.</p>
+          <p className="muted small m0">
+            {how === 'delivery'
+              ? 'The finished file. Your client downloads it from the portal, and a copy goes to your Vimeo (unlisted) for the website.'
+              : 'Plays in our own review room: the client (and anyone you share a link with) comments on exact frames and can draw on the picture.'}
+          </p>
           <label htmlFor={`n-${listId}`} className="small muted">Note to the client (optional)</label>
           <textarea id={`n-${listId}`} className="input" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What changed and what to look for" />
           <label className="small a-check"><input type="checkbox" checked={send} onChange={(e) => setSend(e.target.checked)} /> Send to the client now (emails them)</label>
@@ -196,6 +203,7 @@ function AddVersion({ project, category, title: fixedTitle, reviewUpload = false
             title={fixedTitle ?? title}
             notes={notes}
             send={send}
+            delivery={how === 'delivery'}
             onAdded={(m) => {
               setMsg(m)
               setNotes('')
@@ -265,6 +273,30 @@ function GroupPanel({ project, group, reviewUpload, onChange, onOpen }: { projec
   )
 }
 
+/** A finished file's copy on Vimeo: on its way, there, or stuck (with a retry). */
+function VimeoCopyLine({ projectId, d, onChange }: { projectId: string; d: Deliverable; onChange: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const retry = async () => {
+    setBusy(true)
+    setErr('')
+    const r = await json('POST', '/api/admin/vimeo-push', { projectId, key: d._key })
+    setBusy(false)
+    if (!r.ok) setErr('Couldn’t reach the server. Try again.')
+    else if (r.vimeo === 'failed') setErr(r.vimeoError ?? 'Vimeo said no again.')
+    onChange()
+  }
+  if (d.vimeoState === 'uploading') return <p className="muted small m0">Copying to Vimeo…</p>
+  if (d.vimeoState === 'ready' && d.vimeoUrl) return <p className="small m0"><a href={d.vimeoUrl} target="_blank" rel="noopener noreferrer">On Vimeo ↗<span className="sr-only"> (opens in a new tab)</span></a></p>
+  if (d.vimeoState !== 'failed') return null
+  return (
+    <p className="small m0" role="status">
+      <span className="muted">Vimeo copy failed: {err || d.vimeoError || 'unknown problem'}</span>{' '}
+      <button type="button" className="linklike small" disabled={busy} onClick={retry}>{busy ? 'Trying…' : 'Try again'}</button>
+    </p>
+  )
+}
+
 function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject; d: Deliverable; onChange: () => void; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false)
   const confirm = useConfirm()
@@ -291,7 +323,12 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
       <VersionHead title={d.title} kind={video ? 'video' : fileKind({ name: d.fileName })} ext={video ? undefined : d.fileName?.split('.').pop()} version={versionLabel(d)} date={d.date} length={d.length} />
       {video && d.host === 'r2' ? (
         <div className="stack gap-2">
+          {d.thumbUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- a signed storage address
+            <img src={d.thumbUrl} alt="" loading="lazy" style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--radius-md)', background: 'var(--surface-inverse)' }} />
+          )}
           <Link className="btn btn-primary btn-sm self-start" href={`/admin/review/${encodeURIComponent(project._id)}/${encodeURIComponent(d._key)}`}>Open the review room</Link>
+          {d.vimeoState && <VimeoCopyLine projectId={project._id} d={d} onChange={onChange} />}
           <p className="muted small m0">
             {[d.openComments ? `${d.openComments} open comment${d.openComments === 1 ? '' : 's'} from the client` : 'No open comments from the client', d.fps && `${d.fps} fps`, d.width && d.height && `${d.width}×${d.height}`].filter(Boolean).join(' · ')}
           </p>

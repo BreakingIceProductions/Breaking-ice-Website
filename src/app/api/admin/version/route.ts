@@ -60,8 +60,9 @@ export async function DELETE(req: Request) {
   let trashed = false
   const file = d.fileUrl ? googleFile(d.fileUrl) : null
   if (file && driveReady()) trashed = await trashProjectFile(p as unknown as ClientProject, file.id).catch((e) => (console.error('[admin] trash failed', e), false))
-  // A review copy in our storage goes too (nothing else points at it).
+  // A review copy in our storage goes too, with its thumbnail (nothing else points at them).
   if (d.r2Key && !d.r2Key.startsWith('sample/') && r2Ready()) await deleteObject(d.r2Key).catch((e) => console.error('[admin] r2 delete failed', e))
+  if (d.r2Thumb && !d.r2Thumb.startsWith('sample/') && r2Ready()) await deleteObject(d.r2Thumb).catch((e) => console.error('[admin] r2 thumb delete failed', e))
   await addActivity(p._id, `${d.title}: ${versionLabel(d)} deleted`, 'version')
   return json({ ok: true, trashed })
 }
