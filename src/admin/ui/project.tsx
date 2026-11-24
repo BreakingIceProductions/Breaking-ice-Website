@@ -59,7 +59,7 @@ export function ProjectProgress({ projectId, projectTitle, checks, children }: {
  * `action` replaces the "Move to …" button, which shows only when nothing else is given.
  */
 export function NextUp({ stage, next, action }: { stage: string; next?: Stage; action?: React.ReactNode }) {
-  const { checks, isDone, move } = useProgress()
+  const { checks, isDone, move, tick } = useProgress()
   const [showSteps, setShowSteps] = useState(false)
   const open = checks.find((c) => !isDone(c))
   const done = checks.filter(isDone).length
@@ -76,7 +76,14 @@ export function NextUp({ stage, next, action }: { stage: string; next?: Stage; a
             <span className="sr-only">{done} of {checks.length} steps done in {stage}. {showSteps ? 'Hide' : 'Show'} the steps</span>
           </button>
         )}
-        {action ?? (!open && next && <button type="button" className="btn sa-copper" onClick={() => move(next)}>Move to {next.title}</button>)}
+        {/* A step that doesn't apply (an old project brought in late, say) is ticked off without doing it. Undo: untick it in the steps. */}
+        {open && (
+          <button type="button" className="btn btn-sm sa-next-dismiss" onClick={() => tick(open, true)} title="Doesn’t apply: tick it off and show the next step">
+            Dismiss<span className="sr-only">: {open.label}</span>
+          </button>
+        )}
+        {/* The page's action belongs to an open step; once they're all ticked, the move takes over. */}
+        {(open || !checks.length ? action : undefined) ?? (!open && next && <button type="button" className="btn sa-copper" onClick={() => move(next)}>Move to {next.title}</button>)}
       </div>
       <div id="sa-next-steps" className="sa-next-steps" hidden={!showSteps}>
         <StageChecklist />

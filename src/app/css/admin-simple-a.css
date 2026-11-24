@@ -257,3 +257,8 @@
 @media (prefers-reduced-motion: reduce) {
   .admin .sa-needs > li.a-row-x { transition: none; }
 }
+
+/* Next up: Dismiss a step that doesn’t apply. Quiet, on the card’s own colours. */
+.admin .sa-next .btn.sa-next-dismiss { background: transparent; color: inherit; border: 1px solid color-mix(in srgb, var(--on-solid) 35%, transparent); }
+.admin .sa-next .btn.sa-next-dismiss:hover { background: color-mix(in srgb, var(--on-solid) 8%, transparent); }
+.admin .sa-next .btn.sa-next-dismiss:focus-visible { outline-color: var(--on-solid); }
