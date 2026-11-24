@@ -466,6 +466,43 @@ export async function addVersion(
   return entry
 }
 
+/**
+ * Swaps an existing video version onto a file in our storage, keeping the same version: its
+ * number, status, Final, client switch, feedback, date and notes stay as they are, and the
+ * portal-state email markers aren't touched, so nothing is emailed. A Vimeo link moves to
+ * vimeoUrl (shown as its Vimeo copy). Written to the published doc and any Studio draft.
+ */
+export async function moveVersionToR2(
+  projectId: string,
+  d: Pick<Deliverable, '_key' | 'shareUrl'>,
+  f: { r2Key: string; r2Size: number; r2Thumb?: string; durationSec?: number; width?: number; height?: number; fps?: number; playable?: boolean },
+) {
+  if (sample()) return
+  const at = `deliverables[_key=="${d._key.replace(/[^\w-]/g, '')}"]`
+  const dur = f.durationSec && f.durationSec > 0 ? Math.round(f.durationSec * 1000) / 1000 : undefined
+  const set: Record<string, unknown> = {
+    [`${at}.host`]: 'r2',
+    [`${at}.r2Key`]: f.r2Key,
+    [`${at}.r2Size`]: f.r2Size,
+    ...(f.playable === false
+      ? { [`${at}.playable`]: false }
+      : {
+          [`${at}.fps`]: f.fps && f.fps > 0 ? Math.round(f.fps * 1000) / 1000 : 23.976,
+          ...(dur ? { [`${at}.durationSec`]: dur, [`${at}.length`]: `${Math.floor(dur / 60)}:${String(Math.floor(dur % 60)).padStart(2, '0')}` } : {}),
+          ...(f.width ? { [`${at}.width`]: Math.round(f.width) } : {}),
+          ...(f.height ? { [`${at}.height`]: Math.round(f.height) } : {}),
+        }),
+    ...(f.r2Thumb ? { [`${at}.r2Thumb`]: f.r2Thumb } : {}),
+    ...(d.shareUrl ? { [`${at}.vimeoUrl`]: d.shareUrl, [`${at}.vimeoState`]: 'ready' } : {}),
+  }
+  const unset = [`${at}.shareUrl`, ...(f.playable === false ? [] : [`${at}.playable`])]
+  await portalClient.patch(projectId).set(set).unset(unset).commit()
+  // A pending Studio draft gets the same change, so publishing it can't bring the old link back.
+  await portalClient.patch(`drafts.${projectId}`).set(set).unset(unset).commit().catch(() => {})
+  // Vimeo's player and review page (filled in by the sync) would otherwise still win in places. Email markers stay.
+  await portalClient.patch(`portal-state-${projectId}`).unset([`${at}.vimeoEmbed`, `${at}.vimeoReview`, `${at}.vimeoVersions`]).commit().catch(() => {})
+}
+
 /** Takes one version off the project (and off a pending Studio draft, so publishing it can't bring the version back). */
 export async function removeVersion(projectId: string, versionKey: string) {
   if (sample()) return

@@ -353,6 +353,15 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
         </a>
       ) : null}
       {video && d.host !== 'r2' && !d.vimeoThumb && <p className="muted small m0">The thumbnail shows up after the next sync with Vimeo.</p>}
+      {video && d.host !== 'r2' && (
+        <details className="lib-replace">
+          <summary className="linklike small">Replace with a file</summary>
+          <div className="stack gap-3" style={{ marginTop: 'var(--space-3)' }}>
+            <p className="muted small m0">Moves this version into the review room. It keeps its number, status and feedback, and nothing is emailed. The Vimeo copy stays in your Vimeo.</p>
+            <R2Upload key={d._key} projectId={project._id} title={d.title} notes="" send={false} replaceKey={d._key} replaceFinal={Boolean(d.final)} onAdded={(m) => { notify({ text: m }); onChange() }} />
+          </div>
+        </details>
+      )}
 
       {d.fileName && <p className="muted small m0">{d.fileName}</p>}
       {d.notes && <p className="deliv-note">{d.notes}</p>}

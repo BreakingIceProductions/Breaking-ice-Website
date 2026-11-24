@@ -1,7 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { adminFromRequest } from '@/admin/auth'
-import { addLog, getProject } from '@/admin/data'
-import { portalClient } from '@/portal/data'
+import { addLog, getProject, moveVersionToR2 } from '@/admin/data'
 import { json } from '@/portal/http'
 import { abortMultipart, completeMultipart, createMultipart, headObject, presignPart, presignPut, r2Ready, thumbKeyFor } from '@/portal/r2'
 import { vimeoId, vimeoSourceFile } from '@/portal/vimeo'
@@ -12,7 +11,8 @@ export const maxDuration = 300
 const PART = 16 * 1024 * 1024
 
 /**
- * One-off: moves one Vimeo version into our storage so it plays in the review room.
+ * One-off, kept for reference: Vimeo's API gives no files on the current plan, so this answers with a
+ * pointer to "Replace with a file". Moves one Vimeo version into our storage so it plays in the review room.
  * The file streams from Vimeo to R2 in 16 MB parts (one part in memory at a time). The version keeps
  * its number, status, Final, feedback and dates; nothing is sent, and the portal-state email
  * markers aren't touched, so the scheduler sees nothing new. The old Vimeo link moves to vimeoUrl.
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return json({ ok: false, error: `Vimeo didn’t answer: ${String(e).slice(0, 160)}` }, 502)
   }
-  if (!src) return json({ ok: false, error: 'Vimeo gave no downloadable file (the token needs the video_files scope, or downloads are off for this video).' }, 502)
+  if (!src) return json({ ok: false, error: 'Vimeo won’t hand over the file on this plan. Use Replace with a file on the version instead.' }, 502)
 
   const ext = src.mov ? 'mov' : 'mp4'
   const objectKey = `review/${p._id}/${d._key}/v${d.version || 1}-${randomBytes(3).toString('hex')}.${ext}`
@@ -96,25 +96,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const duration = src.duration && src.duration > 0 ? src.duration : undefined
-  const at = `deliverables[_key=="${d._key}"]`
-  const set: Record<string, unknown> = {
-    [`${at}.host`]: 'r2',
-    [`${at}.r2Key`]: objectKey,
-    [`${at}.r2Size`]: size,
-    [`${at}.fps`]: src.fps && src.fps > 0 ? Math.round(src.fps * 1000) / 1000 : 23.976,
-    [`${at}.vimeoUrl`]: d.shareUrl,
-    [`${at}.vimeoState`]: 'ready',
-    ...(duration ? { [`${at}.durationSec`]: duration, [`${at}.length`]: `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, '0')}` } : {}),
-    ...(src.width ? { [`${at}.width`]: src.width } : {}),
-    ...(src.height ? { [`${at}.height`]: src.height } : {}),
-    ...(r2Thumb ? { [`${at}.r2Thumb`]: r2Thumb } : {}),
-  }
-  await portalClient.patch(p._id).set(set).unset([`${at}.shareUrl`]).commit()
-  // A pending Studio draft gets the same change, so publishing it can't bring the Vimeo link back.
-  await portalClient.patch(`drafts.${p._id}`).set(set).unset([`${at}.shareUrl`]).commit().catch(() => {})
-  // Vimeo's player and review page (filled in by the sync) would otherwise still win in a few places. Email markers stay.
-  await portalClient.patch(`portal-state-${p._id}`).unset([`${at}.vimeoEmbed`, `${at}.vimeoReview`, `${at}.vimeoVersions`]).commit().catch(() => {})
+  await moveVersionToR2(p._id, d, { r2Key: objectKey, r2Size: size, r2Thumb, durationSec: src.duration, width: src.width, height: src.height, fps: src.fps })
   await addLog(p._id, `${d.title}: moved from Vimeo to the review room`, 'office')
 
   return json({ ok: true, r2Key: objectKey, size, seconds: Math.round((Date.now() - started) / 1000) })

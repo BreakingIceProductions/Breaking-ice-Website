@@ -139,7 +139,29 @@ function putPart(url: string, blob: Blob, onBytes: (n: number) => void, track: (
   })
 }
 
-export function R2Upload({ projectId, title, notes, send, delivery = false, onAdded }: { projectId: string; title: string; notes: string; send: boolean; delivery?: boolean; onAdded: (msg: string) => void }) {
+export function R2Upload({
+  projectId,
+  title,
+  notes,
+  send,
+  delivery = false,
+  replaceKey,
+  replaceFinal = false,
+  onAdded,
+}: {
+  projectId: string
+  title: string
+  notes: string
+  send: boolean
+  delivery?: boolean
+  /** Replace the file of this existing version (same key and number) instead of adding a version. */
+  replaceKey?: string
+  /** The version being replaced is Final: then a file the browser can't play is allowed. */
+  replaceFinal?: boolean
+  onAdded: (msg: string) => void
+}) {
+  // A file the browser can't play is fine for a delivery or a Final version's replacement, never for review.
+  const lenient = replaceKey ? replaceFinal : delivery
   const input = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [meta, setMeta] = useState<Meta | null>(null)
@@ -169,9 +191,9 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
       resume()
     } catch {
       // Often ProRes: fine to deliver (the preview comes from Vimeo), but it can't play in the review room.
-      if (!delivery) return setNote(UNPLAYABLE)
+      if (!lenient) return setNote(replaceKey ? 'This file won’t play in a browser (often ProRes). Only a Final version can take one; export an H.264 MP4 or MOV.' : UNPLAYABLE)
       setFile(f)
-      setNote('This browser can’t play it (often ProRes). That’s fine for delivery: it uploads as is, without a thumbnail.')
+      setNote(`This browser can’t play it (often ProRes). That’s fine for ${replaceKey ? 'a Final version' : 'delivery'}: it uploads as is, without a thumbnail.`)
       resume()
     }
   }
@@ -179,7 +201,7 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
   async function start() {
     if (!file || !title.trim()) return
     // Picked in delivery mode, then switched to review: an unplayable file can't go to the review room.
-    if (!meta && !delivery) return setNote(UNPLAYABLE)
+    if (!meta && !lenient) return setNote(UNPLAYABLE)
     cancelled.current = false
     setState('uploading')
     setSent(0)
@@ -190,10 +212,10 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
     let s: Started
     if (saved) s = saved
     else {
-      const r = await post('start', { projectId, title: title.trim(), name: file.name, size: file.size, type: file.type })
+      const r = await post('start', { projectId, title: title.trim(), replaceKey, name: file.name, size: file.size, type: file.type })
       if (!r.ok) {
         setState('error')
-        return setNote(r.error === 'too-big' ? 'That file is over 100 GB.' : r.error === 'not-configured' ? 'Review storage isn’t set up yet (see Settings).' : r.error === 'not-video' ? 'Pick an MP4 or MOV.' : 'Couldn’t start the upload. Try again.')
+        return setNote(r.error === 'too-big' ? 'That file is over 100 GB.' : r.error === 'not-configured' ? 'Review storage isn’t set up yet (see Settings).' : r.error === 'not-video' ? 'Pick an MP4 or MOV.' : r.error === 'not-replaceable' ? 'This version can’t be replaced (it may already be in the review room). Reload to see it.' : 'Couldn’t start the upload. Try again.')
       }
       s = r as Started
       saved = { ...s, title: title.trim(), parts: {} }
@@ -293,8 +315,9 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
       parts,
       title: title.trim(),
       notes,
-      send,
-      delivery,
+      send: replaceKey ? false : send,
+      delivery: replaceKey ? false : delivery,
+      replaceKey,
       thumbKey,
       fps: meta ? fps : undefined,
       playable: Boolean(meta),
@@ -304,7 +327,7 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
     })
     if (!r.ok) {
       setState('error')
-      return setNote('Uploaded, but couldn’t add the version. Try again (the upload carries on from where it is).')
+      return setNote(replaceKey ? 'Uploaded, but couldn’t replace the file. Try again (the upload carries on from where it is).' : 'Uploaded, but couldn’t add the version. Try again (the upload carries on from where it is).')
     }
     save(k, null)
     setState('idle')
@@ -314,6 +337,7 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
     setNote('')
     current.current = null
     thumb.current = null
+    if (replaceKey) return onAdded(r.sample ? 'Sample mode: nothing was uploaded or saved.' : 'Replaced. This version now plays in the review room; nothing was emailed.')
     const base = r.sample ? 'Sample mode: nothing was uploaded or saved.' : send ? 'Uploaded and sent. The client gets the email after the 10-minute hold.' : 'Uploaded, not sent yet.'
     const copy = !delivery || r.sample ? '' : r.vimeo === 'failed' ? ` The Vimeo copy didn’t start: ${r.vimeoError ?? 'unknown problem'}` : ' Copying to Vimeo now.'
     onAdded(base + copy)
@@ -394,7 +418,7 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
       {!busy && (file && !meta && !delivery ? UNPLAYABLE : note) && <p className="small muted m0" role="status">{file && !meta && !delivery ? UNPLAYABLE : note}</p>}
       {!busy && (
         <div>
-          <button type="button" className="btn btn-primary btn-sm" disabled={!file || (!meta && !delivery) || !title.trim()} onClick={start}>{delivery ? 'Upload for delivery' : 'Upload for review'}</button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={!file || (!meta && !lenient) || !title.trim()} onClick={start}>{replaceKey ? 'Upload and replace' : delivery ? 'Upload for delivery' : 'Upload for review'}</button>
           {!title.trim() && file && <span className="small muted"> Add a title first.</span>}
         </div>
       )}

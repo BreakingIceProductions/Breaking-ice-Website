@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto'
 import { adminFromRequest } from '@/admin/auth'
-import { addVersion, getProject } from '@/admin/data'
+import { addLog, addVersion, getProject, moveVersionToR2 } from '@/admin/data'
 import { addActivity } from '@/portal/data'
 import { json } from '@/portal/http'
-import { nextVersion } from '@/portal/library'
+import { categoryOf, nextVersion } from '@/portal/library'
 import { abortMultipart, completeMultipart, createMultipart, headObject, presignPart, presignPut, r2Ready, thumbKeyFor } from '@/portal/r2'
 import { REVIEW_FPS } from '@/portal/types'
 import { pushToVimeo } from '@/portal/vimeo'
@@ -19,6 +19,8 @@ export const runtime = 'nodejs'
  *               pulls a copy from R2 for the website. If Vimeo says no, the version still stands.
  *   thumb     → a presigned PUT for the thumbnail the browser grabs from the video (thumb.jpg next to it)
  *   abort     → throws away an unfinished upload
+ * With replaceKey, start and complete swap the file of an existing video version instead (same
+ * key, same version number): it moves into the review room and nothing is emailed.
  * Sample mode answers without touching the network.
  */
 
@@ -40,10 +42,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
   // An object key always sits under this project's folder, so one project's upload can't touch another's.
   const keyOk = objectKey.startsWith(`review/${projectId}/`) && /^review\/[\w.-]+\/[\w-]+\/v\d+-[a-f0-9]+\.(mp4|mov)$/.test(objectKey)
 
+  const replaceKey = body.replaceKey ? String(body.replaceKey) : ''
+  if (replaceKey && !/^[\w-]{1,40}$/.test(replaceKey)) return json({ ok: false, error: 'invalid' }, 400)
+
   if (action === 'start') {
     const title = String(body.title ?? '').trim().slice(0, 140)
     const size = Number(body.size)
-    if (!title || !Number.isFinite(size) || size <= 0) return json({ ok: false, error: 'invalid' }, 400)
+    if ((!title && !replaceKey) || !Number.isFinite(size) || size <= 0) return json({ ok: false, error: 'invalid' }, 400)
     if (size > MAX_SIZE) return json({ ok: false, error: 'too-big' }, 400)
     // MP4 or MOV, by name or type. The key keeps the real extension (download names come from it).
     const name = String(body.name ?? '')
@@ -51,8 +56,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
     if (!ext) return json({ ok: false, error: 'not-video' }, 400)
     const p = await getProject(projectId)
     if (!p) return json({ ok: false }, 404)
-    const { version } = nextVersion(p.deliverables, 'video', title)
-    const deliverableKey = randomBytes(6).toString('hex')
+    // Replacing: the version's own key and number. Otherwise a new version of that title.
+    const target = replaceKey ? p.deliverables.find((x) => x._key === replaceKey) : undefined
+    if (replaceKey && (!target || categoryOf(target) !== 'video' || target.host === 'r2')) return json({ ok: false, error: 'not-replaceable' }, 400)
+    const version = target ? target.version || 1 : nextVersion(p.deliverables, 'video', title).version
+    const deliverableKey = target ? target._key : randomBytes(6).toString('hex')
     const key = `review/${p._id}/${deliverableKey}/v${version}-${randomBytes(6).toString('hex')}.${ext}`
     if (admin.sample) return json({ ok: true, sample: true, objectKey: key, uploadId: 'sample', deliverableKey, version, partSize: partSizeFor(size) })
     const id = await createMultipart(key, ext === 'mov' ? 'video/quicktime' : 'video/mp4')
@@ -87,7 +95,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
       .map((x: { n?: unknown; etag?: unknown }) => ({ n: Number(x?.n), etag: String(x?.etag ?? '') }))
       .filter((x: { n: number; etag: string }) => Number.isInteger(x.n) && x.n >= 1 && /^"?[\w-]+"?$/.test(x.etag))
     const fps = REVIEW_FPS.find((f) => f === Number(body.fps)) ?? 23.976
-    if (!title || !/^[a-f0-9]{12}$/.test(deliverableKey) || !objectKey.includes(`/${deliverableKey}/`)) return json({ ok: false, error: 'invalid' }, 400)
+    if (replaceKey) {
+      if (deliverableKey !== replaceKey || objectKey.split('/')[2] !== replaceKey) return json({ ok: false, error: 'invalid' }, 400)
+    } else if (!title || !/^[a-f0-9]{12}$/.test(deliverableKey) || !objectKey.includes(`/${deliverableKey}/`)) return json({ ok: false, error: 'invalid' }, 400)
     if (admin.sample) return json({ ok: true, sample: true })
     if (!parts.length) return json({ ok: false, error: 'invalid' }, 400)
     const p = await getProject(projectId)
@@ -102,6 +112,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
     // The thumbnail is a nice-to-have: only kept if it's the expected key and actually arrived.
     const thumbKey = playable && body.thumbKey === thumbKeyFor(objectKey) ? thumbKeyFor(objectKey) : undefined
     const r2Thumb = thumbKey && (await headObject(thumbKey).catch(() => 0)) ? thumbKey : undefined
+    if (replaceKey) {
+      const target = p.deliverables.find((x) => x._key === replaceKey)
+      if (!target || target.host === 'r2') return json({ ok: false, error: 'not-replaceable' }, 400)
+      // Only a Final version may take a file the browser can't play (it's for download, not review).
+      const ok = body.playable !== false || target.final
+      if (!ok) return json({ ok: false, error: 'not-playable' }, 400)
+      await moveVersionToR2(p._id, target, {
+        r2Key: objectKey,
+        r2Size: size,
+        r2Thumb: body.playable === false ? undefined : r2Thumb,
+        durationSec: num(body.durationSec),
+        width: num(body.width),
+        height: num(body.height),
+        fps: body.playable === false ? undefined : fps,
+        playable: body.playable === false ? false : undefined,
+      })
+      await addLog(p._id, `${target.title} v${target.version || 1}: file replaced, now in the review room`, 'office')
+      return json({ ok: true, key: target._key, replaced: true })
+    }
     const entry = await addVersion(p._id, {
       category: 'video',
       title,
