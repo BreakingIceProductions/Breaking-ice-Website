@@ -179,3 +179,38 @@ export async function checkVimeoCopies(p: ClientProject, log: string[]) {
     }
   }
 }
+
+/* ── Moving a video from Vimeo into our own storage ──────────────────── */
+
+type VimeoFile = VimeoDownload & { size?: number; height?: number; fps?: number; type?: string }
+export type VimeoSource = { link: string; size?: number; width?: number; height?: number; fps?: number; mov: boolean; duration?: number; thumb1280?: string }
+
+/**
+ * The best file Vimeo has of a video, with what we need to store it: the original upload when
+ * Vimeo keeps it, otherwise the largest MP4 rendition. Needs the video_files scope.
+ * Undefined when Vimeo gives no downloadable file.
+ */
+export async function vimeoSourceFile(url?: string): Promise<VimeoSource | undefined> {
+  const id = vimeoId(url)
+  if (!id || !vimeoReady()) return undefined
+  const v = await vimeo<{ duration?: number; pictures?: { base_link?: string }; download?: VimeoFile[]; files?: VimeoFile[] }>(`/videos/${id}?fields=duration,pictures.base_link,download,files`)
+  const usable = (list: VimeoFile[] = []) => list.filter((f) => f.link && !/\.m3u8|\.mpd/.test(f.link) && f.quality !== 'hls' && f.quality !== 'dash')
+  const all = [...usable(v.download), ...usable(v.files)]
+  const isMov = (f: VimeoFile) => f.type === 'video/quicktime' || /\.mov(\?|$)/i.test(f.link ?? '')
+  const source = all.find((f) => f.quality === 'source' || f.rendition === 'source')
+  const mp4 = all.filter((f) => !isMov(f) && (!f.type || f.type === 'video/mp4' || /\.mp4(\?|$)/i.test(f.link ?? ''))).sort((a, b) => (b.width ?? 0) - (a.width ?? 0) || (b.size ?? 0) - (a.size ?? 0))[0]
+  const f = source ?? mp4
+  if (!f?.link) return undefined
+  const base = v.pictures?.base_link
+  const [path, query] = (base ?? '').split('?')
+  return {
+    link: f.link,
+    size: f.size,
+    width: f.width,
+    height: f.height,
+    fps: f.fps,
+    mov: isMov(f),
+    duration: v.duration,
+    thumb1280: base ? `${path}_1280x720${query ? `?${query}` : ''}` : undefined,
+  }
+}

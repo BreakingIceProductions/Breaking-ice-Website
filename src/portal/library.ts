@@ -68,7 +68,6 @@ export function isLatest(d: Deliverable, all: Deliverable[] = []) {
 /** What the client can open: the newest version, plus any older one you've switched on. */
 export const clientCanOpen = (d: Deliverable, all: Deliverable[] = []) => d.status !== 'in-progress' && (isLatest(d, all) || Boolean(d.clientCanView))
 
-/** Next version number for a title, and the title as already written (so "poster" joins "Poster"). */
 /** Plays in our own review room: stored in R2 and playable in a browser (a ProRes delivery isn't). */
 export const inReviewRoom = (d: Pick<Deliverable, 'host' | 'playable'>) => d.host === 'r2' && d.playable !== false
 
@@ -94,6 +93,7 @@ export function matchFinalFile<F extends Pick<DriveFile, 'name' | 'mimeType' | '
   return hits.sort((a, b) => Number((b.size ?? 0) <= LARGE_FILE) - Number((a.size ?? 0) <= LARGE_FILE) || (a.size ?? 0) - (b.size ?? 0))[0]
 }
 
+/** Next version number for a title, and the title as already written (so "poster" joins "Poster"). */
 export function nextVersion(all: Deliverable[] = [], category: Category, title: string) {
   const id = groupId(category, title)
   const same = all.filter((x) => x.title && groupId(categoryOf(x), x.title) === id)
