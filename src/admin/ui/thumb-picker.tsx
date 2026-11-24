@@ -38,6 +38,14 @@ export function ThumbPicker({ projectId, versionKey, fps = 23.976, current, star
     return () => { live = false }
   }, [projectId, versionKey])
 
+  useEffect(() => {
+    const v = video.current
+    if (!v || !src) return
+    v.crossOrigin = 'anonymous'
+    v.src = src
+    v.load()
+  }, [src])
+
   const seek = (to: number) => {
     const v = video.current
     if (!v) return
@@ -81,9 +89,11 @@ export function ThumbPicker({ projectId, versionKey, fps = 23.976, current, star
     <div className="stack gap-3 thumb-picker">
       <div className="thumb-picker-media">
         {src ? (
+          // No src prop: the effect below sets crossOrigin first, then the address. A load that starts
+          // without crossOrigin can never be read back into a canvas ("tainted"), which is what failed before.
           <video
+            key={src}
             ref={video}
-            src={src}
             crossOrigin="anonymous"
             playsInline
             muted
