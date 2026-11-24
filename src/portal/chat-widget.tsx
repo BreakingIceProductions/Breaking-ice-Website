@@ -36,7 +36,7 @@ const timeOf = (iso: string) => {
  * The portal's chat: a button bottom-right, and a panel with a "Josh" tab (goes to Josh in Slack)
  * and an "Assistant" tab (the AI). Polls every 5 s while open, every minute while closed (for the badge).
  */
-export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: boolean; producer?: string }) {
+export function ChatWidget({ producer = 'Josh' }: { producer?: string }) {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('josh')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -45,6 +45,7 @@ export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: b
   const [sending, setSending] = useState<Tab | null>(null)
   const [error, setError] = useState('')
   const [announce, setAnnounce] = useState('')
+  const [me, setMe] = useState<{ name: string; staff: boolean } | null>(null)
   const pathname = usePathname()
   const list = useRef<HTMLDivElement>(null)
   const input = useRef<HTMLTextAreaElement>(null)
@@ -61,8 +62,9 @@ export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: b
 
   const load = useCallback(async () => {
     const r = await fetch('/api/portal/chat', { cache: 'no-store' }).catch(() => null)
-    const j = (await r?.json().catch(() => null)) as { ok?: boolean; messages?: ChatMessage[] } | null
+    const j = (await r?.json().catch(() => null)) as { ok?: boolean; messages?: ChatMessage[]; me?: string; staff?: boolean } | null
     if (!j?.ok || !j.messages) return
+    if (j.me) setMe({ name: j.me, staff: Boolean(j.staff) })
     setMessages((cur) => {
       // Keep messages still on their way (optimistic) until the server has them.
       const pending = cur.filter((m) => m._key.startsWith('tmp-'))
@@ -134,9 +136,9 @@ export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: b
 
   async function send() {
     const text = drafts[tab].trim().slice(0, MAX)
-    if (!text || sending || preview) return
+    if (!text || sending) return
     const t = tab
-    const tmp: ChatMessage = { _key: `tmp-${Date.now()}`, at: new Date().toISOString(), from: 'client', who: 'You', text, tab: t }
+    const tmp: ChatMessage = { _key: `tmp-${Date.now()}`, at: new Date().toISOString(), from: 'client', who: me?.name ?? 'You', text, tab: t, mine: true, staff: me?.staff }
     setMessages((cur) => [...cur, tmp])
     setDrafts((d) => ({ ...d, [t]: '' }))
     setSending(t)
@@ -199,6 +201,10 @@ export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: b
           </div>
           <button type="button" className="pc-close" onClick={close} aria-label="Close chat">×</button>
         </header>
+        <div className="pc-whom">
+          <p>{tab === 'josh' ? 'You’re talking with Josh Ferguson' : 'You’re talking with the Breaking Ice assistant (AI)'}</p>
+          {me && <p className="pc-me-line">Signed in as {me.staff ? 'Josh Ferguson (Breaking Ice preview)' : me.name}</p>}
+        </div>
 
         <div
           id={`${id}-list`}
@@ -222,7 +228,7 @@ export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: b
           {inTab.map((m) => (
             <div key={m._key} className={`pc-msg pc-${m.from === 'client' ? 'me' : m.from}`}>
               {m.handoff && <span className="pc-handoff">{producer} hasn’t replied yet, so the assistant answered:</span>}
-              {m.from !== 'client' && <span className="pc-who">{m.from === 'assistant' ? 'Breaking Ice assistant (AI)' : m.who}</span>}
+              <span className="pc-who">{m.from === 'assistant' ? 'Breaking Ice assistant (AI)' : m.from === 'josh' ? m.who : m.mine ? 'You' : m.staff ? 'Josh Ferguson · Breaking Ice' : m.who}</span>
               <p className="pc-bubble">{m.text}</p>
               <span className="pc-time">{m._key.startsWith('tmp-') ? 'Sending…' : timeOf(m.at)}</span>
             </div>
@@ -238,7 +244,6 @@ export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: b
             send()
           }}
         >
-          {preview && <p className="pc-note">Preview: messages aren’t sent.</p>}
           {error && <p className="pc-note pc-err" role="alert">{error}</p>}
           <label htmlFor={`${id}-text`} className="sr-only">{tab === 'josh' ? `Message to ${producer}` : 'Message to the assistant'}</label>
           <div className="pc-compose-row">
@@ -249,7 +254,6 @@ export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: b
               rows={2}
               maxLength={MAX}
               value={drafts[tab]}
-              disabled={preview}
               placeholder={tab === 'josh' ? `Message ${producer}…` : 'Ask the assistant…'}
               onChange={(e) => setDrafts((d) => ({ ...d, [tab]: e.target.value }))}
               onKeyDown={(e) => {
@@ -260,7 +264,7 @@ export function ChatWidget({ preview = false, producer = 'Josh' }: { preview?: b
                 }
               }}
             />
-            <button type="submit" className="btn btn-primary btn-sm" disabled={preview || !drafts[tab].trim() || Boolean(sending)}>Send</button>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={!drafts[tab].trim() || Boolean(sending)}>Send</button>
           </div>
         </form>
       </section>

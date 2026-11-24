@@ -14,6 +14,7 @@ export async function PortalChatCard({ clientId }: { clientId: string }) {
     getChat(clientId).catch(() => ({ messages: [] as ChatMessage[] })),
   ])
   const msgs = (doc.messages ?? []).slice(-20)
+  const summaries = ('summaries' in doc ? doc.summaries ?? [] : []).slice(-3).reverse()
   if (!c?.chat?.enabled && !msgs.length) return null
   const channel = c?.chat?.slackChannelId
   const team = channel ? await teamId().catch(() => undefined) : undefined
@@ -24,11 +25,22 @@ export async function PortalChatCard({ clientId }: { clientId: string }) {
         {c?.chat?.enabled ? 'On.' : 'Off (turn it on in the client’s editor).'}{' '}
         {channel ? (team ? <a className="text-link" href={`https://app.slack.com/client/${team}/${channel}`} target="_blank" rel="noopener noreferrer">Open the Slack channel<span className="sr-only"> (opens in a new tab)</span></a> : <>Slack channel {channel}</>) : 'The Slack channel is made with the first message.'}
       </p>
+      {summaries.length > 0 && (
+        <div className="stack gap-2">
+          <h3 className="small m0">Latest summaries</h3>
+          {summaries.map((x) => (
+            <div key={x._key} className="small">
+              <span className="muted">{x.tab === 'assistant' ? 'Assistant tab' : 'Josh tab'} · {x.count} messages · {fmtAgo(x.at)}</span>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{x.text}</div>
+            </div>
+          ))}
+        </div>
+      )}
       {msgs.length ? (
         <ul className="stack gap-2" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {msgs.map((m) => (
             <li key={m._key} className="small">
-              <strong>{m.from === 'assistant' ? (m.handoff ? 'Assistant (for Josh)' : 'Assistant') : m.who}</strong>
+              <strong>{m.from === 'assistant' ? (m.handoff ? 'Assistant (for Josh)' : 'Assistant') : m.staff ? 'Josh (from the preview)' : m.who}</strong>
               <span className="muted"> · {m.tab === 'josh' ? 'Josh tab' : 'Assistant tab'} · {fmtAgo(m.at)}</span>
               <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{m.text.length > 400 ? `${m.text.slice(0, 400)}…` : m.text}</div>
             </li>

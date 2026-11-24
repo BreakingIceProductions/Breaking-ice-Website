@@ -30,7 +30,16 @@ export type ChatMessage = {
   slackTs?: string
   /** The assistant answered in the Josh tab because Josh hadn't replied yet. */
   handoff?: boolean
+  /** Written by Josh from the back office's portal preview, not by the client. */
+  staff?: boolean
+  /** Who wrote it (stored only; the browser gets `mine` instead). */
+  email?: string
+  /** For the browser: written by the person looking. */
+  mine?: boolean
 }
+
+/** A Claude summary of a stretch of the portal chat, also posted to Slack. */
+export type ChatSummary = { _key: string; at: string; tab: 'josh' | 'assistant'; from: string; to: string; count: number; text: string }
 
 export type DeliverableStatus = 'in-progress' | 'awaiting-feedback' | 'changes-requested' | 'approved'
 

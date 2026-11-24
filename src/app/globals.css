@@ -1401,6 +1401,9 @@ textarea.input.a-quote-text { min-height: 90px; }
 .pc-panel[hidden] { display: none; }
 .pc-head { display: flex; align-items: center; gap: 8px; padding: 8px 8px 0 12px; border-bottom: 1px solid var(--line); }
 .pc-tabs { display: flex; gap: 4px; flex: 1; }
+.pc-whom p { margin: 0; }
+.pc-whom { padding: 8px 16px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+.pc-me-line { font-weight: 400; font-size: 12px; color: var(--ink-muted); }
 .pc-tab { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-muted); font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
 .pc-tab[aria-selected='true'] { color: var(--ink); border-bottom-color: var(--accent-fill); }
 .pc-tab:focus-visible, .pc-close:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; border-radius: var(--radius-xs); }

@@ -732,6 +732,31 @@ export const portalChat = defineType({
     defineField({ name: 'emailedAt', title: 'Last “Josh replied” email', type: 'datetime' }),
     defineField({ name: 'handoffFor', title: 'Assistant answered for Josh (message key)', type: 'string' }),
     defineField({
+      name: 'summarizedUpTo',
+      title: 'Summarized up to (message keys)',
+      type: 'object',
+      fields: [defineField({ name: 'assistant', type: 'string' }), defineField({ name: 'josh', type: 'string' })],
+    }),
+    defineField({
+      name: 'summaries',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'chatSummary',
+          fields: [
+            defineField({ name: 'at', type: 'datetime' }),
+            defineField({ name: 'tab', type: 'string' }),
+            defineField({ name: 'from', title: 'First message', type: 'datetime' }),
+            defineField({ name: 'to', title: 'Last message', type: 'datetime' }),
+            defineField({ name: 'count', type: 'number' }),
+            defineField({ name: 'text', type: 'text' }),
+          ],
+          preview: { select: { title: 'text', subtitle: 'at' } },
+        }),
+      ],
+    }),
+    defineField({
       name: 'messages',
       type: 'array',
       of: [
@@ -746,6 +771,8 @@ export const portalChat = defineType({
             defineField({ name: 'tab', type: 'string', options: { list: ['josh', 'assistant'] } }),
             defineField({ name: 'slackTs', type: 'string' }),
             defineField({ name: 'handoff', type: 'boolean' }),
+            defineField({ name: 'staff', title: 'From Josh (portal preview)', type: 'boolean' }),
+            defineField({ name: 'email', type: 'string' }),
           ],
           preview: { select: { title: 'text', subtitle: 'who' } },
         }),

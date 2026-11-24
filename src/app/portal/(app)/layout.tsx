@@ -44,7 +44,7 @@ export default async function PortalAppLayout({ children }: { children: React.Re
         <main id="main" className="p-main">{children}</main>
       </div>
       <PortalFooter />
-      {chatOn && <ChatWidget preview={Boolean(session.preview)} producer={producer?.name?.split(' ')[0] || 'Josh'} />}
+      {chatOn && <ChatWidget producer={producer?.name?.split(' ')[0] || 'Josh'} />}
     </>
   )
 }
