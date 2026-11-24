@@ -24,6 +24,8 @@ export type PortalCard = {
   id: string
   title: string
   client: string
+  /** The client's id, for grouping projects under their portal. */
+  clientId?: string
   stage: string
   /** The stage name the client sees on their side. */
   theySee: string
@@ -161,6 +163,7 @@ function card(p: OfficeProject, mine: Row[], theirs: Row[], payments: OpenPaymen
     id: p._id,
     title: p.title,
     client: p.client.organizationName,
+    clientId: p.client._id || undefined,
     stage: stageTitle(p.pipelineStage),
     theySee: CLIENT_STAGES[clientStage(p.pipelineStage, p.status) - 1].title,
     hidden,

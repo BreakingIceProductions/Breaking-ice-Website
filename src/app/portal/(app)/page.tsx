@@ -1,12 +1,14 @@
 /* eslint-disable @next/next/no-img-element -- thumbnails are short-lived signed addresses */
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { viewUrl } from '@/galleries/files'
 import { galleriesForClients } from '@/galleries/store'
 import { isExpired } from '@/galleries/types'
 import { requireAccess } from '@/portal/current'
 import { byStart, CLIENT_STAGES, clientStage, projectThumb, today, versionPath } from '@/portal/library'
 import { notificationsFor } from '@/portal/notifications'
+import { ClientLibrary } from '@/portal/portal-library'
 import { QuoteList } from '@/portal/quote-list'
 import type { ClientProject } from '@/portal/types'
 import { EmptyMark } from '@/portal/ui'
@@ -64,6 +66,9 @@ export default async function Home({ searchParams }: Props) {
   const active = sorted.filter((p) => !isDone(p))
   const archive = sorted.filter(isDone)
   const multi = clients.length > 1
+  // "Your work": active projects first, then delivered. Invoice details and guest share links stay on the server, as on the project page.
+  const forBrowser = [...active, ...archive].map((p) => ({ ...p, billing: undefined, deliverables: p.deliverables?.map(({ share: _share, commentsPending: _p, ...d }) => d) }))
+  const me = clients.flatMap((c) => c.contacts).find((c) => c.email.toLowerCase() === session.email)
   // Quotes come first: before we book, they're the whole relationship.
   const { toSign, due, waiting } = await notificationsFor()
   // One timeline across every project, once there's more than one to place on it.
@@ -102,6 +107,15 @@ export default async function Home({ searchParams }: Props) {
           {clients.length > 0 && <LibraryCard cover={cover} />}
         </ul>
       </section>
+      )}
+
+      {sorted.length > 1 && (
+        <section id="work" aria-labelledby="work-h" className="p-work p-anchor">
+          <h2 id="work-h" className="h3">Your work</h2>
+          <Suspense>
+            <ClientLibrary projects={forBrowser} demo={Boolean(session.demo)} uploaderName={me?.name ?? ''} viewOnly={Boolean(session.preview)} />
+          </Suspense>
+        </section>
       )}
 
       {archive.length > 0 && (

@@ -46,7 +46,8 @@ const SETUP: Record<string, string> = { 'no-drive': 'Drive folder', 'nothing-sha
 const NO_SLUG = 'no-slug'
 const isTask = (w: Waiting) => !SETUP[w.key] && w.key !== NO_SLUG
 
-function Card({ c, side }: { c: PortalCard; side: Side }) {
+/** One project's state: stage, who it's waiting on, whether they've looked, and the list for this side. */
+function ProjectState({ c, side }: { c: PortalCard; side: Side }) {
   const seen = c.lastClient
     ? `Last client activity ${c.lastClient.when}: ${c.lastClient.text}`
     : c.opened
@@ -62,14 +63,7 @@ function Card({ c, side }: { c: PortalCard; side: Side }) {
   const list = side === 'us' ? onYou : c.onClient
   const seenShort = c.lastClient ? `Seen ${c.lastClient.when}` : c.opened ? 'Opened' : 'Not opened'
   return (
-    <li className="sa-card sd-pcard">
-      <div className="sd-pc-head">
-        <Initials name={c.client} />
-        <div className="sd-pc-name">
-          <span className="a-client">{c.client}</span>
-          <h3 className="sd-pc-title"><Link className="a-strong-link" href={c.href}>{c.title}</Link></h3>
-        </div>
-      </div>
+    <>
       <p className="sd-pc-dots">
         <span className="sa-chip" title={c.hidden ? undefined : `They see “${c.theySee}”`}>{c.stage}{!c.hidden && <span className="sr-only">. They see “{c.theySee}”</span>}</span>
         <StateDot tone={usCount ? 'accent' : 'off'} label={`${usCount} waiting on us`}>Us {usCount}</StateDot>
@@ -102,6 +96,22 @@ function Card({ c, side }: { c: PortalCard; side: Side }) {
           )}
         </p>
       )}
+    </>
+  )
+}
+
+/** A quote out: one project, no portal yet. */
+function Card({ c, side }: { c: PortalCard; side: Side }) {
+  return (
+    <li className="sa-card sd-pcard">
+      <div className="sd-pc-head">
+        <Initials name={c.client} />
+        <div className="sd-pc-name">
+          <span className="a-client">{c.client}</span>
+          <h3 className="sd-pc-title"><Link className="a-strong-link" href={c.href}>{c.title}</Link></h3>
+        </div>
+      </div>
+      <ProjectState c={c} side={side} />
       <p className="cp-foot">
         {c.viewAs && !c.noAddress && (
           <a className="text-link" href={c.viewAs} target="_blank" rel="noopener noreferrer">
@@ -111,6 +121,71 @@ function Card({ c, side }: { c: PortalCard; side: Side }) {
         <Link className="text-link-plain muted" href={c.href}>Open project<span className="sr-only">: {c.title}</span></Link>
       </p>
     </li>
+  )
+}
+
+type ClientPortal = { key: string; client: string; projects: PortalCard[]; portal?: string }
+
+/** Live portals are per client: one card each, with that client's live projects listed inside. */
+function byClient(cards: PortalCard[]): ClientPortal[] {
+  const map = new Map<string, ClientPortal>()
+  for (const c of cards) {
+    const key = c.clientId ?? c.client
+    const g = map.get(key) ?? { key, client: c.client, projects: [], portal: c.clientId ? `/api/admin/view-as?client=${encodeURIComponent(c.clientId)}&next=%2Fportal` : undefined }
+    g.projects.push(c)
+    map.set(key, g)
+  }
+  return [...map.values()]
+}
+
+function ClientCard({ g, side }: { g: ClientPortal; side: Side }) {
+  return (
+    <li className="sa-card sd-pcard">
+      <div className="sd-pc-head">
+        <Initials name={g.client} />
+        <div className="sd-pc-name">
+          <h3 className="sd-pc-title">{g.client}</h3>
+        </div>
+      </div>
+      <div className="sd-cp-projects">
+        <h4 className="a-client">Live projects</h4>
+        <ul className="sd-cp-plist">
+          {g.projects.map((c) => (
+            <li key={c.id}>
+              <Link className="a-strong-link sd-cp-ptitle" href={c.href}>{c.title}</Link>
+              <ProjectState c={c} side={side} />
+            </li>
+          ))}
+        </ul>
+      </div>
+      {g.portal && (
+        <p className="cp-foot">
+          <a className="text-link" href={g.portal} target="_blank" rel="noopener noreferrer">
+            Open portal →<span className="sr-only"> as {g.client} sees it (opens in a new tab)</span>
+          </a>
+        </p>
+      )}
+    </li>
+  )
+}
+
+/** Client cards with something on this side first; the rest behind one "show more". */
+function ClientGrid({ cards, side }: { cards: PortalCard[]; side: Side }) {
+  const groups = byClient(cards)
+  const has = (g: ClientPortal) => g.projects.some((c) => (side === 'us' ? c.onYou.some((w) => !SETUP[w.key]) : c.onClient.length > 0))
+  const matching = groups.filter(has)
+  const first = matching.length || groups.length > 2 ? matching : groups
+  const rest = groups.filter((g) => !first.includes(g))
+  return (
+    <>
+      {first.length ? <ul className="cp-grid sd-pgrid">{first.map((g) => <ClientCard key={g.key} g={g} side={side} />)}</ul> : <p className="cp-quiet">{side === 'us' ? 'Nothing waiting on us here.' : 'Nothing waiting on them here.'}</p>}
+      {rest.length > 0 && (
+        <details className="ap-more">
+          <summary>Show {plural(rest.length, 'more client')} with nothing waiting on {side === 'us' ? 'us' : 'them'}</summary>
+          <div className="cp-more-list"><ul className="cp-grid sd-pgrid">{rest.map((g) => <ClientCard key={g.key} g={g} side={side} />)}</ul></div>
+        </details>
+      )}
+    </>
   )
 }
 
@@ -145,6 +220,7 @@ export default async function Portals({ searchParams }: Props) {
   const [projects, payments, signRequests] = await Promise.all([listProjects(), openPayments(), listRequests().catch(() => [])])
   const { live, quotes, done, tiles: t } = portalsOverview(projects, payments)
   const docs = signCounts(signRequests)
+  const liveClients = byClient(live).length
   // Which side to show: the one asked for, or "us" when anything is waiting on us, else "them".
   const anyOnUs = [...live, ...quotes].some((c) => c.onYou.some((w) => !SETUP[w.key]))
   const side: Side = asked === 'us' || asked === 'them' ? asked : anyOnUs ? 'us' : 'them'
@@ -156,7 +232,7 @@ export default async function Portals({ searchParams }: Props) {
       </header>
 
       <section aria-label="At a glance" className="sd-glance">
-        <NumTile n={t.portals} label="live" title={`${plural(t.portals, 'live portal')}: ${plural(t.active, 'active project')}${t.hidden ? `, ${t.hidden} hidden from the client` : ''}`} />
+        <NumTile n={liveClients} label="live" title={`${plural(liveClients, 'live portal')}: ${plural(t.active, 'active project')}${t.hidden ? `, ${t.hidden} hidden from the client` : ''}`} />
         <NumTile n={t.onYou} label="on us" accent={t.onYou > 0} href="/admin/portals?waiting=us#cp-live" title={t.onYou ? `Waiting on us: ${plural(t.onYou, 'thing')} to do, on ${plural(t.onYouProjects, 'project')}` : 'Waiting on us: you’re clear'} />
         <NumTile n={t.onClient} label="on them" href="/admin/portals?waiting=them#cp-live" title={t.onClient ? `Waiting on them: ${plural(t.onClient, 'thing')} out, on ${plural(t.onClientProjects, 'project')}` : 'Waiting on them: nothing out with them'} />
         <NumTile n={t.notOpened} label="not opened" title={t.notOpened ? `Not opened yet: ${plural(t.notOpened, 'portal')} with no client activity recorded` : 'Every live portal has client activity'} />
@@ -173,7 +249,7 @@ export default async function Portals({ searchParams }: Props) {
         </div>
         <div className="stack ap-gap-4 a-pending-body">
         {live.length ? (
-          <CardGrid cards={live} side={side} />
+          <ClientGrid cards={live} side={side} />
         ) : (
           <div className="p-card">
             <p className="a-empty"><strong>No live portals yet.</strong></p>

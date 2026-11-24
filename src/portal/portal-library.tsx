@@ -25,11 +25,25 @@ const day = (iso?: string) => (iso ? new Date(iso.length === 10 ? `${iso}T12:00:
  * title → versions. The selection lives in the address (?at=…) so emails and the back
  * button land in the right place.
  */
-export function ProjectLibrary({ project, demo, uploaderName, viewOnly = false }: { project: ClientProject; demo: boolean; uploaderName: string; viewOnly?: boolean }) {
+export function ProjectLibrary({ project, ...rest }: LibraryProps & { project: ClientProject }) {
+  return <Library projects={[project]} single {...rest} />
+}
+
+/**
+ * Every project of a client's in one set of columns (the portal home): the first column lists the
+ * projects, and each opens onto the same folders and panels as its project page. ?at= starts with the slug.
+ */
+export function ClientLibrary({ projects, ...rest }: LibraryProps & { projects: ClientProject[] }) {
+  return <Library projects={projects} single={false} {...rest} />
+}
+
+type LibraryProps = { demo: boolean; uploaderName: string; viewOnly?: boolean }
+
+function Library({ projects, single, demo, uploaderName, viewOnly = false }: LibraryProps & { projects: ClientProject[]; single: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
-  const root = projectNode(project, 'client').children ?? []
+  const root = single ? (projectNode(projects[0], 'client').children ?? []) : projects.map((p) => projectNode(p, 'client'))
   const [path, setPathState] = useState<string[]>(() => (params.get('at') ?? '').split('/').filter(Boolean).map(decodeURIComponent))
 
   const setPath = useCallback(
@@ -48,11 +62,14 @@ export function ProjectLibrary({ project, demo, uploaderName, viewOnly = false }
     setPathState(fromUrl.split('/').filter(Boolean).map(decodeURIComponent))
   }, [fromUrl])
 
-  const at = resolvePath([project], [project.slug, ...path])
+  const at = resolvePath(projects, single ? [projects[0].slug, ...path] : path)
+  const project = at.project
 
   let panel: React.ReactNode
   let panelTitle = 'Details'
-  if (at.version && !clientCanOpen(at.version, project.deliverables)) {
+  if (!project) {
+    panel = <p className="muted">Open a project to see its videos, documents and reference assets.</p>
+  } else if (at.version && !clientCanOpen(at.version, project.deliverables)) {
     // An older version you haven't opened up: never shown, even from a saved address.
     panelTitle = versionLabel(at.version)
     panel = <p className="muted">This is an older version. Ask Breaking Ice if you need it.</p>
@@ -77,13 +94,13 @@ export function ProjectLibrary({ project, demo, uploaderName, viewOnly = false }
   }
 
   // A video in our own review room plays full width under the columns.
-  const picked = at.version ?? (at.group ? [...at.group.versions].reverse().find((v) => clientCanOpen(v, project.deliverables)) : undefined)
-  const room = picked && picked.host === 'r2' && clientCanOpen(picked, project.deliverables) ? picked : undefined
+  const picked = project && (at.version ?? (at.group ? [...at.group.versions].reverse().find((v) => clientCanOpen(v, project.deliverables)) : undefined))
+  const room = project && picked && picked.host === 'r2' && clientCanOpen(picked, project.deliverables) ? picked : undefined
 
   return (
     <>
-      <Finder rootTitle="Folders" root={root} path={path} onPath={setPath} panel={panel} panelTitle={panelTitle} />
-      {room && (
+      <Finder rootTitle={single ? 'Folders' : 'Projects'} root={root} path={path} onPath={setPath} panel={panel} panelTitle={panelTitle} />
+      {project && room && (
         <section id="review-room" className="p-room p-anchor" aria-labelledby="room-h">
           <h3 id="room-h" className="h3">{room.title} <span className="muted">· {versionLabel(room)}</span></h3>
           <ReviewRoom
