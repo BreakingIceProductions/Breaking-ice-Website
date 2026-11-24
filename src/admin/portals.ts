@@ -192,7 +192,16 @@ export function portalsOverview(all: OfficeProject[], payments: OpenPayment[]) {
   const quotes = open.filter(hasQuoteOut).map(build).sort(order)
   const done = all
     .filter((p) => p.archived || p.pipelineStage === 'paid')
-    .map((p) => ({ id: p._id, title: p.title, client: p.client.organizationName, href: pageHref(p._id, p.pipelineStage), note: p.archived ? 'Archived' : 'Paid' }))
+    .map((p) => ({
+      id: p._id,
+      title: p.title,
+      client: p.client.organizationName,
+      clientId: p.client._id || undefined,
+      href: pageHref(p._id, p.pipelineStage),
+      note: p.archived ? 'Archived' : 'Paid',
+      // Still in the client's portal: paid or completed work they can see (not declined leads or hidden projects).
+      inPortal: !p.declinedAt && !p.hiddenFromClient && Boolean(p.slug),
+    }))
 
   // The client-side numbers leave out projects the client can't see.
   const portals = live.filter((c) => !c.hidden)

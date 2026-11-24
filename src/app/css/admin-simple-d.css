@@ -165,3 +165,6 @@
   .admin .sd-conn > .sd-conn-name, .admin .sd-conn > .sd-conn-more, .admin .sd-conn > .sd-conn-extra { grid-column: 1 / -1; }
   .admin .sd-conn > .sd-conn-action { justify-self: end; }
 }
+
+/* Client portals: paid and archived sits below a rule, one card per client. */
+.cp-done-section { border-top: 1px solid var(--line); padding-top: var(--space-5); margin-top: var(--space-3); }

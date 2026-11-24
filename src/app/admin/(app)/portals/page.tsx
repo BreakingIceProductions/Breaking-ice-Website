@@ -124,17 +124,19 @@ function Card({ c, side }: { c: PortalCard; side: Side }) {
   )
 }
 
-type ClientPortal = { key: string; client: string; projects: PortalCard[]; portal?: string }
+type Done = ReturnType<typeof portalsOverview>['done'][number]
+type ClientPortal = { key: string; client: string; clientId?: string; projects: PortalCard[]; delivered: Done[]; portal?: string }
 
-/** Live portals are per client: one card each, with that client's live projects listed inside. */
-function byClient(cards: PortalCard[]): ClientPortal[] {
+/** Portals are per client: one card each, with their live projects and then what's been delivered. */
+function byClient(cards: PortalCard[], done: Done[] = []): ClientPortal[] {
   const map = new Map<string, ClientPortal>()
-  for (const c of cards) {
-    const key = c.clientId ?? c.client
-    const g = map.get(key) ?? { key, client: c.client, projects: [], portal: c.clientId ? `/api/admin/view-as?client=${encodeURIComponent(c.clientId)}&next=%2Fportal` : undefined }
-    g.projects.push(c)
+  const get = (key: string, client: string, clientId?: string) => {
+    const g = map.get(key) ?? { key, client, clientId, projects: [], delivered: [], portal: clientId ? `/api/admin/view-as?client=${encodeURIComponent(clientId)}&next=%2Fportal` : undefined }
     map.set(key, g)
+    return g
   }
+  for (const c of cards) get(c.clientId ?? c.client, c.client, c.clientId).projects.push(c)
+  for (const d of done) get(d.clientId ?? d.client, d.client, d.clientId).delivered.push(d)
   return [...map.values()]
 }
 
@@ -144,21 +146,37 @@ function ClientCard({ g, side }: { g: ClientPortal; side: Side }) {
       <div className="sd-pc-head">
         <Initials name={g.client} />
         <div className="sd-pc-name">
-          <h3 className="sd-pc-title">{g.client}</h3>
+          <h3 className="sd-pc-title">
+            {g.clientId ? <Link className="a-strong-link" href={`/admin/clients/${encodeURIComponent(g.clientId)}`}>{g.client}</Link> : g.client}
+          </h3>
         </div>
       </div>
-      <div className="sd-cp-projects">
-        <h4 className="a-client">Live projects</h4>
-        <ul className="sd-cp-plist">
-          {g.projects.map((c) => (
-            <li key={c.id}>
-              <Link className="a-strong-link sd-cp-ptitle" href={c.href}>{c.title}</Link>
-              <ProjectState c={c} side={side} />
-            </li>
-          ))}
-        </ul>
-      </div>
-      {g.portal && (
+      {g.projects.length > 0 && (
+        <div className="sd-cp-projects">
+          <h4 className="a-client">Live projects</h4>
+          <ul className="sd-cp-plist">
+            {g.projects.map((c) => (
+              <li key={c.id}>
+                <Link className="a-strong-link sd-cp-ptitle" href={c.href}>{c.title}</Link>
+                <ProjectState c={c} side={side} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {g.delivered.length > 0 && (
+        <div className="sd-cp-projects">
+          <h4 className="a-client">Projects</h4>
+          <ul className="sd-cp-plist sd-cp-done">
+            {g.delivered.map((d) => (
+              <li key={d.id}>
+                <Link className="a-strong-link sd-cp-ptitle" href={d.href}>{d.title}</Link> <span className="muted small">· {d.note}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {g.portal && (g.projects.length > 0 || g.delivered.some((d) => d.inPortal)) && (
         <p className="cp-foot">
           <a className="text-link" href={g.portal} target="_blank" rel="noopener noreferrer">
             Open portal →<span className="sr-only"> as {g.client} sees it (opens in a new tab)</span>
@@ -169,24 +187,12 @@ function ClientCard({ g, side }: { g: ClientPortal; side: Side }) {
   )
 }
 
-/** Client cards with something on this side first; the rest behind one "show more". */
+/** Every client with a portal, the ones with something on this side first. */
 function ClientGrid({ cards, side }: { cards: PortalCard[]; side: Side }) {
   const groups = byClient(cards)
   const has = (g: ClientPortal) => g.projects.some((c) => (side === 'us' ? c.onYou.some((w) => !SETUP[w.key]) : c.onClient.length > 0))
-  const matching = groups.filter(has)
-  const first = matching.length || groups.length > 2 ? matching : groups
-  const rest = groups.filter((g) => !first.includes(g))
-  return (
-    <>
-      {first.length ? <ul className="cp-grid sd-pgrid">{first.map((g) => <ClientCard key={g.key} g={g} side={side} />)}</ul> : <p className="cp-quiet">{side === 'us' ? 'Nothing waiting on us here.' : 'Nothing waiting on them here.'}</p>}
-      {rest.length > 0 && (
-        <details className="ap-more">
-          <summary>Show {plural(rest.length, 'more client')} with nothing waiting on {side === 'us' ? 'us' : 'them'}</summary>
-          <div className="cp-more-list"><ul className="cp-grid sd-pgrid">{rest.map((g) => <ClientCard key={g.key} g={g} side={side} />)}</ul></div>
-        </details>
-      )}
-    </>
-  )
+  const sorted = [...groups.filter(has), ...groups.filter((g) => !has(g) && g.projects.length), ...groups.filter((g) => !g.projects.length)]
+  return <ul className="cp-grid sd-pgrid">{sorted.map((g) => <ClientCard key={g.key} g={g} side={side} />)}</ul>
 }
 
 /** The cards with something on this side first; the rest behind one "show more". */
@@ -266,21 +272,14 @@ export default async function Portals({ searchParams }: Props) {
         </section>
       )}
 
-      <details className="p-card a-bucket">
-        <summary className="a-card-head"><h2 className="a-h2">Paid and archived ({done.length})</h2></summary>
+      <section aria-labelledby="cp-done" className="stack ap-gap-4 cp-done-section">
+        <h2 id="cp-done" className="a-h2">Paid and archived</h2>
         {done.length ? (
-          <ul className="cp-done">
-            {done.map((d) => (
-              <li key={d.id}>
-                <Link className="a-strong-link" href={d.href}>{d.title}</Link>
-                <span className="muted small">{d.client} · {d.note}</span>
-              </li>
-            ))}
-          </ul>
+          <ul className="cp-grid sd-pgrid">{byClient([], done).map((g) => <ClientCard key={g.key} g={g} side={side} />)}</ul>
         ) : (
           <p className="muted small a-empty">Nothing paid or archived yet.</p>
         )}
-      </details>
+      </section>
     </div>
   )
 }
