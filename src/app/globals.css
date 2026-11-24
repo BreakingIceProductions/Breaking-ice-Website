@@ -1061,7 +1061,8 @@ body:has(.lightbox, .stills-lightbox) .back-top { visibility: hidden; }
 .proj-card-p { display: flex; flex-direction: column; height: 100%; border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-raised); color: var(--ink); text-decoration: none; transition: border-color .15s, transform .2s; }
 .proj-card-p:hover { border-color: var(--accent-fill); transform: translateY(-2px); }
 .proj-card-p:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.proj-thumb { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; background: var(--surface-inverse); overflow: hidden; }
+.proj-thumb { aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--ink) 7%, var(--surface-raised)); overflow: hidden; }
+:root[data-theme='dark'] .proj-thumb { background: var(--surface-inverse); }
 .proj-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .proj-body { display: flex; flex-direction: column; gap: 4px; padding: var(--space-5) var(--space-6) var(--space-6); }
 .proj-title { font-family: var(--font-display); font-stretch: 125%; font-size: 20px; line-height: 1.25; }
