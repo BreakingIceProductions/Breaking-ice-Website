@@ -22,8 +22,8 @@
 
 .admin {
   /* Surfaces */
-  --a-page: #f8f5ef;
-  --a-card: #fdfbf7;
+  --a-page: #f9f7f2;
+  --a-card: #f1ebe1;
   /* Text, strongest to faintest, then the hairline */
   --a-text: #18202f;
   --a-strong: #3a4456;

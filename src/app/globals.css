@@ -12,8 +12,8 @@
   --slate: #68748a;
   --mist: #dce1e6;
 
-  --surface: #ffffff;
-  --surface-raised: #faf7f2;
+  --surface: #f9f7f2;         /* light page: warm cream, not pure white */
+  --surface-raised: #f1ebe1;  /* raised panels: a deeper cream */
   --surface-inverse: #18202f;
   --ink: #18202f;
   --ink-muted: #4a5468;
@@ -27,7 +27,7 @@
   --line-dark: #3a4458;
   --shard-tone: #ede6db;
   --focus: #a85f2e;
-  --header-bg: rgba(255, 255, 255, .94);
+  --header-bg: rgba(249, 247, 242, .94);
   --input-line: #cfc8bc;
   --danger: #9b2c1f;
   --danger-bg: #fff6f3;
@@ -52,7 +52,7 @@
   --scrim-media: #0e131c;
   --shadow-film: 0 30px 70px -30px rgba(24, 32, 47, .35), 0 0 0 1px var(--line);
   /* Closing band: brand shard pattern fading into the page colour. */
-  --band-rgb: 255 255 255;
+  --band-rgb: 249 247 242;
   --band-tile: url('/brand/shard-field-warm.svg');
   /* One spacing value above and below every full-width divider. */
   --divider-gap: var(--section);
