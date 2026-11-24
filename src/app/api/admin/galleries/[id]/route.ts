@@ -51,11 +51,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (v === undefined) return bad('bad-date')
       patch[k] = v
     }
-    for (const k of ['clientId', 'projectId'] as const) {
-      if (!(k in body)) continue
-      const v = docId(body[k])
+    if ('projectId' in body) {
+      const v = docId(body.projectId)
       if (v === undefined) return bad()
-      patch[k] = v
+      patch.projectId = v
+    }
+    // Tags: clientIds is the list (the first is the primary). A lone clientId still works, as one tag.
+    if ('clientIds' in body) {
+      if (!Array.isArray(body.clientIds) || body.clientIds.length > 50) return bad()
+      const ids = body.clientIds.map(docId)
+      if (ids.some((v: string | undefined) => !v)) return bad()
+      patch.clientIds = ids as string[]
+    } else if ('clientId' in body) {
+      const v = docId(body.clientId)
+      if (v === undefined) return bad()
+      patch.clientIds = v ? [v] : []
     }
     if ('status' in body) {
       if (body.status !== 'draft' && body.status !== 'live') return bad()

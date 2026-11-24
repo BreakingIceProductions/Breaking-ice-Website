@@ -5,7 +5,7 @@ import { adminSampleMode } from '@/admin/config'
 import { portalClient } from '@/portal/data'
 import { portalReady } from '@/portal/config'
 import { sampleGallery } from './samples'
-import type { DownloadEvent, FavouriteList, Gallery, GalleryDownloads, GalleryPhoto, GallerySet, ViewerKind, Visit } from './types'
+import { galleryClientIds, type DownloadEvent, type FavouriteList, type Gallery, type GalleryDownloads, type GalleryPhoto, type GallerySet, type ViewerKind, type Visit } from './types'
 
 /**
  * Gallery records. Real ones are documents in the private portal dataset:
@@ -30,19 +30,33 @@ function mem(): Mem {
   return g.__biGalleries
 }
 
-const FIELDS = `_id, title, slug, date, clientId, "clientName": *[_type == "client" && _id == ^.clientId][0].organizationName, projectId,
+const FIELDS = `_id, title, slug, date, clientId, clientIds, "tagged": *[_type == "client" && _id in coalesce(^.clientIds, [^.clientId])]{_id, organizationName}, "clientName": *[_type == "client" && _id == ^.clientId][0].organizationName, projectId,
   "projectTitle": *[_type == "clientProject" && _id == ^.projectId][0].title, status, coverKey, sets, photos, share, downloads, expiresOn, message, originals, drive, createdAt`
-const LIST_FIELDS = `_id, title, slug, date, clientId, "clientName": *[_type == "client" && _id == ^.clientId][0].organizationName, projectId,
+const LIST_FIELDS = `_id, title, slug, date, clientId, clientIds, "tagged": *[_type == "client" && _id in coalesce(^.clientIds, [^.clientId])]{_id, organizationName}, "clientName": *[_type == "client" && _id == ^.clientId][0].organizationName, projectId,
   "projectTitle": *[_type == "clientProject" && _id == ^.projectId][0].title, status, coverKey, sets, "photos": photos[_key == ^.coverKey], "count": count(photos),
   "bytes": math::sum(photos[].size), share, downloads, expiresOn, createdAt`
 
-const normalize = (x: Partial<Gallery> & { _id: string }): Gallery => ({
+type Tagged = { tagged?: { _id: string; organizationName?: string }[] | null }
+
+/** clientIds is the tag list; clientId always its first entry. Older galleries only have clientId. */
+function tags(x: Partial<Gallery> & Tagged) {
+  const ids = [...new Set(galleryClientIds({ clientId: x.clientId || undefined, clientIds: x.clientIds ?? undefined }).filter(Boolean))]
+  const names = new Map((x.tagged ?? []).map((c) => [c._id, c.organizationName ?? '']))
+  const clientNames = x.tagged ? ids.map((id) => names.get(id)).filter((n): n is string => Boolean(n)) : x.clientNames
+  return {
+    clientId: ids[0],
+    clientIds: ids.length ? ids : undefined,
+    clientName: (x.tagged ? names.get(ids[0]) : undefined) || x.clientName || undefined,
+    clientNames: clientNames?.length ? clientNames : undefined,
+  }
+}
+
+const normalize = (x: Partial<Gallery> & Tagged & { _id: string }): Gallery => ({
   _id: x._id,
   title: x.title || 'Untitled gallery',
   slug: x.slug || x._id,
   date: x.date || undefined,
-  clientId: x.clientId || undefined,
-  clientName: x.clientName || undefined,
+  ...tags(x),
   projectId: x.projectId || undefined,
   projectTitle: x.projectTitle || undefined,
   status: x.status === 'live' ? 'live' : 'draft',
@@ -96,9 +110,9 @@ export async function getGalleryBySlug(slug: string): Promise<Gallery | null> {
 export async function galleriesForClients(clientIds: string[]): Promise<Gallery[]> {
   if (!clientIds.length) return []
   if (useMemory() || clientIds.every((c) => c.startsWith('sample-'))) {
-    return [...mem().galleries.values()].filter((x) => x.status === 'live' && (x.sample || (x.clientId && clientIds.includes(x.clientId))))
+    return [...mem().galleries.values()].filter((x) => x.status === 'live' && (x.sample || galleryClientIds(x).some((c) => clientIds.includes(c))))
   }
-  const rows = await q<Gallery[]>(`*[_type == "gallery" && status == "live" && clientId in $ids] | order(coalesce(date, createdAt) desc){${FIELDS}}`, { ids: clientIds })
+  const rows = await q<Gallery[]>(`*[_type == "gallery" && status == "live" && (clientId in $ids || count(clientIds[@ in $ids]) > 0)] | order(coalesce(date, createdAt) desc){${FIELDS}}`, { ids: clientIds })
   return (rows ?? []).map(normalize)
 }
 
@@ -106,7 +120,7 @@ export async function galleriesForClients(clientIds: string[]): Promise<Gallery[
 export async function countGalleriesForClients(clientIds: string[]): Promise<number> {
   if (!clientIds.length) return 0
   if (useMemory() || clientIds.every((c) => c.startsWith('sample-'))) return (await galleriesForClients(clientIds)).length
-  return (await q<number>(`count(*[_type == "gallery" && status == "live" && clientId in $ids])`, { ids: clientIds })) ?? 0
+  return (await q<number>(`count(*[_type == "gallery" && status == "live" && (clientId in $ids || count(clientIds[@ in $ids]) > 0)])`, { ids: clientIds })) ?? 0
 }
 
 /* ── Writing (admin) ───────────────────────────────────────────────────── */
@@ -124,7 +138,7 @@ export const slugify = (s: string) =>
 /** Readable, and random enough that nobody guesses another client's address. */
 export const newSlug = (title: string) => `${slugify(title)}-${randomBytes(5).toString('base64url').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) || rand(3)}`
 
-export type NewGallery = { title: string; date?: string; clientId?: string; projectId?: string; originals?: 'drive' | 'r2' }
+export type NewGallery = { title: string; date?: string; clientIds?: string[]; projectId?: string; originals?: 'drive' | 'r2' }
 
 export async function createGallery(input: NewGallery): Promise<Gallery> {
   const doc: Gallery = normalize({
@@ -133,7 +147,7 @@ export async function createGallery(input: NewGallery): Promise<Gallery> {
     title: input.title,
     slug: newSlug(input.title),
     date: input.date,
-    clientId: input.clientId,
+    clientIds: input.clientIds?.length ? input.clientIds : undefined,
     projectId: input.projectId,
     status: 'draft',
     sets: [{ _key: newKey(), title: 'Highlights' }],
@@ -147,12 +161,14 @@ export async function createGallery(input: NewGallery): Promise<Gallery> {
     mem().galleries.set(doc._id, doc)
     return doc
   }
-  const { clientName: _c, projectTitle: _p, sample: _s, ...stored } = doc
+  const { clientName: _c, clientNames: _cn, projectTitle: _p, sample: _s, ...stored } = doc
   await portalClient.create({ ...stored, _type: 'gallery' })
   return doc
 }
 
-export type GalleryPatch = Partial<Pick<Gallery, 'title' | 'date' | 'clientId' | 'projectId' | 'status' | 'coverKey' | 'expiresOn' | 'message' | 'slug'>> & {
+export type GalleryPatch = Partial<Pick<Gallery, 'title' | 'date' | 'projectId' | 'status' | 'coverKey' | 'expiresOn' | 'message' | 'slug'>> & {
+  /** The full tag list; the first becomes clientId. An empty list clears both. */
+  clientIds?: string[]
   downloads?: Partial<GalleryDownloads>
   shareOn?: boolean
 }
@@ -161,11 +177,18 @@ export type GalleryPatch = Partial<Pick<Gallery, 'title' | 'date' | 'clientId' |
 export async function updateGallery(id: string, patch: GalleryPatch) {
   const set: Record<string, unknown> = {}
   const unset: string[] = []
-  for (const k of ['title', 'date', 'clientId', 'projectId', 'status', 'coverKey', 'expiresOn', 'message', 'slug'] as const) {
+  for (const k of ['title', 'date', 'projectId', 'status', 'coverKey', 'expiresOn', 'message', 'slug'] as const) {
     if (!(k in patch)) continue
     const v = patch[k]
     if (v === '' || v === undefined || v === null) unset.push(k)
     else set[k] = v
+  }
+  if (patch.clientIds) {
+    const ids = [...new Set(patch.clientIds.filter(Boolean))]
+    if (ids.length) {
+      set.clientIds = ids
+      set.clientId = ids[0]
+    } else unset.push('clientIds', 'clientId')
   }
   if (patch.downloads) for (const [k, v] of Object.entries(patch.downloads)) if (typeof v === 'boolean') set[`downloads.${k}`] = v
   if (typeof patch.shareOn === 'boolean') set['share.on'] = patch.shareOn
@@ -175,7 +198,10 @@ export async function updateGallery(id: string, patch: GalleryPatch) {
     const next: Gallery = { ...cur, downloads: { ...cur.downloads, ...patch.downloads }, share: { ...cur.share, ...(typeof patch.shareOn === 'boolean' ? { on: patch.shareOn } : {}) } }
     for (const [k, v] of Object.entries(set)) if (!k.includes('.')) (next as Record<string, unknown>)[k] = v
     for (const k of unset) delete (next as Record<string, unknown>)[k]
-    if (patch.clientId !== undefined) next.clientName = undefined
+    if (patch.clientIds) {
+      next.clientName = undefined
+      next.clientNames = undefined
+    }
     mem().galleries.set(id, next)
     return
   }

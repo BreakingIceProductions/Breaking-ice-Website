@@ -24,7 +24,7 @@ export function NewGalleryForm({ clients, projects, disabled }: { clients: Clien
     setBusy(true)
     setMsg('')
     try {
-      const r = await fetch('/api/admin/galleries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, date, clientId, projectId }) })
+      const r = await fetch('/api/admin/galleries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, date, clientIds: clientId ? [clientId] : [], projectId }) })
       const j = (await r.json().catch(() => ({}))) as { ok?: boolean; id?: string; error?: string }
       if (!r.ok || !j.id) {
         setBusy(false)

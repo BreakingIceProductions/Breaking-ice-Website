@@ -8,7 +8,7 @@ import { listClients, listProjects } from '@/admin/data'
 import { folderUrl } from '@/galleries/drive'
 import { viewUrl } from '@/galleries/files'
 import { galleriesSampleMode, getGallery, listFavourites, listVisits } from '@/galleries/store'
-import { formatBytes } from '@/galleries/types'
+import { formatBytes, galleryClientIds } from '@/galleries/types'
 import { DangerZone } from '@/galleries/ui/admin-copy'
 import { PhotoGrid, type AdminPhoto } from '@/galleries/ui/admin-grid'
 import { GalleryHeader } from '@/galleries/ui/admin-header'
@@ -44,7 +44,10 @@ export default async function GalleryPage({ params }: { params: Promise<{ id: st
   for (const p of photos) counts[p.set] = (counts[p.set] ?? 0) + 1
   const bytes = g.photos.reduce((n, p) => n + p.size, 0)
 
-  const client = clients.find((c) => c._id === g.clientId)
+  const tagged = galleryClientIds(g).map((id) => clients.find((c) => c._id === id)).filter((c): c is (typeof clients)[number] => Boolean(c))
+  // The handover email is one draft with everyone in To:, so it goes to the primary client only.
+  // A gallery sold to several clients mustn't show one client's contacts to another.
+  const client = tagged[0]
   const recipients: Recipient[] = (client?.contacts ?? []).filter((c) => c.email).map((c) => ({ name: c.name, email: c.email }))
   if (!recipients.length && client?.billingEmail) recipients.push({ email: client.billingEmail })
   const clientOptions = clients.map((c) => ({ id: c._id, name: c.organizationName })).sort((a, b) => a.name.localeCompare(b.name))
@@ -82,9 +85,9 @@ export default async function GalleryPage({ params }: { params: Promise<{ id: st
         id={g._id}
         title={g.title}
         date={g.date}
-        clientId={g.clientId}
+        clientIds={galleryClientIds(g)}
         projectId={g.projectId}
-        clientName={g.clientName ?? client?.organizationName}
+        clientNames={g.clientNames ?? tagged.map((c) => c.organizationName)}
         projectTitle={g.projectTitle}
         status={g.status}
         shareOn={g.share.on}

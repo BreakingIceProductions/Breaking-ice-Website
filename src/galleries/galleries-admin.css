@@ -192,3 +192,15 @@
 .ga-grid-wrap > .a-card-head { justify-content: flex-start; gap: var(--space-3); }
 .ga-page-one .ga-head-side { align-items: flex-start; }
 .ga-page-one .ga-status, .ga-page-one .ga-head-links { justify-content: flex-start; }
+
+/* Clients tag field: chips for every client the gallery shows for, then a box to add one */
+.ga-ctags { display: flex; flex-direction: column; gap: var(--space-2); }
+.ga-ctag-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ga-ctag-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 0 4px 0 10px; border: 1px solid var(--a-hairline-strong); border-radius: var(--radius-pill); background: var(--a-tint); color: var(--a-strong); font-size: var(--a-fs-body); font-weight: 600; }
+.ga-ctag-x { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
+.ga-ctag-x:hover { background: var(--a-hairline); }
+.ga-ctag-x:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.ga-ctags-box { position: relative; }
+.ga-ctags-list { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; right: 0; max-height: 260px; overflow: auto; list-style: none; margin: 0; padding: 4px; background: var(--a-card); border: 1px solid var(--a-hairline-strong); border-radius: var(--a-radius-in); box-shadow: 0 12px 30px -12px rgba(0, 0, 0, .35); }
+.ga-ctags-list li { padding: 8px 10px; border-radius: var(--a-radius-in); cursor: pointer; font-size: var(--a-fs-body); color: var(--a-text); }
+.ga-ctags-list li.on { background: var(--a-tint); color: var(--a-strong); }

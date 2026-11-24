@@ -5,7 +5,7 @@ import { adminSampleMode } from '@/admin/config'
 import { listClients, listProjects } from '@/admin/data'
 import { viewUrl } from '@/galleries/files'
 import { galleriesSampleMode, listGalleries } from '@/galleries/store'
-import { daysLeft, formatBytes, isExpired } from '@/galleries/types'
+import { daysLeft, formatBytes, galleryClientIds, isExpired } from '@/galleries/types'
 import { fmtDay } from '@/galleries/ui/admin-api'
 import { NewGalleryForm } from '@/galleries/ui/admin-new-gallery'
 import '@/galleries/galleries-admin.css'
@@ -48,7 +48,9 @@ export default async function Galleries() {
               const left = daysLeft(g)
               const closed = isExpired(g)
               const soon = !closed && left !== null && left <= 7
-              const client = g.clientName ?? (g.clientId ? clientName.get(g.clientId) : undefined)
+              // Every tagged client, primary first.
+              const names = g.clientNames?.length ? g.clientNames : galleryClientIds(g).map((id) => clientName.get(id)).filter(Boolean)
+              const client = names.length ? names.join(', ') : g.clientName
               return (
                 <li key={g._id} className="p-card ga-item">
                   <Link href={`/admin/galleries/${g._id}`} className="ga-item-cover" tabIndex={-1} aria-hidden="true">

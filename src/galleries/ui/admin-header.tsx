@@ -6,14 +6,16 @@ import { useState } from 'react'
 import { useConfirm } from '@/admin/ui/confirm'
 import { errorText, fmtDay, galleryAction } from './admin-api'
 import type { ClientOption, ProjectOption } from './admin-new-gallery'
+import { ClientTags } from './client-tags'
 
 type Props = {
   id: string
   title: string
   date?: string
-  clientId?: string
+  /** Every tagged client; the first is the primary. */
+  clientIds: string[]
   projectId?: string
-  clientName?: string
+  clientNames?: string[]
   projectTitle?: string
   status: 'draft' | 'live'
   shareOn: boolean
@@ -33,20 +35,21 @@ export function GalleryHeader(p: Props) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(p.title)
   const [date, setDate] = useState(p.date ?? '')
-  const [clientId, setClientId] = useState(p.clientId ?? '')
+  const [clientIds, setClientIds] = useState<string[]>(p.clientIds)
+  const clientId = clientIds[0] ?? ''
   const [projectId, setProjectId] = useState(p.projectId ?? '')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const confirm = useConfirm()
   const theirProjects = p.projects.filter((x) => x.clientId === clientId)
-  const clientLabel = p.clientName ?? p.clients.find((c) => c.id === p.clientId)?.name
+  const clientLabel = (p.clientNames?.length ? p.clientNames : p.clientIds.map((id) => p.clients.find((c) => c.id === id)?.name).filter(Boolean)).join(', ') || undefined
   const projectLabel = p.projectTitle ?? p.projects.find((x) => x.id === p.projectId)?.title
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) return setMsg('The gallery needs a title.')
     setBusy(true)
-    const r = await galleryAction(p.id, { action: 'update', title, date, clientId, projectId })
+    const r = await galleryAction(p.id, { action: 'update', title, date, clientIds, projectId })
     setBusy(false)
     if (!r.ok) return setMsg(errorText(r))
     setMsg('')
@@ -114,26 +117,22 @@ export function GalleryHeader(p: Props) {
               <input id="ga-d-date" className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="ga-d-client">Client</label>
-              <select
+              <label htmlFor="ga-d-client">Clients <span className="muted small">(shows in each one’s portal)</span></label>
+              <ClientTags
                 id="ga-d-client"
-                className="input"
-                value={clientId}
-                onChange={(e) => {
-                  setClientId(e.target.value)
-                  setProjectId('')
+                clients={p.clients}
+                value={clientIds}
+                onChange={(next) => {
+                  // The project list follows the first client: clear the project if it no longer belongs.
+                  if (next[0] !== clientId && !p.projects.some((x) => x.id === projectId && x.clientId === next[0])) setProjectId('')
+                  setClientIds(next)
                 }}
-              >
-                <option value="">No client</option>
-                {p.clients.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              />
             </div>
             <div className="field">
               <label htmlFor="ga-d-project">Project <span className="muted small">(optional)</span></label>
               <select id="ga-d-project" className="input" value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={!clientId || !theirProjects.length}>
-                <option value="">{theirProjects.length ? 'None' : 'No projects for this client'}</option>
+                <option value="">{!clientId ? 'Tag a client first' : theirProjects.length ? 'None' : 'No projects for the first client'}</option>
                 {theirProjects.map((x) => (
                   <option key={x.id} value={x.id}>{x.title}</option>
                 ))}

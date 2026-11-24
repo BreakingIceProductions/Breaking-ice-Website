@@ -60,9 +60,13 @@ export type Gallery = {
   slug: string
   /** Shoot date, YYYY-MM-DD. */
   date?: string
-  /** client document id: shows in that client's portal. */
+  /** The primary client (first tag): its Drive folder and project list are used. Always clientIds[0] when that's set. */
   clientId?: string
   clientName?: string
+  /** Every client the gallery is tagged with: it shows in each of their portals. Older galleries only have clientId. */
+  clientIds?: string[]
+  /** Names of the tagged clients, in tag order (read-only, from the query). */
+  clientNames?: string[]
   /** clientProject id, optional. */
   projectId?: string
   projectTitle?: string
@@ -201,3 +205,6 @@ export function daysLeft(g: Pick<Gallery, 'expiresOn'>, now = new Date()) {
 
 export const formatBytes = (n: number) =>
   n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} GB` : n >= 1024 ** 2 ? `${Math.round(n / 1024 ** 2)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`
+
+/** The clients a gallery is tagged with: clientIds when set, otherwise the single clientId (older galleries). */
+export const galleryClientIds = (g: Pick<Gallery, 'clientId' | 'clientIds'>): string[] => (g.clientIds ? g.clientIds : g.clientId ? [g.clientId] : [])

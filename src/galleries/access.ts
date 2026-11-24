@@ -7,7 +7,7 @@ import { sessionSecret } from '@/portal/config'
 import { getAccess } from '@/portal/data'
 import { viewUrl } from './files'
 import { getFavourites, getGallery, getGalleryBySlug, useMemory, type Who } from './store'
-import { isExpired, type Gallery, type GalleryView, type GalleryViewer, zipParts } from './types'
+import { galleryClientIds, isExpired, type Gallery, type GalleryView, type GalleryViewer, zipParts } from './types'
 
 /**
  * Who may open a gallery, and as whom:
@@ -99,8 +99,10 @@ export async function resolveGallery(via: unknown, ref: unknown, req?: Request):
     const gallery = await getGallery(ref)
     if (!gallery || gallery.status !== 'live') return { denied: 'not-found' }
     const access = await getAccess(session)
-    const ids = access.clients.map((c) => c._id)
-    const mine = gallery.sample ? Boolean(session.demo) || useMemory() : Boolean(gallery.clientId && ids.includes(gallery.clientId))
+    // Any of the gallery's tagged clients will do; the label is the session's own client that matched.
+    const tagged = galleryClientIds(gallery)
+    const matched = access.clients.find((c) => tagged.includes(c._id))
+    const mine = gallery.sample ? Boolean(session.demo) || useMemory() : Boolean(matched)
     if (!mine) return { denied: 'not-found' }
     if (isExpired(gallery)) return { denied: 'closed', gallery }
     const contact = access.clients.flatMap((c) => c.contacts ?? []).find((c) => c.email.toLowerCase() === session.email.toLowerCase())
@@ -111,7 +113,7 @@ export async function resolveGallery(via: unknown, ref: unknown, req?: Request):
       gallery,
       via,
       ref,
-      org: access.clients.find((c) => c._id === gallery.clientId)?.organizationName ?? gallery.clientName,
+      org: matched?.organizationName ?? gallery.clientName,
       viewer: { kind: 'client', name, email: session.email, canFavourite: !preview },
       who: preview ? null : { kind: 'client', name, email: session.email, id: session.email },
       readOnly,

@@ -13,9 +13,11 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const title = str(body.title, 140)
   const date = body.date ? day(body.date) : ''
-  const clientId = body.clientId ? docId(body.clientId) : ''
+  // The form sends clientIds: [clientId]; a bare clientId still works.
+  const raw: unknown[] = Array.isArray(body.clientIds) ? body.clientIds.slice(0, 50) : body.clientId ? [body.clientId] : []
+  const clientIds = raw.map(docId)
   const projectId = body.projectId ? docId(body.projectId) : ''
-  if (!title || date === undefined || clientId === undefined || projectId === undefined) return json({ ok: false, error: 'invalid' }, 400)
-  const g = await createGallery({ title, date: date || undefined, clientId: clientId || undefined, projectId: projectId || undefined, originals: driveOriginalsReady() ? 'drive' : 'r2' })
+  if (!title || date === undefined || clientIds.some((c) => !c) || projectId === undefined) return json({ ok: false, error: 'invalid' }, 400)
+  const g = await createGallery({ title, date: date || undefined, clientIds: clientIds as string[], projectId: projectId || undefined, originals: driveOriginalsReady() ? 'drive' : 'r2' })
   return json({ ok: true, id: g._id })
 }
