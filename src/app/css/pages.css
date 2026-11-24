@@ -82,16 +82,16 @@
 .home-hero:has(+ .home-logos) { padding-bottom: var(--space-16); }
 
 /* Story Kit segments: the copper lead card and six cards in one row on a brand surface with a faint shard pattern.
-   Light theme: warm light surface, navy shards at a whisper, white cards. Dark theme: deep navy band, navy cards.
+   Light theme: cream page surface, navy shards at a whisper, white cards a step lighter. Dark theme: near-black navy band, lighter navy cards.
    The picture areas stay a dark stage in both, so the mockups read the same. */
 .filmstrip-band {
-  --fs-frame: var(--surface-raised);
+  --fs-frame: #fff;
   --fs-frame-line: var(--line);
   --fs-text: var(--ink);
   --fs-muted: var(--ink-muted);
   --fs-num: var(--accent);
   padding: var(--section) 0; overflow: hidden;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cg fill='%2318202f' fill-opacity='.035'%3E%3Cpolygon points='4,4 14,4 14,19 4,26'/%3E%3Cpolygon points='18,4 28,4 28,19 18,26'/%3E%3Cpolygon points='36,36 46,36 46,51 36,58'/%3E%3Cpolygon points='50,36 60,36 60,51 50,58'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 64px 64px repeat, var(--surface-raised);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cg fill='%2318202f' fill-opacity='.035'%3E%3Cpolygon points='4,4 14,4 14,19 4,26'/%3E%3Cpolygon points='18,4 28,4 28,19 18,26'/%3E%3Cpolygon points='36,36 46,36 46,51 36,58'/%3E%3Cpolygon points='50,36 60,36 60,51 50,58'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 64px 64px repeat, var(--surface);
 }
 :root[data-theme='dark'] .filmstrip-band {
   --fs-frame: #222b3d;
@@ -99,7 +99,7 @@
   --fs-text: var(--ink-inverse);
   --fs-muted: var(--ink-inverse-muted);
   --fs-num: var(--accent-on-dark);
-  background: radial-gradient(ellipse 80% 70% at 50% 55%, rgb(15 21 32 / .68), rgb(15 21 32 / .93)), url('/brand/shard-field-deep.svg') 0 0 / 64px 64px repeat, #0f1520;
+  background: radial-gradient(ellipse 80% 70% at 50% 55%, rgb(9 13 20 / .82), rgb(9 13 20 / .97)), url('/brand/shard-field-deep.svg') 0 0 / 64px 64px repeat, #090d14;
 }
 .filmstrip-band .sec-head { margin-bottom: var(--space-12); }
 .fs-scroller { padding: 0 var(--gutter); }
