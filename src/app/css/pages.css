@@ -159,6 +159,12 @@
 .mk-row + .mk-row { border-top: 1px solid rgb(24 32 47 / .12); }
 .mk-what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 4.6cqw; line-height: 1.2; color: rgb(24 32 47 / .78); }
 .mk-what b { color: var(--navy); font-weight: 700; }
+.mk-plan { background: #fff; box-shadow: 0 1.5cqw 4cqw rgb(24 32 47 / .18); }
+/* Dark mode: the rollout plan turns into a dark panel, like the rest of the site. */
+:root[data-theme='dark'] .mk-plan { background: #222b3d; color: var(--ink-inverse); box-shadow: 0 0 0 1px rgb(250 247 242 / .08), 0 2cqw 5cqw rgb(0 0 0 / .5); }
+:root[data-theme='dark'] .mk-row + .mk-row { border-top-color: rgb(250 247 242 / .1); }
+:root[data-theme='dark'] .mk-what { color: rgb(250 247 242 / .7); }
+:root[data-theme='dark'] .mk-what b { color: var(--warm-white); }
 .mk-week { flex: none; padding: .7cqw 2.2cqw; border-radius: 9px; background: var(--accent-fill); color: var(--on-accent); font-size: 4cqw; line-height: 1.2; font-weight: 700; white-space: nowrap; }
 /* A small lift on hover, desktop only and never for reduced motion. */
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
