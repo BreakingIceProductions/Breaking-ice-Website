@@ -728,6 +728,44 @@ textarea.input { min-height: 160px; resize: vertical; }
 /* The popover list is not a timeline row. */
 .stagebar.stagemap .sm-pop li { display: block; }
 
+/* ── Portal home timeline, refined: one hairline through round nodes, a slim count pill on a stem ── */
+.stagebar.stagemap { gap: 0; }
+.stagebar.stagemap > li { align-items: center; text-align: center; gap: 0; padding: 0 6px; }
+/* The line: each stage draws its share, so it runs unbroken from the first node to the last. */
+.stagebar.stagemap > li::before { content: ''; position: absolute; top: 47px; left: 0; right: 0; height: 2px; background: var(--line); }
+.stagebar.stagemap > li:first-child::before { left: 50%; }
+.stagebar.stagemap > li:last-child::before { right: 50%; }
+.stagebar.stagemap .bar { position: relative; z-index: 1; width: 12px; height: 12px; flex: none; border-radius: 50%; background: var(--surface-raised); border: 2px solid color-mix(in srgb, var(--ink) 22%, transparent); }
+.stagebar.stagemap .has .bar { background: var(--accent-fill); border-color: var(--accent-fill); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent-fill) 16%, transparent); }
+.stagebar.stagemap .n { margin-top: 14px; font-size: 11px; letter-spacing: .14em; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--ink-muted) 80%, transparent); }
+.stagebar.stagemap .has .n { color: var(--accent); }
+.stagebar.stagemap .name { margin-top: 2px; font-family: var(--font-sans); font-stretch: 100%; font-weight: 600; font-size: 14px; line-height: 1.3; letter-spacing: 0; text-wrap: balance; color: var(--ink); }
+.stagebar.stagemap .empty .name { font-weight: 500; color: var(--ink-muted); }
+.stagemap .sm-slot { height: 42px; padding-bottom: 0; }
+.stagemap .sm-mark { padding-bottom: 12px; }
+.stagemap .sm-btn { min-width: 26px; height: 26px; padding: 0 9px; background: var(--ink); color: var(--surface); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; box-shadow: 0 6px 14px -8px rgb(var(--inverse-rgb) / .55); transition: transform .15s ease, background-color .15s ease; }
+.stagemap .sm-btn:hover, .stagemap .sm-mark:focus-within .sm-btn { transform: translateY(-1px); background: var(--accent-fill); color: var(--on-accent); }
+/* A hairline stem down to the node, instead of a caret. */
+.stagemap .sm-btn::after { border: 0; top: 100%; bottom: auto; left: 50%; transform: translateX(-50%); width: 1px; height: 12px; background: color-mix(in srgb, var(--ink) 35%, transparent); }
+.stagemap .sm-pop { top: calc(100% + 4px); border-radius: 14px; padding: 10px 14px; }
+:root[data-theme='dark'] .stagemap .sm-btn { background: var(--accent-fill); color: var(--on-accent); }
+:root[data-theme='dark'] .stagemap .sm-btn:hover, :root[data-theme='dark'] .stagemap .sm-mark:focus-within .sm-btn { background: var(--copper-light); }
+@media (prefers-reduced-motion: reduce) { .stagemap .sm-btn { transition: none; } .stagemap .sm-btn:hover { transform: none; } }
+@media (max-width: 560px) {
+  /* Phones: the same idea turned on its side. A vertical hairline through the nodes, count on the right. */
+  .stagebar.stagemap { gap: 0; }
+  .stagebar.stagemap > li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; column-gap: 14px; align-items: center; text-align: left; padding: 8px 0; }
+  .stagebar.stagemap > li::before { top: 0; bottom: 0; left: 5px; right: auto; width: 2px; height: auto; }
+  .stagebar.stagemap > li:first-child::before { top: 50%; left: 5px; }
+  .stagebar.stagemap > li:last-child::before { bottom: 50%; right: auto; }
+  .stagebar.stagemap .bar { grid-column: 1; grid-row: 1 / span 2; width: 12px; height: 12px; }
+  .stagebar.stagemap .n { grid-column: 2; margin-top: 0; }
+  .stagebar.stagemap .name { grid-column: 2; margin-top: 0; }
+  .stagemap .sm-slot { grid-column: 3; grid-row: 1 / span 2; height: auto; padding: 0; align-items: center; }
+  .stagemap .sm-mark { padding-bottom: 0; }
+  .stagemap .sm-btn::after { display: none; }
+}
+
 /* Sidebar bits */
 .producer { display: flex; gap: var(--space-4); align-items: center; }
 .producer img, .avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; }
