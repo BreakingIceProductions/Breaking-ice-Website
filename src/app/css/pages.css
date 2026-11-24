@@ -85,7 +85,7 @@
    Light theme: warm light surface, navy shards at a whisper, white cards. Dark theme: deep navy band, navy cards.
    The picture areas stay a dark stage in both, so the mockups read the same. */
 .filmstrip-band {
-  --fs-frame: var(--surface);
+  --fs-frame: var(--surface-raised);
   --fs-frame-line: var(--line);
   --fs-text: var(--ink);
   --fs-muted: var(--ink-muted);
