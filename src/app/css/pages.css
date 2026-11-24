@@ -218,7 +218,7 @@
 :root[data-theme='dark'] .fit-band { background: var(--surface-inverse); }
 .fit-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--space-16); align-items: start; }
 .fit-grid .sec-head { margin-bottom: 0; }
-.fit-card { --fit-ink: var(--navy); --fit-muted: rgb(24 32 47 / .74); --fit-line: rgb(24 32 47 / .12); padding: var(--space-8); background: #fff; color: var(--fit-ink); border-radius: var(--radius-lg); box-shadow: var(--shadow-film); }
+.fit-card { --fit-ink: var(--navy); --fit-muted: rgb(24 32 47 / .74); --fit-line: rgb(24 32 47 / .12); padding: var(--space-8); background: var(--surface-raised); color: var(--fit-ink); border-radius: var(--radius-lg); box-shadow: var(--shadow-film); }
 :root[data-theme='dark'] .fit-card { background: var(--warm-white); box-shadow: none; }
 .fit-list { list-style: none; margin: 0; padding: 0; }
 .fit-list li + li { border-top: 1px solid var(--fit-line); }
