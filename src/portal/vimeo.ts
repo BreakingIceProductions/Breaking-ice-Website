@@ -163,12 +163,15 @@ export async function checkVimeoCopies(p: ClientProject, log: string[]) {
   for (const d of p.deliverables ?? []) {
     if (d.vimeoState !== 'uploading' || !d.vimeoUri) continue
     try {
-      const v = await vimeo<{ upload?: { status?: string }; transcode?: { status?: string } }>(`${d.vimeoUri}?fields=transcode.status,upload.status`)
+      const v = await vimeo<{ upload?: { status?: string }; transcode?: { status?: string }; pictures?: { base_link?: string } }>(`${d.vimeoUri}?fields=transcode.status,upload.status,pictures.base_link`)
       if (v.upload?.status === 'error' || v.transcode?.status === 'error') {
         await saveCopy(p._id, d._key, { vimeoState: 'failed', vimeoError: v.upload?.status === 'error' ? 'Vimeo couldn’t fetch the file.' : 'Vimeo couldn’t process the file.' })
         log.push(`vimeo copy failed: ${p.title} / ${d.title}`)
       } else if (v.upload?.status === 'complete' && v.transcode?.status === 'complete') {
         await saveCopy(p._id, d._key, { vimeoState: 'ready' })
+        // Its thumbnail too, kept where syncVimeo keeps them, so it shows like any Vimeo video's (a ProRes delivery has no other).
+        const picture = thumb(v.pictures?.base_link)
+        if (picture) await updateDeliverableState(p._id, d._key, { vimeoThumb: picture })
         log.push(`vimeo copy ready: ${p.title} / ${d.title}`)
       }
     } catch (e) {

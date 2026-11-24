@@ -69,6 +69,16 @@ export function isLatest(d: Deliverable, all: Deliverable[] = []) {
 export const clientCanOpen = (d: Deliverable, all: Deliverable[] = []) => d.status !== 'in-progress' && (isLatest(d, all) || Boolean(d.clientCanView))
 
 /** Next version number for a title, and the title as already written (so "poster" joins "Poster"). */
+/** Plays in our own review room: stored in R2 and playable in a browser (a ProRes delivery isn't). */
+export const inReviewRoom = (d: Pick<Deliverable, 'host' | 'playable'>) => d.host === 'r2' && d.playable !== false
+
+/** A file the browser can't play: download only, and the preview is its Vimeo copy once that's ready. */
+export const needsVimeoPreview = (d: Pick<Deliverable, 'host' | 'playable'>) => d.host === 'r2' && d.playable === false
+
+/** Where "Watch video" goes outside the review room: the Vimeo player or link, or a ProRes delivery's ready Vimeo copy. */
+export const watchLink = (d: Pick<Deliverable, 'host' | 'playable' | 'vimeoEmbed' | 'shareUrl' | 'vimeoUrl' | 'vimeoState'>) =>
+  needsVimeoPreview(d) ? (d.vimeoState === 'ready' ? d.vimeoUrl : undefined) : (d.vimeoEmbed ?? d.shareUrl)
+
 /** Final videos of a delivered project can be downloaded (the file comes from Final Files, Vimeo or the review copy). */
 export const canDownloadVideo = (p: { status?: string; deliverables?: Deliverable[] }, d: Deliverable) =>
   p.status === 'delivered' && Boolean(d.final) && categoryOf(d) === 'video' && Boolean(d.shareUrl || d.r2Key) && clientCanOpen(d, p.deliverables)

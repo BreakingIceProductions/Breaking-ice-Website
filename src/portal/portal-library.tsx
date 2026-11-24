@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from './file-icon'
 import { Finder } from './finder'
-import { canDownloadVideo, categoryOf, clientCanOpen, FINALS, projectNode, REFERENCE, resolvePath, versionLabel } from './library'
+import { canDownloadVideo, categoryOf, clientCanOpen, FINALS, inReviewRoom, needsVimeoPreview, projectNode, REFERENCE, resolvePath, versionLabel, watchLink } from './library'
 import { fmtSize } from './resumable'
 import { FinalFiles } from './delivery'
 import { DocLightbox, FeedbackButtons, FeedbackList, ReviewThumb, VersionHead, WatchTile } from './review-ui'
@@ -95,7 +95,7 @@ function Library({ projects, single, demo, uploaderName, viewOnly = false }: Lib
 
   // A video in our own review room plays full width under the columns.
   const picked = project && (at.version ?? (at.group ? [...at.group.versions].reverse().find((v) => clientCanOpen(v, project.deliverables)) : undefined))
-  const room = project && picked && picked.host === 'r2' && clientCanOpen(picked, project.deliverables) ? picked : undefined
+  const room = project && picked && inReviewRoom(picked) && clientCanOpen(picked, project.deliverables) ? picked : undefined
 
   return (
     <>
@@ -125,10 +125,11 @@ function Library({ projects, single, demo, uploaderName, viewOnly = false }: Lib
 
 function VersionPanel({ project, d, uploaderName = '' }: { project: ClientProject; d: Deliverable; uploaderName?: string }) {
   const video = categoryOf(d) === 'video'
-  const inRoom = video && d.host === 'r2'
+  const inRoom = video && inReviewRoom(d)
+  const preparing = video && needsVimeoPreview(d) && !watchLink(d)
   const base = `/api/portal/review/${d._key}?project=${encodeURIComponent(project.slug)}`
   const comments = d.vimeoReview ?? d.shareUrl
-  const watch = d.vimeoEmbed ?? d.shareUrl
+  const watch = watchLink(d)
   const waiting = d.status === 'awaiting-feedback'
   const docExt = d.fileName?.split('.').pop()
   const docKind = fileKind({ name: d.fileName })
@@ -140,7 +141,11 @@ function VersionPanel({ project, d, uploaderName = '' }: { project: ClientProjec
       {inRoom ? (
         <a className="btn btn-primary btn-sm" href="#review-room">Watch and comment <span aria-hidden="true">↓</span></a>
       ) : video ? (
-        watch && <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={`${d.title}, ${versionLabel(d)}`} />
+        watch ? (
+          <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={`${d.title}, ${versionLabel(d)}`} />
+        ) : preparing ? (
+          <p className="muted small" style={{ margin: 0 }}>Preparing a preview. It shows up here soon; the file downloads now.</p>
+        ) : null
       ) : d.fileUrl ? (
         <button type="button" className="review-thumb doc-tile" onClick={() => setViewing(true)} aria-label={`View ${d.title}`}>
           <ReviewThumb src={`${base}&mode=preview`} kind={docKind} ext={docExt} />

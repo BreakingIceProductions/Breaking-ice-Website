@@ -8,7 +8,7 @@ import { requireAdmin } from '@/admin/auth'
 import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import { getProject } from '@/admin/data'
 import { ShareControl } from '@/admin/ui/share-control'
-import { versionLabel, versionPath } from '@/portal/library'
+import { needsVimeoPreview, versionLabel, versionPath } from '@/portal/library'
 import { ReviewRoom } from '@/portal/review-room'
 
 type Props = { params: Promise<{ projectId: string; deliverableKey: string }> }
@@ -42,7 +42,9 @@ export default async function AdminReview({ params }: Props) {
         </div>
       </header>
 
-      {d.host === 'r2' ? (
+      {needsVimeoPreview(d) ? (
+        <p className="muted">This file won’t play in a browser (often ProRes), so it has no review room. The client downloads it from the portal{d.vimeoState === 'ready' && d.vimeoUrl ? <>, and the preview is <a href={d.vimeoUrl} target="_blank" rel="noopener noreferrer">its copy on Vimeo ↗</a></> : ''}.</p>
+      ) : d.host === 'r2' ? (
         <>
           <ReviewRoom
             via="admin"

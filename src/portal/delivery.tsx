@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from './file-icon'
-import { canDownloadVideo, groupDeliverables, isVideoFile, LARGE_FILE, matchFinalFile } from './library'
+import { canDownloadVideo, groupDeliverables, isVideoFile, LARGE_FILE, matchFinalFile, needsVimeoPreview, watchLink } from './library'
 import { fmtSize } from './resumable'
 import { WatchTile } from './review-ui'
 import type { ClientProject, DriveFile } from './types'
@@ -31,11 +31,11 @@ export function Delivery({ project, demo }: { project: ClientProject; demo: bool
       {finals.length > 0 && (
         <ul className="p-delivery-films">
           {finals.map((d) => {
-            const watch = d.vimeoEmbed ?? d.shareUrl
+            const watch = watchLink(d)
             const file = onCards.get(d._key)
             return (
               <li key={d._key} className="p-delivery-film">
-                {watch && <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={d.title} />}
+                {watch ? <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={d.title} /> : needsVimeoPreview(d) ? <span className="muted small">Preparing a preview</span> : null}
                 <div className="stack" style={{ gap: 'var(--space-1)', minWidth: 0 }}>
                   <span className="fname">{d.title}</span>
                   {d.length && <span className="muted small">{d.length}</span>}

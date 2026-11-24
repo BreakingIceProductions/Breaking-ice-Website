@@ -33,7 +33,7 @@ import { invoiceUrl, zohoConnection } from '@/admin/zoho'
 import { SITE_URL } from '@/lib/site'
 import { stripeReady } from '@/portal/config'
 import { getPortalSettings } from '@/portal/data'
-import { categoryOf, isLatest, versionLabel, versionPath } from '@/portal/library'
+import { categoryOf, inReviewRoom, isLatest, needsVimeoPreview, versionLabel, versionPath, watchLink } from '@/portal/library'
 import { paymentsForProject, stripeTestMode } from '@/portal/payments'
 import type { PortalPayment } from '@/portal/types'
 import { listRequests, listTemplates } from '@/portal/sign-store'
@@ -178,7 +178,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
 
   // The one thing to do next, while the stage still has steps open (once they're ticked, Next up offers the move).
   const stepsOpen = checklist(p).some((c) => !c.done)
-  const reviewable = p.deliverables.find((d) => d.host === 'r2' && d.openComments) ?? p.deliverables.find((d) => d.host === 'r2')
+  const reviewable = p.deliverables.find((d) => inReviewRoom(d) && d.openComments) ?? p.deliverables.find((d) => inReviewRoom(d))
   // On every tab; it's the page's primary on Overview and secondary elsewhere, where the tab has its own main action (Portal's "View as the client", for one).
   const nextAction: { label: string; href: string } | undefined = p.archived || !stepsOpen
     ? undefined
@@ -356,8 +356,9 @@ function Cuts({ p, lib, detail }: { p: OfficeProject; lib: string; detail?: bool
     <>
     <ul className={`sa-cuts${detail ? ' sa-cuts-detail' : ''}`}>
       {p.deliverables.map((d) => {
-        const room = d.host === 'r2' ? `/admin/review/${encodeURIComponent(p._id)}/${encodeURIComponent(d._key)}` : undefined
-        const out = !room ? (d.shareUrl ?? d.fileUrl) : undefined
+        const room = inReviewRoom(d) ? `/admin/review/${encodeURIComponent(p._id)}/${encodeURIComponent(d._key)}` : undefined
+        // A ProRes delivery has no review room: its Vimeo copy once ready, otherwise the library.
+        const out = !room ? (needsVimeoPreview(d) ? watchLink(d) : (d.shareUrl ?? d.fileUrl)) : undefined
         const href = room ?? out ?? finder(d)
         const poster = d.thumbUrl ?? d.vimeoThumb
         const video = categoryOf(d) === 'video'

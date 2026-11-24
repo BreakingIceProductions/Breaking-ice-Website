@@ -38,21 +38,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
   const objectKey = String(body.objectKey ?? '')
   const uploadId = String(body.uploadId ?? '')
   // An object key always sits under this project's folder, so one project's upload can't touch another's.
-  const keyOk = objectKey.startsWith(`review/${projectId}/`) && /^review\/[\w.-]+\/[\w-]+\/v\d+-[a-f0-9]+\.mp4$/.test(objectKey)
+  const keyOk = objectKey.startsWith(`review/${projectId}/`) && /^review\/[\w.-]+\/[\w-]+\/v\d+-[a-f0-9]+\.(mp4|mov)$/.test(objectKey)
 
   if (action === 'start') {
     const title = String(body.title ?? '').trim().slice(0, 140)
     const size = Number(body.size)
     if (!title || !Number.isFinite(size) || size <= 0) return json({ ok: false, error: 'invalid' }, 400)
     if (size > MAX_SIZE) return json({ ok: false, error: 'too-big' }, 400)
-    if (!/\.mp4$/i.test(String(body.name ?? '')) && body.type !== 'video/mp4') return json({ ok: false, error: 'not-mp4' }, 400)
+    // MP4 or MOV, by name or type. The key keeps the real extension (download names come from it).
+    const name = String(body.name ?? '')
+    const ext = /\.mov$/i.test(name) || (!/\.mp4$/i.test(name) && body.type === 'video/quicktime') ? 'mov' : /\.mp4$/i.test(name) || body.type === 'video/mp4' ? 'mp4' : ''
+    if (!ext) return json({ ok: false, error: 'not-video' }, 400)
     const p = await getProject(projectId)
     if (!p) return json({ ok: false }, 404)
     const { version } = nextVersion(p.deliverables, 'video', title)
     const deliverableKey = randomBytes(6).toString('hex')
-    const key = `review/${p._id}/${deliverableKey}/v${version}-${randomBytes(6).toString('hex')}.mp4`
+    const key = `review/${p._id}/${deliverableKey}/v${version}-${randomBytes(6).toString('hex')}.${ext}`
     if (admin.sample) return json({ ok: true, sample: true, objectKey: key, uploadId: 'sample', deliverableKey, version, partSize: partSizeFor(size) })
-    const id = await createMultipart(key, 'video/mp4')
+    const id = await createMultipart(key, ext === 'mov' ? 'video/quicktime' : 'video/mp4')
     return json({ ok: true, objectKey: key, uploadId: id, deliverableKey, version, partSize: partSizeFor(size) })
   }
 
@@ -94,8 +97,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
     if (!size) return json({ ok: false, error: 'missing' }, 502)
     const send = body.send !== false
     const delivery = body.delivery === true
+    // Only delivery takes a file the browser can't play (often ProRes): no length, size, frame rate or thumbnail then.
+    const playable = !(delivery && body.playable === false)
     // The thumbnail is a nice-to-have: only kept if it's the expected key and actually arrived.
-    const thumbKey = body.thumbKey === thumbKeyFor(objectKey) ? thumbKeyFor(objectKey) : undefined
+    const thumbKey = playable && body.thumbKey === thumbKeyFor(objectKey) ? thumbKeyFor(objectKey) : undefined
     const r2Thumb = thumbKey && (await headObject(thumbKey).catch(() => 0)) ? thumbKey : undefined
     const entry = await addVersion(p._id, {
       category: 'video',
@@ -108,10 +113,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ action:
         r2Key: objectKey,
         r2Size: size,
         r2Thumb,
-        durationSec: num(body.durationSec) ? Math.round(num(body.durationSec)! * 1000) / 1000 : undefined,
-        fps,
-        width: num(body.width) ? Math.round(num(body.width)!) : undefined,
-        height: num(body.height) ? Math.round(num(body.height)!) : undefined,
+        ...(playable
+          ? {
+              durationSec: num(body.durationSec) ? Math.round(num(body.durationSec)! * 1000) / 1000 : undefined,
+              fps,
+              width: num(body.width) ? Math.round(num(body.width)!) : undefined,
+              height: num(body.height) ? Math.round(num(body.height)!) : undefined,
+            }
+          : { playable: false }),
       },
     })
     // Same as adding a Vimeo link: the scheduler's 10-minute hold and "new version" email take it from here.

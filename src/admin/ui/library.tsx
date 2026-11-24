@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from '@/portal/file-icon'
 import { Finder, type FinderNode } from '@/portal/finder'
-import { byStart, categoryOf, clientCanOpen, FINALS, isLatest, projectLabel, projectNode, REFERENCE, resolvePath, versionLabel, type Category, type DeliverableGroup } from '@/portal/library'
+import { byStart, categoryOf, clientCanOpen, FINALS, isLatest, needsVimeoPreview, projectLabel, projectNode, REFERENCE, resolvePath, versionLabel, type Category, type DeliverableGroup } from '@/portal/library'
 import { fmtSize } from '@/portal/resumable'
 import { FeedbackList, ReviewThumb, VersionHead, WatchTile } from '@/portal/review-ui'
 import type { Deliverable, DriveFile } from '@/portal/types'
@@ -302,7 +302,7 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
   const confirm = useConfirm()
   const notify = useNotify()
   const remove = async (asked = false) => {
-    const what = d.host === 'r2' ? 'It comes off the project and the client’s portal, and the review copy is deleted from storage (its comments stay on record).' : categoryOf(d) === 'video' ? 'It comes off the project and the client’s portal. The video itself stays on Vimeo.' : 'It comes off the project and the client’s portal, and the file goes to Google Drive’s trash (restorable there for 30 days).'
+    const what = d.host === 'r2' ? `It comes off the project and the client’s portal, and the ${needsVimeoPreview(d) ? 'stored file is' : 'review copy is'} deleted from storage (its comments stay on record).` : categoryOf(d) === 'video' ? 'It comes off the project and the client’s portal. The video itself stays on Vimeo.' : 'It comes off the project and the client’s portal, and the file goes to Google Drive’s trash (restorable there for 30 days).'
     if (!asked && !(await confirm({ title: `Delete ${d.title}, ${versionLabel(d)}?`, body: what, confirmLabel: 'Delete', danger: true }))) return
     setBusy(true)
     const r = await json('DELETE', '/api/admin/version', { projectId: project._id, key: d._key })
@@ -321,7 +321,17 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
   return (
     <div className="stack gap-4">
       <VersionHead title={d.title} kind={video ? 'video' : fileKind({ name: d.fileName })} ext={video ? undefined : d.fileName?.split('.').pop()} version={versionLabel(d)} date={d.date} length={d.length} />
-      {video && d.host === 'r2' ? (
+      {video && needsVimeoPreview(d) ? (
+        // A file the browser can't play (often ProRes): no review room; the client downloads it and the preview is the Vimeo copy.
+        <div className="stack gap-2">
+          {d.thumbUrl || d.vimeoThumb ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a signed storage or Vimeo address
+            <img src={(d.thumbUrl ?? d.vimeoThumb)!} alt="" loading="lazy" style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--radius-md)', background: 'var(--surface-inverse)' }} />
+          ) : null}
+          <p className="muted small m0">{[d.r2Key?.split('/').pop()?.replace(/^v\d+-[a-f0-9]+/, `${d.title}`), d.r2Size ? fmtSize(d.r2Size) : '', 'won’t play in a browser, so no review room'].filter(Boolean).join(' · ')}</p>
+          {d.vimeoState ? <VimeoCopyLine projectId={project._id} d={d} onChange={onChange} /> : <p className="muted small m0">No Vimeo copy yet.</p>}
+        </div>
+      ) : video && d.host === 'r2' ? (
         <div className="stack gap-2">
           {d.thumbUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- a signed storage address

@@ -31,7 +31,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ key: str
   if (d.host === 'r2' && d.r2Key) {
     if (!r2Ready()) return json({ ok: false }, 404)
     if (!limited(`vdl:${a.session.email}:${d._key}`, 1, 10 * 60_000)) await addActivity(a.project._id, `${whoIs(a)} downloaded ${d.title}`, 'download')
-    const name = `${d.title} ${d.final ? 'Final' : `v${d.version || 1}`}.mp4`.replace(/[\\/:*?"<>|]+/g, ' ')
+    const ext = d.r2Key.match(/\.(mp4|mov)$/i)?.[1]?.toLowerCase() ?? 'mp4'
+    const name = `${d.title} ${d.final ? 'Final' : `v${d.version || 1}`}.${ext}`.replace(/[\\/:*?"<>|]+/g, ' ')
     return NextResponse.redirect(presignGet(d.r2Key, { expires: 3600, download: name }), 303)
   }
   try {

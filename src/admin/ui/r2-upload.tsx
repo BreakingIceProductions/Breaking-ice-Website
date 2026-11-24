@@ -5,7 +5,7 @@ import { fmtEta, fmtSize } from '@/portal/resumable'
 import { REVIEW_FPS } from '@/portal/types'
 
 /**
- * "Upload for review": an H.264 MP4 goes straight from the browser to our R2 bucket in
+ * "Upload for review": an H.264 MP4 or MOV goes straight from the browser to our R2 bucket in
  * 8–16 MB parts, three at a time, each retried if it fails. The file's length and size
  * are read here first with a hidden video element. Parts already sent are remembered in
  * this browser, so after a reload choosing the same file again carries on where it stopped.
@@ -19,6 +19,8 @@ type Saved = Started & { title: string; parts: Record<number, string> }
 
 const post = (action: string, body: unknown) =>
   fetch(`/api/admin/r2/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(async (r) => ({ ok: r.ok, status: r.status, ...(await r.json().catch(() => ({}))) }))
+const UNPLAYABLE = 'This file won’t play in a browser (often ProRes). Export an H.264 MP4 or MOV for review.'
+const isVideoFile = (f: File) => /\.(mp4|mov)$/i.test(f.name) || f.type === 'video/mp4' || f.type === 'video/quicktime'
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const storeKey = (projectId: string, f: File) => `bi-r2-up:${projectId}:${f.name}:${f.size}:${f.lastModified}`
 const load = (k: string): Saved | null => {
@@ -156,19 +158,28 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
     setMeta(null)
     setNote('')
     setState('idle')
-    if (!/\.mp4$/i.test(f.name) && f.type !== 'video/mp4') return setNote('Pick an MP4 (H.264). Export one from Resolve first.')
+    if (!isVideoFile(f)) return setNote('Pick an MP4 or MOV. Export one from Resolve first.')
+    const resume = () => {
+      const saved = load(storeKey(projectId, f))
+      if (saved) setNote(`Part of this file is already up (${Object.keys(saved.parts).length} pieces). Uploading carries on from there.`)
+    }
     try {
       setMeta(await readMeta(f))
       setFile(f)
-      const saved = load(storeKey(projectId, f))
-      if (saved) setNote(`Part of this file is already up (${Object.keys(saved.parts).length} pieces). Uploading carries on from there.`)
+      resume()
     } catch {
-      setNote('This browser can’t read that file. Is it an H.264 MP4?')
+      // Often ProRes: fine to deliver (the preview comes from Vimeo), but it can't play in the review room.
+      if (!delivery) return setNote(UNPLAYABLE)
+      setFile(f)
+      setNote('This browser can’t play it (often ProRes). That’s fine for delivery: it uploads as is, without a thumbnail.')
+      resume()
     }
   }
 
   async function start() {
-    if (!file || !meta || !title.trim()) return
+    if (!file || !title.trim()) return
+    // Picked in delivery mode, then switched to review: an unplayable file can't go to the review room.
+    if (!meta && !delivery) return setNote(UNPLAYABLE)
     cancelled.current = false
     setState('uploading')
     setSent(0)
@@ -182,7 +193,7 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
       const r = await post('start', { projectId, title: title.trim(), name: file.name, size: file.size, type: file.type })
       if (!r.ok) {
         setState('error')
-        return setNote(r.error === 'too-big' ? 'That file is over 100 GB.' : r.error === 'not-configured' ? 'Review storage isn’t set up yet (see Settings).' : 'Couldn’t start the upload. Try again.')
+        return setNote(r.error === 'too-big' ? 'That file is over 100 GB.' : r.error === 'not-configured' ? 'Review storage isn’t set up yet (see Settings).' : r.error === 'not-video' ? 'Pick an MP4 or MOV.' : 'Couldn’t start the upload. Try again.')
       }
       s = r as Started
       saved = { ...s, title: title.trim(), parts: {} }
@@ -190,7 +201,7 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
     }
     current.current = s
     // The thumbnail goes up alongside the parts; finish() waits for it, and a failure only means no thumbnail.
-    thumb.current = s.sample ? null : uploadThumb(projectId, s, file, meta.duration)
+    thumb.current = s.sample || !meta ? null : uploadThumb(projectId, s, file, meta.duration)
     const total = Math.ceil(file.size / s.partSize)
     const t0 = Date.now()
 
@@ -285,7 +296,8 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
       send,
       delivery,
       thumbKey,
-      fps,
+      fps: meta ? fps : undefined,
+      playable: Boolean(meta),
       durationSec: meta?.duration,
       width: meta?.width,
       height: meta?.height,
@@ -345,13 +357,20 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
         }}
       >
         <p className="m0">
-          {file ? <strong>{file.name}</strong> : <strong>Drop {delivery ? 'the final MP4' : 'an MP4 review copy'} here</strong>}{' '}
+          {file ? <strong>{file.name}</strong> : <strong>Drop {delivery ? 'the final MP4 or MOV' : 'an MP4 or MOV review copy'} here</strong>}{' '}
           {!busy && <>{file ? '' : 'or '}<button type="button" className="linklike" onClick={() => input.current?.click()}>{file ? 'choose another' : 'choose a file'}</button></>}
         </p>
-        <p className="muted small m0">{meta && file ? `${mins} · ${meta.width}×${meta.height} · ${fmtSize(file.size)}` : 'H.264 MP4. It plays as uploaded: nothing is re-encoded.'}</p>
-        <input ref={input} type="file" accept="video/mp4,.mp4" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) choose(f); e.target.value = '' }} />
+        <p className="muted small m0">
+          {meta && file
+            ? `${mins} · ${meta.width}×${meta.height} · ${fmtSize(file.size)}`
+            : file
+              ? `${fmtSize(file.size)} · won’t play in a browser`
+              : 'MP4 or MOV (H.264 plays in the review room). It plays as uploaded: nothing is re-encoded.'}
+        </p>
+        {delivery && !file && <p className="muted small m0">ProRes is fine for delivery: the client downloads the master and the preview comes from Vimeo.</p>}
+        <input ref={input} type="file" accept="video/mp4,video/quicktime,.mp4,.mov" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) choose(f); e.target.value = '' }} />
       </div>
-      {file && (
+      {file && meta && (
         <label className="small muted inline-row">
           Frame rate (for timecode)
           <select className="input a-select" style={{ width: 'auto', minHeight: 36 }} value={fps} disabled={busy} onChange={(e) => setFps(Number(e.target.value))}>
@@ -371,10 +390,11 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
           {state === 'uploading' && <div className="up-actions"><button type="button" className="linklike small" onClick={cancel}>Cancel</button></div>}
         </div>
       )}
-      {!busy && note && <p className="small muted m0" role="status">{note}</p>}
+      {/* An unplayable file picked for delivery, then switched to review: say why it can't go. */}
+      {!busy && (file && !meta && !delivery ? UNPLAYABLE : note) && <p className="small muted m0" role="status">{file && !meta && !delivery ? UNPLAYABLE : note}</p>}
       {!busy && (
         <div>
-          <button type="button" className="btn btn-primary btn-sm" disabled={!file || !meta || !title.trim()} onClick={start}>{delivery ? 'Upload for delivery' : 'Upload for review'}</button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={!file || (!meta && !delivery) || !title.trim()} onClick={start}>{delivery ? 'Upload for delivery' : 'Upload for review'}</button>
           {!title.trim() && file && <span className="small muted"> Add a title first.</span>}
         </div>
       )}

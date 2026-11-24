@@ -440,7 +440,7 @@ export async function addVersion(
     /** Marks it Final (a finished file uploaded for delivery). */
     final?: boolean
     /** A review copy uploaded to our storage, under the key chosen when the upload started. */
-    r2?: { key: string; r2Key: string; r2Size?: number; r2Thumb?: string; durationSec?: number; fps?: number; width?: number; height?: number; version?: number }
+    r2?: { key: string; r2Key: string; r2Size?: number; r2Thumb?: string; playable?: boolean; durationSec?: number; fps?: number; width?: number; height?: number; version?: number }
   },
 ) {
   if (sample()) return
@@ -460,7 +460,7 @@ export async function addVersion(
     ...(v.notes ? { notes: v.notes } : {}),
     ...(v.final ? { final: true } : {}),
     ...(v.r2?.durationSec ? { length: `${Math.floor(v.r2.durationSec / 60)}:${String(Math.floor(v.r2.durationSec % 60)).padStart(2, '0')}` } : {}),
-    ...(v.r2 ? { host: 'r2', r2Key: v.r2.r2Key, r2Size: v.r2.r2Size, ...(v.r2.r2Thumb ? { r2Thumb: v.r2.r2Thumb } : {}), durationSec: v.r2.durationSec, fps: v.r2.fps, width: v.r2.width, height: v.r2.height } : {}),
+    ...(v.r2 ? { host: 'r2', r2Key: v.r2.r2Key, r2Size: v.r2.r2Size, ...(v.r2.r2Thumb ? { r2Thumb: v.r2.r2Thumb } : {}), ...(v.r2.playable === false ? { playable: false } : {}), durationSec: v.r2.durationSec, fps: v.r2.fps, width: v.r2.width, height: v.r2.height } : {}),
   }
   await portalClient.patch(projectId).setIfMissing({ deliverables: [] }).append('deliverables', [entry]).commit({ autoGenerateArrayKeys: false })
   return entry
