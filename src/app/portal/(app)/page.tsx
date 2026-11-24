@@ -1,12 +1,17 @@
+/* eslint-disable @next/next/no-img-element -- thumbnails are short-lived signed addresses */
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { viewUrl } from '@/galleries/files'
+import { galleriesForClients } from '@/galleries/store'
+import { isExpired } from '@/galleries/types'
 import { requireAccess } from '@/portal/current'
-import { byStart, CLIENT_STAGES, clientCanOpen, clientStage, projectThumb, today, versionLabel, versionPath } from '@/portal/library'
+import { byStart, CLIENT_STAGES, clientStage, projectThumb, today, versionPath } from '@/portal/library'
+import { notificationsFor } from '@/portal/notifications'
 import { QuoteList } from '@/portal/quote-list'
-import { quoteExpired } from '@/portal/quotes'
 import type { ClientProject } from '@/portal/types'
 import { EmptyMark } from '@/portal/ui'
 import { RetainerCards, retainerCardsFor } from '@/portal/retainer-home'
+import { StageMap } from '@/portal/stage-map'
 
 export const metadata = { title: 'Your projects' }
 
@@ -14,9 +19,23 @@ type Props = { searchParams: Promise<{ open?: string }> }
 
 const isDone = (p: ClientProject) => p.status === 'delivered' || p.pipelineStage === 'delivered' || p.pipelineStage === 'paid'
 const atPath = (parts: string[]) => parts.map(encodeURIComponent).join('/')
+// Finished projects sit on Delivered even if their pipeline stage lags behind.
+const stageOf = (p: ClientProject) => (isDone(p) ? CLIENT_STAGES.length : clientStage(p.pipelineStage, p.status))
+
+/** Cover for the "Your libraries" tile: a photo from the newest open gallery. Never breaks the home page. */
+async function libraryCover(clientIds: string[]) {
+  try {
+    const g = (await galleriesForClients(clientIds)).find((x) => !isExpired(x) && x.photos.length)
+    if (!g) return ''
+    const cover = g.photos.find((x) => x._key === g.coverKey) ?? g.photos[0]
+    return viewUrl(g, cover, 'thumb')
+  } catch {
+    return ''
+  }
+}
 
 export default async function Home({ searchParams }: Props) {
-  const { session, clients, projects, quotes, name, payments } = await requireAccess()
+  const { session, clients, projects, name } = await requireAccess()
 
   // Email links (?open=<version>) go straight to that version on its project page.
   const { open } = await searchParams
@@ -28,7 +47,7 @@ export default async function Home({ searchParams }: Props) {
   }
 
   // Retainer clients (monthly content) get a card near the top; for some people it's the only thing here.
-  const retainers = await retainerCardsFor(session)
+  const [retainers, cover] = await Promise.all([retainerCardsFor(session), libraryCover(clients.map((c) => c._id))])
 
   if (!clients.length && !retainers.length) {
     return (
@@ -46,12 +65,11 @@ export default async function Home({ searchParams }: Props) {
   const archive = sorted.filter(isDone)
   const multi = clients.length > 1
   // Quotes come first: before we book, they're the whole relationship.
-  const toSign = quotes.filter((q) => !q.signature && !quoteExpired(q, today()))
-  const due = payments.filter((x) => x.status === 'due')
-  const waiting = projects.flatMap((p) =>
-    (p.deliverables ?? []).filter((d) => d.status === 'awaiting-feedback' && clientCanOpen(d, p.deliverables)).map((d) => ({ p, d })),
-  )
-
+  const { toSign, due, waiting } = await notificationsFor()
+  // One timeline across every project, once there's more than one to place on it.
+  const stageMap = projects.length > 1
+    ? CLIENT_STAGES.map((st, i) => ({ title: st.title, projects: sorted.filter((p) => stageOf(p) === i + 1).map((p) => ({ title: p.title, slug: p.slug })) }))
+    : null
   return (
     <div className="wrap p-home">
       <section className="p-hello">
@@ -60,55 +78,29 @@ export default async function Home({ searchParams }: Props) {
         <p className="body-lg muted" style={{ margin: 0 }}>
           {toSign.length
             ? `${toSign.length === 1 ? `Your quote for ${toSign[0].title} is` : `${toSign.length} quotes are`} ready to review and sign.`
-            : waiting.length ? `${waiting.length === 1 ? 'One thing is' : `${waiting.length} things are`} waiting for your feedback.`
+            : waiting ? `${waiting === 1 ? 'One thing is' : `${waiting} things are`} waiting for your feedback.`
               : due.length ? `${due.length === 1 ? 'One payment is' : `${due.length} payments are`} ready when you are.` : 'You’re all caught up.'}
         </p>
       </section>
+
+      {stageMap && (
+        <section className="p-where" aria-labelledby="where-h">
+          <h2 id="where-h" className="p-label">Where we are</h2>
+          <StageMap stages={stageMap} />
+        </section>
+      )}
 
       {retainers.length > 0 && <RetainerCards cards={retainers} />}
 
       {toSign.length > 0 && <QuoteList id="quotes-h" label="Ready for your signature" quotes={toSign} t={today()} />}
 
-      {waiting.length + due.length > 0 && (
-        <section aria-labelledby="waiting-h" className="p-home-sec">
-          <h2 id="waiting-h" className="p-label">Waiting for you</h2>
-          <ul className="lib-list">
-            {due.map((x) => (
-              <li key={x._id}>
-                <Link className="lib-row" href={`/portal/${x.slug}#billing`}>
-                  <span className="fd-dot fd-dot-awaiting" aria-hidden="true" />
-                  <span className="stack" style={{ gap: 0, minWidth: 0 }}>
-                    <strong>{x.label} · ${x.total.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                    <span className="muted small">{x.projectTitle} · ready to pay</span>
-                  </span>
-                  <span className="lib-row-go" aria-hidden="true">→</span>
-                </Link>
-              </li>
-            ))}
-            {waiting.map(({ p, d }) => (
-              <li key={d._key}>
-                <Link className="lib-row" href={`/portal/${p.slug}?at=${atPath(versionPath(d))}`}>
-                  <span className="fd-dot fd-dot-awaiting" aria-hidden="true" />
-                  <span className="stack" style={{ gap: 0, minWidth: 0 }}>
-                    <strong>{d.title} · {versionLabel(d)}</strong>
-                    <span className="muted small">{p.title}</span>
-                  </span>
-                  <span className="lib-row-go" aria-hidden="true">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {(active.length > 0 || (!toSign.length && !retainers.length)) && (
+      {(clients.length > 0 || active.length > 0) && (
       <section aria-labelledby="projects-h" className="p-home-sec">
-        <h2 id="projects-h" className="p-label">{active.length ? 'Your projects' : 'No projects on the go right now'}</h2>
-        {active.length > 0 && (
-          <ul className="proj-grid">
-            {active.map((p) => <ProjectCard key={p._id} p={p} org={multi ? p.client.organizationName : undefined} />)}
-          </ul>
-        )}
+        <h2 id="projects-h" className="p-label">{active.length ? 'Projects' : !toSign.length && !retainers.length ? 'No projects on the go right now' : 'Libraries'}</h2>
+        <ul className="proj-grid">
+          {active.map((p) => <ProjectCard key={p._id} p={p} org={multi ? p.client.organizationName : undefined} />)}
+          {clients.length > 0 && <LibraryCard cover={cover} />}
+        </ul>
       </section>
       )}
 
@@ -131,7 +123,6 @@ function ProjectCard({ p, org }: { p: ClientProject; org?: string }) {
     <li>
       <Link className="proj-card-p" href={`/portal/${p.slug}`}>
         <span className="proj-thumb" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           {thumb ? <img src={thumb} alt="" /> : <EmptyMark />}
         </span>
         <span className="proj-body">
@@ -139,6 +130,23 @@ function ProjectCard({ p, org }: { p: ClientProject; org?: string }) {
           <strong className="proj-title">{p.title}</strong>
           <span className="muted small">{[org, stage].filter(Boolean).join(' · ')}</span>
           {p.nextStep && <span className="proj-next small">{p.nextStep}</span>}
+        </span>
+      </Link>
+    </li>
+  )
+}
+
+function LibraryCard({ cover }: { cover: string }) {
+  return (
+    <li>
+      <Link className="proj-card-p proj-card-lib" href="/portal/galleries">
+        <span className="proj-thumb" aria-hidden="true">
+          {cover ? <img src={cover} alt="" loading="lazy" decoding="async" /> : <EmptyMark />}
+        </span>
+        <span className="proj-body">
+          <span className="fd-kicker">Photos</span>
+          <strong className="proj-title">Your libraries</strong>
+          <span className="muted small">Every photo gallery we’ve shared with you</span>
         </span>
       </Link>
     </li>

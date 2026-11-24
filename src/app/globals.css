@@ -604,6 +604,33 @@ textarea.input { min-height: 160px; resize: vertical; }
   .p-header .header-tools { margin-left: auto; }
 }
 .p-main { min-height: 70vh; }
+
+/* Header notifications: a bell that drops down everything waiting, grouped by project */
+.nt-wrap { position: relative; display: flex; }
+.nt-btn { position: relative; }
+.nt-badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--radius-pill); background: var(--accent-fill); color: var(--on-accent); font-size: 11px; font-weight: 700; line-height: 20px; text-align: center; box-shadow: 0 0 0 2px var(--surface); }
+.nt-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.nt-panel { position: absolute; z-index: 60; top: calc(100% + 10px); right: 0; width: min(360px, calc(100vw - 2 * var(--gutter))); max-height: 60vh; overflow: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4) var(--space-5) var(--space-5); background: var(--surface-raised); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-film); text-align: left; }
+.nt-panel[hidden] { display: none; }
+/* Keeps hover alive while the pointer crosses the gap from the bell to the panel. */
+.nt-wrap::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 12px; }
+.nt-head { margin: 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; }
+.nt-group { display: flex; flex-direction: column; gap: 4px; }
+.nt-group + .nt-group { border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.nt-group-h { margin: 0; font-family: var(--font-display); font-stretch: 125%; font-size: 15px; line-height: 1.3; font-weight: 700; }
+.nt-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.nt-item { display: flex; align-items: flex-start; gap: var(--space-3); padding: 8px 0; min-height: 44px; color: var(--ink); text-decoration: none; font-size: 15px; }
+.nt-item .fd-dot { margin-top: 7px; flex: none; }
+.nt-item:hover strong { color: var(--accent); }
+.nt-item:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-xs); }
+.nt-empty { margin: 0; }
+@media (max-width: 400px) { .nt-btn { width: 44px; height: 44px; } }
+@media (max-width: 560px) {
+  /* Full width under the bar: the panel hangs off the header itself. */
+  .nt-wrap { position: static; }
+  .nt-wrap::after { display: none; }
+  .nt-panel { top: 100%; left: 0; right: 0; width: auto; max-height: 70vh; border-radius: 0; border-left: 0; border-right: 0; padding-left: var(--gutter); padding-right: var(--gutter); }
+}
 .p-footer { border-top: 1px solid var(--line); margin-top: var(--space-16); }
 .p-footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); padding-top: var(--space-6); padding-bottom: var(--space-8); font-size: 13px; color: var(--ink-muted); }
 .p-footer nav { display: flex; gap: var(--space-6); }
@@ -665,6 +692,41 @@ textarea.input { min-height: 160px; resize: vertical; }
   .stagebar:not(.compact) .bar { width: 6px; height: auto; grid-row: 1 / span 3; }
   .stagebar:not(.compact) .n { margin-top: 0; }
 }
+
+/* Portal home: one timeline across several projects, a numbered caret over each stage that has some */
+.stagemap li { position: relative; }
+.stagemap .has .bar { background: var(--accent-fill); }
+.stagemap .empty .name { color: var(--ink-muted); }
+.sm-slot { height: 42px; padding-bottom: 6px; display: flex; align-items: flex-end; justify-content: center; }
+.sm-mark { position: relative; display: flex; flex-direction: column; align-items: center; }
+.sm-btn { position: relative; min-width: 30px; height: 30px; padding: 0 9px; border: 0; border-radius: var(--radius-pill); background: var(--accent-fill); color: var(--on-accent); font: inherit; font-size: 14px; font-weight: 700; line-height: 1; cursor: pointer; }
+.sm-btn::after { content: ''; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); border: 6px solid transparent; border-bottom: 0; border-top-color: var(--accent-fill); }
+.sm-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.sm-pop { position: absolute; z-index: 20; top: calc(100% + 12px); width: max-content; min-width: min(240px, 80vw); max-width: min(300px, 80vw); display: flex; flex-direction: column; gap: 6px; padding: var(--space-3) var(--space-4); background: var(--surface-raised); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-film); text-align: left; }
+.sm-pop[hidden] { display: none; }
+/* Hover bridge across the gap between marker and popover. */
+.sm-pop::before { content: ''; position: absolute; left: 0; right: 0; top: -14px; height: 14px; }
+.sm-pop-mid { left: 50%; transform: translateX(-50%); }
+.sm-pop-start { left: -4px; }
+.sm-pop-end { right: -4px; }
+.sm-pop-h { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; }
+.sm-pop ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sm-pop a { display: flex; align-items: center; min-height: 32px; font-weight: 600; font-size: 15px; color: var(--ink); text-decoration: none; }
+.sm-pop a:hover { color: var(--accent); }
+.sm-go { margin-left: 8px; }
+.sm-pop a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-xs); }
+@media (max-width: 560px) {
+  /* Stages stack; the number sits at the end of its row and points back at the bar. */
+  .stagebar.stagemap li { grid-template-columns: 6px minmax(0, 1fr) auto; }
+  .stagebar.stagemap .bar { grid-column: 1; grid-row: 1 / span 2; }
+  .stagemap .n, .stagemap .name { grid-column: 2; }
+  .stagemap .sm-slot { grid-column: 3; grid-row: 1 / span 2; height: auto; padding: 0 0 0 6px; align-items: center; }
+  .stagemap .sm-btn::after { left: -5px; bottom: 50%; transform: translateY(50%); border: 6px solid transparent; border-left: 0; border-right-color: var(--accent-fill); }
+  .stagemap .sm-pop { top: calc(100% + 8px); left: auto; right: 0; transform: none; }
+}
+
+/* The popover list is not a timeline row. */
+.stagebar.stagemap .sm-pop li { display: block; }
 
 /* Sidebar bits */
 .producer { display: flex; gap: var(--space-4); align-items: center; }

@@ -2,6 +2,8 @@ import { Suspense } from 'react'
 import { requireAccess } from '@/portal/current'
 import { getPortalSettings, portalImage, producerFor } from '@/portal/data'
 import { billingStatus, byStart, CLIENT_STAGES, clientCanOpen, clientStage } from '@/portal/library'
+import { NotificationsMenu } from '@/portal/notifications-menu'
+import { notificationsFor } from '@/portal/notifications'
 import { PortalSidebar, type NavProject } from '@/portal/sidebar'
 import { PortalFooter, PortalHeader } from '@/portal/ui'
 import { countGalleriesForClients } from '@/galleries/store'
@@ -10,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function PortalAppLayout({ children }: { children: React.ReactNode }) {
   const { session, name, quotes, clients, projects, payments } = await requireAccess()
-  const [ps, galleries] = await Promise.all([getPortalSettings(), countGalleriesForClients(clients.map((c) => c._id)).catch(() => 0)])
+  const [ps, galleries, notices] = await Promise.all([getPortalSettings(), countGalleriesForClients(clients.map((c) => c._id)).catch(() => 0), notificationsFor()])
   const nav: NavProject[] = [...projects].sort(byStart).map((p) => ({
     slug: p.slug,
     title: p.title,
@@ -25,7 +27,7 @@ export default async function PortalAppLayout({ children }: { children: React.Re
   return (
     <>
       <a href="#main" className="skip">Skip to content</a>
-      <PortalHeader name={name} demo={session.demo} previewOf={session.preview ? clients[0]?.organizationName ?? 'the client' : undefined} />
+      <PortalHeader name={name} notices={<NotificationsMenu groups={notices.groups} count={notices.count} />} demo={session.demo} previewOf={session.preview ? clients[0]?.organizationName ?? 'the client' : undefined} />
       <div className={`p-shell${session.demo || session.preview ? ' with-ribbon' : ''}`}>
         <Suspense>
           <PortalSidebar

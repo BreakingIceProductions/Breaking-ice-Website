@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { Logo, Mark } from '@/components/brand'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { portalImage } from './data'
@@ -90,7 +91,7 @@ export function ProducerCard({ producer, title = 'Your producer' }: { producer?:
   )
 }
 
-export function PortalHeader({ name, demo, previewOf }: { name?: string; demo?: boolean; previewOf?: string }) {
+export function PortalHeader({ name, demo, previewOf, notices }: { name?: string; demo?: boolean; previewOf?: string; notices?: ReactNode }) {
   return (
     <header className="p-header">
       <div className="wrap">
@@ -100,6 +101,7 @@ export function PortalHeader({ name, demo, previewOf }: { name?: string; demo?: 
         </Link>
         <span className="p-header-label">Client portal</span>
         <div className="header-tools">
+          {notices}
           <ThemeToggle />
           {name && <span className="p-who" title={demo ? 'Sample client' : undefined}>{name}</span>}
           <form action="/api/portal/sign-out" method="post">
