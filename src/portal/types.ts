@@ -66,6 +66,8 @@ export type Deliverable = {
   r2Size?: number
   /** The thumbnail grabbed from the video at upload, a JPEG next to it in R2. */
   r2Thumb?: string
+  /** Where the thumbnail was picked from, in seconds (the back office's frame picker). */
+  thumbAt?: number
   /** false: the browser can't play the stored file (often a ProRes delivery). No review room; the preview comes from the Vimeo copy. */
   playable?: boolean
   /** A finished file's copy on Vimeo, for the website (uploads for delivery). Separate from shareUrl, which is for playback. */

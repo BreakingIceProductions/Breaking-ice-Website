@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from './file-icon'
-import { canDownloadVideo, groupDeliverables, isVideoFile, LARGE_FILE, matchFinalFile, needsVimeoPreview, watchLink } from './library'
+import { canDownloadVideo, groupDeliverables, inReviewRoom, isVideoFile, LARGE_FILE, matchFinalFile, needsVimeoPreview, watchLink } from './library'
 import { fmtSize } from './resumable'
 import { WatchTile } from './review-ui'
 import type { ClientProject, DriveFile } from './types'
@@ -12,7 +12,10 @@ import type { ClientProject, DriveFile } from './types'
  * every file from the project's Final Files folder, ready to download.
  */
 export function Delivery({ project, demo }: { project: ClientProject; demo: boolean }) {
-  const finals = groupDeliverables(project.deliverables).video.map((g) => g.latest).filter((d) => d.final)
+  const finalGroups = groupDeliverables(project.deliverables).video.filter((g) => g.latest.final)
+  const finals = finalGroups.map((g) => g.latest)
+  // A final in our own review room plays on this page: the tile opens its version panel (the same ?at= the library uses).
+  const roomHref = new Map(finalGroups.map((g) => [g.latest._key, `/portal/${project.slug}?${new URLSearchParams({ at: ['videos', g.id].map(encodeURIComponent).join('/') })}#review-room`]))
   const data = useFinalFiles(project.slug)
   const videoFiles = (data.files ?? []).filter(isVideo)
   const onCards = new Map(finals.map((d) => [d._key, matchFile(d.title, videoFiles)]))
@@ -35,7 +38,13 @@ export function Delivery({ project, demo }: { project: ClientProject; demo: bool
             const file = onCards.get(d._key)
             return (
               <li key={d._key} className="p-delivery-film">
-                {watch ? <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={d.title} /> : needsVimeoPreview(d) ? <span className="muted small">Preparing a preview</span> : null}
+                {watch ? (
+                  <WatchTile href={watch} thumb={d.thumbUrl ?? d.vimeoThumb} title={d.title} />
+                ) : inReviewRoom(d) && roomHref.get(d._key) ? (
+                  <WatchTile href={roomHref.get(d._key)!} thumb={d.thumbUrl ?? d.vimeoThumb} title={d.title} sameTab />
+                ) : needsVimeoPreview(d) ? (
+                  <span className="muted small">Preparing a preview</span>
+                ) : null}
                 <div className="stack" style={{ gap: 'var(--space-1)', minWidth: 0 }}>
                   <span className="fname">{d.title}</span>
                   {d.length && <span className="muted small">{d.length}</span>}

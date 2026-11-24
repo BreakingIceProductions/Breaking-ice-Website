@@ -328,6 +328,7 @@ export const clientProject = defineType({
             defineField({ name: 'r2Key', title: 'Review copy (storage key)', type: 'string', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
             defineField({ name: 'r2Size', title: 'Review copy size (bytes)', type: 'number', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
             defineField({ name: 'r2Thumb', title: 'Thumbnail (storage key)', type: 'string', readOnly: true, hidden: ({ parent }) => !parent?.r2Thumb, description: 'Grabbed from the video when it was uploaded.' }),
+            defineField({ name: 'thumbAt', title: 'Thumbnail picked at (seconds)', type: 'number', readOnly: true, hidden: ({ parent }) => parent?.thumbAt === undefined }),
             defineField({ name: 'playable', title: 'Plays in a browser', type: 'boolean', readOnly: true, hidden: ({ parent }) => parent?.playable !== false, description: 'Off for files a browser can’t play (often ProRes): they’re for download, and the preview comes from the Vimeo copy.' }),
             defineField({ name: 'durationSec', title: 'Duration (seconds)', type: 'number', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),
             defineField({ name: 'fps', title: 'Frame rate', type: 'number', readOnly: true, hidden: ({ parent }) => !parent?.r2Key }),

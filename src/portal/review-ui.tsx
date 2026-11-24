@@ -74,15 +74,15 @@ export function VersionHead({ title, kind, ext, version, date, length }: { title
 }
 
 /** The video's thumbnail with a play button: clicking it is "Watch video". */
-export function WatchTile({ href, thumb, title }: { href: string; thumb?: string; title: string }) {
+export function WatchTile({ href, thumb, title, sameTab = false }: { href: string; thumb?: string; title: string; sameTab?: boolean }) {
   return (
-    <a className="watch-tile" href={href} target="_blank" rel="noopener noreferrer">
+    <a className="watch-tile" href={href} {...(sameTab ? {} : { target: '_blank', rel: 'noopener noreferrer' })}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {thumb && <img src={thumb} alt="" />}
       <span className="watch-play" aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg>
       </span>
-      <span className="watch-label">Watch video<span className="sr-only">: {title} (opens in a new tab)</span></span>
+      <span className="watch-label">Watch video<span className="sr-only">: {title}{sameTab ? '' : ' (opens in a new tab)'}</span></span>
     </a>
   )
 }

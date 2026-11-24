@@ -119,7 +119,7 @@ export default async function Home({ searchParams }: Props) {
       )}
 
       {archive.length > 0 && (
-        <details className="p-archive">
+        <details className="p-archive" open>
           <summary>See project archive <span className="muted">({archive.length})</span></summary>
           <ul className="proj-grid proj-grid-small">
             {archive.map((p) => <ProjectCard key={p._id} p={p} org={multi ? p.client.organizationName : undefined} />)}

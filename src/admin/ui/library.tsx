@@ -12,6 +12,7 @@ import type { Deliverable, DriveFile } from '@/portal/types'
 import { Uploader } from '@/portal/uploader'
 import { useConfirm, useNotify } from './confirm'
 import { R2Upload } from './r2-upload'
+import { ThumbPicker } from './thumb-picker'
 import { fmtDate } from '@/admin/dates'
 import { Initials } from './viz'
 import { StageChip } from './viz-c'
@@ -299,6 +300,7 @@ function VimeoCopyLine({ projectId, d, onChange }: { projectId: string; d: Deliv
 
 function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject; d: Deliverable; onChange: () => void; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [picking, setPicking] = useState(false)
   const confirm = useConfirm()
   const notify = useNotify()
   const remove = async (asked = false) => {
@@ -337,7 +339,11 @@ function VersionPanel({ project, d, onChange, onDeleted }: { project: LibProject
             // eslint-disable-next-line @next/next/no-img-element -- a signed storage address
             <img src={d.thumbUrl} alt="" loading="lazy" style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--radius-md)', background: 'var(--surface-inverse)' }} />
           )}
-          <Link className="btn btn-primary btn-sm self-start" href={`/admin/review/${encodeURIComponent(project._id)}/${encodeURIComponent(d._key)}`}>Open the review room</Link>
+          <div className="btn-row">
+            <Link className="btn btn-primary btn-sm" href={`/admin/review/${encodeURIComponent(project._id)}/${encodeURIComponent(d._key)}`}>Open the review room</Link>
+            {!picking && <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPicking(true)}>Choose thumbnail</button>}
+          </div>
+          {picking && <ThumbPicker key={d._key} projectId={project._id} versionKey={d._key} fps={d.fps} current={d.thumbUrl} start={d.thumbAt ?? 0} onDone={onChange} onClose={() => setPicking(false)} />}
           {d.vimeoState && <VimeoCopyLine projectId={project._id} d={d} onChange={onChange} />}
           <p className="muted small m0">
             {[d.openComments ? `${d.openComments} open comment${d.openComments === 1 ? '' : 's'} from the client` : 'No open comments from the client', d.fps && `${d.fps} fps`, d.width && d.height && `${d.width}×${d.height}`].filter(Boolean).join(' · ')}

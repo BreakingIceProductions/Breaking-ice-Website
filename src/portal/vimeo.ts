@@ -214,3 +214,23 @@ export async function vimeoSourceFile(url?: string): Promise<VimeoSource | undef
     thumb1280: base ? `${path}_1280x720${query ? `?${query}` : ''}` : undefined,
   }
 }
+
+/* ── Picking a version's thumbnail frame ─────────────────────────────── */
+
+/**
+ * Makes a new thumbnail at `seconds` into a Vimeo video and sets it as the default (active).
+ * Vimeo may still be generating it; that's fine. Returns its sized image link when Vimeo gives one.
+ */
+export async function setVimeoThumbnail(uri: string, seconds: number): Promise<{ ok: true; thumb?: string } | { ok: false; error: string }> {
+  if (!vimeoReady()) return { ok: false, error: 'Vimeo isn’t connected (no token set).' }
+  const path = uri.startsWith('/videos/') ? uri.split('?')[0] : undefined
+  if (!path || !/^\/videos\/\d+$/.test(path)) return { ok: false, error: 'No Vimeo video to update.' }
+  try {
+    const pic = await vimeo<{ base_link?: string }>(`${path}/pictures`, { method: 'POST', body: JSON.stringify({ time: Math.max(0, Math.round(seconds * 1000) / 1000), active: true }) })
+    return { ok: true, thumb: thumb(pic.base_link) }
+  } catch (e) {
+    const s = String(e instanceof Error ? e.message : e)
+    if (/ (401|403):/.test(s)) return { ok: false, error: 'Vimeo needs a token with edit access.' }
+    return { ok: false, error: s.replace(/^Error: /, '').slice(0, 160) }
+  }
+}
