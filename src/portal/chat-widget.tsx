@@ -32,6 +32,20 @@ const timeOf = (iso: string) => {
   return d.toLocaleString('en-CA', today ? { hour: 'numeric', minute: '2-digit' } : { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+/** iMessage-style stamp between groups: "Today 4:53 p.m.", "Yesterday 3:44 p.m.", "Sat 9:10 a.m.", "Nov 2, 3:44 p.m.". */
+const stampOf = (iso: string) => {
+  const d = new Date(iso)
+  const now = new Date()
+  const time = d.toLocaleTimeString('en-CA', { hour: 'numeric', minute: '2-digit' })
+  const days = Math.round((new Date(now.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86_400_000)
+  if (days === 0) return `Today ${time}`
+  if (days === 1) return `Yesterday ${time}`
+  if (days < 7) return `${d.toLocaleDateString('en-CA', { weekday: 'short' })} ${time}`
+  return `${d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) })}, ${time}`
+}
+const GAP_STAMP = 15 * 60_000 // a new time stamp after a 15-minute pause
+const GAP_GROUP = 2 * 60_000 // messages closer than this from the same sender share one run
+
 /**
  * The portal's chat: a button bottom-right, and a panel with a "Josh" tab (goes to Josh in Slack)
  * and an "Assistant" tab (the AI). Polls every 5 s while open, every minute while closed (for the badge).
@@ -225,14 +239,30 @@ export function ChatWidget({ producer = 'Josh' }: { producer?: string }) {
                 : 'Ask about your projects, versions, dates or payments. The assistant is an AI: for anything it can’t answer, switch to the Josh tab.'}
             </p>
           )}
-          {inTab.map((m) => (
-            <div key={m._key} className={`pc-msg pc-${m.from === 'client' ? 'me' : m.from}`}>
-              {m.handoff && <span className="pc-handoff">{producer} hasn’t replied yet, so the assistant answered:</span>}
-              <span className="pc-who">{m.from === 'assistant' ? 'Breaking Ice assistant (AI)' : m.from === 'josh' ? m.who : m.mine ? 'You' : m.staff ? 'Josh Ferguson · Breaking Ice' : m.who}</span>
-              <p className="pc-bubble">{m.text}</p>
-              <span className="pc-time">{m._key.startsWith('tmp-') ? 'Sending…' : timeOf(m.at)}</span>
-            </div>
-          ))}
+          {inTab.map((m, i) => {
+            const prev = inTab[i - 1]
+            const next = inTab[i + 1]
+            const t = Date.parse(m.at)
+            const sender = (x: ChatMessage) => `${x.from}|${x.mine ? 'me' : x.who}`
+            const stamp = !prev || t - Date.parse(prev.at) >= GAP_STAMP
+            const first = stamp || !prev || sender(prev) !== sender(m) || t - Date.parse(prev.at) >= GAP_GROUP || Boolean(m.handoff)
+            const last = !next || sender(next) !== sender(m) || Date.parse(next.at) - t >= GAP_GROUP || Date.parse(next.at) - t >= GAP_STAMP || Boolean(next.handoff)
+            const me = m.from === 'client' && m.mine
+            const name = m.from === 'assistant' ? 'Breaking Ice assistant (AI)' : m.from === 'josh' ? m.who : m.staff ? 'Josh Ferguson · Breaking Ice' : m.who
+            const pending = m._key.startsWith('tmp-')
+            const lastMine = me && !inTab.slice(i + 1).some((x) => x.from === 'client' && x.mine)
+            return (
+              <div key={m._key} className="pc-row-wrap">
+                {stamp && <p className="pc-stamp"><time dateTime={m.at}>{stampOf(m.at)}</time></p>}
+                <div className={`pc-msg pc-${me ? 'me' : m.from === 'client' ? 'them' : m.from}${first ? ' is-first' : ''}${last ? ' is-last' : ''}`}>
+                  {m.handoff && <span className="pc-handoff">{producer} hasn’t replied yet, so the assistant answered:</span>}
+                  {first && !me && <span className="pc-who">{name}</span>}
+                  <p className="pc-bubble" title={timeOf(m.at)}>{me && <span className="sr-only">You: </span>}{m.text}</p>
+                  {lastMine && <span className="pc-status">{pending ? 'Sending…' : 'Delivered'}</span>}
+                </div>
+              </div>
+            )
+          })}
           {sending === 'assistant' && tab === 'assistant' && <p className="pc-typing">The assistant is writing…</p>}
         </div>
         <p className="sr-only" aria-live="polite">{announce}</p>
@@ -250,11 +280,11 @@ export function ChatWidget({ producer = 'Josh' }: { producer?: string }) {
             <textarea
               id={`${id}-text`}
               ref={input}
-              className="input pc-input"
-              rows={2}
+              className="pc-input"
+              rows={1}
               maxLength={MAX}
               value={drafts[tab]}
-              placeholder={tab === 'josh' ? `Message ${producer}…` : 'Ask the assistant…'}
+              placeholder={tab === 'josh' ? `Message ${producer}` : 'Ask the assistant'}
               onChange={(e) => setDrafts((d) => ({ ...d, [tab]: e.target.value }))}
               onKeyDown={(e) => {
                 // Enter sends; Shift+Enter is a new line.
@@ -264,7 +294,9 @@ export function ChatWidget({ producer = 'Josh' }: { producer?: string }) {
                 }
               }}
             />
-            <button type="submit" className="btn btn-primary btn-sm" disabled={!drafts[tab].trim() || Boolean(sending)}>Send</button>
+            <button type="submit" className="pc-send" disabled={!drafts[tab].trim() || Boolean(sending)} aria-label="Send">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+            </button>
           </div>
         </form>
       </section>

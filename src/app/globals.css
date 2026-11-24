@@ -1464,6 +1464,38 @@ textarea.input.a-quote-text { min-height: 90px; }
 .pc-input { flex: 1; min-height: 44px; max-height: 140px; resize: none; font-size: 15px; }
 .pc-note { margin: 0; font-size: 13px; color: var(--ink-muted); }
 .pc-err { color: var(--danger); }
+
+/* ── Chat, iMessage-style: right-hand solid bubbles for you, grey for everyone else, tails on the last of a run ── */
+.pc-list { gap: 2px; padding: 14px 14px 10px; }
+.pc-row-wrap { display: flex; flex-direction: column; }
+.pc-stamp { margin: 14px 0 8px; text-align: center; font-size: 11.5px; font-weight: 600; color: var(--ink-muted); letter-spacing: .01em; }
+.pc-stamp:first-child { margin-top: 2px; }
+.pc-msg { max-width: 78%; gap: 2px; }
+.pc-msg.is-first:not(:first-child) { margin-top: 0; }
+.pc-row-wrap + .pc-row-wrap .pc-msg.is-first { margin-top: 8px; }
+.pc-who { margin: 0 0 2px 12px; font-size: 11.5px; font-weight: 500; }
+.pc-bubble { position: relative; padding: 8px 13px; border: 0; border-radius: 18px; font-size: 15px; line-height: 1.38; background: var(--pc-them-bg); color: var(--ink); }
+.pc-me .pc-bubble { background: var(--pc-me-bg); color: var(--pc-me-text); border-radius: 18px; }
+.pc-assistant .pc-bubble { border: 0; background: var(--pc-ai-bg); }
+/* Tails: a curved nib on the last bubble of each run, cut out with the panel colour. */
+.pc-msg.is-last .pc-bubble::before, .pc-msg.is-last .pc-bubble::after { content: ''; position: absolute; bottom: 0; height: 18px; }
+.pc-msg.is-last:not(.pc-me) .pc-bubble::before { left: -7px; width: 20px; background: inherit; border-bottom-right-radius: 16px 14px; }
+.pc-msg.is-last:not(.pc-me) .pc-bubble::after { left: -26px; width: 26px; background: var(--surface); border-bottom-right-radius: 10px; }
+.pc-me.is-last .pc-bubble::before { right: -7px; width: 20px; background: inherit; border-bottom-left-radius: 16px 14px; }
+.pc-me.is-last .pc-bubble::after { right: -26px; width: 26px; background: var(--surface); border-bottom-left-radius: 10px; }
+.pc-status { margin: 2px 4px 0 0; font-size: 11px; font-weight: 500; color: var(--ink-muted); }
+.pc-handoff { margin: 6px 0 2px 12px; font-style: normal; }
+/* The message box: one rounded pill with the send arrow inside it. */
+.pc-compose { border-top: 1px solid var(--line); padding: 10px 12px 12px; }
+.pc-compose-row { position: relative; align-items: flex-end; }
+.pc-input { width: 100%; min-height: 38px; max-height: 140px; padding: 8px 46px 8px 14px; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 20px; background: var(--surface-raised); color: var(--ink); font: inherit; font-size: 15px; line-height: 1.4; resize: none; field-sizing: content; }
+.pc-input:focus { outline: none; border-color: var(--pc-send-bg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc-send-bg) 15%, transparent); }
+.pc-send { position: absolute; right: 5px; bottom: 5px; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--pc-send-bg); color: var(--pc-send-fg); cursor: pointer; transition: opacity .15s; }
+.pc-send:disabled { opacity: .35; cursor: default; }
+.pc-send:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.pc-panel { background: var(--surface); --pc-me-bg: #e7d9c3; --pc-me-text: #18202f; --pc-them-bg: #ebe8e2; --pc-ai-bg: #ebe8e2; --pc-send-bg: #18202f; --pc-send-fg: #faf7f2; }
+:root[data-theme='dark'] .pc-panel { --pc-me-bg: #faf7f2; --pc-me-text: #18202f; --pc-them-bg: #343c4c; --pc-ai-bg: #2d3443; --pc-send-bg: #faf7f2; --pc-send-fg: #18202f; }
+
 @media (max-width: 560px) {
   .pc-launch { right: 12px; bottom: 12px; }
   .pc-panel { inset: 0; width: auto; height: auto; border-radius: 0; border: 0; }
