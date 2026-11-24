@@ -141,6 +141,7 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
   const input = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [meta, setMeta] = useState<Meta | null>(null)
+  const [drag, setDrag] = useState(false)
   const [fps, setFps] = useState<number>(23.976)
   const [state, setState] = useState<'idle' | 'uploading' | 'finishing' | 'error'>('idle')
   const [sent, setSent] = useState(0)
@@ -327,10 +328,25 @@ export function R2Upload({ projectId, title, notes, send, delivery = false, onAd
 
   return (
     <div className="stack gap-3">
-      <div className="dropzone dropzone-compact">
+      <div
+        className={`dropzone dropzone-compact${drag ? ' over' : ''}`}
+        onDragOver={(e) => {
+          e.preventDefault()
+          if (!busy) setDrag(true)
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDrag(false)
+        }}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDrag(false)
+          const f = e.dataTransfer.files[0]
+          if (f && !busy) choose(f)
+        }}
+      >
         <p className="m0">
-          {file ? <strong>{file.name}</strong> : <strong>{delivery ? 'The final MP4' : 'An MP4 review copy'}</strong>}{' '}
-          {!busy && <button type="button" className="linklike" onClick={() => input.current?.click()}>{file ? 'choose another' : 'choose a file'}</button>}
+          {file ? <strong>{file.name}</strong> : <strong>Drop {delivery ? 'the final MP4' : 'an MP4 review copy'} here</strong>}{' '}
+          {!busy && <>{file ? '' : 'or '}<button type="button" className="linklike" onClick={() => input.current?.click()}>{file ? 'choose another' : 'choose a file'}</button></>}
         </p>
         <p className="muted small m0">{meta && file ? `${mins} · ${meta.width}×${meta.height} · ${fmtSize(file.size)}` : 'H.264 MP4. It plays as uploaded: nothing is re-encoded.'}</p>
         <input ref={input} type="file" accept="video/mp4,.mp4" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) choose(f); e.target.value = '' }} />
