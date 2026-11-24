@@ -6,6 +6,7 @@ import { NotificationsMenu } from '@/portal/notifications-menu'
 import { notificationsFor } from '@/portal/notifications'
 import { PortalSidebar, type NavProject } from '@/portal/sidebar'
 import { PortalFooter, PortalHeader } from '@/portal/ui'
+import { ChatWidget } from '@/portal/chat-widget'
 import { countGalleriesForClients } from '@/galleries/store'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,8 @@ export default async function PortalAppLayout({ children }: { children: React.Re
     due: payments.filter((x) => x.projectId === p._id && x.status === 'due').length,
   }))
   const producer = clients[0] ? producerFor({ client: clients[0] }, ps) : ps.producer
+  // The chat shows for clients who have it switched on (and in the sample portal).
+  const chatOn = Boolean(session.demo) || clients.some((c) => c.chat?.enabled)
   return (
     <>
       <a href="#main" className="skip">Skip to content</a>
@@ -41,6 +44,7 @@ export default async function PortalAppLayout({ children }: { children: React.Re
         <main id="main" className="p-main">{children}</main>
       </div>
       <PortalFooter />
+      {chatOn && <ChatWidget preview={Boolean(session.preview)} producer={producer?.name?.split(' ')[0] || 'Josh'} />}
     </>
   )
 }

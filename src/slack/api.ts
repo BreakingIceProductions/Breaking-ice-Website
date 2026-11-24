@@ -58,3 +58,21 @@ export async function respond(responseUrl: string, body: { text: string; replace
   if (!/^https:\/\/hooks\.slack\.com\//.test(responseUrl)) return
   await fetch(responseUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch((e) => console.error('[slack] response_url failed', String(e).slice(0, 200)))
 }
+
+/** Makes a channel (private by default). Returns its id, or the Slack error (e.g. 'name_taken'). */
+export async function createChannel(name: string, isPrivate = true): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const r = await postJson('conversations.create', { name, is_private: isPrivate })
+  return { ok: r.ok, id: (r.channel as { id?: string } | undefined)?.id, error: r.error }
+}
+
+/** Adds people to a channel the bot is in. 'already_in_channel' counts as done. */
+export async function inviteToChannel(channel: string, users: string[]) {
+  const r = await postJson('conversations.invite', { channel, users: users.join(',') })
+  return { ok: r.ok || r.error === 'already_in_channel', error: r.error }
+}
+
+/** The workspace's team id (T…), for app.slack.com links. */
+export async function teamId(): Promise<string | undefined> {
+  const r = await call('auth.test', { method: 'POST' })
+  return r.ok ? (r.team_id as string | undefined) : undefined
+}

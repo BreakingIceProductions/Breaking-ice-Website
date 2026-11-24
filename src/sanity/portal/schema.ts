@@ -44,6 +44,16 @@ export const client = defineType({
     defineField({ name: 'organizationName', title: 'Organization name', type: 'string', validation: (r) => r.required() }),
     defineField({ name: 'logo', type: 'image', description: 'Optional. Shown on their dashboard.' }),
     defineField({
+      name: 'chat',
+      title: 'Portal chat',
+      description: 'A chat window in their portal: a “Josh” tab that goes to a Slack channel, and an AI assistant tab.',
+      type: 'object',
+      fields: [
+        defineField({ name: 'enabled', title: 'Chat is on', type: 'boolean', initialValue: false }),
+        defineField({ name: 'slackChannelId', title: 'Slack channel', type: 'string', readOnly: true, description: 'Made automatically with the first message.' }),
+      ],
+    }),
+    defineField({
       name: 'contacts',
       title: 'Contacts (people who can sign in)',
       description: 'Anyone listed here can sign in with their email and sees every project for this client. Remove someone to remove their access.',
@@ -426,6 +436,8 @@ export const portalSettings = defineType({
     defineField({ name: 'reminderIntroUnviewed', title: 'Reminder intro (not yet viewed)', type: 'text', rows: 2, group: 'email' }),
     defineField({ name: 'reminderIntroViewed', title: 'Reminder intro (viewed, not approved)', type: 'text', rows: 2, group: 'email' }),
     defineField({ name: 'reminderDays', title: 'Reminder after (days, when there’s no due date)', type: 'number', initialValue: 7, group: 'email' }),
+    defineField({ name: 'chatHandoffMinutes', title: 'Chat: assistant answers for Josh after (minutes)', description: 'When a client writes in the Josh tab and nobody replies in Slack in this time, the assistant answers, labelled as such.', type: 'number', initialValue: 10, group: 'email' }),
+    defineField({ name: 'chatMonthlyCap', title: 'Chat: assistant replies per client per month', type: 'number', initialValue: 200, group: 'email' }),
     defineField({ name: 'signOff', title: 'Email sign-off', type: 'string', group: 'email' }),
     defineField({ name: 'copyTo', title: 'Send me a copy at', description: 'Gets a copy of every client email.', type: 'string', group: 'email' }),
     defineField({ name: 'gstNumber', title: 'GST number', description: 'When set, portal payments add 5% GST. Leave empty if the company isn’t registered.', type: 'string', group: 'payments' }),
@@ -705,4 +717,42 @@ export const retainerMonth = defineType({
   },
 })
 
-export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment, docTemplate, signRequest, retainerMonth]
+/** One per client (portal-chat-<client id>): the portal chat's messages. Written by the site only. */
+export const portalChat = defineType({
+  name: 'portalChat',
+  title: 'Portal chat',
+  type: 'document',
+  icon: UsersIcon,
+  readOnly: true,
+  fields: [
+    defineField({ name: 'client', type: 'reference', to: [{ type: 'client' }], weak: true }),
+    defineField({ name: 'threadTs', title: 'Current Slack thread', type: 'string' }),
+    defineField({ name: 'assistantCount', title: 'Assistant replies this month', type: 'object', fields: [defineField({ name: 'month', type: 'string' }), defineField({ name: 'n', type: 'number' })] }),
+    defineField({ name: 'lastSeenAt', title: 'Client last looked', type: 'datetime' }),
+    defineField({ name: 'emailedAt', title: 'Last “Josh replied” email', type: 'datetime' }),
+    defineField({ name: 'handoffFor', title: 'Assistant answered for Josh (message key)', type: 'string' }),
+    defineField({
+      name: 'messages',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'chatMessage',
+          fields: [
+            defineField({ name: 'at', type: 'datetime' }),
+            defineField({ name: 'from', type: 'string', options: { list: ['client', 'josh', 'assistant'] } }),
+            defineField({ name: 'who', type: 'string' }),
+            defineField({ name: 'text', type: 'text' }),
+            defineField({ name: 'tab', type: 'string', options: { list: ['josh', 'assistant'] } }),
+            defineField({ name: 'slackTs', type: 'string' }),
+            defineField({ name: 'handoff', type: 'boolean' }),
+          ],
+          preview: { select: { title: 'text', subtitle: 'who' } },
+        }),
+      ],
+    }),
+  ],
+  preview: { select: { title: 'client.organizationName' }, prepare: ({ title }) => ({ title: title ? `Chat · ${title}` : 'Chat' }) },
+})
+
+export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment, docTemplate, signRequest, retainerMonth, portalChat]

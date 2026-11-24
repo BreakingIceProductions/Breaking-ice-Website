@@ -15,6 +15,7 @@ import { tagsFor } from '@/admin/people-shared'
 import { stageIndex, stageTitle } from '@/admin/stages'
 import type { OfficeProject } from '@/admin/types'
 import { TagChips } from '@/admin/ui/tag-chips'
+import { PortalChatCard } from '@/admin/ui/portal-chat-card'
 import { Segments } from '@/admin/ui/graphics'
 import { StageChip, Timeline } from '@/admin/ui/viz-c'
 import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
@@ -142,6 +143,8 @@ export default async function ClientPage({ params, searchParams }: Props) {
             )}
             {c.billingEmail && <p className="muted small m0">Invoices go to {c.billingEmail}</p>}
           </section>
+
+          <PortalChatCard clientId={c._id} />
 
           <section className="p-card" aria-labelledby="h-feed">
             <h2 id="h-feed" className="a-h2">Recent activity</h2>

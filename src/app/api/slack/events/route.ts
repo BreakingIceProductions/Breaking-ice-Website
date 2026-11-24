@@ -1,4 +1,5 @@
 import { after } from 'next/server'
+import { joshReplied } from '@/portal/chat'
 import { handleMessage } from '@/slack/chat'
 import { slackChatReady, slackEnv } from '@/slack/env'
 import { readSlackRequest } from '@/slack/verify'
@@ -12,6 +13,7 @@ export const maxDuration = 300
  * Slack Events API. Every request's signature is checked. Answers only Josh (SLACK_OWNER_ID):
  *  - message in a DM with the bot, or in the pings channel (SLACK_CHANNEL_ID)
  *  - app_mention anywhere the bot is
+ *  - message in a thread of a client's portal-chat channel: Josh's reply, saved to their portal chat
  * Bot messages (its own included), edits, joins and other subtypes are ignored. Slack gets its 200 at
  * once; the reply is worked out afterwards and posted in the message's thread.
  */
@@ -51,6 +53,13 @@ export async function POST(req: Request) {
   const botUserId = body.authorizations?.[0]?.user_id
   if (e.bot_id || e.subtype || !e.user || e.user !== slackEnv.ownerId || !e.channel || !e.ts || !e.text?.trim()) return ok()
   if (botUserId && e.user === botUserId) return ok()
+
+  // A reply in a client's portal-chat thread goes to their portal (top-level messages there are Josh's own notes).
+  if (e.type === 'message' && e.channel_type !== 'im' && e.channel !== slackEnv.channelId && e.thread_ts && e.thread_ts !== e.ts) {
+    const reply = { channel: e.channel, threadTs: e.thread_ts, ts: e.ts, text: e.text }
+    after(() => joshReplied(reply).then(() => undefined).catch((err) => console.error('[slack] portal chat reply failed', err)))
+    return ok()
+  }
 
   const isDm = e.type === 'message' && e.channel_type === 'im'
   const inPings = e.type === 'message' && e.channel === slackEnv.channelId

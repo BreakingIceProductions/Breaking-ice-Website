@@ -11,6 +11,7 @@ import type { ClientProject, Deliverable } from './types'
 import { groupDeliverables, isLatest } from './library'
 import { flushCommentNotices } from './review'
 import { checkVimeoCopies, syncVimeo } from './vimeo'
+import { handoffAll } from './chat'
 
 /**
  * Runs every 10 minutes (GitHub Actions now; Vercel Cron once on Pro).
@@ -96,6 +97,9 @@ export async function runScheduler(now = Date.now()) {
   const settings = await getPortalSettings()
   const projects = await allProjects()
   const log: string[] = []
+
+  // Portal chat: the assistant answers for Josh where a client has waited past the handoff time.
+  await handoffAll(log).catch((e) => log.push(`chat handoff failed: ${String(e).slice(0, 120)}`))
 
   // 1. Vimeo, then emails, so slow folder work can't push them past the time limit.
   for (const p of projects) {

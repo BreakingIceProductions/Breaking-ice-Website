@@ -14,6 +14,7 @@ export const SAMPLE_CLIENT: PortalClient = {
   _id: 'sample-client',
   organizationName: 'Sample Development Corporation',
   portalPayments: true,
+  chat: { enabled: true },
   contacts: [{ _key: 'c1', name: 'Alex Sample', email: DEMO_EMAIL, role: 'Communications lead', getsEmails: true }],
 }
 
@@ -153,6 +154,8 @@ export const DEFAULT_PORTAL: Required<Omit<PortalSettings, Optional>> & Pick<Por
   reminderIntroUnviewed: 'Hi {name}, no pressure: this one is still waiting for your eyes.',
   reminderIntroViewed: 'Hi {name}, any thoughts on this version, or is it good to go?',
   reminderDays: 7,
+  chatHandoffMinutes: 10,
+  chatMonthlyCap: 200,
   signOff: 'Josh',
   signInImage: undefined,
   feedbackVideo: undefined,

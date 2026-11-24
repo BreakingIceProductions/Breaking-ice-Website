@@ -15,6 +15,21 @@ export type PortalClient = {
   portalPayments?: boolean
   /** GST-exempt: nothing adds or mentions GST. */
   noGst?: boolean
+  /** The portal chat: on or off, and its Slack channel once made. */
+  chat?: { enabled?: boolean; slackChannelId?: string }
+}
+
+/** One message in a client's portal chat. */
+export type ChatMessage = {
+  _key: string
+  at: string
+  from: 'client' | 'josh' | 'assistant'
+  who: string
+  text: string
+  tab: 'josh' | 'assistant'
+  slackTs?: string
+  /** The assistant answered in the Josh tab because Josh hadn't replied yet. */
+  handoff?: boolean
 }
 
 export type DeliverableStatus = 'in-progress' | 'awaiting-feedback' | 'changes-requested' | 'approved'
@@ -165,6 +180,8 @@ export type PortalSettings = {
   reminderIntroUnviewed?: string
   reminderIntroViewed?: string
   reminderDays?: number
+  chatHandoffMinutes?: number
+  chatMonthlyCap?: number
   signOff?: string
   copyTo?: string
   /** The company's GST/HST number. When set, portal payments add 5% GST and show the number. */
