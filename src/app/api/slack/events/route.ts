@@ -51,6 +51,10 @@ export async function POST(req: Request) {
 
   const e = body.event
   const botUserId = body.authorizations?.[0]?.user_id
+  // Private-channel messages (client chats): log why one is kept or dropped, without its text.
+  if (e.type === 'message' && e.channel_type === 'group') {
+    console.log('[slack] group message', JSON.stringify({ channel: e.channel, subtype: e.subtype ?? null, bot: Boolean(e.bot_id), owner: e.user === slackEnv.ownerId, thread: Boolean(e.thread_ts && e.thread_ts !== e.ts) }))
+  }
   if (e.bot_id || e.subtype || !e.user || e.user !== slackEnv.ownerId || !e.channel || !e.ts || !e.text?.trim()) return ok()
   if (botUserId && e.user === botUserId) return ok()
 

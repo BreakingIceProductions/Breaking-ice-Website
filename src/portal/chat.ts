@@ -273,7 +273,9 @@ export async function joshReplied(e: { channel: string; threadTs?: string; ts: s
   const reply: ChatMessage = { _key: newKey(), at: new Date().toISOString(), from: 'josh', who: settings.producer?.name || 'Josh', text, tab: 'josh', slackTs: e.ts }
   const away = !doc.lastSeenAt || Date.now() - Date.parse(doc.lastSeenAt) > 3 * 60_000
   const emailOk = !doc.emailedAt || Date.now() - Date.parse(doc.emailedAt) > 30 * 60_000
-  const send = away && emailOk
+  // A reply to Josh's own preview test (the client's last Josh-tab message is staff) never emails the client.
+  const lastClient = [...msgs].reverse().find((m) => m.tab === 'josh' && m.from === 'client')
+  const send = away && emailOk && Boolean(lastClient) && !lastClient!.staff
   await append(client._id, [reply], send ? { emailedAt: new Date().toISOString() } : {})
   if (send) {
     const to = (client.contacts ?? []).filter((c) => c.email && c.getsEmails !== false).map((c) => c.email)
