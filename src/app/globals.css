@@ -1494,6 +1494,10 @@ textarea.input.a-quote-text { min-height: 90px; }
 .pc-send:disabled { opacity: .35; cursor: default; }
 .pc-send:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .pc-panel { background: var(--surface); --pc-me-bg: #e7d9c3; --pc-me-text: #18202f; --pc-them-bg: #ebe8e2; --pc-ai-bg: #ebe8e2; --pc-send-bg: #18202f; --pc-send-fg: #faf7f2; }
+/* The Chat button matches your bubbles: cream, navy text. */
+.pc-launch { background: #e7d9c3; color: #18202f; border: 1px solid color-mix(in srgb, #18202f 14%, transparent); }
+.pc-launch .pc-badge { background: #18202f; color: #faf7f2; }
+:root[data-theme='dark'] .pc-launch { background: #faf7f2; color: #18202f; border-color: transparent; }
 :root[data-theme='dark'] .pc-panel { --pc-me-bg: #faf7f2; --pc-me-text: #18202f; --pc-them-bg: #343c4c; --pc-ai-bg: #2d3443; --pc-send-bg: #faf7f2; --pc-send-fg: #18202f; }
 
 @media (max-width: 560px) {
