@@ -137,7 +137,12 @@ export function SideToggle() {
   const label = collapsed ? 'Expand sidebar' : 'Collapse sidebar'
   return (
     <button type="button" className="a-side-toggle" onClick={toggle} aria-expanded={!collapsed} aria-controls="a-side" aria-label={label} title={`${label} ( [ )`}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {/* Folded rail: the circular Breaking Ice mark sits at the top (CSS shows it only when folded). */}
+      <svg className="a-side-toggle-mark" viewBox="0 0 48 43.9" width="18" height="16.5" aria-hidden="true">
+        <polygon points="0,0 20,0 20,29.9 0,43.9" fill="var(--copper)" />
+        <polygon points="28,0 48,0 48,29.9 28,43.9" fill="var(--warm-white)" />
+      </svg>
+      <svg className="a-side-toggle-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="3" y="4" width="18" height="16" rx="2" />
         <path d="M9 4v16" />
         <path d={collapsed ? 'm13.5 10 2 2-2 2' : 'm15.5 10-2 2 2 2'} />

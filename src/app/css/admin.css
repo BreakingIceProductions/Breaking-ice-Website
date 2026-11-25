@@ -178,6 +178,13 @@
 .a-logo-mark, .a-signout-icon { display: none; }
 .a-side-toggle { flex: none; display: none; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border-radius: var(--radius-pill); border: 1px solid rgb(250 247 242 / .16); background: transparent; color: #d5dae2; cursor: pointer; }
 .a-side-toggle:hover { background: rgb(250 247 242 / .08); color: var(--warm-white); border-color: var(--warm-white); }
+.a-side-toggle-mark { display: none; }
+/* Folded: the top button becomes the circular Breaking Ice mark (40px circle, negative margins keep the 32px row). */
+@media (min-width: 821px) {
+  .a-shell[data-side='collapsed'] .a-side-toggle { width: 40px; height: 40px; min-width: 40px; min-height: 40px; margin: -4px 0; background: rgb(250 247 242 / .06); }
+  .a-shell[data-side='collapsed'] .a-side-toggle-mark { display: block; }
+  .a-shell[data-side='collapsed'] .a-side-toggle-icon { display: none; }
+}
 @media (min-width: 821px) {
   /* Sticky: Settings, the theme toggle and Sign out stay in reach however long the page is. */
   .a-side { position: sticky; top: 0; height: 100vh; height: 100dvh; overflow-x: clip; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; transition: flex-basis .2s ease, padding .2s ease; }
