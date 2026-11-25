@@ -192,7 +192,8 @@
      footer is the same height either way and the Settings group never shifts. */
   .a-side-foot { margin-top: 44px; }
   .a-shell[data-side='collapsed'] .a-side-foot { margin-top: 0; }
-  .a-shell[data-side='collapsed'] .a-side { flex: 0 0 72px; }
+  /* min-width 0: the invisible group labels must not stretch the rail past 72px. */
+  .a-shell[data-side='collapsed'] .a-side { flex: 0 0 72px; width: 72px; min-width: 0; }
   .a-shell[data-side='collapsed'] .a-side-head { justify-content: center; }
   .a-shell[data-side='collapsed'] .a-side-head .a-logo { display: none; }
   .a-shell[data-side='collapsed'] .a-search-btn { width: 44px; align-self: flex-start; }
@@ -200,7 +201,7 @@
   .a-shell[data-side='collapsed'] .a-ext,
   .a-shell[data-side='collapsed'] .a-conn { display: none; }
   .a-shell[data-side='collapsed'] .a-nav-label,
-  .a-shell[data-side='collapsed'] .a-side-label { visibility: hidden; white-space: nowrap; overflow: hidden; }
+  .a-shell[data-side='collapsed'] .a-side-label { visibility: hidden; white-space: nowrap; overflow: hidden; width: 0; }
   /* Labels stay in the accessibility tree; only hidden from sight. */
   .a-shell[data-side='collapsed'] .a-search-text,
   .a-shell[data-side='collapsed'] .a-nav-text,

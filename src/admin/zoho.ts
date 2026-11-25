@@ -278,7 +278,8 @@ export const recurringUrl = (orgId: string, id: string) => `${adminEnv.zohoBooks
 
 /** A recurring invoice profile, as the Money page's projection reads it. Amounts in dollars. */
 export type RecurringProfile = {
-  recurrence_id: string
+  recurring_invoice_id?: string
+  recurrence_id?: string
   recurrence_name?: string
   customer_id?: string
   customer_name?: string
@@ -299,7 +300,10 @@ async function fetchRecurringProfiles(): Promise<RecurringProfile[]> {
   const out: RecurringProfile[] = []
   for (const r of rows) {
     if (r.status && r.status.toLowerCase() !== 'active') continue
-    const full = (await call<{ recurring_invoice: RecurringProfile }>(`/recurringinvoices/${encodeURIComponent(r.recurrence_id)}`)).recurring_invoice
+    // Zoho's list rows carry the id as recurring_invoice_id (recurrence_id is absent there).
+    const id = r.recurring_invoice_id ?? r.recurrence_id
+    if (!id) continue
+    const full = (await call<{ recurring_invoice: RecurringProfile }>(`/recurringinvoices/${encodeURIComponent(id)}`)).recurring_invoice
     if (full && (!full.status || full.status.toLowerCase() === 'active')) out.push(full)
   }
   return out
