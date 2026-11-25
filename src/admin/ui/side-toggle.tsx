@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 /** Cookie + localStorage key for the sidebar's collapsed state. */
 export const SIDE_KEY = 'bi-admin-side'
@@ -93,9 +93,23 @@ export function SideShell({ initial, children }: { initial: boolean; children: R
 
   // While it peeks, the sidebar shows its open layout; `collapsed` (and the toggle's label) stay as chosen.
   const open = !collapsed || peek
+
+  // Opening from the rail: the panel widens first, then the words fade in (CSS keys off data-opening), so
+  // labels never appear squeezed mid-animation. Only when it actually opens, not on page load.
+  const [opening, setOpening] = useState(false)
+  const wasOpen = useRef(open)
+  useEffect(() => {
+    const was = wasOpen.current
+    wasOpen.current = open
+    if (!open || was) return
+    setOpening(true)
+    const t = setTimeout(() => setOpening(false), 500)
+    return () => clearTimeout(t)
+  }, [open])
+
   return (
     <SideContext.Provider value={{ collapsed, toggle }}>
-      <div className="a-shell" data-side={open ? 'open' : 'collapsed'} data-peek={collapsed && peek ? '' : undefined}>{children}</div>
+      <div className="a-shell" data-side={open ? 'open' : 'collapsed'} data-peek={collapsed && peek ? '' : undefined} data-opening={opening ? '' : undefined}>{children}</div>
     </SideContext.Provider>
   )
 }

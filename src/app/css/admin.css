@@ -185,6 +185,10 @@
   /* Leave room for the toggle beside the wordmark. */
   .a-side-head .a-logo { --logo-h: 21px; min-width: 0; padding-right: 0; padding-left: var(--space-2); }
   .a-nav a, .a-search-btn { white-space: nowrap; }
+  /* Group titles never wrap, so they can't reflow line by line while the panel widens. */
+  .a-side .a-nav-label, .a-side .a-side-label { white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  /* Opening: the panel widens (.2s), then every word fades in once there's room. */
+  .a-shell[data-opening] :is(.a-nav-label, .a-side-label, .a-nav-text, .a-search-text, .a-search-btn kbd, .a-signout-text, .a-conn, .a-ext, .a-logo-full, .a-badge) { animation: a-words-in .22s ease .14s both; }
 
   /* Folding keeps every icon in the same spot: same side padding, same row heights, and the
      group labels keep their space (just invisible), so nothing jumps when the rail opens or closes. */
@@ -220,6 +224,10 @@
   .a-shell[data-peek] .a-side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 60; width: 248px; height: auto; box-shadow: 12px 0 32px rgb(10 14 22 / .28); animation: a-peek .16s ease-out; }
 }
 @keyframes a-peek { from { width: 72px; } to { width: 248px; } }
+@keyframes a-words-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .a-shell[data-opening] :is(.a-nav-label, .a-side-label, .a-nav-text, .a-search-text, .a-search-btn kbd, .a-signout-text, .a-conn, .a-ext, .a-logo-full, .a-badge) { animation: none; }
+}
 @media (min-width: 821px) and (prefers-reduced-motion: reduce) {
   .a-shell[data-peek] .a-side { animation: none; }
 }
