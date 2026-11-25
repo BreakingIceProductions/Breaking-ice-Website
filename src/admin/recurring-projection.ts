@@ -103,3 +103,42 @@ export function projectRecurring(profiles: RecurringProfile[], t = today()): Rec
     skipped,
   }
 }
+
+/** One active profile's signed value for a fiscal year, and the day it counts from on the year chart. */
+export type RetainerSigned = { on: string; value: number; customer: string }
+
+/**
+ * Retainers as signed money for the fiscal year: every invoice a profile makes in the year, issued or
+ * still to come, pre-tax sub_total each. It walks from the profile's start date (its first invoice;
+ * the next invoice date when Zoho gives no start date) at its frequency, keeps the dates from the fiscal
+ * year's start, and stops at the earlier of its end date and the fiscal year's end. So the figure stays
+ * the same as the months pass. `on` is the start date clamped into the fiscal year and not after today,
+ * so the year chart's Signed line steps up where the card already counts it.
+ */
+export function retainerSignedFor(profiles: RecurringProfile[], t = today()): RetainerSigned[] {
+  const fy = fiscalYear(t)
+  const out: RetainerSigned[] = []
+  const isDay = (s?: string) => Boolean(s && /^\d{4}-\d{2}-\d{2}/.test(s))
+  for (const p of profiles) {
+    const unit = UNIT[(p.recurrence_frequency ?? '').toLowerCase()]
+    const every = Math.max(1, Math.floor(Number(p.repeat_every) || 1))
+    const amount = typeof p.sub_total === 'number' && Number.isFinite(p.sub_total) ? p.sub_total : undefined
+    const anchor = isDay(p.start_date) ? p.start_date!.slice(0, 10) : isDay(p.next_invoice_date) ? p.next_invoice_date!.slice(0, 10) : undefined
+    if (!unit || amount === undefined || amount <= 0 || !anchor) continue
+    const end = isDay(p.end_date) ? p.end_date!.slice(0, 10) : undefined
+    const stop = end && end < fy.end ? end : fy.end
+    let value = 0
+    let first: string | undefined
+    for (let k = 0; k < 2000; k++) {
+      const date = step(anchor, unit, every, k)
+      if (date > stop) break
+      if (date < fy.start) continue
+      value += amount
+      first ??= date
+    }
+    if (!value || !first) continue
+    const start = anchor < fy.start ? fy.start : anchor
+    out.push({ on: start > t ? (t < fy.start ? fy.start : t) : start, value: round2(value), customer: p.customer_name ?? p.recurrence_name ?? 'Recurring invoice' })
+  }
+  return out
+}

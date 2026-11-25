@@ -9,7 +9,7 @@ import { cad } from '@/admin/insights'
 import { moneyView, RANGES, reportView, type GoalLine, type RangeKey } from '@/admin/money'
 import { loadMoney } from '@/admin/money-data'
 import { fiscalShare } from '@/admin/fiscal'
-import { projectRecurring, type RecurringProjection } from '@/admin/recurring-projection'
+import { projectRecurring, retainerSignedFor, type RecurringProjection, type RetainerSigned } from '@/admin/recurring-projection'
 import { listRecurringProfiles } from '@/admin/zoho'
 import { GoalsForm } from '@/admin/ui/goals-form'
 import { Legend, SplitBar } from '@/admin/ui/graphics'
@@ -44,6 +44,8 @@ export default async function Money({ searchParams }: Props) {
   // Recurring invoice profiles from Zoho Books (cached an hour). Null when Zoho can't be read: the page shows no projection.
   const [data, profiles] = await Promise.all([loadMoney(), view === 'money' ? listRecurringProfiles() : Promise.resolve(null)])
   const recurring = profiles?.length ? projectRecurring(profiles) : null
+  // Retainers count toward Signed: each profile's invoices this fiscal year. None when Zoho can't be read (projects only).
+  const retainers = profiles?.length ? retainerSignedFor(profiles) : []
   return (
     <div className="a-page mn sb-page mc-page">
       <div className="a-pending-scope stack sb-gap">
@@ -64,7 +66,7 @@ export default async function Money({ searchParams }: Props) {
           )}
         </header>
         <div className="a-pending-body stack sb-gap">
-          {view === 'money' ? <MoneyView data={data} canEdit={!admin.viewOnly} recurring={recurring} /> : <ReportsView data={data} range={range} />}
+          {view === 'money' ? <MoneyView data={data} canEdit={!admin.viewOnly} recurring={recurring} retainers={retainers} /> : <ReportsView data={data} range={range} />}
         </div>
       </div>
     </div>
@@ -124,8 +126,8 @@ const STATUS_WORD: Record<string, { text: string; tone: ChipTone }> = {
   'Partly paid': { text: 'Part paid', tone: 'info' },
 }
 
-function MoneyView({ data, canEdit, recurring }: { data: Data; canEdit: boolean; recurring: RecurringProjection | null }) {
-  const v = moneyView(data.projects, data.payments, data.goals)
+function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdit: boolean; recurring: RecurringProjection | null; retainers: RetainerSigned[] }) {
+  const v = moneyView(data.projects, data.payments, data.goals, undefined, retainers)
   const t = today()
   const ageOf = (d?: string) => (d ? Math.max(0, daysBetween(d, t)) : null)
   const current = v.months.filter((m) => !m.future).at(-1)
@@ -164,6 +166,7 @@ function MoneyView({ data, canEdit, recurring }: { data: Data; canEdit: boolean;
                 </span>
                 <Meter value={set ? g.share ?? 0 : 0} tick={tick} />
                 <span className="mc-goal-line" title={g.note}>{goalStatus(g)}</span>
+                {g.split && <span className="mc-goal-line" title={g.note}>{g.split}</span>}
               </li>
             )
           })}

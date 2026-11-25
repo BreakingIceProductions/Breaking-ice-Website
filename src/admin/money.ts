@@ -29,6 +29,7 @@ const QUOTED = idx('quoted')
 const sum = (list: number[]) => list.reduce((a, b) => a + b, 0)
 const pct = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : null)
 const day = (iso?: string) => (iso && !Number.isNaN(Date.parse(iso)) ? ymd(new Date(iso)) : undefined)
+const fmtMoney = (n: number) => `$${Math.round(n).toLocaleString('en-CA')}`
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /* ── Periods ────────────────────────────────────────────────────────── */
@@ -224,9 +225,9 @@ export function winRate(projects: OfficeProject[], r: Period) {
  * of the year or month gone), and `gap` is the value minus that: negative is behind. A rate has no
  * pace, so its gap is the value minus the goal, in points.
  */
-export type GoalLine = { key: keyof Goals; label: string; unit: 'money' | 'count' | 'rate'; value: number | null; note: string; goal?: number; share?: number; pace?: number; paceShare?: number; gap?: number }
+export type GoalLine = { key: keyof Goals; label: string; unit: 'money' | 'count' | 'rate'; value: number | null; note: string; /** A short visible line under the card, e.g. the projects / retainers split. */ split?: string; goal?: number; share?: number; pace?: number; paceShare?: number; gap?: number }
 
-function goalLine(base: Pick<GoalLine, 'key' | 'label' | 'unit' | 'value' | 'note'>, goal: number | undefined, gone: number | null): GoalLine {
+function goalLine(base: Pick<GoalLine, 'key' | 'label' | 'unit' | 'value' | 'note' | 'split'>, goal: number | undefined, gone: number | null): GoalLine {
   if (!goal || base.value === null) return { ...base, goal: goal || undefined }
   const pace = gone === null ? undefined : goal * gone
   return { ...base, goal, share: base.value / goal, pace, paceShare: gone ?? undefined, gap: base.value - (pace ?? goal) }
@@ -234,7 +235,12 @@ function goalLine(base: Pick<GoalLine, 'key' | 'label' | 'unit' | 'value' | 'not
 
 /* ── The Money view ─────────────────────────────────────────────────── */
 
-export function moneyView(projects: MoneyProject[], payments: PortalPayment[], goals: Goals, t = today()) {
+/**
+ * `retainers` is each active recurring profile's signed value for this fiscal year (retainerSignedFor in
+ * src/admin/recurring-projection.ts). It adds to Signed (the goal card and the year chart's Signed line) but
+ * not to the win rate, which stays on quotes. Empty when Zoho Books can't be read: Signed is projects only.
+ */
+export function moneyView(projects: MoneyProject[], payments: PortalPayment[], goals: Goals, t = today(), retainers: { on: string; value: number }[] = []) {
   // Yearly figures follow the fiscal year (Nov 1 – Oct 31, src/admin/fiscal.ts); monthly ones stay calendar months.
   const fy = fiscalYear(t)
   const prevFy = fiscalYear(t, -1)
@@ -249,13 +255,15 @@ export function moneyView(projects: MoneyProject[], payments: PortalPayment[], g
   const monthGone = Number(t.slice(8)) / daysBetween(`${month}-01`, `${addMonths(month, 1)}-01`)
 
   const signed = signedIn(projects, thisYear)
+  const retainerSigned = sum(retainers.map((r) => r.value))
+  const signedTotal = signed.value + retainerSigned
   const collectedYear = collected(all, thisYear)
   const leads = projects.filter((p) => within(leadDay(p), thisMonth)).length
   const win = winRate(projects, thisYear)
   const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`
 
   const goalLines: GoalLine[] = [
-    goalLine({ key: 'signedYear', label: `Signed in ${year}`, unit: 'money', value: signed.value, note: `${plural(signed.count, 'project')} reached Onboarding${signed.count > signed.withValue ? `, ${signed.count - signed.withValue} with no quote total` : ''}` }, goals.signedYear, yearGone),
+    goalLine({ key: 'signedYear', label: `Signed in ${year}`, unit: 'money', value: signedTotal, note: `${plural(signed.count, 'project')} reached Onboarding${signed.count > signed.withValue ? `, ${signed.count - signed.withValue} with no quote total` : ''}${retainers.length ? `, plus ${plural(retainers.length, 'retainer')}: every invoice its recurring profile makes this fiscal year, before GST` : ''}`, split: retainerSigned ? `${fmtMoney(signed.value)} projects + ${fmtMoney(retainerSigned)} retainers` : undefined }, goals.signedYear, yearGone),
     goalLine({ key: 'collectedYear', label: `Collected in ${year}`, unit: 'money', value: collectedYear, note: 'Payments and invoices recorded as paid' }, goals.collectedYear, yearGone),
     goalLine({ key: 'leadsMonth', label: `New leads in ${monthLabel(month, false)}`, unit: 'count', value: leads, note: 'Leads and projects first recorded this month' }, goals.leadsMonth, monthGone),
     goalLine({ key: 'winRate', label: `Win rate in ${year}`, unit: 'rate', value: win.rate, note: win.decided ? `${win.signed} signed of ${win.decided} decided` : 'Nothing signed or declined yet this year' }, goals.winRate, null),
@@ -269,7 +277,8 @@ export function moneyView(projects: MoneyProject[], payments: PortalPayment[], g
   let collectedRun = 0
   const months = fy.months.map((m, i) => {
     const label = MONTHS[Number(m.slice(5, 7)) - 1]
-    const signedThen = sum(signings.filter((s) => within(s.on, inMonth(m))).map((s) => s.value ?? 0))
+    // Retainers step up in the month they count from (their start, clamped into the year and to today), matching the card.
+    const signedThen = sum(signings.filter((s) => within(s.on, inMonth(m))).map((s) => s.value ?? 0)) + sum(retainers.filter((r) => within(r.on, inMonth(m))).map((r) => r.value))
     const collectedThen = collected(paid, inMonth(m))
     signedRun += signedThen
     collectedRun += collectedThen

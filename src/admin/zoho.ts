@@ -288,6 +288,8 @@ export type RecurringProfile = {
   recurrence_frequency?: string
   repeat_every?: number | string
   next_invoice_date?: string
+  /** The profile's first invoice date (read from the full profile). */
+  start_date?: string
   end_date?: string
   sub_total?: number
   tax_total?: number

@@ -18,15 +18,12 @@ type Linked = { client: string; zohoContactId?: string; zohoRecurringIds: string
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 /**
- * "December 2026 retainer". Retainers are billed in advance: an invoice dated in the last week of
- * a month (the first ones go out on the 30th) is for the month after; otherwise it's its own month.
+ * "November 2026 retainer". Retainers are billed at the end of the month they cover, so the
+ * invoice date's own month is the month it's for (the Nov 30 invoice is November).
  */
 export function retainerLabel(date: string) {
-  const [y, m, d] = date.slice(0, 10).split('-').map(Number)
-  const ahead = d >= 24
-  const month = ahead ? (m % 12) + 1 : m
-  const year = ahead && m === 12 ? y + 1 : y
-  return `${MONTHS[month - 1]} ${year} retainer`
+  const [y, m] = date.slice(0, 10).split('-').map(Number)
+  return `${MONTHS[m - 1]} ${y} retainer`
 }
 
 /** Sanity ids allow letters, digits, dots, dashes and underscores. */
