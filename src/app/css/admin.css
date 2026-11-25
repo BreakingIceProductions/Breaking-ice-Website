@@ -221,15 +221,19 @@
 /* Folded sidebar, hovered or focused: it opens over the page (a 72px spacer holds the rail's place, so nothing moves). */
 @media (min-width: 821px) {
   .a-shell[data-peek]::before { content: ''; flex: 0 0 72px; }
-  .a-shell[data-peek] .a-side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 60; width: 248px; height: auto; box-shadow: 12px 0 32px rgb(10 14 22 / .28); animation: a-peek .16s ease-out; }
+  /* flex-basis stays at the rail's 72px while floating, so rejoining the layout has nothing to animate. */
+  .a-shell[data-peek] .a-side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 60; flex: 0 0 72px; width: 248px; height: auto; box-shadow: 12px 0 32px rgb(10 14 22 / .28); transition: none; animation: a-peek .16s ease-out; }
+  /* Leaving: still floating, it slides back to the rail (words already hidden by the folded layout), then lands. */
+  .a-shell[data-closing] .a-side { width: 72px; animation: a-peek-out .16s ease-in; box-shadow: none; }
 }
 @keyframes a-peek { from { width: 72px; } to { width: 248px; } }
+@keyframes a-peek-out { from { width: 248px; } to { width: 72px; } }
 @keyframes a-words-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .a-shell[data-opening] :is(.a-nav-label, .a-side-label, .a-nav-text, .a-search-text, .a-search-btn kbd, .a-signout-text, .a-conn, .a-ext, .a-logo-full, .a-badge) { animation: none; }
 }
 @media (min-width: 821px) and (prefers-reduced-motion: reduce) {
-  .a-shell[data-peek] .a-side { animation: none; }
+  .a-shell[data-peek] .a-side, .a-shell[data-closing] .a-side { animation: none; }
 }
 @media (min-width: 821px) and (prefers-reduced-motion: reduce) {
   .a-side { transition: none; }

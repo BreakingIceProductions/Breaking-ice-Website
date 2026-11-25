@@ -26,7 +26,23 @@ export function SideShell({ initial, children }: { initial: boolean; children: R
   const [collapsed, setCollapsed] = useState(initial)
 
   // Folded: hovering the rail with a mouse, or tabbing into it, opens it over the page until the pointer or focus leaves.
-  const [peek, setPeek] = useState(false)
+  const [peek, setPeekRaw] = useState(false)
+
+  // Closing a peek: it stays floating over the page while it slides back to the rail, then rejoins the layout,
+  // so the page behind never moves. Set in the same update as peek, so there's no in-between frame.
+  const [closing, setClosing] = useState(false)
+  const peekRef = useRef(false)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const setPeek = useCallback((v: boolean) => {
+    clearTimeout(closeTimer.current)
+    if (!v && peekRef.current) {
+      setClosing(true)
+      closeTimer.current = setTimeout(() => setClosing(false), 180)
+    } else if (v) setClosing(false)
+    peekRef.current = v
+    setPeekRaw(v)
+  }, [])
+  useEffect(() => () => clearTimeout(closeTimer.current), [])
 
   const toggle = useCallback(() => {
     setPeek(false)
@@ -107,9 +123,10 @@ export function SideShell({ initial, children }: { initial: boolean; children: R
     return () => clearTimeout(t)
   }, [open])
 
+  const floating = collapsed && (peek || closing)
   return (
     <SideContext.Provider value={{ collapsed, toggle }}>
-      <div className="a-shell" data-side={open ? 'open' : 'collapsed'} data-peek={collapsed && peek ? '' : undefined} data-opening={opening ? '' : undefined}>{children}</div>
+      <div className="a-shell" data-side={open ? 'open' : 'collapsed'} data-peek={floating ? '' : undefined} data-closing={floating && !peek ? '' : undefined} data-opening={opening ? '' : undefined}>{children}</div>
     </SideContext.Provider>
   )
 }
