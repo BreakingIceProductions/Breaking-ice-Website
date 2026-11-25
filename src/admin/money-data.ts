@@ -5,6 +5,8 @@ import { adminSampleMode } from './config'
 import { listProjects } from './data'
 import type { Goals, MoneyProject } from './money'
 import { SAMPLE_GOALS, sampleOfficePayments } from './money-samples'
+import { projectRecurring, retainerSignedFor, type RecurringProjection, type RetainerSigned } from './recurring-projection'
+import { listRecurringProfiles } from './zoho'
 
 /**
  * What the Money page reads: the projects (with the day each record was made), every portal
@@ -55,4 +57,33 @@ export async function loadMoney(): Promise<{ projects: MoneyProject[]; payments:
   ])
   const madeAt = new Map(created.map((c) => [c._id, c._createdAt]))
   return { projects: projects.map((p) => ({ ...p, _createdAt: madeAt.get(p._id) })), payments, goals }
+}
+
+/**
+ * Retainer income for the Money and Reports pages, from Zoho Books recurring invoice profiles (cached an
+ * hour): the projection (invoices to come), each profile's signed value this fiscal year, and which portal
+ * client each Zoho customer is. Null when Zoho can't be read or has no active profiles: every section then
+ * shows projects only, with nothing guessed.
+ */
+export type RetainerForecast = {
+  projection: RecurringProjection
+  signed: RetainerSigned[]
+  /** Zoho customer id → portal client. */
+  clients: Record<string, { clientId: string; name?: string }>
+}
+
+export async function loadRetainerForecast(): Promise<RetainerForecast | null> {
+  if (adminSampleMode()) return null
+  const profiles = await listRecurringProfiles()
+  if (!profiles?.length) return null
+  const links = await read<{ client: string; zohoContactId: string; name?: string }[]>(
+    `*[_type == "boClient" && defined(zohoContactId)]{client, zohoContactId, "name": *[_type == "client" && _id == ^.client][0].organizationName}`,
+    {},
+    [],
+  )
+  return {
+    projection: projectRecurring(profiles),
+    signed: retainerSignedFor(profiles),
+    clients: Object.fromEntries(links.map((l) => [l.zohoContactId, { clientId: l.client, name: l.name }])),
+  }
 }

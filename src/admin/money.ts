@@ -151,6 +151,8 @@ export type Bill = {
   paidOn?: string
   method?: string
   cardFee?: number
+  /** A monthly retainer invoice Zoho Books made from a recurring profile (mirrored as a portal payment). */
+  retainer?: boolean
 }
 
 export function bills(projects: OfficeProject[], payments: PortalPayment[]): Bill[] {
@@ -172,8 +174,9 @@ export function bills(projects: OfficeProject[], payments: PortalPayment[]): Bil
       source: 'payment',
       amount: x.amount,
       state,
-      status: state === 'paid' ? 'Paid' : state === 'clearing' ? 'Client says it’s sent' : 'Asked in the portal',
+      status: state === 'paid' ? 'Paid' : state === 'clearing' ? 'Client says it’s sent' : x.kind === 'retainer' ? 'Retainer invoice' : 'Asked in the portal',
       owed: state === 'paid' ? 0 : x.total,
+      retainer: x.kind === 'retainer' || undefined,
       asked: day(x.createdAt),
       paidOn: state === 'paid' ? day(x.paidAt) : undefined,
       method: x.method,
@@ -235,12 +238,22 @@ function goalLine(base: Pick<GoalLine, 'key' | 'label' | 'unit' | 'value' | 'not
 
 /* ── The Money view ─────────────────────────────────────────────────── */
 
+/** "$1,200 collected · $96,000 more expected from retainers by Oct 31 · $97,200 by then, $298,800 short of the goal". */
+function collectedSplit(done: number, expected: number, goal: number | undefined, end: string) {
+  const by = `${MONTHS[Number(end.slice(5, 7)) - 1]} ${Number(end.slice(8, 10))}`
+  const total = done + expected
+  const verdict = !goal ? '' : total >= goal ? ` · ${fmtMoney(total)} by then: reaches the goal` : ` · ${fmtMoney(total)} by then: ${fmtMoney(goal - total)} short of the goal`
+  return `${fmtMoney(done)} collected · ${fmtMoney(expected)} more expected from retainers by ${by}${verdict}`
+}
+
 /**
  * `retainers` is each active recurring profile's signed value for this fiscal year (retainerSignedFor in
  * src/admin/recurring-projection.ts). It adds to Signed (the goal card and the year chart's Signed line) but
  * not to the win rate, which stays on quotes. Empty when Zoho Books can't be read: Signed is projects only.
+ * `expected` is the retainer invoices still to come this fiscal year (projectRecurring().restOfYear). It never
+ * counts as collected: it only adds a labelled "expected" line under the Collected goal.
  */
-export function moneyView(projects: MoneyProject[], payments: PortalPayment[], goals: Goals, t = today(), retainers: { on: string; value: number }[] = []) {
+export function moneyView(projects: MoneyProject[], payments: PortalPayment[], goals: Goals, t = today(), retainers: { on: string; value: number }[] = [], expected = 0) {
   // Yearly figures follow the fiscal year (Nov 1 – Oct 31, src/admin/fiscal.ts); monthly ones stay calendar months.
   const fy = fiscalYear(t)
   const prevFy = fiscalYear(t, -1)
@@ -264,7 +277,7 @@ export function moneyView(projects: MoneyProject[], payments: PortalPayment[], g
 
   const goalLines: GoalLine[] = [
     goalLine({ key: 'signedYear', label: `Signed in ${year}`, unit: 'money', value: signedTotal, note: `${plural(signed.count, 'project')} reached Onboarding${signed.count > signed.withValue ? `, ${signed.count - signed.withValue} with no quote total` : ''}${retainers.length ? `, plus ${plural(retainers.length, 'retainer')}: every invoice its recurring profile makes this fiscal year, before GST` : ''}`, split: retainerSigned ? `${fmtMoney(signed.value)} projects + ${fmtMoney(retainerSigned)} retainers` : undefined }, goals.signedYear, yearGone),
-    goalLine({ key: 'collectedYear', label: `Collected in ${year}`, unit: 'money', value: collectedYear, note: 'Payments and invoices recorded as paid' }, goals.collectedYear, yearGone),
+    goalLine({ key: 'collectedYear', label: `Collected in ${year}`, unit: 'money', value: collectedYear, note: `Payments and invoices recorded as paid${expected ? `. Expected from retainers is projected from Zoho Books recurring profiles and isn’t counted as collected` : ''}`, split: expected ? collectedSplit(collectedYear, expected, goals.collectedYear, fy.end) : undefined }, goals.collectedYear, yearGone),
     goalLine({ key: 'leadsMonth', label: `New leads in ${monthLabel(month, false)}`, unit: 'count', value: leads, note: 'Leads and projects first recorded this month' }, goals.leadsMonth, monthGone),
     goalLine({ key: 'winRate', label: `Win rate in ${year}`, unit: 'rate', value: win.rate, note: win.decided ? `${win.signed} signed of ${win.decided} decided` : 'Nothing signed or declined yet this year' }, goals.winRate, null),
   ]
@@ -378,16 +391,22 @@ function gaps(projects: MoneyProject[], all: Bill[]) {
   }
 }
 
-/** The "Paid this year" list as CSV text. */
-export function paidCsv(rows: Bill[]) {
+/**
+ * The "Paid this year" list as CSV text. `projected` adds the retainer invoices still to come this fiscal year as
+ * their own rows (Kind "Projected (retainers)", no paid date, an Expected on date), so they can be filtered out.
+ */
+export function paidCsv(rows: Bill[], projected: { date: string; amount: number; client: string }[] = []) {
   const cell = (v: string | number | undefined) => {
     const s = String(v ?? '')
     // A leading =, +, - or @ would run as a formula in a spreadsheet.
     const safe = /^[=+\-@]/.test(s) && typeof v !== 'number' ? `'${s}` : s
     return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
   }
-  const head = ['Paid on', 'Client', 'Project', 'What', 'Amount before GST (CAD)', 'How', 'Card fee (CAD)', 'Record']
-  const lines = rows.map((b) => [b.paidOn, b.client, b.project, b.label, b.amount.toFixed(2), b.source === 'payment' ? methodLabel(b.method) : 'Zoho Books invoice', b.cardFee ? b.cardFee.toFixed(2) : '', b.source === 'payment' ? 'Portal payment' : 'Invoice'])
+  const head = ['Paid on', 'Client', 'Project', 'What', 'Amount before GST (CAD)', 'How', 'Card fee (CAD)', 'Record', 'Kind', 'Expected on']
+  const lines = [
+    ...rows.map((b) => [b.paidOn, b.client, b.project, b.label, b.amount.toFixed(2), b.source === 'payment' ? methodLabel(b.method) : 'Zoho Books invoice', b.cardFee ? b.cardFee.toFixed(2) : '', b.source === 'payment' ? 'Portal payment' : 'Invoice', 'Paid', '']),
+    ...projected.map((p) => ['', p.client, 'Monthly retainer', `${monthLabel(p.date.slice(0, 7), true)} retainer invoice`, p.amount.toFixed(2), '', '', 'Zoho Books recurring profile', 'Projected (retainers)', p.date]),
+  ]
   return [head, ...lines].map((l) => l.map(cell).join(',')).join('\r\n') + '\r\n'
 }
 
@@ -410,8 +429,18 @@ function furthest(p: OfficeProject) {
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-export function reportView(projects: MoneyProject[], payments: PortalPayment[], range: RangeKey, t = today()) {
+/**
+ * `forecast` is retainer income from Zoho Books recurring profiles (empty when Zoho can't be read). Its
+ * projected invoices show as their own "Projected (retainers)" figures, never inside collected. In This
+ * fiscal year, the retainers' signed value also counts toward Signed, as on the Money tab, and the money
+ * chart runs to the fiscal year end so the months still to come show their projected invoices.
+ */
+export function reportView(projects: MoneyProject[], payments: PortalPayment[], range: RangeKey, t = today(), forecast: { signed: { on: string; value: number }[]; invoices: { date: string; amount: number }[] } = { signed: [], invoices: [] }) {
   const r = periodFor(range, t)
+  const fiscal = range === 'year' ? fiscalYear(t) : null
+  const retainerSigned = fiscal ? sum(forecast.signed.map((s) => s.value)) : 0
+  // Retainer invoices still to come that fall in the shown months: to the fiscal year end in This fiscal year, else the rest of this month.
+  const upcoming = forecast.invoices.filter((i) => i.date >= t && (fiscal ? i.date <= fiscal.end : i.date.slice(0, 7) === t.slice(0, 7)))
   const all = bills(projects, payments)
   // The leads that came in during the period. The sections below follow these same leads through.
   const cohort = projects.filter((p) => { const d = leadDay(p); return Boolean(d) && within(d, r) })
@@ -446,14 +475,17 @@ export function reportView(projects: MoneyProject[], payments: PortalPayment[], 
   const signings = projects.map(signing).filter((s): s is { on: string; value?: number } => Boolean(s?.on))
   const paid = all.filter((b) => b.state === 'paid' && b.paidOn)
   const first = r.from ?? [...signings.map((s) => s.on), ...paid.map((b) => b.paidOn!)].sort()[0]
-  const monthKeys = first ? monthsFrom(first.slice(0, 7), t.slice(0, 7)) : []
+  const monthKeys = first ? monthsFrom(first.slice(0, 7), fiscal ? fiscal.end.slice(0, 7) : t.slice(0, 7)) : []
   const byYear = monthKeys.length > 24
   const buckets = byYear ? [...new Set(monthKeys.map((m) => m.slice(0, 4)))] : monthKeys
   const spansYears = new Set(monthKeys.map((m) => m.slice(0, 4))).size > 1
   const moneyByMonth = buckets.map((b) => ({
     label: byYear ? b : monthLabel(b, spansYears),
-    signed: sum(signings.filter((s) => s.on.startsWith(b)).map((s) => s.value ?? 0)),
+    signed: sum(signings.filter((s) => s.on.startsWith(b)).map((s) => s.value ?? 0)) + (fiscal ? sum(forecast.signed.filter((s) => s.on.startsWith(b)).map((s) => s.value)) : 0),
     collected: sum(paid.filter((x) => x.paidOn!.startsWith(b)).map((x) => x.amount)),
+    /** Projected retainer invoices in this month (or year), not collected. */
+    projected: sum(upcoming.filter((i) => i.date.startsWith(b)).map((i) => i.amount)),
+    future: !byYear && b > t.slice(0, 7),
   }))
 
   // New leads by month across the period, the same way. All time starts at the first dated lead.
@@ -500,7 +532,11 @@ export function reportView(projects: MoneyProject[], payments: PortalPayment[], 
     leads: cohort.length,
     win,
     signed,
+    /** Retainers' signed value this fiscal year (This fiscal year only), on top of `signed`. */
+    retainerSigned,
     collected: collected(all, r),
+    /** Retainer invoices still to come in the shown months, before GST. Projected, not collected. */
+    projected: sum(upcoming.map((i) => i.amount)),
     sources: split(LEAD_SOURCES, (p) => p.office.lead?.source),
     types: split(PROJECT_TYPES, (p) => p.projectType),
     funnel,

@@ -9,7 +9,7 @@ import type { RecurringProfile } from './zoho'
  * Projected money is kept apart from collected money everywhere it's shown.
  */
 
-export type ProjectedInvoice = { date: string; amount: number; customer: string }
+export type ProjectedInvoice = { date: string; amount: number; customer: string; /** Zoho Books customer id. */ customerId?: string }
 
 export type RecurringProjection = {
   /** What the active profiles bill in a typical month, before GST. */
@@ -81,7 +81,7 @@ export function projectRecurring(profiles: RecurringProfile[], t = today()): Rec
       if (date > stop) break
       // A next date already behind us (Zoho hasn't moved it on yet) isn't projected again.
       if (date < t) continue
-      invoices.push({ date, amount, customer })
+      invoices.push({ date, amount, customer, customerId: p.customer_id })
       if (!next || date < next) next = date
     }
   }
@@ -105,7 +105,7 @@ export function projectRecurring(profiles: RecurringProfile[], t = today()): Rec
 }
 
 /** One active profile's signed value for a fiscal year, and the day it counts from on the year chart. */
-export type RetainerSigned = { on: string; value: number; customer: string }
+export type RetainerSigned = { on: string; value: number; customer: string; /** Zoho Books customer id. */ customerId?: string }
 
 /**
  * Retainers as signed money for the fiscal year: every invoice a profile makes in the year, issued or
@@ -138,7 +138,55 @@ export function retainerSignedFor(profiles: RecurringProfile[], t = today()): Re
     }
     if (!value || !first) continue
     const start = anchor < fy.start ? fy.start : anchor
-    out.push({ on: start > t ? (t < fy.start ? fy.start : t) : start, value: round2(value), customer: p.customer_name ?? p.recurrence_name ?? 'Recurring invoice' })
+    out.push({ on: start > t ? (t < fy.start ? fy.start : t) : start, value: round2(value), customer: p.customer_name ?? p.recurrence_name ?? 'Recurring invoice', customerId: p.customer_id })
   }
   return out
+}
+
+/** One retainer client on the Money page's Still to bill card: this fiscal year's value, split into paid, invoiced and still to come. */
+export type RetainerBillRow = {
+  key: string
+  client: string
+  /** The portal client, when the Zoho customer is linked to one (boClient.zohoContactId). */
+  clientId?: string
+  /** Every invoice its profiles make this fiscal year, before GST (as in Signed). */
+  total: number
+  /** Mirrored retainer invoices dated this fiscal year: paid, and invoiced but not paid (before GST). */
+  paid: number
+  billedNotPaid: number
+  /** Projected invoices from today to the fiscal year end: signed, not invoiced yet. */
+  left: number
+}
+
+type RetainerPayment = { clientId: string; kind: string; status: string; amount: number; createdAt?: string }
+
+/**
+ * Still to bill for retainers, one row per Zoho customer. `left` is the projection from today to the
+ * fiscal year end; once Zoho issues an invoice it leaves `left` and shows as billed (and in Owed) instead.
+ */
+export function retainerBillRows(
+  signed: RetainerSigned[],
+  invoices: ProjectedInvoice[],
+  payments: RetainerPayment[],
+  clients: Record<string, { clientId: string; name?: string }>,
+  t = today(),
+): RetainerBillRow[] {
+  const fy = fiscalYear(t)
+  const rows = new Map<string, RetainerBillRow>()
+  const row = (customerId: string | undefined, customer: string) => {
+    const key = customerId ?? customer
+    const linked = customerId ? clients[customerId] : undefined
+    const r = rows.get(key) ?? { key, client: linked?.name ?? customer, clientId: linked?.clientId, total: 0, paid: 0, billedNotPaid: 0, left: 0 }
+    rows.set(key, r)
+    return r
+  }
+  for (const s of signed) row(s.customerId, s.customer).total += s.value
+  for (const i of invoices) if (i.date <= fy.end) row(i.customerId, i.customer).left += i.amount
+  for (const r of rows.values()) {
+    if (!r.clientId) continue
+    const mine = payments.filter((p) => p.kind === 'retainer' && p.clientId === r.clientId && p.status !== 'canceled' && (p.createdAt ?? '').slice(0, 10) >= fy.start && (p.createdAt ?? '').slice(0, 10) <= fy.end)
+    r.paid = round2(mine.filter((p) => p.status === 'paid').reduce((n, p) => n + p.amount, 0))
+    r.billedNotPaid = round2(mine.filter((p) => p.status !== 'paid').reduce((n, p) => n + p.amount, 0))
+  }
+  return [...rows.values()].map((r) => ({ ...r, total: round2(r.total), left: round2(r.left) })).sort((a, b) => b.total - a.total)
 }

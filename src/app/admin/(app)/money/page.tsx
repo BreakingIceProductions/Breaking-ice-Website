@@ -7,10 +7,9 @@ import { requireAdmin } from '@/admin/auth'
 import { daysBetween, fmtDate, today } from '@/admin/dates'
 import { cad } from '@/admin/insights'
 import { moneyView, RANGES, reportView, type GoalLine, type RangeKey } from '@/admin/money'
-import { loadMoney } from '@/admin/money-data'
+import { loadMoney, loadRetainerForecast, type RetainerForecast } from '@/admin/money-data'
 import { fiscalShare } from '@/admin/fiscal'
-import { projectRecurring, retainerSignedFor, type RecurringProjection, type RetainerSigned } from '@/admin/recurring-projection'
-import { listRecurringProfiles } from '@/admin/zoho'
+import { retainerBillRows } from '@/admin/recurring-projection'
 import { GoalsForm } from '@/admin/ui/goals-form'
 import { Legend, SplitBar } from '@/admin/ui/graphics'
 import { HelpTip } from '@/admin/ui/help-tip'
@@ -42,10 +41,7 @@ export default async function Money({ searchParams }: Props) {
   const view = one(sp.view) === 'reports' ? 'reports' : 'money'
   const range: RangeKey = RANGES.find((r) => r.key === one(sp.range))?.key ?? '12m'
   // Recurring invoice profiles from Zoho Books (cached an hour). Null when Zoho can't be read: the page shows no projection.
-  const [data, profiles] = await Promise.all([loadMoney(), view === 'money' ? listRecurringProfiles() : Promise.resolve(null)])
-  const recurring = profiles?.length ? projectRecurring(profiles) : null
-  // Retainers count toward Signed: each profile's invoices this fiscal year. None when Zoho can't be read (projects only).
-  const retainers = profiles?.length ? retainerSignedFor(profiles) : []
+  const [data, forecast] = await Promise.all([loadMoney(), loadRetainerForecast()])
   return (
     <div className="a-page mn sb-page mc-page">
       <div className="a-pending-scope stack sb-gap">
@@ -66,7 +62,7 @@ export default async function Money({ searchParams }: Props) {
           )}
         </header>
         <div className="a-pending-body stack sb-gap">
-          {view === 'money' ? <MoneyView data={data} canEdit={!admin.viewOnly} recurring={recurring} retainers={retainers} /> : <ReportsView data={data} range={range} />}
+          {view === 'money' ? <MoneyView data={data} canEdit={!admin.viewOnly} forecast={forecast} /> : <ReportsView data={data} range={range} forecast={forecast} />}
         </div>
       </div>
     </div>
@@ -121,13 +117,27 @@ function goalStatus(g: GoalLine): React.ReactNode {
 const STATUS_WORD: Record<string, { text: string; tone: ChipTone }> = {
   'Client says it’s sent': { text: 'Clearing', tone: 'info' },
   'Asked in the portal': { text: 'Asked', tone: 'muted' },
+  'Retainer invoice': { text: 'Retainer', tone: 'muted' },
   'Opened by the client': { text: 'Opened', tone: 'muted' },
   Overdue: { text: 'Overdue', tone: 'hot' },
   'Partly paid': { text: 'Part paid', tone: 'info' },
 }
 
-function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdit: boolean; recurring: RecurringProjection | null; retainers: RetainerSigned[] }) {
-  const v = moneyView(data.projects, data.payments, data.goals, undefined, retainers)
+/**
+ * `forecast` is retainer income from Zoho Books recurring profiles, or null when Zoho can't be read (every section is
+ * then projects and real payments only). Projected money is always labelled projected; Collected and Paid stay real.
+ */
+function MoneyView({ data, canEdit, forecast }: { data: Data; canEdit: boolean; forecast: RetainerForecast | null }) {
+  const recurring = forecast?.projection ?? null
+  // Retainers count toward Signed: each profile's invoices this fiscal year.
+  const retainers = forecast?.signed ?? []
+  const v = moneyView(data.projects, data.payments, data.goals, undefined, retainers, recurring?.restOfYear ?? 0)
+  // Still to bill for retainers: per client, this fiscal year's value less what Zoho has invoiced.
+  const retainerRows = forecast ? retainerBillRows(retainers, forecast.projection.invoices, data.payments, forecast.clients) : []
+  const retainerLeft = retainerRows.reduce((n, r) => n + r.left, 0)
+  const projectsLeft = v.toBill.counted ? v.toBill.total : 0
+  const toBillTotal = projectsLeft + retainerLeft
+  const toBillSplit = retainerLeft ? `${cad(projectsLeft)} on projects + ${cad(retainerLeft)} on retainers` : undefined
   const t = today()
   const ageOf = (d?: string) => (d ? Math.max(0, daysBetween(d, t)) : null)
   const current = v.months.filter((m) => !m.future).at(-1)
@@ -209,7 +219,7 @@ function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdi
         </section>
         <div className="mc-stats">
           <Stat label="Owed to you" value={cad(v.owed.total)} href="#owed" sub={`${plural(v.owed.rows.length, 'open invoice or payment', 'open invoices or payments')}${v.owed.clearing ? ` · ${v.owed.clearing} clearing` : ''}`} />
-          <Stat label="Still to bill" value={v.toBill.counted ? cad(v.toBill.total) : DASH} href="#to-bill" sub={`On ${plural(v.toBill.rows.length, 'active project')}, not invoiced yet`} />
+          <Stat label="Still to bill" value={v.toBill.counted || retainerLeft ? cad(toBillTotal) : DASH} href="#to-bill" sub={toBillSplit ?? `On ${plural(v.toBill.rows.length, 'active project')}, not invoiced yet`} title={retainerLeft ? 'Signed, not invoiced yet: project quotes less what’s invoiced, plus retainer invoices Zoho Books will make by the fiscal year end (projected).' : undefined} />
           <Stat label={`Collected in ${v.monthLabel}`} value={cad(v.collectedMonth.total)} href="#paid" sub={plural(v.collectedMonth.count, 'payment')} />
           {recurring && recurring.monthly > 0 && (
             <Stat
@@ -230,7 +240,7 @@ function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdi
               <ul className="sb-list mn-bill">
                 {v.owed.rows.map((b) => {
                   const word = STATUS_WORD[b.status] ?? { text: b.status, tone: 'muted' as ChipTone }
-                  const since = `${b.source === 'payment' ? 'Asked in the portal' : 'Zoho Books invoice made'} ${longDay(b.asked)}`
+                  const since = `${b.retainer ? 'Retainer invoice made in Zoho Books' : b.source === 'payment' ? 'Asked in the portal' : 'Zoho Books invoice made'} ${longDay(b.asked)}`
                   return (
                     <li key={b.key} className="sb-row">
                       <Initials name={b.client} />
@@ -240,7 +250,7 @@ function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdi
                       </span>
                       <span className="sb-row-chips">
                         <AgeChip days={ageOf(b.asked)} label={since} />
-                        {word.text !== 'Asked' && <Chip tone={word.tone} label={b.status}>{word.text}</Chip>}
+                        {word.text !== 'Asked' && word.text !== 'Retainer' && <Chip tone={word.tone} label={b.status}>{word.text}</Chip>}
                       </span>
                       <strong className="sb-row-amt">{cad(b.owed)}</strong>
                       <Link className="btn btn-secondary btn-sm sb-row-btn" href={moneyTab(b.projectId, b.clientId)}>Open<span className="sr-only"> the Money tab of {b.project}</span></Link>
@@ -256,8 +266,8 @@ function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdi
         </section>
 
         <section id="to-bill" className="sb-card" aria-labelledby="mn-bill-h">
-          <Head id="mn-bill-h" title="Still to bill" sub={v.toBill.counted ? `${cad(v.toBill.total)} not invoiced yet on ${plural(v.toBill.rows.length, 'active project')}` : undefined} />
-          {v.toBill.rows.length ? (
+          <Head id="mn-bill-h" title="Still to bill" sub={toBillSplit ? `${cad(toBillTotal)} not invoiced yet: ${toBillSplit}` : v.toBill.counted ? `${cad(v.toBill.total)} not invoiced yet on ${plural(v.toBill.rows.length, 'active project')}` : undefined} />
+          {v.toBill.rows.length || retainerRows.length ? (
             <>
               <Legend parts={billParts(0, 0, 0).map(({ label, tone }) => ({ label, value: 0, tone }))} />
               <div className="mn-showall mn-first-3">
@@ -281,8 +291,21 @@ function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdi
                       )}
                     </li>
                   ))}
+                  {retainerRows.map((r) => (
+                    <li key={`ret-${r.key}`}>
+                      <span className="mc-bill-head">
+                        <span>{r.clientId ? <Link className="text-link" href={`/admin/clients/${encodeURIComponent(r.clientId)}`}>{r.client}</Link> : r.client} <span className="muted">Retainer · {v.year}</span></span>
+                        <span className="muted mc-nowrap">of {cad(r.total)}</span>
+                      </span>
+                      <SplitBar parts={billParts(r.paid, r.billedNotPaid, r.left)} legend={false} />
+                      <span className="mc-bill-foot" title={`Paid ${cad(r.paid)} · invoiced, not paid ${cad(r.billedNotPaid)} · projected to invoice ${cad(r.left)}`}>
+                        <strong>{cad(r.left)}</strong> left to bill this fiscal year (projected from the recurring profile)
+                        <span className="sr-only">. Paid {cad(r.paid)}, invoiced but not paid {cad(r.billedNotPaid)}.</span>
+                      </span>
+                    </li>
+                  ))}
                 </ul>
-                <Toggle n={v.toBill.rows.length} first={3} />
+                <Toggle n={v.toBill.rows.length + retainerRows.length} first={3} />
               </div>
             </>
           ) : (
@@ -334,12 +357,18 @@ function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdi
         <section className="sb-card" aria-labelledby="mn-top-h">
           <Head id="mn-top-h" title={`Top clients, ${v.year}`} sub={v.clientRows.length ? 'By what they paid' : undefined} />
           <BarList rows={v.clientRows.map((c) => ({ label: c.label, value: c.amount, text: cad(c.amount), tag: `${c.count}×` }))} empty="Nothing paid yet this fiscal year." />
+          {retainerRows.length > 0 && (
+            <div className="stack sb-gap-s">
+              <h3 className="mc-stat-label">Retainers signed for {v.year}</h3>
+              <BarList rows={retainerRows.map((r) => ({ label: r.client, value: r.total, text: cad(r.total), note: `${cad(r.paid)} paid so far · the rest is projected, not collected` }))} empty="" />
+            </div>
+          )}
         </section>
       </div>
 
       <section id="paid" className="sb-card" aria-labelledby="mn-paid-h">
         <Head id="mn-paid-h" title={`Paid in ${v.year}`} sub={v.paidRows.length ? `${cad(paidTotal)} from ${plural(v.paidRows.length, 'payment')}` : undefined}>
-          {v.paidRows.length > 0 && <a className="btn btn-secondary btn-sm mc-csv" href="/api/admin/money/csv" download>Download CSV<span className="sr-only"> of the paid list</span></a>}
+          {v.paidRows.length > 0 && <a className="btn btn-secondary btn-sm mc-csv" href="/api/admin/money/csv" download>Download CSV<span className="sr-only"> of the paid list{recurring ? ', with projected retainer invoices as separate rows' : ''}</span></a>}
         </Head>
         {v.paidRows.length ? (
           <div className="mn-showall mc-first-6">
@@ -379,6 +408,12 @@ function MoneyView({ data, canEdit, recurring, retainers }: { data: Data; canEdi
           'Zoho Books is the accounting record. Invoice statuses come from it; quote totals, stage moves and portal payments come from the back office.',
           'Due dates live in Zoho Books, so each owed line counts its age from the day it was asked for or the invoice was made. Draft invoices that haven’t been sent aren’t counted.',
           'Still to bill is each active project’s quote total (Onboarding to Final delivery), less what’s been invoiced.',
+          ...(recurring
+            ? [
+                'Retainers come from the active recurring invoice profiles in Zoho Books (before GST, fiscal year November to October). Signed counts every invoice a profile makes this fiscal year; Still to bill and Expected count the ones still to come. Once Zoho issues an invoice it moves to Owed, then Paid.',
+                'Projected money is never in Collected or Paid: it’s labelled projected or expected, and drawn dashed or hatched.',
+              ]
+            : []),
           ...(v.hasLastYear ? [] : ['Last year will sit beside this year once there are dated payments from it.']),
           'Only portal payments say how they were paid. Invoices paid straight in Zoho Books aren’t in the How clients pay split.',
           'An invoice with no portal payment is dated the day it was first seen paid in Zoho Books. Card fees are passed on to the client and aren’t in the amounts.',
@@ -429,8 +464,9 @@ function Gaps({ gaps }: { gaps: ReturnType<typeof moneyView>['gaps'] }) {
 
 const IN_RANGE: Record<RangeKey, string> = { '30d': 'in the last 30 days', '12m': 'in the last 12 months', year: 'this fiscal year', all: 'on record' }
 
-function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
-  const v = reportView(data.projects, data.payments, range)
+function ReportsView({ data, range, forecast }: { data: Data; range: RangeKey; forecast: RetainerForecast | null }) {
+  const v = reportView(data.projects, data.payments, range, undefined, forecast ? { signed: forecast.signed, invoices: forecast.projection.invoices } : undefined)
+  const signedTotal = v.signed.value + v.retainerSigned
   const inRange = IN_RANGE[range]
   const rate = (n: number | null) => (n === null ? DASH : `${n}%`)
   const busiest = v.weekdays.reduce((a, b) => (b.count > a.count ? b : a), v.weekdays[0])
@@ -449,7 +485,7 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
           value={rate(v.win.rate)}
           sub={<>{v.win.decided ? `${v.win.signed} signed of ${v.win.decided} decided` : 'Nothing decided'}{data.goals.winRate ? <>. Goal <strong>{data.goals.winRate}%</strong></> : null}</>}
         />
-        <Stat label="Signed" value={v.signed.withValue ? cad(v.signed.value) : DASH} sub={v.signed.count ? `${plural(v.signed.count, 'project')}, by month signed` : 'Nothing signed'} title={v.signed.count > v.signed.withValue ? `${v.signed.count - v.signed.withValue} with no quote total` : undefined} />
+        <Stat label="Signed" value={v.signed.withValue || v.retainerSigned ? cad(signedTotal) : DASH} sub={v.retainerSigned ? `${cad(v.signed.value)} projects + ${cad(v.retainerSigned)} retainers` : v.signed.count ? `${plural(v.signed.count, 'project')}, by month signed` : 'Nothing signed'} title={v.signed.count > v.signed.withValue ? `${v.signed.count - v.signed.withValue} with no quote total` : undefined} />
         <Stat label="Average project" value={v.signed.average === null ? DASH : cad(v.signed.average)} sub={v.signed.withValue ? `Across ${plural(v.signed.withValue, 'valued project')}` : 'No valued projects'} />
       </div>
 
@@ -531,21 +567,22 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
 
       <div className="mc-grid mc-grid-4">
         <section className="sb-card mc-span2" aria-labelledby="mn-mbm-h">
-          <Head id="mn-mbm-h" title={`Money by ${v.byYear ? 'year' : 'month'}`} sub={`${cad(v.signed.value)} signed · ${cad(v.collected)} collected`} />
-          {v.moneyByMonth.some((m) => m.signed > 0 || m.collected > 0) ? (
+          <Head id="mn-mbm-h" title={`Money by ${v.byYear ? 'year' : 'month'}`} sub={`${cad(signedTotal)} signed · ${cad(v.collected)} collected${v.projected ? ` · ${cad(v.projected)} projected (retainers)` : ''}`} />
+          {v.moneyByMonth.some((m) => m.signed > 0 || m.collected > 0 || m.projected > 0) ? (
             <>
               <ColChart
                 legend={['Signed', 'Collected']}
-                label={`Signed and collected by ${v.byYear ? 'year' : 'month'}, before GST: ${v.moneyByMonth.map((m) => `${m.label} ${cad(m.signed)} signed, ${cad(m.collected)} collected`).join('; ')}.`}
-                cols={v.moneyByMonth.map((m) => ({ label: m.label, short: v.byYear ? m.label : m.label.slice(0, 3), value: m.signed, value2: m.collected, title: `${m.label}: ${cad(m.signed)} signed · ${cad(m.collected)} collected` }))}
+                label={`Signed and collected by ${v.byYear ? 'year' : 'month'}, before GST: ${v.moneyByMonth.map((m) => `${m.label} ${cad(m.signed)} signed, ${cad(m.collected)} collected${m.projected ? `, ${cad(m.projected)} projected from retainers (not collected)` : ''}`).join('; ')}.`}
+                cols={v.moneyByMonth.map((m) => ({ label: m.label, short: v.byYear ? m.label : m.label.slice(0, 3), value: m.signed, value2: m.future ? undefined : m.collected, future: m.future, projected: m.future ? m.projected : undefined, title: `${m.label}: ${cad(m.signed)} signed · ${cad(m.collected)} collected${m.projected ? ` · ${cad(m.projected)} projected (retainers)` : ''}` }))}
               />
+              {v.projected > 0 && <p className="mc-key-line">Projected (retainers): invoices Zoho Books will make from recurring profiles, before GST. Not collected{v.moneyByMonth.some((m) => m.future && m.projected) ? '; hatched in months still to come' : ''}.</p>}
               <details className="sb-fold">
                 <summary>Numbers</summary>
                 <div className="a-table-scroll">
                   <table className="a-table">
                     <caption className="sr-only">Signed and collected by {v.byYear ? 'year' : 'month'}, before GST</caption>
-                    <thead><tr><th scope="col">{v.byYear ? 'Year' : 'Month'}</th><th scope="col" className="num">Signed</th><th scope="col" className="num">Collected</th></tr></thead>
-                    <tbody>{v.moneyByMonth.map((m) => <tr key={m.label}><th scope="row">{m.label}</th><td className="num">{cad(m.signed)}</td><td className="num">{cad(m.collected)}</td></tr>)}</tbody>
+                    <thead><tr><th scope="col">{v.byYear ? 'Year' : 'Month'}</th><th scope="col" className="num">Signed</th><th scope="col" className="num">Collected</th>{v.projected > 0 ? <th scope="col" className="num">Projected (retainers)</th> : null}</tr></thead>
+                    <tbody>{v.moneyByMonth.map((m) => <tr key={m.label}><th scope="row">{m.label}</th><td className="num">{cad(m.signed)}</td><td className="num">{m.future ? DASH : cad(m.collected)}</td>{v.projected > 0 ? <td className="num">{m.projected ? cad(m.projected) : DASH}</td> : null}</tr>)}</tbody>
                   </table>
                 </div>
               </details>
@@ -608,6 +645,9 @@ function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
           'The funnel uses stage history: a lead counts for a step when it reached that stage or a later one. “Had a call” is reaching Quote to write. Each ring is the share of the step before.',
           'How fast deals sign counts days from the lead’s first record (and from its first move to Quoted) to its first move to Onboarding or its signature. Only projects with both dates count.',
           'Open pipeline right now is today’s count in each sales stage, whatever range is picked.',
+          ...(forecast
+            ? ['Retainers come from the active recurring invoice profiles in Zoho Books. In This fiscal year, Signed adds every invoice they make this fiscal year (November to October), and the money chart runs to October with the invoices still to come as Projected (retainers). Other ranges show only the rest of this month as projected. Projected money is never counted as collected.']
+            : []),
         ]}
         gaps={v.gaps}
       />
