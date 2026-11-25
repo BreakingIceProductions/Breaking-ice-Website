@@ -16,6 +16,11 @@ const NOTES: Record<string, { text: string; err?: boolean }> = {
   error: { text: 'That didn’t go through and nothing was charged. Try again, or reply to any of our emails and we’ll sort it out.', err: true },
 }
 
+const RETAINER_SENT: { text: string; err?: boolean } = { text: 'Thanks, we’ve let Josh know it’s on its way. As soon as it arrives (usually one to three business days), it shows as paid here.' }
+
+/** "deposit" reads well mid-sentence; a retainer label starts with a month name, which keeps its capital. */
+const inline = (p: PortalPayment) => (p.kind === 'retainer' ? p.label : p.label.toLowerCase())
+
 const day = (iso?: string) => fmtDate(iso, { month: 'short', day: 'numeric', year: 'numeric' })
 
 /**
@@ -28,7 +33,9 @@ export async function PaymentList({ payments, back, note, heading = 'Payments', 
   // The sample project is public (the demo on the sign-in page), so it never shows the real bank details.
   const sample = payments.every((p) => p._id.startsWith('sample-'))
   const settings = sample ? { ...real, etransferEmail: 'payments@example.com', eftDetails: 'Account: Breaking Ice Productions\nInstitution 000 · Transit 00000\nAccount 0000000\n(Real projects show the real details.)' } : real
-  const msg = note ? NOTES[note] : undefined
+  // Retainer invoices aren't tied to a project, so the "sent" note doesn't talk about booking one.
+  const retainer = payments.every((p) => p.kind === 'retainer')
+  const msg = note === 'sent' && retainer ? RETAINER_SENT : note ? NOTES[note] : undefined
   const due = payments.filter((p) => p.status === 'due')
   const bankWays = Boolean(settings.etransferEmail || settings.eftDetails)
   // Only name the ways that are set up: e-Transfer can be switched off by leaving its email empty.
@@ -69,7 +76,7 @@ export async function PaymentList({ payments, back, note, heading = 'Payments', 
         const ref = payReference(p)
         return (
           <div key={p._id} className="pay-how">
-            <h3 className="pay-how-h">{due.length > 1 ? `Paying the ${p.label.toLowerCase()} (${cad(p.total)})` : 'How to pay'}</h3>
+            <h3 className="pay-how-h">{due.length > 1 ? `Paying the ${inline(p)} (${cad(p.total)})` : 'How to pay'}</h3>
             {bankWays ? (
               <>
                 <p className="small" style={{ margin: 0 }}>
@@ -109,7 +116,7 @@ export async function PaymentList({ payments, back, note, heading = 'Payments', 
               <form action="/api/portal/pay" method="post">
                 <input type="hidden" name="payment" value={p._id} />
                 <input type="hidden" name="back" value={back} />
-                <button type="submit" name="how" value="card" className="btn btn-secondary">Pay {cad(p.total + fee.added)} by credit card<span className="sr-only"> for the {p.label.toLowerCase()}</span></button>
+                <button type="submit" name="how" value="card" className="btn btn-secondary">Pay {cad(p.total + fee.added)} by credit card<span className="sr-only"> for the {inline(p)}</span></button>
               </form>
             </div>
           </div>

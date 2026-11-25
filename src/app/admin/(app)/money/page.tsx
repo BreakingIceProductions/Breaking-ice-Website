@@ -8,6 +8,9 @@ import { daysBetween, fmtDate, today } from '@/admin/dates'
 import { cad } from '@/admin/insights'
 import { moneyView, RANGES, reportView, type GoalLine, type RangeKey } from '@/admin/money'
 import { loadMoney } from '@/admin/money-data'
+import { fiscalShare } from '@/admin/fiscal'
+import { projectRecurring, type RecurringProjection } from '@/admin/recurring-projection'
+import { listRecurringProfiles } from '@/admin/zoho'
 import { GoalsForm } from '@/admin/ui/goals-form'
 import { Legend, SplitBar } from '@/admin/ui/graphics'
 import { HelpTip } from '@/admin/ui/help-tip'
@@ -24,7 +27,8 @@ const one = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v)
 const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`
 const DASH = '—'
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const moneyTab = (projectId: string) => `/admin/projects/${encodeURIComponent(projectId)}?tab=money`
+// Retainer payments have no project, so they open the client page instead.
+const moneyTab = (projectId: string, clientId?: string) => (projectId || !clientId ? `/admin/projects/${encodeURIComponent(projectId)}?tab=money` : `/admin/clients/${encodeURIComponent(clientId)}`)
 const longDay = (d?: string) => fmtDate(d) || DASH
 const pctOf = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
 /** Swatch tones for a list: five in turn, and the hollow one for "Not recorded". */
@@ -37,7 +41,9 @@ export default async function Money({ searchParams }: Props) {
   const sp = await searchParams
   const view = one(sp.view) === 'reports' ? 'reports' : 'money'
   const range: RangeKey = RANGES.find((r) => r.key === one(sp.range))?.key ?? '12m'
-  const data = await loadMoney()
+  // Recurring invoice profiles from Zoho Books (cached an hour). Null when Zoho can't be read: the page shows no projection.
+  const [data, profiles] = await Promise.all([loadMoney(), view === 'money' ? listRecurringProfiles() : Promise.resolve(null)])
+  const recurring = profiles?.length ? projectRecurring(profiles) : null
   return (
     <div className="a-page mn sb-page mc-page">
       <div className="a-pending-scope stack sb-gap">
@@ -58,7 +64,7 @@ export default async function Money({ searchParams }: Props) {
           )}
         </header>
         <div className="a-pending-body stack sb-gap">
-          {view === 'money' ? <MoneyView data={data} canEdit={!admin.viewOnly} /> : <ReportsView data={data} range={range} />}
+          {view === 'money' ? <MoneyView data={data} canEdit={!admin.viewOnly} recurring={recurring} /> : <ReportsView data={data} range={range} />}
         </div>
       </div>
     </div>
@@ -118,12 +124,15 @@ const STATUS_WORD: Record<string, { text: string; tone: ChipTone }> = {
   'Partly paid': { text: 'Part paid', tone: 'info' },
 }
 
-function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
+function MoneyView({ data, canEdit, recurring }: { data: Data; canEdit: boolean; recurring: RecurringProjection | null }) {
   const v = moneyView(data.projects, data.payments, data.goals)
   const t = today()
   const ageOf = (d?: string) => (d ? Math.max(0, daysBetween(d, t)) : null)
   const current = v.months.filter((m) => !m.future).at(-1)
-  const lastYear = String(Number(v.year) - 1)
+  const lastYear = v.lastYear
+  // Projected recurring invoices still to come this fiscal year, placed on the year chart by date.
+  const projected = recurring ? recurring.invoices.filter((i) => i.date <= v.fiscal.end).map((i) => ({ at: fiscalShare(v.fiscal, i.date), amount: i.amount })) : undefined
+  const yearEndDay = fmtDate(v.fiscal.end)
   const billParts = (paid: number, billed: number, left: number) => [
     { label: 'Paid', value: paid, text: cad(paid), tone: 'accent' as const },
     { label: 'Billed, not paid', value: billed, text: cad(billed), tone: 'soft' as const },
@@ -139,7 +148,7 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
     <>
       <section className="stack sb-gap-s sb-goals" aria-labelledby="mn-goals-h">
         <div className="sb-card-head">
-          <h2 id="mn-goals-h" className="mc-eyebrow">Goals for {v.year}</h2>
+          <h2 id="mn-goals-h" className="mc-eyebrow">Goals for {v.year} ({v.yearRange})</h2>
           {canEdit && <GoalsForm goals={data.goals} />}
         </div>
         <ul className="mc-goals">
@@ -168,19 +177,19 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
       <div className="mc-grid mc-grid-year">
         <section className="sb-card" aria-labelledby="mn-year-h">
           <Head id="mn-year-h" title="The year so far" sub={`Running totals${data.goals.signedYear ? ', against an even pace to the signed goal' : ''}`} />
-          <YearLines months={v.months} goal={data.goals.signedYear} yearGone={v.yearGone} format={cad}>
+          <YearLines months={v.months} goal={data.goals.signedYear} yearGone={v.yearGone} format={cad} projected={projected} projectedTo={yearEndDay}>
             <details className="sb-fold">
               <summary>Numbers</summary>
               <div className="a-table-scroll">
                 <table className="a-table">
-                  <caption className="sr-only">Signed and collected in {v.year}, month by month and as running totals</caption>
+                  <caption className="sr-only">Signed and collected in {v.year} ({v.yearRange}), month by month and as running totals</caption>
                   <thead>
                     <tr><th scope="col">Month</th><th scope="col" className="num">Collected</th>{v.hasLastYear ? <th scope="col" className="num">{lastYear}</th> : null}<th scope="col" className="num">Collected so far</th><th scope="col" className="num">Signed</th><th scope="col" className="num">Signed so far</th>{data.goals.signedYear ? <th scope="col" className="num">Even pace at month end</th> : null}</tr>
                   </thead>
                   <tbody>
                     {v.months.map((m) => (
                       <tr key={m.label}>
-                        <th scope="row">{m.label}</th>
+                        <th scope="row">{m.long}</th>
                         <td className="num">{m.future ? DASH : cad(m.collected)}</td>
                         {v.hasLastYear ? <td className="num">{cad(m.lastYear)}</td> : null}
                         <td className="num">{m.future ? DASH : cad(m.collectedRun)}</td>
@@ -199,6 +208,14 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
           <Stat label="Owed to you" value={cad(v.owed.total)} href="#owed" sub={`${plural(v.owed.rows.length, 'open invoice or payment', 'open invoices or payments')}${v.owed.clearing ? ` · ${v.owed.clearing} clearing` : ''}`} />
           <Stat label="Still to bill" value={v.toBill.counted ? cad(v.toBill.total) : DASH} href="#to-bill" sub={`On ${plural(v.toBill.rows.length, 'active project')}, not invoiced yet`} />
           <Stat label={`Collected in ${v.monthLabel}`} value={cad(v.collectedMonth.total)} href="#paid" sub={plural(v.collectedMonth.count, 'payment')} />
+          {recurring && recurring.monthly > 0 && (
+            <Stat
+              label="Recurring"
+              value={`${cad(recurring.monthly)} / month`}
+              title="Projected from active recurring invoice profiles in Zoho Books, before GST. Not collected yet."
+              sub={<>{plural(recurring.clients, 'client')}{recurring.next ? ` · next invoice ${fmtDate(recurring.next)}` : ''}<br />{cad(recurring.restOfYear)} more by {yearEndDay} · {cad(recurring.next12)} next 12 months</>}
+            />
+          )}
         </div>
       </div>
 
@@ -223,7 +240,7 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
                         {word.text !== 'Asked' && <Chip tone={word.tone} label={b.status}>{word.text}</Chip>}
                       </span>
                       <strong className="sb-row-amt">{cad(b.owed)}</strong>
-                      <Link className="btn btn-secondary btn-sm sb-row-btn" href={moneyTab(b.projectId)}>Open<span className="sr-only"> the Money tab of {b.project}</span></Link>
+                      <Link className="btn btn-secondary btn-sm sb-row-btn" href={moneyTab(b.projectId, b.clientId)}>Open<span className="sr-only"> the Money tab of {b.project}</span></Link>
                     </li>
                   )
                 })}
@@ -279,6 +296,7 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
               { year: v.year, values: v.months.map((m) => m.collected), texts: v.months.map((m) => cad(m.collected)), total: cad(yearTotal) },
               ...(v.hasLastYear ? [{ year: lastYear, values: v.months.map((m) => m.lastYear), texts: v.months.map((m) => cad(m.lastYear)), total: cad(lastYearTotal) }] : []),
             ]}
+            projected={recurring ? { values: recurring.byMonth, texts: recurring.byMonth.map(cad), total: cad(recurring.byMonth.reduce((n, x) => n + x, 0)) } : undefined}
           />
         </section>
 
@@ -306,13 +324,13 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
               </ul>
             </div>
           ) : (
-            <p className="mc-calm">No portal payments yet this year.</p>
+            <p className="mc-calm">No portal payments yet this fiscal year.</p>
           )}
         </section>
 
         <section className="sb-card" aria-labelledby="mn-top-h">
           <Head id="mn-top-h" title={`Top clients, ${v.year}`} sub={v.clientRows.length ? 'By what they paid' : undefined} />
-          <BarList rows={v.clientRows.map((c) => ({ label: c.label, value: c.amount, text: cad(c.amount), tag: `${c.count}×` }))} empty="Nothing paid yet this year." />
+          <BarList rows={v.clientRows.map((c) => ({ label: c.label, value: c.amount, text: cad(c.amount), tag: `${c.count}×` }))} empty="Nothing paid yet this fiscal year." />
         </section>
       </div>
 
@@ -332,7 +350,7 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
                       <strong aria-hidden="true">{b.paidOn ? Number(b.paidOn.slice(8, 10)) : ''}</strong>
                     </span>
                     <span className="mc-paid-main">
-                      <Link className="text-link" href={moneyTab(b.projectId)}>{b.project}<span className="sr-only">: open its Money tab</span></Link>
+                      <Link className="text-link" href={moneyTab(b.projectId, b.clientId)}>{b.project}<span className="sr-only">: open its Money tab</span></Link>
                       <span className="mc-paid-sub">{b.label} · {b.client} · {how}{b.cardFee ? ` · plus ${cad(b.cardFee)} card fee` : ''}</span>
                     </span>
                     <strong className="mc-paid-amt">{cad(b.amount)}</strong>
@@ -347,7 +365,7 @@ function MoneyView({ data, canEdit }: { data: Data; canEdit: boolean }) {
             )}
           </div>
         ) : (
-          <p className="mc-calm">Nothing paid yet this year.</p>
+          <p className="mc-calm">Nothing paid yet this fiscal year.</p>
         )}
       </section>
 
@@ -406,7 +424,7 @@ function Gaps({ gaps }: { gaps: ReturnType<typeof moneyView>['gaps'] }) {
 
 /* ── Reports ────────────────────────────────────────────────────────── */
 
-const IN_RANGE: Record<RangeKey, string> = { '30d': 'in the last 30 days', '12m': 'in the last 12 months', year: 'this year', all: 'on record' }
+const IN_RANGE: Record<RangeKey, string> = { '30d': 'in the last 30 days', '12m': 'in the last 12 months', year: 'this fiscal year', all: 'on record' }
 
 function ReportsView({ data, range }: { data: Data; range: RangeKey }) {
   const v = reportView(data.projects, data.payments, range)

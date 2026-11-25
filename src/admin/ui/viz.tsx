@@ -42,6 +42,8 @@ export type Col = {
   text?: string
   current?: boolean
   future?: boolean
+  /** Projected (not collected) money for a future column, drawn hatched and faded so it reads apart from real columns. */
+  projected?: number
 }
 
 /**
@@ -51,7 +53,7 @@ export type Col = {
  * `wrap` lets long labels under the columns wrap instead of being cut short.
  */
 export function ColChart({ cols, label, height = 160, legend, goal, wrap }: { cols: Col[]; label: string; height?: number; legend?: [string, string]; goal?: { value: number; text: string }; wrap?: boolean }) {
-  const max = Math.max(...cols.flatMap((c) => [c.value, c.value2 ?? 0]), goal?.value ?? 0, 0)
+  const max = Math.max(...cols.flatMap((c) => [c.value, c.value2 ?? 0, c.projected ?? 0]), goal?.value ?? 0, 0)
   const pct = (v: number) => (max > 0 ? (v / max) * 100 : 0)
   const h = (v: number) => `${max > 0 ? Math.max(v > 0 ? 3 : 0, pct(v)) : 0}%`
   return (
@@ -61,7 +63,11 @@ export function ColChart({ cols, label, height = 160, legend, goal, wrap }: { co
           <span key={`${c.label}-${i}`} className={`sb-col${c.current ? ' is-current' : ''}${c.future ? ' is-future' : ''}${goal && c.value >= goal.value ? ' is-hit' : ''}`} title={c.title}>
             {c.text !== undefined && <span className="sb-col-num" aria-hidden="true">{c.text}</span>}
             <span className="sb-col-plot" aria-hidden="true">
-              <span className="sb-col-bar" style={{ height: c.future ? '4%' : h(c.value) }} />
+              {c.future && c.projected ? (
+                <span className="sb-col-bar sb-col-projected" style={{ height: h(c.projected), background: 'repeating-linear-gradient(135deg, color-mix(in srgb, var(--a-accent) 55%, transparent) 0 3px, transparent 3px 7px)', outline: '1px dashed color-mix(in srgb, var(--a-accent) 60%, transparent)', outlineOffset: '-1px', opacity: 0.75, boxShadow: 'none' }} />
+              ) : (
+                <span className="sb-col-bar" style={{ height: c.future ? '4%' : h(c.value) }} />
+              )}
               {c.value2 !== undefined && <span className="sb-col-bar sb-alt" style={{ height: h(c.value2) }} />}
               {goal && <span className="sb-col-goal" style={{ bottom: `${pct(goal.value)}%` }}>{i === 0 && <span className="sb-goal-text">{goal.text}</span>}</span>}
             </span>

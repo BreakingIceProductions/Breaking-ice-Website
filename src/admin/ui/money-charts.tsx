@@ -129,20 +129,29 @@ export type YearMonth = { label: string; future: boolean; signedRun: number; col
  * Running totals through the year: signed (copper, shaded) and collected (ink), against a dashed even pace
  * to the signed goal. Finished months are plotted at their end and the current month at today, which is
  * marked. The drawing stretches to its box, so the month names and the legend are HTML.
+ * `projected` (share of the year, amount) continues collected as a dashed line from today to the year end (`projectedTo`), adding
+ * the recurring invoices Zoho Books will make; it's labelled Projected and never mixed into Collected.
  */
-export function YearLines({ months, goal, yearGone, format, children }: { months: YearMonth[]; goal?: number; yearGone: number; format: (n: number) => string; children?: ReactNode }) {
+export function YearLines({ months, goal, yearGone, format, projected, projectedTo = 'year end', children }: { months: YearMonth[]; goal?: number; yearGone: number; format: (n: number) => string; projected?: { at: number; amount: number }[]; projectedTo?: string; children?: ReactNode }) {
   const W = 1000
   const H = 240
   const PAD = 8
   const done = months.filter((m) => !m.future)
   const last = done.at(-1)
-  const top = Math.max(goal ?? 0, last?.signedRun ?? 0, last?.collectedRun ?? 0, 1)
+  const future = last && projected?.length ? projected.filter((p) => p.at >= yearGone && p.at <= 1).sort((a, b) => a.at - b.at) : []
+  const projectedEnd = future.length && last ? last.collectedRun + future.reduce((n, p) => n + p.amount, 0) : undefined
+  const top = Math.max(goal ?? 0, last?.signedRun ?? 0, last?.collectedRun ?? 0, projectedEnd ?? 0, 1)
   const x = (i: number) => (i === done.length - 1 ? yearGone : (i + 1) / 12) * W
   const y = (v: number) => H - PAD - (v / top) * (H - PAD * 2)
   const line = (key: 'signedRun' | 'collectedRun') => `M0,${y(0)} ${done.map((m, i) => `L${x(i).toFixed(1)},${y(m[key]).toFixed(1)}`).join(' ')}`
   const nowX = last ? x(done.length - 1) : 0
+  // Flat until each invoice date, then up by its amount, then flat to the year end.
+  let run = last?.collectedRun ?? 0
+  const projPath = projectedEnd !== undefined
+    ? `M${nowX.toFixed(1)},${y(run).toFixed(1)} ${future.map((p) => { const px = (p.at * W).toFixed(1); const before = y(run).toFixed(1); run += p.amount; return `L${px},${before} L${px},${y(run).toFixed(1)}` }).join(' ')} L${W},${y(run).toFixed(1)}`
+    : ''
   const summary = last
-    ? `Running totals to today: ${format(last.signedRun)} signed, ${format(last.collectedRun)} collected${goal ? `, against an even pace of ${format(goal * yearGone)} toward a ${format(goal)} signed goal` : ''}. Month by month: ${done.map((m) => `${m.label} ${format(m.signedRun)} signed, ${format(m.collectedRun)} collected`).join('; ')}.`
+    ? `Running totals to today: ${format(last.signedRun)} signed, ${format(last.collectedRun)} collected${goal ? `, against an even pace of ${format(goal * yearGone)} toward a ${format(goal)} signed goal` : ''}${projectedEnd !== undefined ? `, projected ${format(projectedEnd)} collected by ${projectedTo} with recurring invoices` : ''}. Month by month: ${done.map((m) => `${m.label} ${format(m.signedRun)} signed, ${format(m.collectedRun)} collected`).join('; ')}.`
     : 'Nothing recorded yet this year.'
   return (
     <figure className="mc-year">
@@ -154,6 +163,7 @@ export function YearLines({ months, goal, yearGone, format, children }: { months
           {goal ? <path className="mc-line-pace" d={`M0,${y(0)} L${W},${y(goal)}`} /> : null}
           {last && <path className="mc-now" d={`M${nowX.toFixed(1)},0 V${H}`} />}
           <path className="mc-line-collected" d={line('collectedRun')} />
+          {projPath && <path className="mc-line-collected" d={projPath} style={{ strokeDasharray: '6 6', opacity: 0.6 }} />}
           <path className="mc-line-signed" d={line('signedRun')} />
         </svg>
         <div className="mc-months" aria-hidden="true">{months.map((m) => <span key={m.label} className={m === last ? 'is-now' : undefined}>{m.label.slice(0, 1)}</span>)}</div>
@@ -161,6 +171,7 @@ export function YearLines({ months, goal, yearGone, format, children }: { months
       <ul className="mc-legend">
         <li><span className="mc-key mc-key-signed" aria-hidden="true" />Signed <strong>{format(last?.signedRun ?? 0)}</strong></li>
         <li><span className="mc-key mc-key-collected" aria-hidden="true" />Collected <strong>{format(last?.collectedRun ?? 0)}</strong></li>
+        {projectedEnd !== undefined ? <li><span className="mc-key mc-key-collected" aria-hidden="true" style={{ borderTopStyle: 'dashed', opacity: 0.6 }} />Projected <strong>{format(projectedEnd)}</strong> by {projectedTo}</li> : null}
         {goal ? <li><span className="mc-key mc-key-pace" aria-hidden="true" />Even pace <strong>{format(goal * yearGone)}</strong> today</li> : null}
       </ul>
       {children}

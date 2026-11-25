@@ -250,15 +250,22 @@ export type QuoteSignature = { name: string; title?: string; org?: string; at: s
 
 export type QuoteOption = { _key: string; name: string; total: number; note?: string }
 
-/** Money asked of a client through the portal: a deposit, a balance, or anything else. Amounts in dollars. */
+/**
+ * Money asked of a client through the portal: a deposit, a balance, or anything else. Amounts in dollars.
+ * A retainer payment mirrors a monthly invoice Zoho Books generated from a recurring profile: it
+ * belongs to the client, not a project, so it has no projectId.
+ */
 export type PortalPayment = {
   _id: string
-  projectId: string
+  /** Missing on retainer payments. */
+  projectId?: string
   clientId: string
   /** Project slug and title, for links and labels. */
   slug?: string
   projectTitle?: string
-  kind: 'deposit' | 'balance' | 'other'
+  /** The client's name, where a query asks for it (retainer payments have no project to name). */
+  clientName?: string
+  kind: 'deposit' | 'balance' | 'other' | 'retainer'
   label: string
   /** Before tax. */
   amount: number

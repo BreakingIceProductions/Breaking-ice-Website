@@ -1,4 +1,5 @@
 import 'server-only'
+import { unstable_cache } from 'next/cache'
 import { SITE_URL } from '@/lib/site'
 import { adminEnv, zohoReady } from './config'
 import { getConnection, getZohoContactId, saveConnection, setZohoContactId } from './data'
@@ -239,6 +240,83 @@ export async function recordCardPayment(invoiceId: string, p: { fee: number; fee
     }),
   })
   return fresh
+}
+
+/** A full invoice as the retainer import reads it. Amounts in dollars. */
+export type RecurringInvoice = ZohoInvoice & { customer_id?: string; date?: string; due_date?: string; sub_total?: number; tax_total?: number; recurring_invoice_id?: string; last_payment_date?: string }
+
+/**
+ * Read-only: the invoices Zoho Books generated from one recurring invoice profile, each read in
+ * full (the list reply has no sub_total or tax_total). Uses the list filter recurring_invoice_id
+ * (a documented GET /invoices parameter); if Zoho refuses it, lists the customer's invoices and
+ * keeps the ones whose recurring_invoice_id matches. `known` invoice ids are skipped unread.
+ */
+export async function listInvoicesForRecurring(profileId: string, customerId?: string, known: Set<string> = new Set()): Promise<RecurringInvoice[]> {
+  type Row = ZohoInvoice & { recurring_invoice_id?: string }
+  let rows: Row[]
+  let filtered = true
+  try {
+    rows = (await call<{ invoices: Row[] }>('/invoices', {}, { recurring_invoice_id: profileId, per_page: '200' })).invoices ?? []
+  } catch (e) {
+    if (!customerId) throw e
+    rows = (await call<{ invoices: Row[] }>('/invoices', {}, { customer_id: customerId, per_page: '200' })).invoices ?? []
+    filtered = false
+  }
+  const out: RecurringInvoice[] = []
+  for (const r of rows) {
+    if (known.has(r.invoice_id) || (r.recurring_invoice_id && r.recurring_invoice_id !== profileId)) continue
+    const full = (await call<{ invoice: RecurringInvoice }>(`/invoices/${encodeURIComponent(r.invoice_id)}`)).invoice
+    // Keep only invoices that came from this profile: one naming another profile never counts,
+    // and on the customer-wide fallback one naming none doesn't either.
+    if (full.recurring_invoice_id ? full.recurring_invoice_id !== profileId : !filtered) continue
+    out.push(full)
+  }
+  return out
+}
+
+export const recurringUrl = (orgId: string, id: string) => `${adminEnv.zohoBooks}/app/${encodeURIComponent(orgId)}#/recurringinvoices/${encodeURIComponent(id)}`
+
+/** A recurring invoice profile, as the Money page's projection reads it. Amounts in dollars. */
+export type RecurringProfile = {
+  recurrence_id: string
+  recurrence_name?: string
+  customer_id?: string
+  customer_name?: string
+  status?: string
+  /** days, weeks, months or years. */
+  recurrence_frequency?: string
+  repeat_every?: number | string
+  next_invoice_date?: string
+  end_date?: string
+  sub_total?: number
+  tax_total?: number
+  total?: number
+}
+
+/** Read-only: the active profiles, each read in full (the list reply may leave amounts out). Throws when Zoho can't be read. */
+async function fetchRecurringProfiles(): Promise<RecurringProfile[]> {
+  const rows = (await call<{ recurring_invoices: RecurringProfile[] }>('/recurringinvoices', {}, { status: 'active', per_page: '200' })).recurring_invoices ?? []
+  const out: RecurringProfile[] = []
+  for (const r of rows) {
+    if (r.status && r.status.toLowerCase() !== 'active') continue
+    const full = (await call<{ recurring_invoice: RecurringProfile }>(`/recurringinvoices/${encodeURIComponent(r.recurrence_id)}`)).recurring_invoice
+    if (full && (!full.status || full.status.toLowerCase() === 'active')) out.push(full)
+  }
+  return out
+}
+
+// Cached for an hour so the Money page doesn't call Zoho on every load. Failures aren't cached (they throw).
+const cachedProfiles = unstable_cache(fetchRecurringProfiles, ['zoho-recurring-profiles'], { revalidate: 3600 })
+
+/** The active recurring invoice profiles, or null when Zoho Books isn't connected or can't be read. Never throws. */
+export async function listRecurringProfiles(): Promise<RecurringProfile[] | null> {
+  try {
+    if (!(await zohoConnection())) return null
+    return await cachedProfiles()
+  } catch (e) {
+    console.error('[admin] zoho recurring profiles failed', e)
+    return null
+  }
 }
 
 /** Zoho statuses: draft, sent, viewed, overdue, unpaid, partially_paid, paid, void. */

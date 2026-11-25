@@ -3,6 +3,7 @@ import { methodLabel } from '@/portal/pay-methods'
 import type { PortalPayment } from '@/portal/types'
 import { PIPELINE_STAGES, PROJECT_TYPES } from '@/sanity/portal/office-constants'
 import { addDays, daysBetween, today, ymd } from './dates'
+import { fiscalShare, fiscalYear } from './fiscal'
 import { LEAD_SOURCES } from './lead'
 import type { OfficeProject } from './types'
 
@@ -39,7 +40,7 @@ const within = (d: string | undefined, r: Period) => (r.from ? Boolean(d && d >=
 export const RANGES = [
   { key: '30d', label: 'Last 30 days' },
   { key: '12m', label: 'Last 12 months' },
-  { key: 'year', label: 'This year' },
+  { key: 'year', label: 'This fiscal year' },
   { key: 'all', label: 'All time' },
 ] as const
 export type RangeKey = (typeof RANGES)[number]['key']
@@ -48,7 +49,7 @@ export type RangeKey = (typeof RANGES)[number]['key']
 export function periodFor(range: RangeKey, t = today()): Period {
   if (range === 'all') return { to: t }
   if (range === '30d') return { from: addDays(t, -29), to: t }
-  if (range === 'year') return { from: `${t.slice(0, 4)}-01-01`, to: t }
+  if (range === 'year') return { from: fiscalYear(t).start, to: t }
   return { from: `${addMonths(t.slice(0, 7), -11)}-01`, to: t }
 }
 
@@ -163,7 +164,8 @@ export function bills(projects: OfficeProject[], payments: PortalPayment[]): Bil
   for (const x of live) {
     const state = x.status === 'paid' ? 'paid' : x.status === 'processing' ? 'clearing' : 'open'
     out.push({
-      ...who(x.projectId, x.projectTitle, x.clientId),
+      // A retainer payment has no project: it's listed under the client, and links to the client page.
+      ...(x.projectId ? who(x.projectId, x.projectTitle, x.clientId) : { projectId: '', project: 'Monthly retainer', clientId: x.clientId, client: x.clientName ?? 'Client not found' }),
       key: x._id,
       label: `${x.label}${x.zohoInvoiceNumber ? ` · ${x.zohoInvoiceNumber}` : ''}`,
       source: 'payment',
@@ -233,15 +235,17 @@ function goalLine(base: Pick<GoalLine, 'key' | 'label' | 'unit' | 'value' | 'not
 /* ── The Money view ─────────────────────────────────────────────────── */
 
 export function moneyView(projects: MoneyProject[], payments: PortalPayment[], goals: Goals, t = today()) {
-  const year = t.slice(0, 4)
+  // Yearly figures follow the fiscal year (Nov 1 – Oct 31, src/admin/fiscal.ts); monthly ones stay calendar months.
+  const fy = fiscalYear(t)
+  const prevFy = fiscalYear(t, -1)
+  const year = fy.name
   const month = t.slice(0, 7)
-  const thisYear: Period = { from: `${year}-01-01`, to: t }
+  const thisYear: Period = { from: fy.start, to: t }
   const thisMonth: Period = { from: `${month}-01`, to: t }
   const all = bills(projects, payments)
 
   // How much of the year and of the month has gone, counting today.
-  const daysInYear = daysBetween(`${year}-01-01`, `${Number(year) + 1}-01-01`)
-  const yearGone = (daysBetween(`${year}-01-01`, t) + 1) / daysInYear
+  const yearGone = fiscalShare(fy, t)
   const monthGone = Number(t.slice(8)) / daysBetween(`${month}-01`, `${addMonths(month, 1)}-01`)
 
   const signed = signedIn(projects, thisYear)
@@ -263,14 +267,17 @@ export function moneyView(projects: MoneyProject[], payments: PortalPayment[], g
   const inMonth = (m: string): Period => ({ from: `${m}-01`, to: `${m}-31` })
   let signedRun = 0
   let collectedRun = 0
-  const months = MONTHS.map((label, i) => {
-    const m = `${year}-${String(i + 1).padStart(2, '0')}`
+  const months = fy.months.map((m, i) => {
+    const label = MONTHS[Number(m.slice(5, 7)) - 1]
     const signedThen = sum(signings.filter((s) => within(s.on, inMonth(m))).map((s) => s.value ?? 0))
     const collectedThen = collected(paid, inMonth(m))
     signedRun += signedThen
     collectedRun += collectedThen
     return {
       label,
+      /** "YYYY-MM", and "Nov 2026" for tables. */
+      month: m,
+      long: monthLabel(m, true),
       future: m > month,
       signed: signedThen,
       collected: collectedThen,
@@ -278,7 +285,8 @@ export function moneyView(projects: MoneyProject[], payments: PortalPayment[], g
       collectedRun,
       /** Where an even pace to the signed goal stands at the end of this month. */
       pace: goals.signedYear ? (goals.signedYear * (i + 1)) / 12 : undefined,
-      lastYear: collected(paid, inMonth(`${Number(year) - 1}-${m.slice(5)}`)),
+      /** The same month of the fiscal year before. */
+      lastYear: collected(paid, inMonth(prevFy.months[i])),
     }
   })
 
@@ -312,8 +320,12 @@ export function moneyView(projects: MoneyProject[], payments: PortalPayment[], g
   const clientRows = group(paidRows, (b) => b.client).slice(0, 5)
 
   return {
+    /** The fiscal year: "FY2027", "Nov 2026 – Oct 2027", and the one before ("FY2026"). */
     year,
-    /** The share of the year gone, counting today: where "today" sits on the year chart. */
+    yearRange: fy.range,
+    lastYear: prevFy.name,
+    fiscal: fy,
+    /** The share of the fiscal year gone, counting today: where "today" sits on the year chart. */
     yearGone,
     monthLabel: monthLabel(month, false),
     goalLines,

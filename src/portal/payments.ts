@@ -46,6 +46,16 @@ export const feeLabel = (pct: number) => `Credit card processing fee (${pct}%)`
 /** What to put in the e-Transfer message or EFT memo so the payment can be matched. */
 export const payReference = (p: PortalPayment) => p.zohoInvoiceNumber ?? `${p.projectTitle ?? 'Project'} ${p.label}`
 
+/** What a payment is for, in Josh's notes: the project, or "monthly retainer" for a retainer invoice (no project). */
+const forWhat = (p: Pick<PortalPayment, 'kind' | 'projectTitle'>) => p.projectTitle ?? (p.kind === 'retainer' ? 'Monthly retainer' : 'Project')
+
+/** Where Josh opens a payment in the back office: the project's Money tab, or the client page for a retainer payment. */
+const adminLink = (p: Pick<PortalPayment, 'projectId' | 'clientId'>) =>
+  p.projectId ? `${SITE_URL}/admin/projects/${p.projectId}?tab=money` : `${SITE_URL}/admin/clients/${encodeURIComponent(p.clientId)}`
+
+/** The project log, when there's a project (retainer payments have none). */
+const logFor = (p: Pick<PortalPayment, 'projectId'>, text: string, kind: string) => (p.projectId ? addLog(p.projectId, text, kind) : Promise.resolve())
+
 export async function paymentsForClients(clientIds: string[]): Promise<PortalPayment[]> {
   if (!portalReady() || !clientIds.length) return []
   return (await portalClient.fetch<PortalPayment[]>(`*[_type == "portalPayment" && clientId in $ids && status != "canceled"] | order(createdAt asc){${FIELDS}}`, { ids: clientIds })) ?? []
@@ -80,7 +90,8 @@ export async function createPayment(p: { projectId: string; clientId: string; ki
  * reference the back office uses when a project is booked or delivered, so they share one draft.
  */
 async function linkZohoInvoice(pay: PortalPayment) {
-  if (pay.zohoInvoiceId || !(await zohoConnection())) return pay.zohoInvoiceId
+  // Retainer payments arrive with their Zoho invoice already (Zoho made it), so only project payments get here.
+  if (pay.zohoInvoiceId || !pay.projectId || !(await zohoConnection())) return pay.zohoInvoiceId
   const project = await getProject(pay.projectId)
   if (!project) return
   const what = pay.kind === 'deposit' ? 'Deposit' : pay.kind === 'balance' ? 'Balance' : pay.label
@@ -111,15 +122,15 @@ async function linkZohoInvoice(pay: PortalPayment) {
 export async function markSent(pay: PortalPayment, method: BankMethod) {
   if (pay.status !== 'due') return
   await portalClient.patch(pay._id).set({ status: 'processing', method }).commit()
-  await addLog(pay.projectId, `Client says the ${pay.label.toLowerCase()} (${fmtCad(pay.total)}) is on its way by ${methodLabel(method)}`, 'payment')
-  const line = `${pay.label} sent by ${methodLabel(method)}: ${fmtCad(pay.total)} · ${pay.projectTitle}. Reference ${payReference(pay)}.`
-  const admin = `${SITE_URL}/admin/projects/${pay.projectId}?tab=money`
+  await logFor(pay, `Client says the ${pay.label.toLowerCase()} (${fmtCad(pay.total)}) is on its way by ${methodLabel(method)}`, 'payment')
+  const line = `${pay.label} sent by ${methodLabel(method)}: ${fmtCad(pay.total)} · ${forWhat(pay)}. Reference ${payReference(pay)}.`
+  const admin = adminLink(pay)
   await notifyJosh(`📨 ${line} ${admin}`)
   await sendEmail({
     to: [portalEnv.replyTo],
-    subject: `${pay.label} sent by ${methodLabel(method)}: ${pay.projectTitle}`,
+    subject: `${pay.label} sent by ${methodLabel(method)}: ${forWhat(pay)}`,
     text: `${line}\n\nThe client says it's on its way. Once it's in, mark it paid in the back office (or it shows as paid when Zoho Books has it)${pay.kind === 'deposit' ? ', and the project moves to Booked' : ''}.\n\n${admin}`,
-    html: `<p>${esc(line)}</p><p>The client says it’s on its way. Once it’s in, mark it paid in the back office (or it shows as paid when Zoho Books has it)${pay.kind === 'deposit' ? ', and the project moves to Booked' : ''}.</p><p><a href="${admin}">Open the project</a></p>`,
+    html: `<p>${esc(line)}</p><p>The client says it’s on its way. Once it’s in, mark it paid in the back office (or it shows as paid when Zoho Books has it)${pay.kind === 'deposit' ? ', and the project moves to Booked' : ''}.</p><p><a href="${admin}">Open ${pay.projectId ? 'the project' : 'the client'}</a></p>`,
   }).catch((e) => console.error('[portal] payment-sent email to Josh failed', e))
 }
 
@@ -127,7 +138,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 /** A paid deposit books the project, if signing didn't already. Safe to run twice. */
 export async function bookOnDeposit(pay: Pick<PortalPayment, 'kind' | 'projectId'>) {
-  if (pay.kind !== 'deposit') return
+  if (pay.kind !== 'deposit' || !pay.projectId) return
   const p = await getProject(pay.projectId)
   if (!p || stageIndex(p.pipelineStage) >= stageIndex('booked')) return
   const results = await runStage(p, 'booked')
@@ -149,9 +160,9 @@ export async function syncPaymentsFromZoho() {
       const method = pay.method && pay.method !== 'card' ? pay.method : 'bank'
       await portalClient.patch(pay._id).ifRevisionId(pay._rev).set({ status: 'paid', paidAt: new Date().toISOString(), method }).commit()
       await announce({ ...pay, status: 'paid', method }, false)
-      log.push(`payment ${pay.label} · ${pay.projectTitle}: paid in Zoho Books`)
+      log.push(`payment ${pay.label} · ${forWhat(pay)}: paid in Zoho Books`)
     } catch (e) {
-      log.push(`payment sync failed for ${pay.label} · ${pay.projectTitle}: ${String(e).slice(0, 120)}`)
+      log.push(`payment sync failed for ${pay.label} · ${forWhat(pay)}: ${String(e).slice(0, 120)}`)
     }
   }
   return log
@@ -201,11 +212,12 @@ type CheckoutSession = {
 export async function startCheckout(p: PortalPayment, who: { email: string; org: string }, origin: string, backPath: string) {
   if (!stripeReady()) throw new Error('stripe-off')
   const fee = cardFeeFor(p, await getPortalSettings())
-  const what = `${p.label} · ${p.projectTitle ?? 'Project'}`
+  const what = p.kind === 'retainer' ? `${p.label}${p.zohoInvoiceNumber ? ` · Invoice ${p.zohoInvoiceNumber}` : ''}` : `${p.label} · ${p.projectTitle ?? 'Project'}`
   const items: Params[] = [{ quantity: 1, price_data: { currency: 'cad', unit_amount: cents(p.amount), product_data: { name: what } } }]
   if (fee.fee) items.push({ quantity: 1, price_data: { currency: 'cad', unit_amount: cents(fee.fee), product_data: { name: feeLabel(fee.pct) } } })
   const gst = round2((p.gst ?? 0) + fee.gst)
   if (gst) items.push({ quantity: 1, price_data: { currency: 'cad', unit_amount: cents(gst), product_data: { name: 'GST (5%)' } } })
+  // projectId is undefined for a retainer payment; form() skips it.
   const meta = { paymentId: p._id, projectId: p.projectId, cardFee: String(fee.fee), cardFeeGst: String(fee.gst), cardFeePct: String(fee.pct) }
   const s = await stripe<CheckoutSession>('checkout/sessions', {
     mode: 'payment',
@@ -215,7 +227,8 @@ export async function startCheckout(p: PortalPayment, who: { email: string; org:
     client_reference_id: p._id,
     metadata: meta,
     payment_intent_data: { description: `${what} · ${who.org}`, metadata: meta, receipt_email: who.email },
-    success_url: `${origin}/api/portal/pay/return?session_id={CHECKOUT_SESSION_ID}`,
+    // A retainer payment has no project page to come back to, so the return trip is told where it started.
+    success_url: `${origin}/api/portal/pay/return?session_id={CHECKOUT_SESSION_ID}${p.projectId ? '' : `&back=${encodeURIComponent(backPath)}`}`,
     cancel_url: `${origin}${backPath}`,
   })
   await portalClient.patch(p._id).set({ sessionId: s.id }).commit()
@@ -270,7 +283,7 @@ async function recordCardInZoho(pay: PortalPayment, charged: number, pct: number
     const invoiceId = await linkZohoInvoice(pay)
     if (!invoiceId) return
     await recordCardPayment(invoiceId, { fee: pay.cardFee ?? 0, feeLabel: feeLabel(pct), amount: charged, reference: `Stripe ${reference}`, date: new Date().toISOString().slice(0, 10) })
-    await addLog(pay.projectId, `${pay.label}: card payment and processing fee recorded in Zoho Books`, 'payment')
+    await logFor(pay, `${pay.label}: card payment and processing fee recorded in Zoho Books`, 'payment')
   } catch (e) {
     console.error('[portal] zoho card payment failed', e)
     await notifyJosh(`⚠️ ${pay.label} was paid by card (${fmtCad(charged)}) but couldn’t be recorded in Zoho Books. Add the ${fmtCad(pay.cardFee ?? 0)} card fee and record the payment by hand. ${String(e).slice(0, 140)}`)
@@ -283,16 +296,19 @@ export async function failSession(sessionId: string) {
   const pay = s.metadata?.paymentId ? await getPayment(s.metadata.paymentId) : null
   if (!pay || pay.status === 'paid') return
   await portalClient.patch(pay._id).set({ status: 'due' }).commit()
-  await addLog(pay.projectId, `${pay.label} bank payment failed; it’s due again`, 'payment')
-  await notifyJosh(`⚠️ Bank payment failed: ${pay.label} · ${pay.projectTitle} (${fmtCad(pay.total)}). ${SITE_URL}/admin/projects/${pay.projectId}?tab=money`)
+  await logFor(pay, `${pay.label} bank payment failed; it’s due again`, 'payment')
+  await notifyJosh(`⚠️ Bank payment failed: ${pay.label} · ${forWhat(pay)} (${fmtCad(pay.total)}). ${adminLink(pay)}`)
 }
 
 async function announce(pay: PortalPayment, processing: boolean) {
   const amount = fmtCad(pay.total)
-  if (!processing) await addActivity(pay.projectId, `${pay.label} paid`, 'approved')
+  if (!processing && pay.projectId) await addActivity(pay.projectId, `${pay.label} paid`, 'approved')
   if (!processing) await bookOnDeposit(pay).catch((e) => console.error('[portal] booking on deposit failed', e))
-  await addLog(pay.projectId, processing ? `${pay.label} (${amount}) paid by bank debit; clearing` : `${pay.label} paid: ${amount}${pay.method ? ` by ${methodLabel(pay.method)}` : ''}${pay.cardFee ? `, incl. ${fmtCad(round2(pay.cardFee + (pay.cardFeeGst ?? 0)))} card fee` : ''}`, 'payment')
-  await notifyJosh(`${processing ? '⏳' : '💸'} ${pay.label} ${processing ? 'started by bank debit' : 'paid'}: ${amount} · ${pay.projectTitle}. ${SITE_URL}/admin/projects/${pay.projectId}?tab=money`)
+  await logFor(pay, processing ? `${pay.label} (${amount}) paid by bank debit; clearing` : `${pay.label} paid: ${amount}${pay.method ? ` by ${methodLabel(pay.method)}` : ''}${pay.cardFee ? `, incl. ${fmtCad(round2(pay.cardFee + (pay.cardFeeGst ?? 0)))} card fee` : ''}`, 'payment')
+  await notifyJosh(`${processing ? '⏳' : '💸'} ${pay.label} ${processing ? 'started by bank debit' : 'paid'}: ${amount} · ${forWhat(pay)}. ${adminLink(pay)}`)
+  // Retainer invoices come from Zoho Books, which does its own emailing (and Stripe sends a card
+  // receipt), so the portal stays quiet: no paid email to the client for a retainer payment.
+  if (pay.kind === 'retainer') return
   try {
     const settings = await getPortalSettings()
     const client = await portalClient.fetch<{ organizationName: string; contacts?: { name: string; email: string; getsEmails?: boolean }[] } | null>(`*[_id == $id][0]{organizationName, contacts}`, { id: pay.clientId })

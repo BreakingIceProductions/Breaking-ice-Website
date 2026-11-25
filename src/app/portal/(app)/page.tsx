@@ -8,6 +8,7 @@ import { isExpired } from '@/galleries/types'
 import { requireAccess } from '@/portal/current'
 import { byStart, CLIENT_STAGES, clientStage, projectThumb, today, versionPath } from '@/portal/library'
 import { notificationsFor } from '@/portal/notifications'
+import { PaymentList } from '@/portal/payment-list'
 import { ClientLibrary } from '@/portal/portal-library'
 import { QuoteList } from '@/portal/quote-list'
 import type { ClientProject } from '@/portal/types'
@@ -17,7 +18,7 @@ import { StageMap } from '@/portal/stage-map'
 
 export const metadata = { title: 'Your projects' }
 
-type Props = { searchParams: Promise<{ open?: string }> }
+type Props = { searchParams: Promise<{ open?: string; pay?: string }> }
 
 const isDone = (p: ClientProject) => p.status === 'delivered' || p.pipelineStage === 'delivered' || p.pipelineStage === 'paid'
 const atPath = (parts: string[]) => parts.map(encodeURIComponent).join('/')
@@ -37,10 +38,10 @@ async function libraryCover(clientIds: string[]) {
 }
 
 export default async function Home({ searchParams }: Props) {
-  const { session, clients, projects, name } = await requireAccess()
+  const { session, clients, projects, payments, name } = await requireAccess()
 
   // Email links (?open=<version>) go straight to that version on its project page.
-  const { open } = await searchParams
+  const { open, pay: payNote } = await searchParams
   if (open) {
     for (const p of projects) {
       const d = p.deliverables?.find((x) => x._key === open)
@@ -61,6 +62,10 @@ export default async function Home({ searchParams }: Props) {
       </div>
     )
   }
+
+  // Monthly retainer invoices, newest first, for clients without a retainer page (that page has its own Billing block).
+  const withPage = new Set(retainers.map((r) => r.id))
+  const billing = payments.filter((p) => p.kind === 'retainer' && !withPage.has(p.clientId)).reverse()
 
   const sorted = [...projects].sort(byStart)
   const active = sorted.filter((p) => !isDone(p))
@@ -96,6 +101,8 @@ export default async function Home({ searchParams }: Props) {
       )}
 
       {retainers.length > 0 && <RetainerCards cards={retainers} />}
+
+      {billing.length > 0 && <PaymentList id="billing" heading="Billing" payments={billing} back="/portal" note={payNote} />}
 
       {toSign.length > 0 && <QuoteList id="quotes-h" label="Ready for your signature" quotes={toSign} t={today()} />}
 

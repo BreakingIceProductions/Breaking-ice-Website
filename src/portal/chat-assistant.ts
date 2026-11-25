@@ -53,7 +53,7 @@ export function clientContext(d: ClientData) {
     lines.push(`\nQuote for ${q.title}: ${q.signature ? `signed${q.total ? `, total $${q.total.toLocaleString('en-CA')}` : ''}` : 'shared, not signed yet'}${q.validUntil && !q.signature ? `, valid until ${q.validUntil}` : ''}`)
   }
   for (const x of d.payments.filter((p) => p.status !== 'canceled')) {
-    lines.push(`Payment: ${x.label} for ${x.projectTitle ?? 'a project'}, $${x.total.toLocaleString('en-CA', { minimumFractionDigits: 2 })}, ${x.status}`)
+    lines.push(`Payment: ${x.label} for ${x.projectTitle ?? (x.kind === 'retainer' ? 'their monthly retainer' : 'a project')}, $${x.total.toLocaleString('en-CA', { minimumFractionDigits: 2 })}, ${x.status}`)
   }
   return lines.join('\n')
 }

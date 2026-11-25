@@ -29,6 +29,8 @@ import { handoffAll } from './chat'
  *  Folders       every active project gets its Drive folders, and renames follow the Studio.
  *  Back office   calendar events, TickTick due dates and Zoho Books invoice statuses
  *                catch up with the projects (src/admin/sync.ts).
+ *  Retainer bills monthly invoices Zoho Books makes from a recurring profile appear in the portal as retainer
+ *                payments (no email: Zoho sends the invoice).
  *  Payments      portal payments whose Zoho Books invoice is paid show as paid.
  *  Retainers     from the 1st, last month's recap is drafted for each retainer client (src/retainer/recap.ts).
  *                Josh reads and sends it from the back office; it is never sent from here.
@@ -138,6 +140,16 @@ export async function runScheduler(now = Date.now()) {
     log.push(...(await syncOffice(started + 52_000)))
   } catch (e) {
     log.push(`office sync failed: ${String(e).slice(0, 160)}`)
+  }
+  // 3a. Retainer invoices Zoho Books generated from a recurring profile show in the portal (src/portal/retainer-billing.ts). Read-only, sends nothing.
+  // Monthly invoices don't need a 10-minute check: only the first run of each hour looks, to spare Zoho's daily API allowance.
+  try {
+    if (new Date().getUTCMinutes() < 10) {
+      const { importRecurringInvoices } = await import('./retainer-billing')
+      log.push(...(await importRecurringInvoices()))
+    }
+  } catch (e) {
+    log.push(`retainer invoice import failed: ${String(e).slice(0, 160)}`)
   }
   // 3b. Portal payments paid in Zoho Books (e-Transfers and EFTs from the bank feed).
   try {

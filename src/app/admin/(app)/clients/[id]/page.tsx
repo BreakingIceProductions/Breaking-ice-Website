@@ -19,6 +19,9 @@ import { PortalChatCard } from '@/admin/ui/portal-chat-card'
 import { Segments } from '@/admin/ui/graphics'
 import { StageChip, Timeline } from '@/admin/ui/viz-c'
 import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
+import { recurringUrl, invoiceUrl, zohoConnection } from '@/admin/zoho'
+import { portalClient } from '@/portal/data'
+import { retainerPaymentsFor } from '@/portal/retainer-billing'
 
 type Props = { params: Promise<{ id: string }>; searchParams?: Promise<{ added?: string; found?: string }> }
 
@@ -144,6 +147,8 @@ export default async function ClientPage({ params, searchParams }: Props) {
             {c.billingEmail && <p className="muted small m0">Invoices go to {c.billingEmail}</p>}
           </section>
 
+          <RecurringCard clientId={c._id} />
+
           <PortalChatCard clientId={c._id} />
 
           <section className="p-card" aria-labelledby="h-feed">
@@ -157,5 +162,55 @@ export default async function ClientPage({ params, searchParams }: Props) {
         </aside>
       </div>
     </div>
+  )
+}
+
+const PAY_STATUS: Record<string, string> = { due: 'Due', processing: 'Client says it’s sent', paid: 'Paid' }
+
+/**
+ * Read-only: the client's Zoho Books recurring invoice profiles (from their boClient record) and the
+ * monthly invoices mirrored into the portal from them. Nothing here calls Zoho; it renders nothing
+ * for clients without a profile.
+ */
+async function RecurringCard({ clientId }: { clientId: string }) {
+  const [ids, pays, conn] = await Promise.all([
+    portalClient.fetch<string[] | null>(`*[_id == $id][0].zohoRecurringIds`, { id: `bo-client-${clientId}` }).catch(() => null),
+    retainerPaymentsFor(clientId).catch(() => []),
+    zohoConnection().catch(() => null),
+  ])
+  if (!ids?.length && !pays.length) return null
+  const org = conn?.orgId
+  return (
+    <section className="p-card" aria-labelledby="h-recurring">
+      <h2 id="h-recurring" className="a-h2">Recurring invoices</h2>
+      {ids?.length ? (
+        <p className="muted small m0">
+          Zoho Books profile{ids.length === 1 ? '' : 's'}:{' '}
+          {ids.map((rid, i) => (
+            <span key={rid}>
+              {i > 0 && ', '}
+              {org ? <a className="text-link-plain" href={recurringUrl(org, rid)} target="_blank" rel="noopener noreferrer">{rid}<span className="sr-only"> (opens Zoho Books)</span></a> : rid}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {pays.length ? (
+        <ul className="a-rows">
+          {pays.map((p) => (
+            <li key={p._id}>
+              <span className="a-row-main">
+                <strong>{p.label}</strong>
+                <span className="muted small">
+                  {p.zohoInvoiceNumber && p.zohoInvoiceId && org ? <a className="text-link-plain" href={invoiceUrl(org, p.zohoInvoiceId)} target="_blank" rel="noopener noreferrer">{p.zohoInvoiceNumber}</a> : (p.zohoInvoiceNumber ?? 'Invoice')} · {PAY_STATUS[p.status] ?? p.status}
+                </span>
+              </span>
+              <span className="a-row-side"><span className="muted small">{cad(p.total)}</span></span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="sc-empty">No invoices from it yet. They show here once Zoho Books makes them.</p>
+      )}
+    </section>
   )
 }

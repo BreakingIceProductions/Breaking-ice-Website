@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { requireAccess } from '@/portal/current'
+import { PaymentList } from '@/portal/payment-list'
 import { portalImage } from '@/portal/data'
 import { accentVars } from '@/portal/retainer-accent'
 import { resolveBrand } from '@/portal/retainer-brand'
@@ -21,7 +22,7 @@ import {
 import type { MonthKey } from '@/retainer/types'
 import '@/app/css/retainer.css'
 
-type Props = { params: Promise<{ clientId: string }>; searchParams: Promise<{ m?: string | string[] }> }
+type Props = { params: Promise<{ clientId: string }>; searchParams: Promise<{ m?: string | string[]; pay?: string }> }
 
 /** Only a contact on this retainer client (or the back office previewing it) gets past here. */
 async function clientFor(clientId: string): Promise<RetainerClient> {
@@ -41,7 +42,9 @@ export async function generateMetadata({ params }: Props) {
 export default async function RetainerPage({ params, searchParams }: Props) {
   const { clientId } = await params
   const c = await clientFor(clientId)
-  const { m } = await searchParams
+  const { m, pay: payNote } = await searchParams
+  // Monthly invoices from Zoho Books, newest first. The same list the pay route checks, so only this client's own.
+  const billing = (await requireAccess()).payments.filter((p) => p.kind === 'retainer' && p.clientId === c._id).reverse()
 
   const now = monthKey()
   const months = [...new Set(monthsFor(c))].sort()
@@ -186,6 +189,12 @@ export default async function RetainerPage({ params, searchParams }: Props) {
           </div>
         )}
       </section>
+
+      {billing.length > 0 && (
+        <div className="rt-sec">
+          <PaymentList id="billing" heading="Billing" payments={billing} back={base} note={typeof payNote === 'string' ? payNote : undefined} />
+        </div>
+      )}
 
       <section className="rt-sec" aria-labelledby="rt-docs-h">
         <div className="nb-head">

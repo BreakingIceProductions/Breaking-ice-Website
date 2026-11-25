@@ -528,7 +528,10 @@ export async function getZohoContactId(clientId: string) {
 
 export async function setZohoContactId(clientId: string, zohoContactId: string) {
   if (sample()) return
-  await portalClient.createOrReplace({ _id: `bo-client-${clientId}`, _type: 'boClient', client: clientId, zohoContactId })
+  // Patch, not replace: the record also holds the client's recurring invoice profiles (zohoRecurringIds).
+  const _id = `bo-client-${clientId}`
+  await portalClient.createIfNotExists({ _id, _type: 'boClient', client: clientId })
+  await portalClient.patch(_id).set({ zohoContactId }).commit()
 }
 
 /* ── Connection tokens, encrypted at rest ───────────────────────────── */

@@ -16,7 +16,8 @@ const GOALS_ID = 'bo-goals'
 export const GOAL_KEYS = ['signedYear', 'collectedYear', 'leadsMonth', 'winRate'] as const
 
 const PAYMENT_FIELDS = `_id, projectId, clientId, kind, label, amount, gst, total, status, createdAt, paidAt, method, cardFee, cardFeeGst, zohoInvoiceId, zohoInvoiceNumber,
-  "projectTitle": *[_type == "clientProject" && _id == ^.projectId][0].title`
+  "projectTitle": *[_type == "clientProject" && _id == ^.projectId][0].title,
+  "clientName": *[_type == "client" && _id == ^.clientId][0].organizationName`
 
 async function read<T>(query: string, params: Record<string, unknown>, fallback: T): Promise<T> {
   try {

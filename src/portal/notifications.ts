@@ -17,7 +17,7 @@ const money = (n: number) => `$${n.toLocaleString('en-CA', { minimumFractionDigi
  * home page share it); the only extra query is the sign requests.
  */
 export const notificationsFor = cache(async () => {
-  const { clients, projects, quotes, payments } = await requireAccess()
+  const { session, clients, projects, quotes, payments } = await requireAccess()
   const t = today()
   const toSign = quotes.filter((q) => !q.signature && !quoteExpired(q, t))
   const due = payments.filter((x) => x.status === 'due')
@@ -43,7 +43,16 @@ export const notificationsFor = cache(async () => {
     const p = bySlug.get(q.slug)
     add(p?._id ?? 'quotes', p?.title ?? 'Quotes', { key: `q-${q.slug}`, label: p ? 'Quote ready to sign' : q.title, sub: p ? undefined : 'Quote ready to sign', href: `/portal/quotes/${q.slug}` })
   }
+  // Retainer invoices have no project: they're paid from the retainer page, or the home page for clients without one.
+  const retainerPages = due.some((x) => x.kind === 'retainer')
+    ? new Set((await import('@/retainer/data').then((m) => m.retainerClientsFor(session)).catch(() => [])).map((c) => c._id))
+    : new Set<string>()
   for (const x of due) {
+    if (x.kind === 'retainer') {
+      const href = retainerPages.has(x.clientId) ? `/portal/retainer/${encodeURIComponent(x.clientId)}#billing` : '/portal#billing'
+      add(`retainer-${x.clientId}`, 'Monthly retainer', { key: `pay-${x._id}`, label: `${x.label} · ${money(x.total)}`, sub: 'Ready to pay', href })
+      continue
+    }
     const p = (x.projectId && byId.get(x.projectId)) || (x.slug && bySlug.get(x.slug)) || undefined
     add(p?._id ?? `pay-${x.slug ?? x._id}`, p?.title ?? x.projectTitle ?? 'Payments', { key: `pay-${x._id}`, label: `${x.label} · ${money(x.total)}`, sub: 'Ready to pay', href: x.slug ? `/portal/${x.slug}#billing` : '/portal' })
   }
