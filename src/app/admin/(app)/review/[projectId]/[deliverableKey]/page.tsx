@@ -8,7 +8,7 @@ import { requireAdmin } from '@/admin/auth'
 import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import { getProject } from '@/admin/data'
 import { ShareControl } from '@/admin/ui/share-control'
-import { needsVimeoPreview, versionLabel, versionPath } from '@/portal/library'
+import { categoryOf, groupDeliverables, needsVimeoPreview, versionLabel, versionPath } from '@/portal/library'
 import { ReviewRoom } from '@/portal/review-room'
 
 type Props = { params: Promise<{ projectId: string; deliverableKey: string }> }
@@ -28,10 +28,14 @@ export default async function AdminReview({ params }: Props) {
   const d = p?.deliverables.find((x) => x._key === decodeURIComponent(deliverableKey))
   if (!p || !d) notFound()
   const finder = `/admin/clients?at=${[p.client._id, p.slug ?? p._id, ...versionPath(d)].map(encodeURIComponent).join('/')}`
+  const projectHref = `/admin/projects/${encodeURIComponent(p._id)}?tab=portal`
+  // Every version of this deliverable, oldest first, for the room's version stepper.
+  const siblings = groupDeliverables(p.deliverables, { includeInProgress: true })[categoryOf(d)].find((g) => g.versions.some((v) => v._key === d._key))?.versions ?? [d]
+  const versions = siblings.map((v) => ({ key: v._key, label: versionLabel(v), href: `/admin/review/${encodeURIComponent(p._id)}/${encodeURIComponent(v._key)}` }))
 
   return (
     <div className="a-page">
-      <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }, { label: p.title, href: `/admin/projects/${encodeURIComponent(p._id)}?tab=portal` }]} />
+      <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }, { label: p.title, href: projectHref }]} />
       <header className="a-head">
         <div className="stack ap-gap-2 ap-minw0">
           <h1 className="a-h1">{d.title} <span className="muted">· {versionLabel(d)}</span></h1>
@@ -57,6 +61,9 @@ export default async function AdminReview({ params }: Props) {
             status={d.status}
             readOnly={Boolean(admin.viewOnly)}
             note={d.notes}
+            crumbs={[p.client.organizationName, p.title]}
+            backHref={projectHref}
+            versions={versions}
           />
           <ShareControl projectId={p._id} deliverableKey={d._key} share={d.share} viewOnly={Boolean(admin.viewOnly)} />
         </>

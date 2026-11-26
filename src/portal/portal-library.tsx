@@ -4,7 +4,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { IconFor, fileKind } from './file-icon'
 import { Finder } from './finder'
-import { canDownloadVideo, categoryOf, clientCanOpen, FINALS, inReviewRoom, needsVimeoPreview, projectNode, REFERENCE, resolvePath, versionLabel, watchLink } from './library'
+import { canDownloadVideo, categoryOf, clientCanOpen, FINALS, groupDeliverables, inReviewRoom, needsVimeoPreview, projectNode, REFERENCE, resolvePath, versionLabel, versionPath, watchLink } from './library'
 import { fmtSize } from './resumable'
 import { FinalFiles } from './delivery'
 import { DocLightbox, FeedbackButtons, FeedbackList, ReviewThumb, VersionHead, WatchTile } from './review-ui'
@@ -96,13 +96,17 @@ function Library({ projects, single, demo, uploaderName, viewOnly = false }: Lib
   // A video in our own review room plays full width under the columns.
   const picked = project && (at.version ?? (at.group ? [...at.group.versions].reverse().find((v) => clientCanOpen(v, project.deliverables)) : undefined))
   const room = project && picked && inReviewRoom(picked) && clientCanOpen(picked, project.deliverables) ? picked : undefined
+  // The versions of this deliverable the client can open, for the room's stepper.
+  const roomVersions = project && room
+    ? (groupDeliverables(project.deliverables ?? [], { includeInProgress: true })[categoryOf(room)].find((g) => g.versions.some((v) => v._key === room._key))?.versions ?? [room]).filter((v) => clientCanOpen(v, project.deliverables))
+    : []
 
   return (
     <>
       <Finder rootTitle={single ? 'Folders' : 'Projects'} root={root} path={path} onPath={setPath} panel={panel} panelTitle={panelTitle} />
       {project && room && (
         <section id="review-room" className="p-room p-anchor" aria-labelledby="room-h">
-          <h3 id="room-h" className="h3">{room.title} <span className="muted">· {versionLabel(room)}</span></h3>
+          <h3 id="room-h" className="sr-only">Review room: {room.title}, {versionLabel(room)}</h3>
           <ReviewRoom
             key={room._key}
             via="portal"
@@ -116,6 +120,12 @@ function Library({ projects, single, demo, uploaderName, viewOnly = false }: Lib
             canDecide={!viewOnly}
             readOnly={viewOnly}
             note={room.notes}
+            crumbs={[project.client?.organizationName ?? '', project.title]}
+            versions={roomVersions.map((v) => ({ key: v._key, label: versionLabel(v) }))}
+            onVersion={(key) => {
+              const v = roomVersions.find((x) => x._key === key)
+              if (v) setPath(single ? versionPath(v) : [project.slug, ...versionPath(v)])
+            }}
           />
         </section>
       )}

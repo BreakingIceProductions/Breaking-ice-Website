@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ReviewRoom } from '@/portal/review-room'
 import type { DeliverableStatus } from '@/portal/types'
 
-type Room = { deliverableKey: string; title: string; versionLabel: string; fps: number; duration?: number; status: DeliverableStatus; note?: string }
+type Room = { deliverableKey: string; title: string; versionLabel: string; fps: number; duration?: number; status: DeliverableStatus; note?: string; crumbs?: string[] }
 
 const newId = () => {
   const a = new Uint8Array(18)

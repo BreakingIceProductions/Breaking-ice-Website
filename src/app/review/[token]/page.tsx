@@ -50,6 +50,7 @@ export default async function ReviewShare({ params }: Props) {
                 duration: target.d.durationSec,
                 status: target.d.status,
                 note: target.d.notes,
+                crumbs: [target.org, target.projectTitle],
               }}
             />
           </>
