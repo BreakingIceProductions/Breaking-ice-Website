@@ -6,7 +6,9 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Mark } from '@/components/brand'
 import { quoteDeposit } from './library'
-import type { QuoteOption } from './types'
+import { RetainerBilling } from './retainer-billing-view'
+import { monthName, optionMonthly, retainerChoice } from './retainer-quote'
+import type { QuoteOption, QuoteRetainer, RetainerChoice } from './types'
 
 const script = Dancing_Script({ subsets: ['latin'], weight: '500', display: 'swap' })
 
@@ -30,6 +32,8 @@ type Props = {
   coverUrl?: string
   /** Whether a deposit is paid in the portal next (the animation says so). */
   depositNext?: boolean
+  /** A retainer: monthly prices, add-ons, no deposit. */
+  retainer?: QuoteRetainer
 }
 
 const cad = (n?: number) => (n ? `$${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })}` : '')
@@ -124,8 +128,106 @@ export function QuoteGlance({ options, total, depositPercent, deposit, summary, 
   )
 }
 
+/** A retainer's At a glance: monthly prices, no deposit, billed through the term. */
+export function RetainerGlance({ options, retainer, summary, includes, version, noGst }: { options: QuoteOption[]; retainer: QuoteRetainer; summary?: string; includes?: string[]; version: number; noGst?: boolean }) {
+  const [option, setOption] = useChoice('')
+  return (
+    <section className="p-card q-summary" aria-labelledby="sum-h">
+      <h2 id="sum-h" className="p-label">At a glance</h2>
+      <div className="q-packages" role="radiogroup" aria-label="Options">
+        {options.map((o) => (
+          <button key={o._key} type="button" role="radio" aria-checked={option === o._key} className={`q-package${option === o._key ? ' on' : ''}`} onClick={() => setOption(o._key)}>
+            <span className="stack" style={{ gap: 0, textAlign: 'left' }}>
+              <strong>{o.name}</strong>
+              {o.note && <span className="muted small">{o.note}</span>}
+            </span>
+            <span className="q-package-price">{cad(optionMonthly(o, retainer.months))}<span className="muted small">/mo</span></span>
+          </button>
+        ))}
+      </div>
+      <p className="muted small" style={{ margin: 0 }}>
+        {retainer.months} monthly invoices from {monthName(retainer.start)}. No deposit{noGst ? '' : '. Prices before GST'}.
+      </p>
+      {summary && <p style={{ margin: 0 }}>{summary}</p>}
+      {includes && includes.length > 0 && (
+        <ul className="q-includes">
+          {includes.map((x) => <li key={x}>{x}</li>)}
+        </ul>
+      )}
+      <p className="muted small" style={{ margin: 0 }}>The PDF has the full details{version > 1 ? ` (version ${version})` : ''}.</p>
+    </section>
+  )
+}
+
+/** Option, buyout and archive for a retainer, with the totals as they change. */
+function RetainerPicker({ options, retainer, option, setOption, buyout, setBuyout, archive, setArchive, noGst }: {
+  options: QuoteOption[]; retainer: QuoteRetainer; option: string; setOption: (k: string) => void
+  buyout: boolean; setBuyout: (b: boolean) => void; archive: boolean; setArchive: (b: boolean) => void; noGst?: boolean
+}) {
+  const chosen = options.find((o) => o._key === option)
+  const c = chosen ? retainerChoice(retainer, chosen, { buyout, archive }) : undefined
+  const needsBuyout = Boolean(retainer.archive?.requiresBuyout)
+  const tax = plusGst(noGst)
+  return (
+    <>
+      <fieldset className="q-sig">
+        <legend className="small">Choose an option</legend>
+        <div className="q-options">
+          {options.map((o) => (
+            <label key={o._key} className={`q-option${option === o._key ? ' on' : ''}`}>
+              <input type="radio" name="option" value={o._key} checked={option === o._key} onChange={() => setOption(o._key)} required />
+              <span className="stack" style={{ gap: 0 }}>
+                <strong>{o.name}</strong>
+                <span className="small">{cad(optionMonthly(o, retainer.months))}/month{tax}</span>
+                {o.note && <span className="muted small">{o.note}</span>}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {(retainer.buyout || retainer.archive) && (
+        <fieldset className="q-sig q-addons">
+          <legend className="small">Add-ons, only at this price when booked now</legend>
+          {retainer.buyout && (
+            <label className={`q-addon${buyout ? ' on' : ''}`}>
+              <input type="checkbox" checked={buyout} onChange={(e) => { setBuyout(e.target.checked); if (!e.target.checked && needsBuyout) setArchive(false) }} />
+              <span className="stack" style={{ gap: 2 }}>
+                <strong>{retainer.buyout.name}</strong>
+                <span className="small">{chosen?.buyoutMonthly ? `+${cad(chosen.buyoutMonthly)}/month${tax}` : 'Priced with the option you choose'}</span>
+                {retainer.buyout.note && <span className="muted small">{retainer.buyout.note}</span>}
+              </span>
+            </label>
+          )}
+          {retainer.archive && (
+            <label className={`q-addon${archive ? ' on' : ''}${needsBuyout && !buyout ? ' off' : ''}`}>
+              <input type="checkbox" checked={archive} disabled={needsBuyout && !buyout} onChange={(e) => setArchive(e.target.checked)} />
+              <span className="stack" style={{ gap: 2 }}>
+                <strong>{retainer.archive.name}</strong>
+                <span className="small">{cad(retainer.archive.total)} once, on the first invoice{tax}</span>
+                <span className="muted small">{needsBuyout && !buyout ? 'Available with the media buyout.' : retainer.archive.note}</span>
+              </span>
+            </label>
+          )}
+        </fieldset>
+      )}
+      <div className="q-rsum" aria-live="polite">
+        {c ? (
+          <dl className="q-money">
+            <div><dt>Each month</dt><dd>{cad(c.monthly)}{tax}</dd></div>
+            <div><dt>First invoice ({monthName(retainer.start)})</dt><dd>{cad(c.first)}{tax}</dd></div>
+            <div><dt>The year</dt><dd>{cad(c.year)}{tax}</dd></div>
+            <div><dt>Due today</dt><dd>$0</dd></div>
+          </dl>
+        ) : (
+          <p className="muted small" style={{ margin: 0 }}>Choose an option to see your monthly total.</p>
+        )}
+      </div>
+    </>
+  )
+}
+
 /** Type or draw a signature, agree, sign. */
-export function QuoteSign({ slug, version, org, options, depositPercent, deposit, defaultName, defaultTitle, demo, preview, noGst, coverUrl, depositNext }: Props) {
+export function QuoteSign({ slug, version, org, options, depositPercent, deposit, defaultName, defaultTitle, demo, preview, noGst, coverUrl, depositNext, retainer }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const [sending, setSending] = useState(false)
@@ -134,8 +236,11 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
   const [method, setMethod] = useState<'typed' | 'drawn'>('typed')
   const [agree, setAgree] = useState(false)
   const [option, setOption] = useChoice(options?.length === 1 ? options[0]._key : '')
+  const [buyout, setBuyout] = useState(false)
+  const [archive, setArchive] = useState(false)
   const [drawn, setDrawn] = useState(false)
-  const [state, setState] = useState<{ busy?: boolean; err?: string; done?: string }>({})
+  const [state, setState] = useState<{ busy?: boolean; err?: string; done?: string; retainer?: RetainerChoice }>({})
+  const chosenOption = options?.find((o) => o._key === option)
   const pad = useRef<HTMLCanvasElement>(null)
 
   const ready = name.trim().length >= 2 && agree && (method === 'typed' || drawn) && (!options?.length || Boolean(option))
@@ -149,6 +254,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         project: slug, version, option: option || undefined, name: name.trim(), title: title.trim(), method, typed: name.trim(), agree,
+        ...(retainer ? { buyout, archive } : {}),
         image: method === 'drawn' ? pad.current?.toDataURL('image/png') : undefined,
       }),
     }).catch(() => null)
@@ -159,7 +265,10 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
       setTimeout(() => {
         if (demo) {
           setSending(false)
-          setState({ done: 'Sample only: nothing was signed or sent.' })
+          setState({
+            done: 'Sample only: nothing was signed or sent.',
+            retainer: retainer && chosenOption ? retainerChoice(retainer, chosenOption, { buyout, archive }) : undefined,
+          })
         } else {
           window.scrollTo({ top: 0 })
           router.replace(`${pathname}?signed=1`)
@@ -177,13 +286,23 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
     setState({ err })
   }
 
-  if (sending) return <SentOff coverUrl={coverUrl} next={depositNext ? 'Next: your deposit.' : 'A signed copy is on its way to your inbox.'} />
+  if (sending) return <SentOff coverUrl={coverUrl} next={retainer ? `Nothing to pay today. Your first invoice comes in ${monthName(retainer.start).split(' ')[0]}.` : depositNext ? 'Next: your deposit.' : 'A signed copy is on its way to your inbox.'} />
+  if (state.done && state.retainer)
+    return (
+      <div className="stack">
+        <p className="q-signed-note" role="status">{state.done} This is what the client sees next:</p>
+        <RetainerBilling choice={state.retainer} retainer={retainer} option={chosenOption?.name} noGst={noGst} heading="Signed · how billing works" />
+      </div>
+    )
   if (state.done) return <p className="q-signed-note" role="status">{state.done}</p>
 
   return (
     <form className="q-sign stack" onSubmit={sign} aria-labelledby="sign-h">
       <h2 id="sign-h" className="h3" style={{ margin: 0 }}>Sign and accept</h2>
-      {options && options.length > 0 && (
+      {retainer && options && options.length > 0 && (
+        <RetainerPicker options={options} retainer={retainer} option={option} setOption={setOption} buyout={buyout} setBuyout={setBuyout} archive={archive} setArchive={setArchive} noGst={noGst} />
+      )}
+      {!retainer && options && options.length > 0 && (
         <fieldset className="q-sig">
           <legend className="small">Choose a package</legend>
           <div className="q-options">
@@ -240,7 +359,8 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
         <button type="submit" className="btn btn-primary" disabled={!ready || state.busy}>{state.busy ? 'Signing…' : 'Sign quote'}</button>
       </div>
       <p className="muted small" style={{ margin: 0 }}>
-        You’ll get the signed PDF by email, with a certificate page recording your name, email, the time and this device.{depositNext ? ' Your project is booked once the deposit is paid.' : ' Signing books your project in.'}
+        You’ll get the signed PDF by email, with a certificate page recording your name, email, the time and this device.
+        {retainer ? ` Signing books the retainer. Nothing is due today: invoices start in ${monthName(retainer.start)}.` : depositNext ? ' Your project is booked once the deposit is paid.' : ' Signing books your project in.'}
       </p>
     </form>
   )

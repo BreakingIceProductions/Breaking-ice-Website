@@ -7,7 +7,7 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import { projectId as sanityProject } from '@/sanity/env'
 import { portalEnv } from './config'
 import { PORTAL_DATASET, portalClient } from './data'
-import type { PortalQuote, QuoteOption, QuoteSignature } from './types'
+import type { PortalQuote, QuoteOption, QuoteRetainer, QuoteSignature } from './types'
 
 /**
  * Quotes and signing. Each project has at most one quote record, "quote-<project id>",
@@ -37,6 +37,8 @@ export type QuoteDoc = {
   includes?: string[]
   options?: QuoteOption[]
   depositPercent?: number
+  retainer?: QuoteRetainer
+  story?: string
   validUntil?: string
   updatedAt?: string
   sharedAt?: string
@@ -79,8 +81,8 @@ export async function getQuote(projectId: string) {
   return portalClient.getDocument<QuoteDoc>(quoteId(projectId))
 }
 
-const CLIENT_QUOTE_FIELDS = `projectId, version, fileName, "coverUrl": cover.asset->url, summary, note, includes, options, depositPercent, validUntil, sharedAt,
-  "signature": signature{name, title, org, at, method, option, total, deposit, certificateId},
+const CLIENT_QUOTE_FIELDS = `projectId, version, fileName, "coverUrl": cover.asset->url, summary, note, includes, options, depositPercent, validUntil, sharedAt, retainer, story,
+  "signature": signature{name, title, org, at, method, option, total, deposit, certificateId, retainer},
   "p": *[_type == "clientProject" && _id == ^.projectId][0]{title, "slug": slug.current, pipelineStage, quoteAmount, depositAmount, "org": client->organizationName, "noGst": client->noGst}`
 
 type RawClientQuote = Omit<PortalQuote, 'slug' | 'title' | 'org' | 'pipelineStage' | 'total' | 'deposit'> & {
@@ -109,6 +111,8 @@ export async function quotesForClients(clientIds: string[], unsent = false): Pro
       signature: r.signature ?? undefined,
       options: r.options ?? undefined,
       depositPercent: r.depositPercent ?? undefined,
+      retainer: r.retainer ?? undefined,
+      story: r.story ?? undefined,
       noGst: Boolean(p!.noGst),
     }))
 }
@@ -180,6 +184,8 @@ type CertInput = {
   option?: string
   total?: number
   deposit?: number
+  /** For a retainer: the option's monthly price, add-ons and invoices, one line each. */
+  retainerLines?: string[]
   docHash: string
   signer: { name: string; title?: string; email: string }
   method: 'typed' | 'drawn'
@@ -245,8 +251,12 @@ export async function buildSignedPdf(c: CertInput) {
   row('Quote', `${c.fileName} (version ${c.version}, ${pages.length} page${pages.length === 1 ? '' : 's'})`)
   row('Project', c.projectTitle)
   row('Client', c.org)
-  if (c.option) row('Package chosen', c.option, bold)
-  if (c.total) row('Total, before tax', cad(c.total))
+  if (c.option) row(c.retainerLines ? 'Option chosen' : 'Package chosen', c.option, bold)
+  for (const l of c.retainerLines ?? []) {
+    const [k, ...v] = l.split(': ')
+    row(k, v.join(': '))
+  }
+  if (c.total) row(c.retainerLines ? 'Term total, before tax' : 'Total, before tax', cad(c.total))
   if (c.deposit) row('Deposit', cad(c.deposit))
   row('Fingerprint (SHA-256)', c.docHash)
   y -= 8

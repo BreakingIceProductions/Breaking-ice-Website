@@ -9,6 +9,7 @@ import { notifyJosh, sendEmail, signedEmail } from '@/portal/email'
 import { ipOf, json, limited, sameOrigin } from '@/portal/http'
 import { quoteDeposit, today } from '@/portal/library'
 import { createPayment } from '@/portal/payments'
+import { cad0, retainerChoice, retainerLines } from '@/portal/retainer-quote'
 import { assetBytes, buildSignedPdf, fmtMoment, getQuote, newCertificateId, quoteExpired, sha256, uploadAsset } from '@/portal/quotes'
 
 export const runtime = 'nodejs'
@@ -46,8 +47,10 @@ export async function POST(req: Request) {
   // With packages, one must be chosen; its price becomes the project's total.
   const option = q.options?.length ? q.options.find((o) => o._key === body.option) : undefined
   if (q.options?.length && !option) return json({ ok: false, error: 'invalid' }, 400)
-  const total = option?.total ?? q.total
-  const deposit = quoteDeposit(total, q)
+  // A retainer: the add-ons chosen set the monthly price; the year is the total and there's no deposit.
+  const retainer = q.retainer && option ? retainerChoice(q.retainer, option, { buyout: body.buyout === true, archive: body.archive === true }) : undefined
+  const total = retainer ? retainer.year : option?.total ?? q.total
+  const deposit = retainer ? undefined : quoteDeposit(total, q)
   let image: Uint8Array | undefined
   if (method === 'drawn') {
     const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(body.image ?? ''))
@@ -72,6 +75,7 @@ export async function POST(req: Request) {
   try {
     signed = await buildSignedPdf({
       original, fileName, projectTitle: q.title, org: q.org, version: doc.version, option: option?.name, total, deposit, docHash: doc.fileHash,
+      retainerLines: retainer ? retainerLines(retainer, q.retainer) : undefined,
       signer, method, typed, image, at, ip: ipOf(req), userAgent: req.headers.get('user-agent') ?? 'unknown', sharedAt: doc.sharedAt, viewedAt: doc.viewedAt, certificateId,
     })
   } catch (e) {
@@ -92,7 +96,7 @@ export async function POST(req: Request) {
         signature: {
           ...signer, org: q.org, at, method, typed: method === 'typed' ? typed : undefined, image: imageRef, ip: ipOf(req),
           userAgent: (req.headers.get('user-agent') ?? 'unknown').slice(0, 300), version: doc.version, docHash: doc.fileHash,
-          option: option?.name, total, deposit, certificateId, signedFile, signedHash: sha256(signed),
+          option: option?.name, total, deposit, certificateId, signedFile, signedHash: sha256(signed), retainer,
         },
       })
       .commit()
@@ -151,7 +155,8 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error('[portal] signed email to client failed', e)
     }
-    const line = `${name}${title ? ` (${title})` : ''} signed the quote for ${q.title} · ${q.org}${option ? `, choosing ${option.name}` : ''}.`
+    const line = `${name}${title ? ` (${title})` : ''} signed the quote for ${q.title} · ${q.org}${option ? `, choosing ${option.name}` : ''}.${
+      retainer ? ` Retainer: ${retainerLines(retainer, q.retainer).join(' · ')} · Year: ${cad0(retainer.year)}. Set up the Zoho recurring profile.` : ''}`
     const admin = `${SITE_URL}/admin/projects/${q.projectId}?tab=documents`
     await notifyJosh(`✍️ ${esc(line)} ${admin}`)
     await sendEmail({

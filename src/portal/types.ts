@@ -241,14 +241,43 @@ export type PortalQuote = {
   total?: number
   deposit?: number
   signature?: QuoteSignature
+  /** A retainer: monthly prices, optional add-ons, no deposit, billed monthly from the start month. */
+  retainer?: QuoteRetainer
+  /** A walkthrough shown before the PDF (a key in src/portal/stories). */
+  story?: string
   /** The client is GST-exempt, so prices show without "+ GST". */
   noGst?: boolean
 }
 
 /** What the client can see of a signature. The full record (IP, device, fingerprints) stays on the server. */
-export type QuoteSignature = { name: string; title?: string; org?: string; at: string; method: 'typed' | 'drawn'; option?: string; total?: number; deposit?: number; certificateId: string }
+export type QuoteSignature = { name: string; title?: string; org?: string; at: string; method: 'typed' | 'drawn'; option?: string; total?: number; deposit?: number; certificateId: string; retainer?: RetainerChoice }
 
-export type QuoteOption = { _key: string; name: string; total: number; note?: string }
+/** On a retainer quote, total is the year (monthly × months); monthly and buyoutMonthly are per month. */
+export type QuoteOption = { _key: string; name: string; total: number; note?: string; monthly?: number; buyoutMonthly?: number }
+
+export type QuoteRetainer = {
+  /** First month billed, YYYY-MM. */
+  start: string
+  months: number
+  /** An add-on on every monthly invoice (the media buyout), priced per option. */
+  buyout?: { name: string; note?: string }
+  /** A one-time add-on on the first invoice. */
+  archive?: { name: string; total: number; note?: string; requiresBuyout?: boolean }
+}
+
+/** What was chosen when a retainer was signed. Amounts before tax. */
+export type RetainerChoice = {
+  monthly: number
+  buyout: boolean
+  buyoutMonthly?: number
+  archive: boolean
+  archiveTotal?: number
+  /** The first invoice (monthly + archive). */
+  first: number
+  year: number
+  start: string
+  months: number
+}
 
 /**
  * Money asked of a client through the portal: a deposit, a balance, or anything else. Amounts in dollars.
