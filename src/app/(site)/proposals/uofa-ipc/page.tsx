@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Eyebrow } from '@/components/brand'
-import { embedUrl } from '@/lib/video'
 import styles from './proposal.module.css'
 
 /**
@@ -9,9 +8,6 @@ import styles from './proposal.module.css'
  * and noindex/nofollow. The full proposal is submitted as a PDF; this page carries only the pertinent parts.
  * Wording comes from the proposal (261126_Proposal_Workstream_A). Client contacts and references stay in the PDF.
  */
-
-// TODO: paste the Vimeo link for Sample 1 (Understanding the Management Plans) here. Empty shows a "link coming" state.
-const SAMPLE_1_VIMEO = ''
 
 const PDF_HREF = '/proposals/uofa-ipc-2026-0155.pdf'
 const EMAIL = 'josh@breakingiceproductions.com'
@@ -23,46 +19,56 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
 }
 
+/**
+ * Vimeo player URL built directly, so unlisted videos keep their private hash (?h=). The shared embedUrl() helper
+ * keeps only the video id, which would break these unlisted links. Click to play, with sound.
+ */
+function vimeoSrc(id: string, hash?: string): string {
+  return `https://player.vimeo.com/video/${id}?${hash ? `h=${hash}&` : ''}autoplay=0&dnt=1`
+}
+
 const SAMPLES: {
   title: string
   client: string
-  url: string
+  src: string
   length: string
   challenge: string
   approach: string
-  resultLabel: string
-  result: string
+  delivered: string
 }[] = [
   {
     title: 'Understanding the Management Plans',
     client: 'Imperial Oil, Norman Wells',
-    url: SAMPLE_1_VIMEO,
-    length: '3:58 · plan cuts 30–45 s each',
+    src: vimeoSrc('1241826679', '69bb2a643e'),
+    length: '4:03',
     challenge: 'Introduce six technical management plans to community members at the start of public meetings. The plans were long regulatory documents, and the audience came from many backgrounds.',
-    approach: 'A plain-language script approved by the regulatory team, then a custom animated map of the site built from real elevation data, with line-art callouts and cards that name each item as it’s spoken, blended with drone footage. Delivered with captions, plus one-minute plan cuts for web and social.',
-    resultLabel: 'Results',
-    result: 'Imperial has kept bringing us back, for the aquatic effects monitoring video and the decommissioning series, and has asked to plan its 2027 content with us.',
+    approach: 'A plain-language script approved by the regulatory team, then a custom animated map of the site built from real elevation data, with line-art callouts and cards that name each item as it’s spoken, blended with drone footage.',
+    delivered: 'A narrated explainer with captions, plus short stand-alone cuts of each plan for web and social.',
   },
   {
-    title: 'Northern Development Program',
-    client: 'Imperial Oil, Sahtú region, 2026',
-    url: 'https://vimeo.com/1237728973',
-    length: '3:47',
-    challenge: 'Imperial wanted more young people from Sahtú communities to apply to its Northern Development Program, a path to an education and a job in oil and gas. The film had to speak to young workers in their own terms and show what the program actually asks of them.',
-    approach: 'Program participants from five Sahtú communities tell it themselves: why they joined, what they’re learning on the job, and why patience with training pays off. The message to applicants stays simple: show up every day and be willing to learn.',
-    resultLabel: 'Delivered',
-    result: 'The main film, plus one-minute profiles of individual participants for social media.',
+    title: 'About the People',
+    client: 'Imperial Oil, Norman Wells closure film',
+    src: vimeoSrc('1249803556', '91eab9060b'),
+    length: '3:04',
+    challenge: 'Mark the end of production at Norman Wells after more than a century, in a way that speaks to the community as much as to the operation.',
+    approach: 'A narrated film that starts on the Mackenzie River and the first well, then turns to the people who lived the operation’s history: employees, families, local businesses and the Sahtú community, Sahtú knowledge of the land, and the Mackenzie River Classic hockey tournament on the frozen river. It closes on the next chapter and the priorities that stay the same: safety, people and protecting the land.',
+    delivered: 'A narrated short film, directed and shot by Josh Ferguson.',
   },
   {
-    title: 'Innovators’ Showcase: Délı̨nę',
-    client: 'Sahtú Divisional Education Council',
-    url: 'https://vimeo.com/1237731219',
-    length: '3:08',
-    challenge: 'Capture a one-day STEM competition for students from several Sahtú schools, on the shore of Great Bear Lake, and turn it into a short film students, families and funders would actually watch and share.',
-    approach: 'Full-day coverage of every challenge room, students at work rather than posed, on-screen titles for each of the five challenges, and media consent for every student handled through the school board.',
-    resultLabel: 'Results',
-    result: 'The council has brought us back for each showcase since 2024, in Fort Good Hope, Délı̨nę and Tulita.',
+    title: 'North of Ordinary',
+    client: 'North-Wright Airways',
+    src: vimeoSrc('1244528640', '565c0e4a21'),
+    length: '1:14',
+    challenge: 'Tell a northern airline’s story through its own people, in short episodes that hold attention on a phone screen.',
+    approach: 'An interview-led series cut from on-camera conversations with the airline’s crew and staff. This episode features the founder. The series uses an animated intro, an end card built on a real map of the Sahtú region, name and role titles, and captions sized to read on a phone.',
+    delivered: 'A 1:14 episode for social media, part of an ongoing series.',
   },
+]
+
+const MORE_WORK: { title: string; client: string; src: string }[] = [
+  { title: 'Northern Development Program', client: 'Imperial Oil', src: vimeoSrc('1237728973') },
+  { title: 'Innovators’ Showcase: Délı̨nę', client: 'Sahtú Divisional Education Council', src: vimeoSrc('1237731219') },
+  { title: 'Boiler Controls', client: 'Company film, Norman Wells', src: vimeoSrc('1237728461', '2b530410e8') },
 ]
 
 const IDEAS = [
@@ -104,14 +110,14 @@ const MILESTONES: [string, string][] = [
 ]
 
 const TEAM: [string, string, string?][] = [
-  ['Project Lead / Director / Editor', 'Josh Ferguson, Breaking Ice Productions', 'Single point of contact. Leads committee sessions, writes and directs, shoots as director of photography, edits both videos.'],
+  ['Project Lead / Director / Editor', 'Josh Ferguson, Breaking Ice Productions', 'Single point of contact. Leads committee sessions, writes and directs, shoots as director of photography, edits both videos, mixes the sound and runs the focus group.'],
   ['Second camera', 'Geet Chahil, camera operator', 'Second angle and coverage'],
-  ['Sound recordist', 'Edmonton freelance sound recordist', 'Location sound'],
-  ['Gaffer / grip', 'Edmonton freelance gaffer/grip', 'Lighting, rigging, safe cable and equipment management'],
+  ['Sound recordist', 'Edmonton freelance sound recordist, booked at award', 'Location sound'],
+  ['Gaffer / grip', 'Edmonton freelance gaffer/grip, booked at award', 'Lighting, rigging, safe cable and equipment management'],
   ['Production assistant', 'Thomas Paton, Breaking Ice Productions', 'Releases, talent coordination, set support'],
-  ['Sound design and mix', '', 'Sound effects, music edit, final mix'],
-  ['Focus group moderator', '', 'Discussion guide, moderation, findings memo'],
-  ['French translator', '', 'Script and caption translation, French caption QC'],
+  ['Sound design and mix', 'Josh Ferguson, in DaVinci Resolve’s Fairlight', 'Sound effects, music edit, final mix'],
+  ['Focus group moderator', 'Josh Ferguson, with Thomas Paton taking notes', 'Discussion guide, moderation, findings memo'],
+  ['French translator', 'Certified English–French translator, booked at award', 'Script and caption translation, French caption QC'],
 ]
 
 const PRICE: [string, string][] = [
@@ -121,19 +127,11 @@ const PRICE: [string, string][] = [
   ['Phase 4: Reporting of metrics', '$1,725'],
 ]
 
-/** An inline Vimeo player (click to play, with sound). Built from the site's embed helper, without autoplay. */
-function Player({ url, title }: { url: string; title: string }) {
-  const src = embedUrl(url || undefined, 'play')?.replace('autoplay=1', 'autoplay=0')
+/** An inline Vimeo player (click to play, with sound). */
+function Player({ src, title, className }: { src: string; title: string; className?: string }) {
   return (
-    <div className={styles.player}>
-      {src ? (
-        <iframe src={src} title={title} allow="fullscreen; picture-in-picture" allowFullScreen loading="lazy" />
-      ) : (
-        <div className={styles.pending}>
-          <strong>Film link coming</strong>
-          <span className="small">{title} will play here shortly.</span>
-        </div>
-      )}
+    <div className={className ? `${styles.player} ${className}` : styles.player}>
+      <iframe src={src} title={title} allow="fullscreen; picture-in-picture" allowFullScreen loading="lazy" />
     </div>
   )
 }
@@ -256,7 +254,7 @@ export default function UofaIpcProposalPage() {
           <div className={styles.samples}>
             {SAMPLES.map((s, i) => (
               <article key={s.title} className={styles.sample} aria-labelledby={`sample-${i + 1}`}>
-                <Player url={s.url} title={s.title} />
+                <Player src={s.src} title={s.title} />
                 <div className={styles.sampleText}>
                   <div className="stack" style={{ gap: 6 }}>
                     <span className="step-num">Sample {i + 1}</span>
@@ -266,11 +264,24 @@ export default function UofaIpcProposalPage() {
                   <dl>
                     <div><dt>Challenge</dt><dd>{s.challenge}</dd></div>
                     <div><dt>Approach</dt><dd>{s.approach}</dd></div>
-                    <div><dt>{s.resultLabel}</dt><dd>{s.result}</dd></div>
+                    <div><dt>What we delivered</dt><dd>{s.delivered}</dd></div>
                   </dl>
                 </div>
               </article>
             ))}
+          </div>
+
+          <div className={styles.more} aria-labelledby="more-work">
+            <h3 id="more-work" className="h3">More work</h3>
+            <ul className={styles.moreGrid}>
+              {MORE_WORK.map((w) => (
+                <li key={w.title}>
+                  <Player src={w.src} title={w.title} />
+                  <span className={styles.moreTitle}>{w.title}</span>
+                  <span className="caption">{w.client}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
@@ -337,7 +348,7 @@ export default function UofaIpcProposalPage() {
               <p style={{ margin: 0 }}>
                 Josh founded Breaking Ice Productions in Norman Wells, NT in 2022 and now works from Stony Plain and Norman Wells. He leads every project personally, and directs,
                 shoots and edits the company’s films himself, most of them for industry, education and community clients in the Sahtú region. He holds a Transport Canada drone pilot certificate.
-                Recent work includes Imperial Oil’s management plans explainer and aquatic effects monitoring video, the Closing a Century decommissioning series in Norman Wells,
+                Recent work includes Imperial Oil’s management plans explainer and aquatic effects monitoring video, a film marking the closure of Imperial’s Norman Wells operation,
                 and education films for the Sahtú Divisional Education Council.
               </p>
             </div>
