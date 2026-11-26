@@ -36,7 +36,7 @@ export function kpis(projects: OfficeProject[]) {
   }
 }
 
-export type Row = { project: OfficeProject; detail: string; when: string; urgent?: boolean; sort: number; /** Set when the row can be dismissed. */ key?: string }
+export type Row = { project: OfficeProject; detail: string; when: string; urgent?: boolean; sort: number; /** Set when the row can be dismissed. */ key?: string; /** Worth doing, but not worth a notification: listed under "When you have a minute" on Today and left out of the badge. */ quiet?: boolean }
 
 export function needsAction(projects: OfficeProject[]): Row[] {
   const t = today()
@@ -59,23 +59,24 @@ export function needsAction(projects: OfficeProject[]): Row[] {
       add(`fixes-${d._key}-v${d.version}`, { detail: `Notes in on ${d.title}. Start the fixes.`, when: `v${d.version}`, sort: 5 })
     // Review-room comments from the client or guests on a version that's still with them.
     for (const d of p.deliverables.filter((x) => x.openComments && x.status === 'awaiting-feedback'))
-      add(`comments-${d._key}-v${d.version}`, { detail: `${d.openComments} open comment${d.openComments === 1 ? '' : 's'} on ${d.title}.`, when: `v${d.version}`, sort: 4 })
+      add(`comments-${d._key}-v${d.version}`, { detail: `${d.openComments} open comment${d.openComments === 1 ? '' : 's'} on ${d.title}.`, when: `v${d.version}`, sort: 4, quiet: true })
     if (p.pipelineStage === 'delivered' && !hasFinalInvoice(p)) {
       const d = daysSince(p.office.stageChangedAt) ?? 0
       add(`no-invoice-${since}`, { detail: finalAmount(p) ? 'Delivered. No invoice yet.' : 'Delivered. Add the quote total to draft the invoice.', when: `${d} day${d === 1 ? '' : 's'}`, urgent: true, sort: 0 })
     }
     for (const i of (p.office.invoices ?? []).filter((x) => x.status === 'draft')) {
       const d = daysSince(i.createdAt) ?? 0
-      if (d >= 1) add(`draft-${i.id}`, { detail: `Draft invoice${i.number ? ` ${i.number}` : ''} hasn’t been sent from Zoho Books.`, when: `${d} days`, sort: 3 })
+      // A day-old draft can wait; three days unsent is money sitting still.
+      if (d >= 1) add(`draft-${i.id}`, { detail: `Draft invoice${i.number ? ` ${i.number}` : ''} hasn’t been sent from Zoho Books.`, when: `${d} days`, sort: 3, quiet: d < 3 })
     }
     for (const m of MILESTONE_LIST) {
       const date = p.milestones[m.key]
       if (!date || !m.yours || si >= idx(m.doneFrom)) continue
       const n = daysBetween(t, date)
-      if (n <= 3) add(`due-${m.key}-${date}`, { detail: `${m.label} ${n < 0 ? 'was' : ''} ${fmtDay(date, { weekday: 'long' })}.`.replace('  ', ' '), when: n < 0 ? `${-n} days late` : n === 0 ? 'Today' : `In ${n} day${n === 1 ? '' : 's'}`, urgent: n <= 0, sort: n })
+      if (n <= 3) add(`due-${m.key}-${date}`, { detail: `${m.label} ${n < 0 ? 'was' : ''} ${fmtDay(date, { weekday: 'long' })}.`.replace('  ', ' '), when: n < 0 ? `${-n} days late` : n === 0 ? 'Today' : `In ${n} day${n === 1 ? '' : 's'}`, urgent: n <= 0, sort: n, quiet: n > 1 })
     }
     if (si >= idx('roughcut') && si < idx('delivered') && p.deliverables.length && p.deliverables.every((d) => d.status === 'approved'))
-      add(`approved-${since}`, { detail: 'Everything’s approved. Move it to Final delivery.', when: 'Ready', sort: 2 })
+      add(`approved-${since}`, { detail: 'Everything’s approved. Move it to Final delivery.', when: 'Ready', sort: 2, quiet: true })
   }
   return rows.sort((a, b) => a.sort - b.sort)
 }

@@ -8,8 +8,9 @@ import type { OfficeProject } from './types'
 
 /*
  * Today's "Needs you" list, in one place, so the nav badge and the page header always show the same number.
- * The list is: reminders (needsAction), booked projects with no deposit asked for, and the week/month
- * follow-ups after delivery. Dismissed reminders are already left out.
+ * Only urgent things count: reminders that aren't quiet (needsAction) and booked projects with no deposit asked for.
+ * Quiet reminders and the week/month follow-ups after delivery sit lower on Today, under "When you have a minute",
+ * and raise no badge. Dismissed reminders are already left out.
  */
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -52,5 +53,5 @@ export function depositsDue(projects: OfficeProject[], payments: PortalPayment[]
 export function needsYouCount(all: MoneyProject[], payments: PortalPayment[], goals: Goals, t = today()): number {
   const projects = all.filter((p) => !p.archived)
   const owed = new Set(moneyView(all, payments, goals, t).owed.rows.map((b) => b.projectId).filter((x): x is string => Boolean(x)))
-  return needsAction(projects).length + depositsDue(projects, payments, owed).length + followUps(projects, t).length
+  return needsAction(projects).filter((r) => !r.quiet).length + depositsDue(projects, payments, owed).length
 }

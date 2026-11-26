@@ -93,7 +93,7 @@ function rowHref(r: Row) {
 }
 
 /** One row in Needs you. Every source (reminders, follow-ups, deposits, things out with clients) is turned into this, so each thing shows once, in one style. */
-type Need = { id: string; projectId: string; dismissKey?: string; href: string; client?: string; title: string; detail: string; when?: string; urgent?: boolean; /** The one thing to do, as a word or two on the row's button. */ verb: string; waiting?: boolean; nudge?: { email: string; first: string; title: string; client: string } }
+type Need = { id: string; projectId: string; dismissKey?: string; href: string; client?: string; title: string; detail: string; when?: string; urgent?: boolean; /** The one thing to do, as a word or two on the row's button. */ verb: string; waiting?: boolean; /** Can wait: shown under "When you have a minute", not counted. */ quiet?: boolean; nudge?: { email: string; first: string; title: string; client: string } }
 
 /** The word on a reminder's button, from the kind of reminder it is (its key). */
 const VERBS: [RegExp, string][] = [
@@ -207,6 +207,7 @@ export default async function Today() {
     detail: r.detail,
     when: r.when,
     urgent: r.urgent,
+    quiet: r.quiet,
     verb: verbFor(r.key),
   }))
   // A week and a month after delivery.
@@ -219,13 +220,17 @@ export default async function Today() {
     title: f.project.title,
     detail: f.detail,
     when: f.when,
+    quiet: true,
     verb: verbFor(f.key),
   }))
   // Booked with no deposit in, and nothing sent for it (an invoice or request already out counts as owed, on the Money page).
   const owedIds = new Set(money.owed.rows.map((b) => b.projectId).filter((x): x is string => Boolean(x)))
   const deposits: Need[] = depositsDue(projects, payments, owedIds)
     .map((p) => ({ id: `dep-${p._id}`, projectId: p._id, href: projectTab(p._id, 'money'), client: p.client.organizationName, title: p.title, detail: 'Deposit not asked for yet', when: p.depositAmount ? cad(p.depositAmount) : undefined, verb: 'Ask for deposit' }))
-  const onYou = ranked([...reminders, ...deposits, ...follow])
+  // Only the urgent things are notifications; the rest waits lower down, folded, and isn't counted.
+  const allMine = ranked([...reminders, ...deposits, ...follow])
+  const onYou = allMine.filter((n) => !n.quiet)
+  const canWait = allMine.filter((n) => n.quiet)
 
   // Out with clients: cuts waiting on feedback and quotes with no answer (with Nudge), quotes shared before Quote sent, and documents out for signature.
   const theirs = waitingOnClients(projects)
@@ -337,6 +342,13 @@ export default async function Today() {
         />
 
         <NeedList rows={onYou} max={3} empty="All clear" />
+
+        {canWait.length > 0 && (
+          <details className="ap-more sa-later">
+            <summary>When you have a minute · {canWait.length}</summary>
+            <ul className="sa-needs">{canWait.map((n) => <NeedRow key={n.id} n={n} />)}</ul>
+          </details>
+        )}
       </section>
 
       {/* ── Out with clients: folded, opened by its tile ── */}
