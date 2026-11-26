@@ -24,7 +24,7 @@ export const metadata: Metadata = {
  * keeps only the video id, which would break these unlisted links. Click to play, with sound.
  */
 function vimeoSrc(id: string, hash?: string): string {
-  return `https://player.vimeo.com/video/${id}?${hash ? `h=${hash}&` : ''}autoplay=0&dnt=1`
+  return `https://player.vimeo.com/video/${id}?${hash ? `h=${hash}&` : ''}autoplay=0&dnt=1&title=0&byline=0&portrait=0`
 }
 
 const SAMPLES: {
@@ -117,7 +117,7 @@ const TEAM: [string, string, string?][] = [
   ['Production assistant', 'Thomas Paton, Breaking Ice Productions', 'Releases, talent coordination, set support'],
   ['Sound design and mix', 'Josh Ferguson, in DaVinci Resolve’s Fairlight', 'Sound effects, music edit, final mix'],
   ['Focus group moderator', 'Josh Ferguson, with Thomas Paton taking notes', 'Discussion guide, moderation, findings memo'],
-  ['French translator', 'Certified English–French translator, booked at award', 'Script and caption translation, French caption QC'],
+  ['French translator', 'Professional English–French translator, booked at award', 'Script and caption translation, French caption QC'],
 ]
 
 const PRICE: [string, string][] = [
