@@ -1,5 +1,7 @@
 import { cookies } from 'next/headers'
 import Link from 'next/link'
+import { Suspense } from 'react'
+import { BackButton } from '@/admin/ui/back-button'
 import { Logo, Mark } from '@/components/brand'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { requireAdmin } from '@/admin/auth'
@@ -86,6 +88,7 @@ export default async function AdminApp({ children }: { children: React.ReactNode
         </nav>
         <AdminSearch items={search} />
         <main id="main" className="a-main">
+          <Suspense fallback={null}><BackButton /></Suspense>
           {admin.sample && (
             <p className="a-sample" role="status">Sample data: nothing you do here is kept for good, and no emails or payments go out.</p>
           )}

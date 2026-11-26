@@ -13,7 +13,8 @@ import { daysSince, today, TZ, ymd, fmtDate } from '@/admin/dates'
 import { budgetTitle, fmtTime, isContactLog, isSalesStage, LOST_REASONS, typeTitle } from '@/admin/lead'
 import { getPeople } from '@/admin/people'
 import { tagsFor } from '@/admin/people-shared'
-import { EmailComposer, SentEmails } from '@/admin/ui/email'
+import { emailTrack } from '@/admin/email-templates-shared'
+import { EmailComposer } from '@/admin/ui/email'
 import { HelpTip } from '@/admin/ui/help-tip'
 import { LeadActivity, LeadArchive, LeadFields, LeadSteps, type LeadLogEntry } from '@/admin/ui/lead'
 import { Chip } from '@/admin/ui/viz'
@@ -68,7 +69,16 @@ export default async function LeadPage({ params, searchParams }: Props) {
   const writeInNextUp = p.pipelineStage === 'lead' || p.pipelineStage === 'call'
 
   const log = [...(p.office.log ?? [])].sort((a, b) => b.at.localeCompare(a.at))
-  const entries: LeadLogEntry[] = log.map((l) => ({ key: l._key, date: day(ymd(new Date(l.at))), time: l.day ? undefined : clock(l.at), text: l.text }))
+  // One communications timeline: the log, plus each email sent from the composer with its open status.
+  // The composer also logs "Emailed: <subject>"; that line is dropped when its sent record is shown instead.
+  const sent = p.office.emails ?? []
+  const near = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) < 5 * 60_000
+  const shownAsEmail = (l: (typeof log)[number]) => l.kind === 'email' && sent.some((e) => near(e.at, l.at) && l.text === `Emailed: ${e.subject}`.slice(0, 240))
+  const when = (iso: string) => `${day(ymd(new Date(iso)))} at ${clock(iso)}`
+  const entries: LeadLogEntry[] = [
+    ...log.filter((l) => !shownAsEmail(l)).map((l) => ({ at: l.at, key: l._key, date: day(ymd(new Date(l.at))), time: l.day ? undefined : clock(l.at), text: l.text })),
+    ...sent.map((e) => ({ at: e.at, key: `e-${e._key}`, date: day(ymd(new Date(e.at))), time: clock(e.at), text: e.subject, email: { to: e.to.join(', '), body: e.body || undefined, track: emailTrack(e, when) } })),
+  ].sort((a, b) => b.at.localeCompare(a.at))
   const lastContact = log.find((l) => isContactLog(l.kind))
   const moved = daysSince(p.office.stageChangedAt)
   const quote = quoteStatus(p)
@@ -145,19 +155,15 @@ export default async function LeadPage({ params, searchParams }: Props) {
         )}
       </section>
 
-      <div className="a-split">
-        <div className="a-col stack">
-          <LeadFields
-            projectId={p._id}
-            projectType={p.projectType}
-            lead={lead}
-            contact={{ name, email, company, onClient: Boolean(listed), tags: tagsFor(people, email), studioHref: p.client._id ? `/studio/portal/structure/client;${encodeURIComponent(p.client._id)}` : undefined }}
-          />
-        </div>
-        <aside className="stack a-col a-aside ld-aside" aria-label="Activity">
-          <LeadActivity simple projectId={p._id} today={today()} entries={entries} />
-          {(p.office.emails ?? []).length > 0 && <SentEmails emails={p.office.emails ?? []} />}
-        </aside>
+      {/* Details and Activity at equal weight, side by side; one column on a phone, or while Details is being edited. */}
+      <div className="ld-pair">
+        <LeadFields
+          projectId={p._id}
+          projectType={p.projectType}
+          lead={lead}
+          contact={{ name, email, company, onClient: Boolean(listed), tags: tagsFor(people, email), studioHref: p.client._id ? `/studio/portal/structure/client;${encodeURIComponent(p.client._id)}` : undefined }}
+        />
+        <LeadActivity simple projectId={p._id} today={today()} entries={entries} tracked={sent.length > 0} />
       </div>
     </div>
   )

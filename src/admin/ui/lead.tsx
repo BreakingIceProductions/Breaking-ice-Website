@@ -5,13 +5,14 @@ import { activityText } from '../activity-text'
 import { useEffect, useId, useRef, useState } from 'react'
 import { PROJECT_TYPES } from '@/sanity/portal/office-constants'
 import { CONTACT_KINDS, fmtTime, LEAD_BUDGETS, LEAD_SOURCES, LOST_REASONS, webHref } from '../lead'
+import { OPEN_TRACKING_NOTE, type EmailTrack } from '../email-templates-shared'
 import type { LeadDetails } from '../types'
 import { useNotify } from './confirm'
 import { StageDialog, type Stage } from './stage-dialog'
 import { HelpTip, Reveal } from './help-tip'
 import { TagChips } from './tag-chips'
 import { Chip } from './viz'
-import { Timeline } from './viz-c'
+import { Timeline, type TimelineItem } from './viz-c'
 
 const post = (url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -336,13 +337,50 @@ export function LeadFields({ projectId, contact, lead, projectType }: { projectI
 /* ── Log contact, and the activity list ──────────────────────────────── */
 
 /** `source` (where the line came from) and `note` (one of your own notes) are for the project page, which lists more than the log. */
-export type LeadLogEntry = { key: string; date: string; time?: string; text: string; source?: string; note?: boolean }
+export type LeadLogEntry = {
+  key: string
+  date: string
+  time?: string
+  text: string
+  source?: string
+  note?: boolean
+  /** An email sent from the composer: `text` is its subject. Opens to the body when the record kept it. */
+  email?: { to: string; body?: string; track?: EmailTrack }
+}
+
+/** One sent email in the timeline: subject (opens to the body), who it went to, and whether it was opened. */
+function mailItem(l: LeadLogEntry, m: NonNullable<LeadLogEntry['email']>): TimelineItem {
+  const subject = <><span className="ld-mail-kind">Email</span> <strong className="ld-mail-subject">{l.text}</strong></>
+  return {
+    key: l.key,
+    text: m.body ? (
+      <details className="ld-mail">
+        <summary>{subject}<span className="sr-only"> (show the email)</span></summary>
+        <pre className="em-sent-body ld-mail-body">{m.body}</pre>
+      </details>
+    ) : (
+      <span>{subject}</span>
+    ),
+    sub: (
+      <span className="ld-mail-meta">
+        <span className="ld-mail-to">To {m.to}</span>
+        {m.track && (
+          <span className={`ld-track is-${m.track.tone}`} title={m.track.title}>
+            <span aria-hidden="true">{m.track.tone === 'opened' ? '◉' : m.track.tone === 'bounced' ? '!' : '○'}</span> {m.track.text}
+          </span>
+        )}
+      </span>
+    ),
+    when: <>{l.date}{l.time && <><br />{l.time}</>}</>,
+  }
+}
 
 /**
  * The log-contact form and the activity list. `simple` (the lead page) keeps the form behind a "Log contact"
  * button and draws the list as a timeline with dots; the project page keeps the open form and plain list.
+ * On the lead page the timeline also holds the emails sent, with whether each was opened (`tracked` shows the note on what that means).
  */
-export function LeadActivity({ projectId, today, entries, simple }: { projectId: string; today: string; entries: LeadLogEntry[]; simple?: boolean }) {
+export function LeadActivity({ projectId, today, entries, simple, tracked }: { projectId: string; today: string; entries: LeadLogEntry[]; simple?: boolean; tracked?: boolean }) {
   const router = useRouter()
   const [kind, setKind] = useState(CONTACT_KINDS[0].value)
   const [date, setDate] = useState(today)
@@ -350,8 +388,9 @@ export function LeadActivity({ projectId, today, entries, simple }: { projectId:
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [all, setAll] = useState(false)
-  const shown = all ? entries : entries.slice(0, 5)
-  const earlier = entries.length - 5
+  const first = simple ? 8 : 5
+  const shown = all ? entries : entries.slice(0, first)
+  const earlier = entries.length - first
 
   async function log(e: React.FormEvent) {
     e.preventDefault()
@@ -391,14 +430,17 @@ export function LeadActivity({ projectId, today, entries, simple }: { projectId:
   return (
     <section className="p-card" aria-labelledby="ld-h-activity">
       {simple ? (
-        <div className="a-card-head"><h2 id="ld-h-activity" className="a-h2">Activity</h2></div>
+        <div className="a-card-head">
+          <h2 id="ld-h-activity" className="a-h2">Activity</h2>
+          {tracked && <HelpTip label="About “Opened”">{OPEN_TRACKING_NOTE}</HelpTip>}
+        </div>
       ) : (
         <h2 id="ld-h-activity" className="a-h2">Activity</h2>
       )}
       {simple ? <Reveal className="sc-log" label={<><span aria-hidden="true">+</span> Log contact</>} openLabel="Close">{form}</Reveal> : form}
 
       {entries.length && simple ? (
-        <Timeline label="Activity, newest first" items={shown.map((l) => ({ key: l.key, text: l.note ? l.text : activityText(l.text), sub: l.source, note: l.note, when: <>{l.date}{l.time && <><br />{l.time}</>}</> }))} />
+        <Timeline label="Activity, newest first" items={shown.map((l) => (l.email ? mailItem(l, l.email) : { key: l.key, text: l.note ? l.text : activityText(l.text), sub: l.source, note: l.note, when: <>{l.date}{l.time && <><br />{l.time}</>}</> }))} />
       ) : entries.length ? (
         <ul className="a-feed ld-feed">
           {shown.map((l) => (

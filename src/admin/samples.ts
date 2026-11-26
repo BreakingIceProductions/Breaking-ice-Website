@@ -148,6 +148,8 @@ export function sampleOfficeProjects(): OfficeProject[] {
         stageChangedAt: at(-1),
         lead: { phone: '780-555-0142', website: 'example.com', source: 'referral', budget: '10k-30k', startDate: d(45), notes: '[Why now, in their words, and what you want to remember for the call.]' },
         log: [
+          { _key: 'l9', at: at(-0.05), text: 'Emailed: Following up on the brand film', kind: 'email' },
+          { _key: 'l8', at: at(-0.3), text: 'Emailed: Great to meet you at the Chamber', kind: 'email' },
           { _key: 'l7', at: at(-0.1), text: 'Phone call: [Short note]', kind: 'contact-phone' },
           { _key: 'l6', at: at(-0.5), text: 'Email: [Short note]', kind: 'contact-email' },
           { _key: 'l5', at: at(-0.8), text: 'Text: [Short note]', kind: 'contact-text' },
@@ -155,6 +157,13 @@ export function sampleOfficeProjects(): OfficeProject[] {
           { _key: 'l3', at: at(-1), text: 'Lead added', kind: 'lead' },
           { _key: 'l2', at: `${d(-2)}T19:00:00.000Z`, text: 'Phone call: [Short note]', kind: 'contact-phone', day: true },
           { _key: 'l1', at: `${d(-3)}T19:00:00.000Z`, text: 'Other: [Short note]', kind: 'contact-other', day: true },
+        ],
+        // Emails from the composer, one of each open status: opened three times, not opened yet, bounced, and an older one with no tracking.
+        emails: [
+          { _key: 'm4', at: at(-0.05), to: ['ab@example.com'], subject: 'Following up on the brand film', body: 'Hi [Client contact],\n\nJust following up on the brand film. Does Thursday at 10 work for a call?\n\nJosh', resendId: 'sample-4' },
+          { _key: 'm3', at: at(-0.3), to: ['ab@example.com'], subject: 'Great to meet you at the Chamber', body: 'Hi [Client contact],\n\nGreat to meet you at the Chamber mixer. Here are a few films like the one you described.\n\nJosh', template: 'After an event', resendId: 'sample-3', deliveredAt: at(-0.3), openedAt: at(-0.25), lastOpenedAt: at(-0.08), opens: 3 },
+          { _key: 'm2', at: at(-0.9), to: ['old-address@example.com'], subject: 'Quick question about timing', body: 'Hi,\n\nWhen are you hoping to have the film ready?\n\nJosh', resendId: 'sample-2', bouncedAt: at(-0.9), bounce: 'The mailbox does not exist.' },
+          { _key: 'm1', at: at(-2.5), to: ['ab@example.com'], subject: 'Thanks for reaching out', body: 'Hi,\n\nThanks for reaching out. I\u2019ll be in touch soon.\n\nJosh' },
         ],
       },
     },

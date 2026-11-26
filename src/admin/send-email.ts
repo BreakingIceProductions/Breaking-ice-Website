@@ -57,9 +57,11 @@ export async function sendProjectEmail(input: SendProjectEmailInput): Promise<Se
   if (input.sample) return { ok: true, sample: true, project: p, to: valid }
 
   const settings = await getPortalSettings()
+  let resendId: string | undefined
   try {
     const r = await sendEmail({ to: valid, bcc: settings.copyTo && !valid.includes(settings.copyTo.toLowerCase()) ? [settings.copyTo] : undefined, ...messageEmail({ subject, body, sections }) })
     if (!r.ok) return fail('email-off', 503, 'Email isn’t set up on this site yet (no Resend key), so nothing was sent.')
+    resendId = r.id
   } catch (e) {
     console.error('[admin] email send failed', e)
     return fail('failed', 502, 'The email didn’t go out. Nothing was sent. Try again in a minute.')
@@ -72,7 +74,7 @@ export async function sendProjectEmail(input: SendProjectEmailInput): Promise<Se
     console.error('[admin] email log failed', e)
     missed.push('activity log')
   })
-  await addSentEmail(p._id, { at, to: valid, subject, body, ...(template ? { template } : {}) }).catch((e) => {
+  await addSentEmail(p._id, { at, to: valid, subject, body, ...(template ? { template } : {}), ...(resendId ? { resendId } : {}) }).catch((e) => {
     console.error('[admin] sent email record failed', e)
     missed.push('Emails sent list')
   })

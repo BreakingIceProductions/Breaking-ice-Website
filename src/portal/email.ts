@@ -37,12 +37,15 @@ export async function sendEmail(msg: {
       reply_to: portalEnv.replyTo,
       subject: msg.subject,
       html: msg.html,
-      text: msg.text,
+      // Branded emails carry Josh's footer in the HTML; the plain-text part gets the same words.
+      text: msg.html.includes(SIGNATURE_MARK) && !msg.text.includes('Past the surface.') ? `${msg.text.trimEnd()}\n\n${SIGNATURE_TEXT}` : msg.text,
       attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })),
     }),
   })
   if (!res.ok) throw new Error(`email ${res.status}: ${(await res.text()).slice(0, 300)}`)
-  return { ok: true as const }
+  // Resend answers { id }: kept on the sent record so its open and bounce webhooks can find it (src/app/api/resend/webhook).
+  const id = ((await res.json().catch(() => ({}))) as { id?: unknown }).id
+  return { ok: true as const, id: typeof id === 'string' ? id : undefined }
 }
 
 const NAVY = '#18202F'
@@ -51,6 +54,19 @@ const COPPER_DEEP = '#A85F2E'
 const WARM = '#FAF7F2'
 const MUTED = '#4A5468'
 const FONT = "Arial, 'Helvetica Neue', Helvetica, sans-serif"
+
+/**
+ * Josh's email footer, word for word as his Spark signature on josh@breakingiceproductions.com.
+ * Every branded email (the layout below) ends with it; sendEmail adds the plain-text copy to those emails' text part.
+ */
+const SIGNATURE_MARK = '<!--bi-signature-->'
+const SIGNATURE_TEXT = `--\nJosh Ferguson\nOwner / Creative Director\n\n807-621-2780  ·  josh@breakingiceproductions.com\nbreakingiceproductions.com  · Stony Plain, AB & Norman Wells, NT\nPast the surface.`
+const SIGNATURE_HTML = `${SIGNATURE_MARK}<tr><td style="padding:24px 32px 28px;border-top:1px solid #E6E1D8;font:13px/20px ${FONT};color:${MUTED}">
+  <span style="font-weight:bold;color:${NAVY}">Josh Ferguson</span><br>Owner / Creative Director<br><br>
+  <a href="tel:+18076212780" style="color:${MUTED};text-decoration:none">807-621-2780</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="mailto:josh@breakingiceproductions.com" style="color:${MUTED};text-decoration:none">josh@breakingiceproductions.com</a><br>
+  <a href="https://breakingiceproductions.com" style="color:${COPPER_DEEP};text-decoration:none">breakingiceproductions.com</a>&nbsp;&nbsp;·&nbsp;Stony Plain, AB &amp; Norman Wells, NT<br>
+  <span style="font-style:italic;color:${COPPER_DEEP}">Past the surface.</span>
+</td></tr>`
 
 function layout({ eyebrow, preview, body }: { eyebrow: string; preview?: string; body: string }) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="color-scheme" content="light only"><title>Breaking Ice</title></head>
@@ -63,9 +79,7 @@ ${preview ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${
 </td></tr>
 <tr><td style="padding:28px 32px 0;font:600 11px/16px ${FONT};letter-spacing:3px;text-transform:uppercase;color:${COPPER_DEEP}">${esc(eyebrow)}</td></tr>
 ${body}
-<tr><td style="padding:24px 32px 28px;border-top:1px solid #E6E1D8;font:12px/18px ${FONT};color:${MUTED}">
-  Breaking Ice Productions · Stony Plain, AB · Norman Wells, NT<br>Questions? Just reply to this email.
-</td></tr>
+${SIGNATURE_HTML}
 </table></td></tr></table></body></html>`
 }
 

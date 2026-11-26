@@ -17,8 +17,30 @@ export type EmailTemplate = {
   stage?: PipelineStage
 }
 
-/** A message sent from the composer, kept on the office record (newest first). */
-export type SentEmail = { _key: string; at: string; to: string[]; subject: string; body: string; template?: string }
+/**
+ * A message sent from the composer, kept on the office record (newest first).
+ * `resendId` is Resend's email id; Resend's webhook (src/app/api/resend/webhook) fills in the tracking fields by it.
+ * Older records have no id, so no open status.
+ */
+export type SentEmail = {
+  _key: string
+  at: string
+  to: string[]
+  subject: string
+  body: string
+  template?: string
+  resendId?: string
+  /** The first open, as Resend reports it (a tracking image loaded). */
+  openedAt?: string
+  lastOpenedAt?: string
+  opens?: number
+  deliveredAt?: string
+  bouncedAt?: string
+  /** Resend's bounce message, when it gives one. */
+  bounce?: string
+  /** The last few webhook ids seen, so a retried delivery isn't counted twice. */
+  hooks?: string[]
+}
 
 export const LIMITS = { name: 80, subject: 200, body: 10_000, to: 5, templates: 60 }
 
@@ -132,3 +154,24 @@ export const forStage = (templates: EmailTemplate[], stage?: string) => [
   ...templates.filter((t) => stage && t.stage === stage),
   ...templates.filter((t) => !stage || t.stage !== stage),
 ]
+
+/** What the activity log says about a sent email's tracking. Nothing for older records with no Resend id. */
+export type EmailTrack = { tone: 'opened' | 'waiting' | 'bounced'; text: string; title?: string }
+
+/**
+ * "Opened Tue, Nov 25 at 3:12 p.m. · opened 3 times", "Not opened yet" or "Bounced". `when` formats a time
+ * (the page's own date and clock, in the studio's time zone).
+ */
+export function emailTrack(e: Pick<SentEmail, 'resendId' | 'openedAt' | 'opens' | 'bouncedAt' | 'bounce' | 'lastOpenedAt'>, when: (iso: string) => string): EmailTrack | undefined {
+  if (e.bouncedAt) return { tone: 'bounced', text: 'Bounced', title: e.bounce ? `Bounced: ${e.bounce}` : 'It didn’t reach them. Check the address.' }
+  if (e.openedAt) {
+    const n = e.opens ?? 1
+    return { tone: 'opened', text: `Opened ${when(e.openedAt)}${n > 1 ? ` · opened ${n} times` : ''}`, title: n > 1 && e.lastOpenedAt ? `Last opened ${when(e.lastOpenedAt)}` : undefined }
+  }
+  if (e.resendId) return { tone: 'waiting', text: 'Not opened yet' }
+  return undefined
+}
+
+/** The honest note beside open tracking. */
+export const OPEN_TRACKING_NOTE =
+  'Opens are tracked by a tiny image in the email. Apple Mail and some company mail filters load it on their own, so “Opened” can show when nobody read it, and people who block images can read it without it showing.'

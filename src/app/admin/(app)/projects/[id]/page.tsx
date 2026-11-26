@@ -10,6 +10,7 @@ import { checklist } from '@/admin/board-data'
 import { getProject } from '@/admin/data'
 import { composerSetup } from '@/admin/email-templates'
 import { fmtRange, today, TZ, fmtDate } from '@/admin/dates'
+import { emailTrack, OPEN_TRACKING_NOTE, type SentEmail } from '@/admin/email-templates-shared'
 import { cad } from '@/admin/insights'
 import { isContactLog, isSalesStage } from '@/admin/lead'
 import { MILESTONE_LIST } from '@/admin/milestones'
@@ -75,6 +76,12 @@ const REVIEW_WORD = { 'in-progress': 'Not sent yet', 'awaiting-feedback': 'Await
 const day = (iso?: string) => fmtDate(iso, 'weekday')
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-CA', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })
 
+/** " · Opened Tue, Nov 25 at 3:12 p.m." for a composer email Resend has reported on; nothing for older ones. */
+const trackText = (e: SentEmail) => {
+  const t = emailTrack(e, (iso) => `${day(iso)} at ${clock(iso)}`)
+  return t ? ` · ${t.text}` : ''
+}
+
 /**
  * What has gone to the client on this project, newest first. Built only from what's already
  * recorded: the back-office log, each version's "emailed" stamp, and the quote's own dates.
@@ -87,7 +94,7 @@ function sentToClient(p: OfficeProject) {
   const reviewSends = log.filter((l) => l.kind === 'email' && !l.text.startsWith('Emailed: '))
   const near = (a: string, b: string) => Math.abs(Date.parse(a) - Date.parse(b)) < 5 * 60_000
   const rows: { key: string; at: string; kind: string; text: string; status?: string; body?: string }[] = [
-    ...(p.office.emails ?? []).map((e) => ({ key: `e-${e._key}`, at: e.at, kind: 'Email', text: e.subject, status: `To ${e.to.join(', ')}${e.template ? ` · from “${e.template}”` : ''}`, body: e.body })),
+    ...(p.office.emails ?? []).map((e) => ({ key: `e-${e._key}`, at: e.at, kind: 'Email', text: e.subject, status: `To ${e.to.join(', ')}${e.template ? ` · from “${e.template}”` : ''}${trackText(e)}`, body: e.body })),
     ...quoteSends.map((l) => ({ key: l._key, at: l.at, kind: 'Quote email', text: l.text })),
     ...reviewSends.map((l) => ({ key: l._key, at: l.at, kind: 'Review email', text: l.text })),
     ...log
@@ -475,7 +482,7 @@ function Overview({ p, stage, si, t, log, lastContact, lib, base }: { p: OfficeP
       </div>
 
       <PhoneFold id="details" folded className="sa-fold sa-details" summary={<span className="sa-fold-link">Details, people and activity</span>}>
-        <div className="a-split">
+        <div className="a-split ld-pair-split">
           <div className="stack a-col">
             <section className="p-card" aria-labelledby="h-details">
               <h2 id="h-details" className="a-h2">Details</h2>
@@ -561,6 +568,7 @@ function Emails({ p }: { p: OfficeProject }) {
     <section className="p-card pj-narrow" aria-labelledby="h-emails">
       <div className="a-card-head">
         <h2 id="h-emails" className="a-h2">Sent to the client</h2>
+        {(p.office.emails ?? []).some((e) => e.resendId) && <HelpTip label="About “Opened”">{OPEN_TRACKING_NOTE}</HelpTip>}
         {p.client._id && <Link className="text-link small" href={`/admin/emails?client=${encodeURIComponent(p.client._id)}`}>Open the full conversation</Link>}
       </div>
       {rows.length ? (

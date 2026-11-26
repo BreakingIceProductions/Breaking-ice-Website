@@ -396,6 +396,32 @@ export async function addSentEmail(projectId: string, email: Omit<SentEmail, '_k
   await portalClient.patch(officeId(projectId)).unset(['emails[50:]']).commit().catch(() => {})
 }
 
+export type EmailEvent = { kind: 'opened' | 'delivered' | 'bounced'; resendId: string; at: string; hookId: string; bounce?: string }
+
+/**
+ * Resend's webhook → the sent record with that Resend id. Opens: the first open stays, the count and the
+ * latest open move on. A webhook id already seen on the record is skipped (Resend retries deliveries).
+ * `found: false` when no record has the id: an email sent from elsewhere on the site, or one not recorded.
+ */
+export async function recordEmailEvent(e: EmailEvent): Promise<{ found: boolean }> {
+  if (sample()) return { found: false }
+  const hit = await portalClient.fetch<{ _id: string; email?: { _key: string; hooks?: string[] } } | null>(
+    `*[_type == "boState" && $id in emails[].resendId][0]{ _id, "email": emails[resendId == $id][0]{ _key, hooks } }`,
+    { id: e.resendId },
+    { cache: 'no-store' },
+  )
+  if (!hit?.email) return { found: false }
+  if (hit.email.hooks?.includes(e.hookId)) return { found: true }
+  const at = `emails[_key=="${hit.email._key}"]`
+  // Only the last 10 ids are kept.
+  let patch = portalClient.patch(hit._id).set({ [`${at}.hooks`]: [...(hit.email.hooks ?? []), e.hookId].slice(-10) })
+  if (e.kind === 'opened') patch = patch.setIfMissing({ [`${at}.openedAt`]: e.at, [`${at}.opens`]: 0 }).inc({ [`${at}.opens`]: 1 }).set({ [`${at}.lastOpenedAt`]: e.at })
+  else if (e.kind === 'delivered') patch = patch.setIfMissing({ [`${at}.deliveredAt`]: e.at })
+  else patch = patch.set({ [`${at}.bouncedAt`]: e.at, ...(e.bounce ? { [`${at}.bounce`]: e.bounce.slice(0, 300) } : {}) })
+  await patch.commit()
+  return { found: true }
+}
+
 export async function addNote(projectId: string, text: string) {
   if (sample()) return
   await ensureOffice(projectId)
