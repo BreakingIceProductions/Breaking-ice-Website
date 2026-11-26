@@ -261,7 +261,7 @@ export type QuoteRetainer = {
   months: number
   /** An add-on on every monthly invoice (the media buyout), priced per option. */
   buyout?: { name: string; note?: string }
-  /** A one-time add-on on the first invoice. */
+  /** A one-time add-on: paid on the first invoice, or spread across them all. */
   archive?: { name: string; total: number; note?: string; requiresBuyout?: boolean }
 }
 
@@ -272,7 +272,10 @@ export type RetainerChoice = {
   buyoutMonthly?: number
   archive: boolean
   archiveTotal?: number
-  /** The first invoice (monthly + archive). */
+  /** Archive spread across every invoice instead of paid once on the first. */
+  archiveSpread?: boolean
+  archiveMonthly?: number
+  /** The first invoice (monthly, plus the archive when paid once). */
   first: number
   year: number
   start: string

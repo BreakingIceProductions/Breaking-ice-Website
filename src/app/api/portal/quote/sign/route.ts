@@ -48,7 +48,7 @@ export async function POST(req: Request) {
   const option = q.options?.length ? q.options.find((o) => o._key === body.option) : undefined
   if (q.options?.length && !option) return json({ ok: false, error: 'invalid' }, 400)
   // A retainer: the add-ons chosen set the monthly price; the year is the total and there's no deposit.
-  const retainer = q.retainer && option ? retainerChoice(q.retainer, option, { buyout: body.buyout === true, archive: body.archive === true }) : undefined
+  const retainer = q.retainer && option ? retainerChoice(q.retainer, option, { buyout: body.buyout === true, archive: body.archive === true, archiveSpread: body.archiveSpread === true }) : undefined
   const total = retainer ? retainer.year : option?.total ?? q.total
   const deposit = retainer ? undefined : quoteDeposit(total, q)
   let image: Uint8Array | undefined

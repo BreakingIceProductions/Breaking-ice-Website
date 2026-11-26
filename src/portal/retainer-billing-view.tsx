@@ -14,8 +14,8 @@ export function RetainerBilling({ choice, retainer, option, noGst, heading = 'Ho
       <p className="rb-due"><strong>Nothing is due today.</strong> Your first invoice comes in {monthName(choice.start)}.</p>
       <dl className="q-money rb-sum">
         {option && <div><dt>Option</dt><dd>{option}</dd></div>}
-        <div><dt>Monthly{choice.buyout ? `, with ${retainer?.buyout?.name?.toLowerCase() ?? 'the buyout'}` : ''}</dt><dd>{cad0(choice.monthly)}{tax}</dd></div>
-        {choice.archive && <div><dt>{retainer?.archive?.name ?? 'Archive licence'}, once</dt><dd>{cad0(choice.archiveTotal ?? 0)}{tax}</dd></div>}
+        <div><dt>Monthly{choice.buyout ? `, with ${retainer?.buyout?.name?.toLowerCase() ?? 'the buyout'}` : ''}{choice.archiveSpread ? `${choice.buyout ? ' and' : ', with'} the archive` : ''}</dt><dd>{cad0(choice.monthly)}{tax}</dd></div>
+        {choice.archive && <div><dt>{retainer?.archive?.name ?? 'Archive licence'}, {choice.archiveSpread ? `spread monthly (${cad0(choice.archiveMonthly ?? 0)}/month)` : 'once'}</dt><dd>{cad0(choice.archiveTotal ?? 0)}{tax}</dd></div>}
         <div><dt>First invoice ({monthName(choice.start)})</dt><dd>{cad0(choice.first)}{tax}</dd></div>
         <div className="rb-year"><dt>The year</dt><dd>{cad0(choice.year)}{tax}</dd></div>
       </dl>

@@ -160,12 +160,13 @@ export function RetainerGlance({ options, retainer, summary, includes, version, 
 }
 
 /** Option, buyout and archive for a retainer, with the totals as they change. */
-function RetainerPicker({ options, retainer, option, setOption, buyout, setBuyout, archive, setArchive, noGst }: {
+function RetainerPicker({ options, retainer, option, setOption, buyout, setBuyout, archive, setArchive, archiveSpread, setArchiveSpread, noGst }: {
   options: QuoteOption[]; retainer: QuoteRetainer; option: string; setOption: (k: string) => void
-  buyout: boolean; setBuyout: (b: boolean) => void; archive: boolean; setArchive: (b: boolean) => void; noGst?: boolean
+  buyout: boolean; setBuyout: (b: boolean) => void; archive: boolean; setArchive: (b: boolean) => void
+  archiveSpread: boolean; setArchiveSpread: (b: boolean) => void; noGst?: boolean
 }) {
   const chosen = options.find((o) => o._key === option)
-  const c = chosen ? retainerChoice(retainer, chosen, { buyout, archive }) : undefined
+  const c = chosen ? retainerChoice(retainer, chosen, { buyout, archive, archiveSpread }) : undefined
   const needsBuyout = Boolean(retainer.archive?.requiresBuyout)
   const tax = plusGst(noGst)
   return (
@@ -203,10 +204,22 @@ function RetainerPicker({ options, retainer, option, setOption, buyout, setBuyou
               <input type="checkbox" checked={archive} disabled={needsBuyout && !buyout} onChange={(e) => setArchive(e.target.checked)} />
               <span className="stack" style={{ gap: 2 }}>
                 <strong>{retainer.archive.name}</strong>
-                <span className="small">{cad(retainer.archive.total)} once, on the first invoice{tax}</span>
+                <span className="small">{cad(retainer.archive.total)}{tax}, paid once in {monthName(retainer.start).split(' ')[0]} or spread across the {retainer.months} invoices</span>
                 <span className="muted small">{needsBuyout && !buyout ? 'Available with the media buyout.' : retainer.archive.note}</span>
               </span>
             </label>
+          )}
+          {retainer.archive && archive && (
+            <div className="q-paywhen" role="radiogroup" aria-label={`How to pay the ${retainer.archive.name.toLowerCase()}`}>
+              <label className={`q-option${!archiveSpread ? ' on' : ''}`}>
+                <input type="radio" name="archive-pay" checked={!archiveSpread} onChange={() => setArchiveSpread(false)} />
+                <span className="stack" style={{ gap: 0 }}><strong>Once, in {monthName(retainer.start)}</strong><span className="small">{cad(retainer.archive.total)}{tax}</span></span>
+              </label>
+              <label className={`q-option${archiveSpread ? ' on' : ''}`}>
+                <input type="radio" name="archive-pay" checked={archiveSpread} onChange={() => setArchiveSpread(true)} />
+                <span className="stack" style={{ gap: 0 }}><strong>Spread over the year</strong><span className="small">+{cad(Math.round((retainer.archive.total / retainer.months) * 100) / 100)}/month{tax}</span></span>
+              </label>
+            </div>
           )}
         </fieldset>
       )}
@@ -238,6 +251,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
   const [option, setOption] = useChoice(options?.length === 1 ? options[0]._key : '')
   const [buyout, setBuyout] = useState(false)
   const [archive, setArchive] = useState(false)
+  const [archiveSpread, setArchiveSpread] = useState(false)
   const [drawn, setDrawn] = useState(false)
   const [state, setState] = useState<{ busy?: boolean; err?: string; done?: string; retainer?: RetainerChoice }>({})
   const chosenOption = options?.find((o) => o._key === option)
@@ -254,7 +268,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         project: slug, version, option: option || undefined, name: name.trim(), title: title.trim(), method, typed: name.trim(), agree,
-        ...(retainer ? { buyout, archive } : {}),
+        ...(retainer ? { buyout, archive, archiveSpread } : {}),
         image: method === 'drawn' ? pad.current?.toDataURL('image/png') : undefined,
       }),
     }).catch(() => null)
@@ -267,7 +281,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
           setSending(false)
           setState({
             done: 'Sample only: nothing was signed or sent.',
-            retainer: retainer && chosenOption ? retainerChoice(retainer, chosenOption, { buyout, archive }) : undefined,
+            retainer: retainer && chosenOption ? retainerChoice(retainer, chosenOption, { buyout, archive, archiveSpread }) : undefined,
           })
         } else {
           window.scrollTo({ top: 0 })
@@ -300,7 +314,7 @@ export function QuoteSign({ slug, version, org, options, depositPercent, deposit
     <form className="q-sign stack" onSubmit={sign} aria-labelledby="sign-h">
       <h2 id="sign-h" className="h3" style={{ margin: 0 }}>Sign and accept</h2>
       {retainer && options && options.length > 0 && (
-        <RetainerPicker options={options} retainer={retainer} option={option} setOption={setOption} buyout={buyout} setBuyout={setBuyout} archive={archive} setArchive={setArchive} noGst={noGst} />
+        <RetainerPicker options={options} retainer={retainer} option={option} setOption={setOption} buyout={buyout} setBuyout={setBuyout} archive={archive} setArchive={setArchive} archiveSpread={archiveSpread} setArchiveSpread={setArchiveSpread} noGst={noGst} />
       )}
       {!retainer && options && options.length > 0 && (
         <fieldset className="q-sig">
