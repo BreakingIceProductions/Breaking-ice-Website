@@ -219,18 +219,7 @@ function Section({ s, onDone }: { s: StorySection; onDone: () => void }) {
         </section>
       )
     case 'gallery':
-      return (
-        <section className="qst-gallery" aria-label="Photos from our Imperial work">
-          <div className="qst-gallery-row">
-            {s.images.map((im, i) => (
-              <figure key={im.src} className="qst-rv" style={{ '--d': i } as React.CSSProperties}>
-                <img src={im.src} alt={im.alt} loading="lazy" style={{ objectPosition: im.focus }} />
-              </figure>
-            ))}
-          </div>
-          {s.caption && <p className="qst-gallery-cap qst-rv">{s.caption}</p>}
-        </section>
-      )
+      return <Gallery s={s} />
     case 'options':
       return <Options s={s} />
     case 'buyout':
@@ -298,6 +287,46 @@ function Section({ s, onDone }: { s: StorySection; onDone: () => void }) {
         </section>
       )
   }
+}
+
+/** A sideways-scrolling strip of photos: swipe, trackpad, or the arrow buttons. */
+function Gallery({ s }: { s: Extract<StorySection, { kind: 'gallery' }> }) {
+  const row = useRef<HTMLDivElement>(null)
+  const [edge, setEdge] = useState({ start: true, end: false })
+  const update = useCallback(() => {
+    const el = row.current
+    if (!el) return
+    setEdge({ start: el.scrollLeft < 8, end: el.scrollLeft + el.clientWidth > el.scrollWidth - 8 })
+  }, [])
+  useEffect(() => {
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [update])
+  const step = (dir: 1 | -1) => {
+    const el = row.current
+    if (!el) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: reduce ? 'auto' : 'smooth' })
+  }
+  return (
+    <section className="qst-gallery" aria-label="Photos from our Imperial work">
+      <div className="qst-gallery-row" ref={row} onScroll={update} tabIndex={0} aria-label="Photos, scroll sideways">
+        {s.images.map((im) => (
+          <figure key={im.src}>
+            <img src={im.src} alt={im.alt} loading="lazy" onLoad={update} style={{ objectPosition: im.focus }} />
+          </figure>
+        ))}
+      </div>
+      <div className="qst-gallery-foot">
+        {s.caption && <p className="qst-gallery-cap qst-rv">{s.caption}</p>}
+        <div className="qst-gallery-nav">
+          <button type="button" onClick={() => step(-1)} disabled={edge.start} aria-label="Previous photos">←</button>
+          <button type="button" onClick={() => step(1)} disabled={edge.end} aria-label="More photos">→</button>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 function Options({ s }: { s: Extract<StorySection, { kind: 'options' }> }) {

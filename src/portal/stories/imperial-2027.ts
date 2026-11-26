@@ -83,7 +83,11 @@ export const imperial2027: QuoteStoryConfig = {
       kind: 'gallery',
       images: [
         { src: img('community-dancers'), alt: 'Dancers in ribbon skirts with children at the community gathering' },
+        { src: img('community-elder-drum'), alt: 'An Elder drumming at the community gathering' },
         { src: img('community-fiddle'), alt: 'A fiddler playing at the community gathering' },
+        { src: img('community-feast'), alt: 'Food being served at the community feast' },
+        { src: img('community-fiddlers-stage'), alt: 'Fiddlers on stage at the community gathering' },
+        { src: img('community-drummers-stage'), alt: 'Drummers on stage at the community gathering' },
         { src: img('aerial-autumn'), alt: 'Rooftops and yellow trees in Norman Wells from directly above' },
       ],
       caption: 'Sahtu people telling their own stories: the monitors, the students, the families the food banks serve.',
@@ -142,7 +146,7 @@ export const imperial2027: QuoteStoryConfig = {
       note: 'A retainer lets us plan this work instead of chasing it, and spend more of every trip filming instead of quoting. The way we work together stays the same: quick calls, honest feedback, and stories told with care. Whatever your team decides, thank you for 2026. We’d be glad to keep going.',
       from: 'Josh',
       cta: 'Read the full proposal',
-      image: { src: img('aerial-river'), alt: 'Norman Wells from the air in autumn', focus: '50% 70%' },
+      image: { src: img('sunset-river'), alt: 'Sunset over the frozen Mackenzie River and the mountains beyond', focus: '50% 40%' },
     },
   ],
 }

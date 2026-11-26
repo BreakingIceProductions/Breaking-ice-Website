@@ -109,11 +109,18 @@
 
 /* Gallery */
 .qst-gallery { padding: 0 0 clamp(72px, 10vw, 120px); background: #f1ebe1; }
-.qst-gallery-row { display: grid; grid-template-columns: 1fr 1.5fr 1.2fr; gap: 6px; height: clamp(240px, 38vw, 520px); }
-.qst-gallery-row figure { margin: 0; overflow: hidden; }
-.qst-gallery-row img { width: 100%; height: 100%; object-fit: cover; }
-.qst-gallery-cap { max-width: 1240px; margin: 28px auto 0; padding: 0 var(--qst-gutter); font-family: var(--font-serif); font-style: italic; font-size: clamp(20px, 2.2vw, 28px); line-height: 1.35; color: #18202f; }
-@media (max-width: 640px) { .qst-gallery-row { grid-template-columns: 1fr 1fr; height: auto; } .qst-gallery-row figure { aspect-ratio: 1; } .qst-gallery-row figure:last-child { grid-column: span 2; aspect-ratio: 16 / 9; } }
+.qst-gallery-row { display: flex; gap: 6px; height: clamp(260px, 40vw, 540px); overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding-inline: var(--qst-gutter); padding-inline: var(--qst-gutter); scrollbar-width: none; cursor: grab; }
+.qst-gallery-row::-webkit-scrollbar { display: none; }
+.qst-gallery-row:focus-visible { outline: 2px solid #c9773f; outline-offset: -2px; }
+.qst-gallery-row figure { flex: 0 0 auto; height: 100%; margin: 0; overflow: hidden; scroll-snap-align: start; }
+.qst-gallery-row img { display: block; height: 100%; width: auto; max-width: none; object-fit: cover; }
+.qst-gallery-foot { max-width: 1240px; margin: 28px auto 0; padding: 0 var(--qst-gutter); display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.qst-gallery-cap { margin: 0; font-family: var(--font-serif); font-style: italic; font-size: clamp(20px, 2.2vw, 28px); line-height: 1.35; color: #18202f; }
+.qst-gallery-nav { display: flex; gap: 8px; flex: 0 0 auto; }
+.qst-gallery-nav button { width: 48px; height: 48px; border: 1px solid #18202f; background: transparent; color: #18202f; font-size: 20px; cursor: pointer; transition: background .2s, color .2s, opacity .2s; }
+.qst-gallery-nav button:hover:not(:disabled) { background: #18202f; color: #faf7f2; }
+.qst-gallery-nav button:disabled { opacity: .3; cursor: default; }
+@media (max-width: 640px) { .qst-gallery-row { height: 300px; } .qst-gallery-foot { flex-direction: column; } }
 
 /* Options */
 .qst-opt-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 8px 0 20px; }
