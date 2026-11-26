@@ -9,7 +9,12 @@ import { PRE_PORTAL_STAGES } from '@/sanity/portal/office-constants'
 import { PaymentList } from '@/portal/payment-list'
 import { PdfPages } from '@/portal/pdf-view'
 import { QuoteReveal, ReplayReveal } from '@/portal/quote-reveal'
-import { QuoteChoice, QuoteGlance, QuoteSign } from '@/portal/quote-sign'
+import { QuoteChoice, QuoteGlance, QuoteSign, RetainerGlance } from '@/portal/quote-sign'
+import { ReplayStory, StoryGate } from '@/portal/quote-story'
+import { RetainerBilling } from '@/portal/retainer-billing-view'
+import { monthName, optionMonthly } from '@/portal/retainer-quote'
+import { storyFor } from '@/portal/stories'
+import '@/portal/quote-story.css'
 import { fmtMoment, markQuoteViewed, quoteExpired } from '@/portal/quotes'
 import { fmtDate, ProducerCard, StageBar } from '@/portal/ui'
 
@@ -49,7 +54,11 @@ export default async function QuotePage({ params, searchParams }: Props) {
   const signedUrl = `${fileUrl}&signed=1`
   const money = (n: number) => `$${n.toLocaleString('en-CA', { maximumFractionDigits: 2 })}`
   const tax = q.noGst ? '' : ' + GST'
-  const price = q.options?.length
+  const retainer = q.retainer && q.options?.length ? q.retainer : undefined
+  const story = !q.signature && !expired ? storyFor(q) : undefined
+  const price = retainer
+    ? `From ${money(Math.min(...q.options!.map((o) => optionMonthly(o, retainer.months))))} a month${tax}`
+    : q.options?.length
     ? `${q.options.length > 1 ? 'From ' : ''}${money(Math.min(...q.options.map((o) => o.total)))}${tax}`
     : q.total ? `${money(q.total)}${tax}` : undefined
   const from = producer?.name ? { name: producer.name, photo: portalImage(producer.portrait, 160, 160) } : undefined
@@ -57,6 +66,38 @@ export default async function QuotePage({ params, searchParams }: Props) {
   // Once signed, the deposit replaces At a glance: one clear next step.
   const payFirst = Boolean(q.signature && mine.length)
   const coverImg = q.coverUrl ? `${q.coverUrl}?w=600&auto=format` : undefined
+
+  // A signed retainer: nothing to pay now; the billing schedule is the whole page.
+  if (q.signature?.retainer) {
+    const s = q.signature
+    return (
+      <div className={`wrap q-page q-pay-page${justSigned ? ' q-pay-in' : ''}`}>
+        <nav className="breadcrumb" aria-label="Breadcrumb">
+          <Link href="/portal/quotes">← All quotes</Link>
+        </nav>
+        <header className="q-head">
+          <span className="eyebrow">{q.org} · {q.title}</span>
+          <h1 className="h1">{justSigned ? 'Signed. Thank you.' : 'Your retainer'}</h1>
+          <p className="lede" style={{ margin: 0 }}>The retainer is booked. Nothing is due today; invoices start in {monthName(s.retainer!.start)}.</p>
+        </header>
+        <div className="q-pay-grid">
+          <RetainerBilling choice={s.retainer!} retainer={q.retainer} option={s.option} noGst={q.noGst} />
+          <aside className="q-side stack">
+            <section className="p-card q-signed" aria-labelledby="signed-h">
+              <h2 id="signed-h" className="p-label">Signed</h2>
+              <p style={{ margin: 0 }}>
+                <strong>{s.name}</strong>{s.title ? `, ${s.title}` : ''}
+                <br />
+                <span className="muted small">{fmtMoment(s.at)} · Certificate {s.certificateId}</span>
+              </p>
+              {!demo && <a className="text-link small" href={`${signedUrl}&download=1`}>Download your signed copy</a>}
+            </section>
+            <ProducerCard producer={producer} title="Questions about billing?" />
+          </aside>
+        </div>
+      </div>
+    )
+  }
 
   // Signed with a deposit to pay: the quote steps aside and the deposit is the whole page.
   if (q.signature && mine.some((x) => x.status === 'due')) {
@@ -90,7 +131,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
     )
   }
 
-  return (
+  const page = (
     <div className="wrap q-page">
       {!q.signature && !expired && (
         <QuoteReveal
@@ -107,6 +148,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
       )}
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link href="/portal/quotes">← All quotes</Link>
+        {story && <> <span aria-hidden="true">·</span> <ReplayStory /></>}
       </nav>
 
       <header className="q-head">
@@ -122,10 +164,12 @@ export default async function QuotePage({ params, searchParams }: Props) {
         </p>
       </header>
 
-      <section className="p-where" aria-labelledby="where-h">
-        <h2 id="where-h" className="p-label">Where we are</h2>
-        <StageBar stage={clientStage(q.pipelineStage)} names={CLIENT_STAGES.map((s) => s.title)} />
-      </section>
+      {!retainer && (
+        <section className="p-where" aria-labelledby="where-h">
+          <h2 id="where-h" className="p-label">Where we are</h2>
+          <StageBar stage={clientStage(q.pipelineStage)} names={CLIENT_STAGES.map((s) => s.title)} />
+        </section>
+      )}
 
       <div className="q-grid">
         <section className="q-doc" aria-label="The quote">
@@ -152,7 +196,8 @@ export default async function QuotePage({ params, searchParams }: Props) {
               {from && <figcaption>{from.name}</figcaption>}
             </figure>
           )}
-          {!payFirst && <QuoteGlance
+          {!payFirst && retainer && <RetainerGlance options={q.options!} retainer={retainer} summary={q.summary} includes={q.includes} version={q.version} noGst={q.noGst} />}
+          {!payFirst && !retainer && <QuoteGlance
             options={q.options}
             total={q.total}
             depositPercent={q.depositPercent}
@@ -180,7 +225,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
             </section>
           ) : expired ? null : (
             <section className="p-card">
-              <QuoteSign slug={q.slug} version={q.version} org={q.org} options={q.options} depositPercent={q.depositPercent} deposit={q.deposit} defaultName={me?.name ?? ''} defaultTitle={me?.role ?? ''} demo={demo} preview={Boolean(session.preview)} noGst={q.noGst} coverUrl={coverImg} depositNext={Boolean(client?.portalPayments && (q.depositPercent || q.deposit))} />
+              <QuoteSign slug={q.slug} version={q.version} org={q.org} options={q.options} depositPercent={q.depositPercent} deposit={q.deposit} defaultName={me?.name ?? ''} defaultTitle={me?.role ?? ''} demo={demo} preview={Boolean(session.preview)} noGst={q.noGst} coverUrl={coverImg} depositNext={!retainer && Boolean(client?.portalPayments && (q.depositPercent || q.deposit))} retainer={retainer} />
             </section>
           )}
 
@@ -191,4 +236,7 @@ export default async function QuotePage({ params, searchParams }: Props) {
       </div>
     </div>
   )
+
+  // A walkthrough comes first when the quote has one.
+  return story ? <StoryGate storageKey={`quote-story:${q.projectId}:v${q.version}`} story={story}>{page}</StoryGate> : page
 }

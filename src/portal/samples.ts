@@ -166,8 +166,39 @@ export const DEFAULT_PORTAL: Required<Omit<PortalSettings, Optional>> & Pick<Por
   cardFeePercent: 3,
 }
 
+/**
+ * The Imperial 2027 retainer with its walkthrough, for previewing the flow on a local dev server.
+ * Never in production: the sample portal is public and these are a real client's prices.
+ */
+const imperialRetainerSample = (): PortalQuote => ({
+  projectId: 'sample-imperial-2027',
+  slug: 'sample-imperial-2027-retainer',
+  title: 'The 2027 Storytelling Retainer',
+  org: SAMPLE_CLIENT.organizationName,
+  pipelineStage: 'quoted',
+  version: 1,
+  fileName: '261124_Imperial 2027 Storytelling Retainer.pdf',
+  note: 'Kennedy, here’s the full proposal for 2027. Choose an option and sign whenever your team is ready. Happy to walk through it anytime.',
+  validUntil: '2026-12-31',
+  sharedAt: iso(-1),
+  story: 'imperial-2027',
+  options: [
+    { _key: 'opt1', name: 'Option 1', monthly: 5300, buyoutMonthly: 2650, total: 63600, note: 'The pieces your team ranks first' },
+    { _key: 'opt2', name: 'Option 2', monthly: 7500, buyoutMonthly: 3750, total: 90000, note: 'More pieces than 2026, for less' },
+    { _key: 'opt3', name: 'Option 3', monthly: 10550, buyoutMonthly: 5275, total: 126600, note: 'The whole 2027 slate, with room for more' },
+  ],
+  retainer: {
+    start: '2027-01',
+    months: 12,
+    buyout: { name: 'Media buyout (50%)', note: 'The year’s raw footage, graded, synced and organized. 75% if added later.' },
+    archive: { name: 'Past footage archive licence', total: 18000, requiresBuyout: true, note: 'Every frame from past Imperial projects. $27,000 on its own.' },
+  },
+  total: 63600,
+})
+
 /** One quote waiting for a signature and one already signed, for the preview. */
 export const sampleQuotes = (): PortalQuote[] => [
+  ...(process.env.NODE_ENV !== 'production' ? [imperialRetainerSample()] : []),
   {
     projectId: 'sample-q1',
     slug: 'sample-recruitment-film',
