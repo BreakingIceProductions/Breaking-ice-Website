@@ -23,7 +23,7 @@ export const imperial2027: QuoteStoryConfig = {
       stats: [
         { value: '20+', label: 'finished pieces, from two-minute shorts to the AEMP film' },
         { value: '~$100K', label: 'of work, each piece quoted and approved on its own' },
-        { value: '−$10K', label: 'Option 2 makes more pieces than 2026, counting cuts, for about $10,000 less' },
+        { value: '−$4K', label: 'Option 2 makes more pieces than 2026, counting cuts, for about $4,000 less' },
       ],
       body: 'The Closing a Century series, the management plan explainer and its cuts, the AEMP film, the Mackenzie River Classic and the end of production video. Communities have asked to see more of what is happening on the islands and along the river.',
       image: { src: img('aerial-town'), alt: 'Norman Wells from the air, streets and the river in autumn colour' },
@@ -96,12 +96,12 @@ export const imperial2027: QuoteStoryConfig = {
       kind: 'options',
       eyebrow: 'Three ways to set up the year',
       title: 'Choose how much we make together',
-      body: 'Each is one monthly price for 12 months, about 15% below the same work quoted piece by piece. All prices before tax.',
+      body: 'Each is one monthly price for 12 months. Quoted piece by piece, the same work would cost 15% more. All prices before tax.',
       rows: ['Closing a Century shorts', 'Closure explainers', 'Community films', 'Shoot days', 'Photo days, editing included', 'Editing and animation days', 'Planning, scripts, portal'],
       options: [
-        { name: 'Option 1', monthly: 5300, annual: 63600, pieceByPiece: 75000, save: 11400, counts: [5, 1, 2, 12, 2, 35, 'Included'], buyoutMonthly: 2650, buyoutAnnual: 31800, buyoutLater: 47700, note: 'The pieces your team ranks first' },
-        { name: 'Option 2', monthly: 7500, annual: 90000, pieceByPiece: 105800, save: 15800, counts: [10, 2, 2, 16, 2, 54, 'Included'], buyoutMonthly: 3750, buyoutAnnual: 45000, buyoutLater: 67500, note: 'More pieces than 2026, for less' },
-        { name: 'Option 3', monthly: 10550, annual: 126600, pieceByPiece: 148600, save: 22000, counts: [15, 2, 4, 26, 2, 73, 'Included'], buyoutMonthly: 5275, buyoutAnnual: 63300, buyoutLater: 94950, note: 'The whole 2027 slate, with room for more' },
+        { name: 'Option 1', monthly: 6000, annual: 72000, pieceByPiece: 82800, save: 10800, counts: [5, 1, 2, 12, 2, 35, 'Included'], buyoutMonthly: 3000, buyoutAnnual: 36000, buyoutLater: 54000, note: 'The pieces your team ranks first' },
+        { name: 'Option 2', monthly: 8000, annual: 96000, pieceByPiece: 110400, save: 14400, counts: [10, 2, 2, 16, 2, 54, 'Included'], buyoutMonthly: 4000, buyoutAnnual: 48000, buyoutLater: 72000, note: 'More pieces than 2026, for less' },
+        { name: 'Option 3', monthly: 11000, annual: 132000, pieceByPiece: 151800, save: 19800, counts: [15, 2, 4, 26, 2, 73, 'Included'], buyoutMonthly: 5500, buyoutAnnual: 66000, buyoutLater: 99000, note: 'The whole 2027 slate, with room for more' },
       ],
       recommended: 1,
       footnote: 'If your team adds or swaps pieces, the proposal has a price list at the retainer rate.',
@@ -115,9 +115,9 @@ export const imperial2027: QuoteStoryConfig = {
         'Booked with the retainer, it’s 50% of the retainer price, spread across the monthly invoices. That price is a one-time chance: added later in the year, it’s 75%.',
       ],
       prices: [
-        { name: 'Option 1', now: '+$2,650/mo · $31,800', later: '$47,700' },
-        { name: 'Option 2', now: '+$3,750/mo · $45,000', later: '$67,500' },
-        { name: 'Option 3', now: '+$5,275/mo · $63,300', later: '$94,950' },
+        { name: 'Option 1', now: '+$3,000/mo · $36,000', later: '$54,000' },
+        { name: 'Option 2', now: '+$4,000/mo · $48,000', later: '$72,000' },
+        { name: 'Option 3', now: '+$5,500/mo · $66,000', later: '$99,000' },
       ],
       archive: {
         title: 'Past footage at the same deal',

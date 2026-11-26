@@ -183,9 +183,9 @@ const imperialRetainerSample = (): PortalQuote => ({
   sharedAt: iso(-1),
   story: 'imperial-2027',
   options: [
-    { _key: 'opt1', name: 'Option 1', monthly: 5300, buyoutMonthly: 2650, total: 63600, note: 'The pieces your team ranks first' },
-    { _key: 'opt2', name: 'Option 2', monthly: 7500, buyoutMonthly: 3750, total: 90000, note: 'More pieces than 2026, for less' },
-    { _key: 'opt3', name: 'Option 3', monthly: 10550, buyoutMonthly: 5275, total: 126600, note: 'The whole 2027 slate, with room for more' },
+    { _key: 'opt1', name: 'Option 1', monthly: 6000, buyoutMonthly: 3000, total: 72000, note: 'The pieces your team ranks first' },
+    { _key: 'opt2', name: 'Option 2', monthly: 8000, buyoutMonthly: 4000, total: 96000, note: 'More pieces than 2026, for less' },
+    { _key: 'opt3', name: 'Option 3', monthly: 11000, buyoutMonthly: 5500, total: 132000, note: 'The whole 2027 slate, with room for more' },
   ],
   retainer: {
     start: '2027-01',
@@ -193,7 +193,7 @@ const imperialRetainerSample = (): PortalQuote => ({
     buyout: { name: 'Media buyout (50%)', note: 'The year’s raw footage, graded, synced and organized. 75% if added later.' },
     archive: { name: 'Past footage archive licence', total: 18000, requiresBuyout: true, note: 'Every frame from past Imperial projects. $27,000 on its own.' },
   },
-  total: 63600,
+  total: 72000,
 })
 
 /** One quote waiting for a signature and one already signed, for the preview. */
