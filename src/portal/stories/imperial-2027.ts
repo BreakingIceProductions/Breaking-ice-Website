@@ -12,7 +12,7 @@ export const imperial2027: QuoteStoryConfig = {
       eyebrow: 'Imperial Oil · Proposal for 2027',
       title: 'The 2027 Storytelling Retainer',
       subtitle: 'One year of plain-language films about the work at Norman Wells, and the people around it.',
-      image: { src: img('hero-mackenzie-view'), alt: 'The Mackenzie River and the mountains beyond, autumn forest in the foreground', focus: '50% 55%' },
+      image: { src: img('hero-norman-wells-river'), alt: 'Norman Wells and the Mackenzie River from the air in autumn, islands in the river and storm clouds above', focus: '50% 55%' },
       opener: 'This is our plan for working together through 2027. It comes out of a good year. Your team trusted us with real stories on the islands, along the river and in the communities, and we’d like to keep telling them.',
       from: 'Josh Ferguson',
     },
