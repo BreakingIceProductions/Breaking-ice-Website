@@ -1,5 +1,6 @@
 import 'server-only'
 import { randomBytes } from 'node:crypto'
+import { withSignature } from '@/portal/email'
 import { presign, r2Env, r2Ready } from '@/portal/r2'
 import { latestSentEmails, listSentEmails } from '@/portal/sent-emails'
 import { adminSampleMode, googleOAuthReady } from './config'
@@ -342,7 +343,8 @@ export async function sendMail(input: SendInput): Promise<MailMessage> {
     if (total > MAIL_LIMITS.files + 1024) throw new MailInputError('Attachments are over 20 MB in all.')
     files.push({ name: f.name, type: f.type, data })
   }
-  const raw = buildMime({ to: input.to, cc: input.cc, subject: input.subject, body: input.body, inReplyTo: input.inReplyTo, references: input.references, files })
+  // Gmail doesn't add Josh's signature to mail sent through its API, so it goes on here.
+  const raw = buildMime({ to: input.to, cc: input.cc, subject: input.subject, body: withSignature(input.body), inReplyTo: input.inReplyTo, references: input.references, files })
   const at = new Date().toISOString()
   const toAddr = (e: string) => client.people.find((p) => p.email === e) ?? { name: e, email: e }
   if (adminSampleMode()) {

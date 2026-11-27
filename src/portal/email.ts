@@ -73,7 +73,12 @@ const FONT = "Arial, 'Helvetica Neue', Helvetica, sans-serif"
  * Every branded email (the layout below) ends with it; sendEmail adds the plain-text copy to those emails' text part.
  */
 const SIGNATURE_MARK = '<!--bi-signature-->'
-const SIGNATURE_TEXT = `--\nJosh Ferguson\nOwner / Creative Director\n\n807-621-2780  ·  josh@breakingiceproductions.com\nbreakingiceproductions.com  · Stony Plain, AB & Norman Wells, NT\nPast the surface.`
+export const SIGNATURE_TEXT = `--\nJosh Ferguson\nOwner / Creative Director\n\n807-621-2780  ·  josh@breakingiceproductions.com\nbreakingiceproductions.com  · Stony Plain, AB & Norman Wells, NT\nPast the surface.`
+/**
+ * A plain email's body with Josh's signature under it, for mail that doesn't go through the branded layout
+ * (the Emails page sends through Gmail's API, and Gmail doesn't add his signature to those). Left alone when it's already there.
+ */
+export const withSignature = (body: string) => (body.includes('Past the surface.') ? body : `${body.trimEnd()}\n\n${SIGNATURE_TEXT}`)
 const SIGNATURE_HTML = `${SIGNATURE_MARK}<tr><td style="padding:24px 32px 28px;border-top:1px solid #E6E1D8;font:13px/20px ${FONT};color:${MUTED}">
   <span style="font-weight:bold;color:${NAVY}">Josh Ferguson</span><br>Owner / Creative Director<br><br>
   <a href="tel:+18076212780" style="color:${MUTED};text-decoration:none">807-621-2780</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="mailto:josh@breakingiceproductions.com" style="color:${MUTED};text-decoration:none">josh@breakingiceproductions.com</a><br>

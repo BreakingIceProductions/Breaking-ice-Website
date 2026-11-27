@@ -805,7 +805,7 @@ function Composer({ conv, sample, onSent, templates, signOff, bigUploads }: { co
             {templates.map((t) => <option key={t.key} value={t.key}>{t.name}</option>)}
           </select>
         )}
-        <p className={`ml-status${status?.error ? ' is-error' : ''}`} role={status?.error ? 'alert' : 'status'}>{busy || status?.text || 'Sends from your Gmail'}</p>
+        <p className={`ml-status${status?.error ? ' is-error' : ''}`} role={status?.error ? 'alert' : 'status'}>{busy || status?.text || 'Sends from your Gmail, with your signature'}</p>
       </div>
     </form>
   )
