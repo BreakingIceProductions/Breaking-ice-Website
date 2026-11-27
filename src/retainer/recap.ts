@@ -173,7 +173,7 @@ export async function sendRecap(c: RetainerClient, month: MonthKey, mail: { subj
   const failed: string[] = []
   for (const x of to) {
     try {
-      const r = await sendEmail({ to: [x.email], bcc: settings.copyTo && settings.copyTo.toLowerCase() !== x.email.toLowerCase() ? [settings.copyTo] : undefined, ...email })
+      const r = await sendEmail({ to: [x.email], bcc: settings.copyTo && settings.copyTo.toLowerCase() !== x.email.toLowerCase() ? [settings.copyTo] : undefined, ...email }, { kind: 'recap', clientId: c._id, summary: monthLabel(month) })
       if (!r.ok) {
         await saveRecap(c._id, month, { sentAt: null })
         return { ok: false, error: 'email-off', message: 'Email isn’t set up on this site yet (no Resend key), so nothing was sent.' }

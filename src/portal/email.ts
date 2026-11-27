@@ -4,6 +4,9 @@ import { postMessage } from '@/slack/api'
 import { actions as slackActions, section as slackSection, type SlackBlock, type SlackButton } from '@/slack/blocks'
 import { slackBotReady, slackEnv } from '@/slack/env'
 import { portalEnv } from './config'
+import { keepSentEmail, type EmailLog } from './sent-emails'
+
+export type { EmailLog } from './sent-emails'
 
 /**
  * Portal emails. Plain table-based HTML, 600px, so Outlook and Gmail agree.
@@ -14,6 +17,12 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 export const fill = (t: string, vars: Record<string, string | number | undefined>) =>
   t.replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined ? String(vars[k]) : ''))
 
+/**
+ * Sends one email through Resend. `log` says what it was for (kind, project, client, card text) so a copy is
+ * kept for the client’s thread on the back office Emails page; without it the client is found by the
+ * recipient’s address. Pass `false` for emails that must never be kept (sign-in codes). Keeping the copy
+ * never fails the send.
+ */
 export async function sendEmail(msg: {
   to: string[]
   subject: string
@@ -22,11 +31,13 @@ export async function sendEmail(msg: {
   bcc?: string[]
   preview?: string
   attachments?: { filename: string; content: Uint8Array }[]
-}) {
+}, log?: EmailLog | false) {
   if (!portalEnv.resendKey) {
     console.info('[portal] email not configured; would send:', msg.subject, '→', msg.to.join(', '))
     return { ok: false as const, reason: 'not-configured' }
   }
+  // Branded emails carry Josh’s footer in the HTML; the plain-text part gets the same words.
+  const text = msg.html.includes(SIGNATURE_MARK) && !msg.text.includes('Past the surface.') ? `${msg.text.trimEnd()}\n\n${SIGNATURE_TEXT}` : msg.text
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${portalEnv.resendKey}`, 'Content-Type': 'application/json' },
@@ -37,15 +48,17 @@ export async function sendEmail(msg: {
       reply_to: portalEnv.replyTo,
       subject: msg.subject,
       html: msg.html,
-      // Branded emails carry Josh's footer in the HTML; the plain-text part gets the same words.
-      text: msg.html.includes(SIGNATURE_MARK) && !msg.text.includes('Past the surface.') ? `${msg.text.trimEnd()}\n\n${SIGNATURE_TEXT}` : msg.text,
+      text,
       attachments: msg.attachments?.map((a) => ({ filename: a.filename, content: Buffer.from(a.content).toString('base64') })),
     }),
   })
   if (!res.ok) throw new Error(`email ${res.status}: ${(await res.text()).slice(0, 300)}`)
   // Resend answers { id }: kept on the sent record so its open and bounce webhooks can find it (src/app/api/resend/webhook).
-  const id = ((await res.json().catch(() => ({}))) as { id?: unknown }).id
-  return { ok: true as const, id: typeof id === 'string' ? id : undefined }
+  const raw = ((await res.json().catch(() => ({}))) as { id?: unknown }).id
+  const id = typeof raw === 'string' ? raw : undefined
+  // A copy for the client’s thread in the back office (src/portal/sent-emails.ts). Never throws.
+  if (log !== false) await keepSentEmail({ resendId: id, to: msg.to, subject: msg.subject, html: msg.html, text }, log)
+  return { ok: true as const, id }
 }
 
 const NAVY = '#18202F'

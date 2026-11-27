@@ -151,7 +151,7 @@ export async function POST(req: Request) {
           portalUrl: `${SITE_URL}/portal/quotes/${q.slug}${payer?.portalPayments ? '#billing' : ''}`, signOff: settings.signOff, producerPhone: producer?.phone, payInPortal: waitForDeposit, noGst: Boolean(payer?.noGst),
         }),
         attachments,
-      })
+      }, { kind: 'signed', projectId: q.projectId, clientId: doc.clientId, ...(option ? { summary: option.name } : {}) })
     } catch (e) {
       console.error('[portal] signed email to client failed', e)
     }

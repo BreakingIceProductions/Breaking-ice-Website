@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { recordEmailEvent, type EmailEvent } from '@/admin/data'
+import { recordSentEmailEvent } from '@/portal/sent-emails'
 
 export const runtime = 'nodejs'
 
@@ -30,9 +31,10 @@ type ResendEvent = { type?: string; created_at?: string; data?: { email_id?: str
 const KINDS: Record<string, EmailEvent['kind']> = { 'email.opened': 'opened', 'email.delivered': 'delivered', 'email.bounced': 'bounced' }
 
 /**
- * Resend → us: opens, deliveries and bounces for emails sent from the back office composer (and Slack's
- * "Approve and send"), matched by the Resend id kept on the sent record. Other events, and emails with no
- * record, are answered 200 and ignored so Resend doesn't retry them.
+ * Resend → us: opens, deliveries and bounces, matched by Resend id on two records: the project's "Emails sent"
+ * list (the back office composer and Slack's "Approve and send") and the `sentEmail` copy every client email
+ * from the site keeps (src/portal/sent-emails.ts), which drives the cards on the Emails page. One email can have
+ * both. Other events, and emails with no record, are answered 200 and ignored so Resend doesn't retry them.
  */
 export async function POST(req: Request) {
   const secret = process.env.RESEND_WEBHOOK_SECRET?.trim()
@@ -58,8 +60,9 @@ export async function POST(req: Request) {
   const at = event.created_at && !Number.isNaN(Date.parse(event.created_at)) ? new Date(event.created_at).toISOString() : new Date().toISOString()
   const b = event.data?.bounce
   try {
-    const r = await recordEmailEvent({ kind, resendId, at, hookId: hookId!, ...(kind === 'bounced' && b ? { bounce: b.message || [b.type, b.subType].filter(Boolean).join(' · ') } : {}) })
-    if (!r.found) return new Response('no record')
+    const e: EmailEvent = { kind, resendId, at, hookId: hookId!, ...(kind === 'bounced' && b ? { bounce: b.message || [b.type, b.subType].filter(Boolean).join(' · ') } : {}) }
+    const [project, copy] = await Promise.all([recordEmailEvent(e), recordSentEmailEvent(e)])
+    if (!project.found && !copy.found) return new Response('no record')
   } catch (e) {
     console.error('[resend] webhook failed', e)
     return new Response('retry', { status: 500 })

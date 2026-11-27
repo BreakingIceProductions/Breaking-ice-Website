@@ -35,6 +35,8 @@ export async function POST(req: Request) {
   const allVideo = items.every((d) => d.category === 'video')
   const sent: string[] = []
   const failed: string[] = []
+  // The card in the client's email thread: "Review link sent · Rough cut v2".
+  const log = { kind: 'review' as const, projectId: p._id, clientId: client._id, summary: items.length === 1 ? `${items[0].title} v${items[0].version}` : `${items.length} to review` }
   for (const c of to) {
     const token = await signLinkToken(c.email.toLowerCase(), `/portal/${p.slug}${allVideo ? '?at=videos#work' : ''}`, 7 * 24 * 60)
     const mail = reviewBatchEmail({
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
       note: note || undefined,
     })
     try {
-      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail })
+      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail }, log)
       if (r.ok) sent.push(c.email)
       else return json({ ok: false, error: 'email-off', message: 'Email isn’t set up, so nothing was sent.' }, 503)
     } catch (e) {

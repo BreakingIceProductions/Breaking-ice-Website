@@ -318,7 +318,7 @@ async function announce(pay: PortalPayment, processing: boolean) {
         to: [c.email],
         bcc: settings.copyTo ? [settings.copyTo] : undefined,
         ...paidEmail({ name: c.name.split(' ')[0], projectTitle: pay.projectTitle ?? 'your project', org: client!.organizationName, label: pay.label, total: pay.total, processing, receiptUrl: pay.receiptUrl, portalUrl: `${SITE_URL}/portal/${pay.slug ?? ''}#billing`, signOff: settings.signOff }),
-      })
+      }, { kind: 'paid', projectId: pay.projectId, clientId: pay.clientId, summary: `${pay.label} · ${fmtCad(pay.total)}${processing ? ' (clearing)' : ''}` })
     }
   } catch (e) {
     console.error('[portal] payment email failed', e)

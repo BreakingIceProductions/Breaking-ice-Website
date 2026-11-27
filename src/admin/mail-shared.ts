@@ -40,12 +40,64 @@ export type ConversationRow = {
 
 export type MailProject = { id: string; title: string; href: string }
 
+/**
+ * What a site email (sent through Resend by src/portal/email.ts sendEmail) was for. Shown as a compact card in
+ * the client’s thread; the copy itself is a `sentEmail` document in the portal dataset.
+ */
+export const SITE_EMAIL_KINDS = {
+  quote: 'Quote sent',
+  'quote-updated': 'Updated quote sent',
+  review: 'Review link sent',
+  version: 'New version sent',
+  reminder: 'Feedback reminder sent',
+  delivery: 'Final files sent',
+  paid: 'Payment receipt sent',
+  signed: 'Signed quote sent',
+  'sign-request': 'Sign request sent',
+  message: 'Email sent from the site',
+  'chat-reply': 'Chat reply emailed',
+  recap: 'Month-end recap sent',
+  other: 'Site email sent',
+} as const
+export type SiteEmailKind = keyof typeof SITE_EMAIL_KINDS
+export const isSiteEmailKind = (k: unknown): k is SiteEmailKind => typeof k === 'string' && Object.hasOwn(SITE_EMAIL_KINDS, k)
+
+/** One site email as the thread shows it (no HTML: that loads when the card is opened). */
+export type SiteEmail = {
+  id: string
+  at: string
+  kind: SiteEmailKind
+  subject: string
+  /** Short card text, e.g. 'From $72,000 + GST'. */
+  summary?: string
+  to: string[]
+  projectId?: string
+  projectTitle?: string
+  deliveredAt?: string
+  openedAt?: string
+  opens?: number
+  bouncedAt?: string
+  bounce?: string
+}
+
+/** "Quote sent · From $72,000 + GST": the card's first line, and the list preview. */
+export const siteEmailLine = (e: Pick<SiteEmail, 'kind' | 'summary'>) => `${SITE_EMAIL_KINDS[e.kind] ?? SITE_EMAIL_KINDS.other}${e.summary ? ` · ${e.summary}` : ''}`
+
+/** "Delivered", "Opened 2×", "Bounced" or nothing (before Resend's webhook reports). */
+export const siteEmailStatus = (e: Pick<SiteEmail, 'deliveredAt' | 'openedAt' | 'opens' | 'bouncedAt'>) =>
+  e.bouncedAt ? 'Bounced' : e.openedAt || e.opens ? `Opened${(e.opens ?? 1) > 1 ? ` ${e.opens}×` : ''}` : e.deliveredAt ? 'Delivered' : ''
+
+/** The full copy of a site email, for the preview sheet. */
+export type SiteEmailCopy = SiteEmail & { html: string; text: string }
+
 export type Conversation = {
   clientId: string
   clientName: string
   people: MailPerson[]
   projects: MailProject[]
   messages: MailMessage[]
+  /** Emails the website sent this client (quotes, review links, receipts…), oldest first. Shown as cards. */
+  siteEmails: SiteEmail[]
   /** More messages exist in Gmail than are shown. */
   more?: boolean
 }
@@ -77,3 +129,6 @@ export const baseSubject = (s: string) => s.replace(/^\s*((re|fwd?|aw|sv)\s*(\[\
 export const replySubject = (s: string) => (/^\s*re\s*:/i.test(s) ? s.trim() : `Re: ${s.trim()}`)
 
 export const fmtBytes = (n: number) => (n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${Math.round(n / 1024)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`)
+
+/** Card money: "$72,000", or "$9,420.50" when there are cents. */
+export const cardMoney = (n: number) => `$${n.toLocaleString('en-CA', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`

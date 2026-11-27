@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const next = typeof body.next === 'string' && body.next.startsWith('/portal/') ? body.next : '/portal'
     const link = `${SITE_URL}/portal/auth?token=${encodeURIComponent(await signLinkToken(email, next))}`
     try {
-      await sendEmail({ to: [email], ...signInEmail({ link, code }) })
+      await sendEmail({ to: [email], ...signInEmail({ link, code }) }, false)
     } catch (e) {
       console.error('[portal] sign-in email failed', e)
     }

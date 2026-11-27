@@ -1,6 +1,7 @@
 import { SITE_URL } from '@/lib/site'
 import { adminFromRequest } from '@/admin/auth'
 import { addLog, getProject } from '@/admin/data'
+import { cardMoney } from '@/admin/mail-shared'
 import { runStage, stageIndex } from '@/admin/stages'
 import { signLinkToken } from '@/portal/auth'
 import { getPortalSettings, portalClient, producerFor } from '@/portal/data'
@@ -121,16 +122,19 @@ export async function POST(req: Request) {
   const producer = producerFor({ client }, settings)
   const sent: string[] = []
   const failed: string[] = []
+  const total = fresh.options?.length ? Math.min(...fresh.options.map((o) => o.total)) : amount(form.get('total')) ?? p.quoteAmount
+  // The card in the client's email thread: "Quote sent · From $72,000 + GST".
+  const log = { kind: again ? ('quote-updated' as const) : ('quote' as const), projectId: p._id, clientId: client._id, ...(total ? { summary: `${fresh.options?.length ? 'From ' : ''}${cardMoney(total)}${client.noGst ? '' : ' + GST'}` } : {}) }
   for (const c of to) {
     const token = await signLinkToken(c.email.toLowerCase(), `/portal/quotes/${p.slug}`, 7 * 24 * 60)
     const mail = quoteEmail({
       name: c.name.split(' ')[0], projectTitle: p.title, org: client.organizationName, from: Boolean(fresh.options?.length),
-      total: fresh.options?.length ? Math.min(...fresh.options.map((o) => o.total)) : amount(form.get('total')) ?? p.quoteAmount,
+      total,
       validUntil: fresh.validUntil ? new Date(`${fresh.validUntil}T12:00:00Z`).toLocaleDateString('en-CA', { dateStyle: 'long', timeZone: 'UTC' }) : undefined,
       again, portalUrl: `${SITE_URL}/portal/auth?token=${encodeURIComponent(token)}`, signOff: settings.signOff, producerPhone: producer?.phone, note: fresh.note || undefined, noGst: Boolean(client.noGst),
     })
     try {
-      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail })
+      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail }, log)
       ;(r.ok ? sent : failed).push(c.name)
     } catch (e) {
       console.error('[admin] quote email failed', e)

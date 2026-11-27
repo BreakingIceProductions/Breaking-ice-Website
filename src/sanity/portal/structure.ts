@@ -23,6 +23,7 @@ export const portalStructure: StructureResolver = (S) =>
       S.documentTypeListItem('reviewComment').title('Review comments'),
       S.documentTypeListItem('docTemplate').title('Document templates'),
       S.documentTypeListItem('signRequest').title('Sign requests'),
+      S.documentTypeListItem('sentEmail').title('Sent emails'),
       S.divider(),
       S.listItem()
         .title('Portal settings')

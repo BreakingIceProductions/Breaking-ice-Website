@@ -5,6 +5,7 @@ import { attachmentUploadUrl, getConversation, listConversations, mailState, Mai
 import { isMailAddress } from '@/admin/mail-core'
 import { MAIL_LIMITS } from '@/admin/mail-shared'
 import { json } from '@/portal/http'
+import { getSentEmail } from '@/portal/sent-emails'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,8 @@ export const maxDuration = 60
 
 /**
  * The Emails page (client correspondence through Josh's Gmail). Owner only: view-only sign-ins can't read his mail.
- * GET: the conversation list, one client's conversation (?client=), or the unread count for the sidebar (?count=1).
+ * GET: the conversation list, one client's conversation (?client=), the unread count for the sidebar (?count=1), or
+ * the full copy of one email the site sent (?sent=<sentEmail id>, links taken out) for the card's preview sheet.
  * POST: mark a conversation read, get an upload address for a big attachment, or send.
  */
 
@@ -37,6 +39,11 @@ export async function GET(req: Request) {
   const u = new URL(req.url)
   try {
     if (u.searchParams.get('count')) return json({ ok: true, count: await unreadCount().catch(() => 0) })
+    const sentId = u.searchParams.get('sent')
+    if (sentId) {
+      const email = await getSentEmail(sentId)
+      return email ? json({ ok: true, email }) : json({ ok: false, message: 'That email isn’t on record any more.' }, 404)
+    }
     const state = await mailState()
     if (state !== 'ready' && state !== 'sample') return json({ ok: true, state })
     const fresh = u.searchParams.get('fresh') === '1'

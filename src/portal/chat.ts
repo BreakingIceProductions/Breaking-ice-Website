@@ -283,7 +283,7 @@ export async function joshReplied(e: { channel: string; threadTs?: string; ts: s
         subject: 'Josh replied to your message',
         body: `Josh replied to your message in your client portal:\n\n“${text.slice(0, 600)}${text.length > 600 ? '…' : ''}”\n\n[button: Open the chat](${SITE_URL}/portal?chat=open)`,
       })
-      await sendEmail({ to, bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail }).catch((err) => console.error('[chat] reply email failed', err))
+      await sendEmail({ to, bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail }, { kind: 'chat-reply', clientId: client._id }).catch((err) => console.error('[chat] reply email failed', err))
     }
   }
   return true

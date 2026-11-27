@@ -116,7 +116,7 @@ export async function emailSignRequest(r: SignRequest): Promise<{ ok: true; simu
     producerPhone: producer?.phone,
   })
   try {
-    const sent = await sendEmail({ to: [r.recipient.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail })
+    const sent = await sendEmail({ to: [r.recipient.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail }, { kind: 'sign-request', projectId: r.projectId, clientId: r.clientId, summary: r.snapshot.title })
     if (!sent.ok) return { ok: false, message: 'Email isn’t set up on this site, so nothing was sent. Copy the link instead.' }
   } catch (e) {
     console.error('[sign] email failed', e)

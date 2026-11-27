@@ -81,7 +81,7 @@ async function emailContacts(p: ClientProject, d: Deliverable, kind: 'new' | 're
     })
     // One bad address must never stop (or repeat) the others.
     try {
-      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail })
+      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail }, { kind: kind === 'new' ? 'version' : 'reminder', projectId: p._id, clientId: p.client._id, summary: `${d.title} v${d.version}` })
       if (r.ok) sent++
       else if (r.reason === 'not-configured') return { sent, total: to.length, configured: false }
     } catch (e) {
@@ -278,7 +278,7 @@ async function deliveryStep(p: ClientProject, now: number, settings: Settings, l
       producerPhone: producer?.phone,
     })
     try {
-      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail })
+      const r = await sendEmail({ to: [c.email], bcc: settings.copyTo ? [settings.copyTo] : undefined, ...mail }, { kind: 'delivery', projectId: p._id, clientId: p.client._id, summary: finals.length === 1 ? finals[0].title : `${finals.length} films` })
       if (r.ok) sent++
     } catch (e) {
       log.push(`delivery email failed: ${c.email}: ${String(e).slice(0, 120)}`)

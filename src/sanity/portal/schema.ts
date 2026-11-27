@@ -1,6 +1,7 @@
 import { CalendarIcon } from '@sanity/icons/Calendar'
 import { CaseIcon } from '@sanity/icons/Case'
 import { CogIcon } from '@sanity/icons/Cog'
+import { EnvelopeIcon } from '@sanity/icons/Envelope'
 import { UsersIcon } from '@sanity/icons/Users'
 import { defineArrayMember, defineField, defineType } from 'sanity'
 import { officeFields, officeGroup } from './office'
@@ -782,4 +783,42 @@ export const portalChat = defineType({
   preview: { select: { title: 'client.organizationName' }, prepare: ({ title }) => ({ title: title ? `Chat · ${title}` : 'Chat' }) },
 })
 
-export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment, docTemplate, signRequest, retainerMonth, portalChat]
+/**
+ * One per client email the website sent through Resend (src/portal/sent-emails.ts): exactly what went out, for the
+ * cards in the client's thread on the back office Emails page. Delivery, opens and bounces come from Resend's webhook.
+ * Written by the site only. Sign-in codes are never kept.
+ */
+export const sentEmail = defineType({
+  name: 'sentEmail',
+  title: 'Sent email',
+  type: 'document',
+  icon: EnvelopeIcon,
+  readOnly: true,
+  fields: [
+    defineField({ name: 'kind', type: 'string', description: 'What it was: quote, quote-updated, review, version, reminder, delivery, paid, signed, sign-request, message, chat-reply, recap or other.' }),
+    defineField({ name: 'subject', type: 'string' }),
+    defineField({ name: 'summary', title: 'Card text', type: 'string', description: 'e.g. “From $72,000 + GST”.' }),
+    defineField({ name: 'to', type: 'array', of: [{ type: 'string' }] }),
+    defineField({ name: 'client', type: 'reference', to: [{ type: 'client' }], weak: true }),
+    defineField({ name: 'project', type: 'reference', to: [{ type: 'clientProject' }], weak: true }),
+    defineField({ name: 'projectTitle', title: 'Project title (when sent)', type: 'string' }),
+    defineField({ name: 'sentAt', type: 'datetime' }),
+    defineField({ name: 'resendId', title: 'Resend id', type: 'string' }),
+    defineField({ name: 'deliveredAt', type: 'datetime' }),
+    defineField({ name: 'openedAt', title: 'First opened', type: 'datetime' }),
+    defineField({ name: 'lastOpenedAt', title: 'Last opened', type: 'datetime' }),
+    defineField({ name: 'opens', type: 'number' }),
+    defineField({ name: 'bouncedAt', type: 'datetime' }),
+    defineField({ name: 'bounce', title: 'Bounce reason', type: 'string' }),
+    defineField({ name: 'hooks', title: 'Webhook ids seen', type: 'array', of: [{ type: 'string' }], hidden: true }),
+    defineField({ name: 'text', title: 'Plain text', type: 'text', rows: 10 }),
+    defineField({ name: 'html', title: 'HTML', type: 'text', rows: 6 }),
+  ],
+  orderings: [{ title: 'Newest first', name: 'sentDesc', by: [{ field: 'sentAt', direction: 'desc' }] }],
+  preview: {
+    select: { subject: 'subject', org: 'client.organizationName', at: 'sentAt' },
+    prepare: ({ subject, org, at }) => ({ title: subject ?? 'Email', subtitle: [org, at ? new Date(at).toLocaleDateString('en-CA') : ''].filter(Boolean).join(' · ') }),
+  },
+})
+
+export const portalSchemaTypes = [client, clientProject, portalSettings, portalPayment, reviewComment, docTemplate, signRequest, retainerMonth, portalChat, sentEmail]

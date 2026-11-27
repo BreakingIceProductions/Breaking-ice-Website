@@ -59,7 +59,7 @@ export async function sendProjectEmail(input: SendProjectEmailInput): Promise<Se
   const settings = await getPortalSettings()
   let resendId: string | undefined
   try {
-    const r = await sendEmail({ to: valid, bcc: settings.copyTo && !valid.includes(settings.copyTo.toLowerCase()) ? [settings.copyTo] : undefined, ...messageEmail({ subject, body, sections }) })
+    const r = await sendEmail({ to: valid, bcc: settings.copyTo && !valid.includes(settings.copyTo.toLowerCase()) ? [settings.copyTo] : undefined, ...messageEmail({ subject, body, sections }) }, { kind: 'message', projectId: p._id, clientId: p.client._id, summary: subject.slice(0, 80) })
     if (!r.ok) return fail('email-off', 503, 'Email isn’t set up on this site yet (no Resend key), so nothing was sent.')
     resendId = r.id
   } catch (e) {

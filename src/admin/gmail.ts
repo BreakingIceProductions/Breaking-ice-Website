@@ -1,12 +1,13 @@
 import 'server-only'
 import { randomBytes } from 'node:crypto'
 import { presign, r2Env, r2Ready } from '@/portal/r2'
+import { latestSentEmails, listSentEmails } from '@/portal/sent-emails'
 import { adminSampleMode, googleOAuthReady } from './config'
 import { listClients, type ClientSummary } from './data'
 import { googleAccess, googleConnection, GoogleAuthError, hasGmailScope } from './gcal'
 import { isSalesStage, pageHref } from './lead'
 import { buildMime, gmailQueries, headerOf, isMailAddress, matchClients, messageBody, parseAddressList, readParts, type GPart, type OutFile } from './mail-core'
-import { MAIL_LIMITS, type Conversation, type ConversationRow, type MailMessage, type MailPerson, type MailProject, type MailState } from './mail-shared'
+import { MAIL_LIMITS, siteEmailLine, type Conversation, type ConversationRow, type MailMessage, type MailPerson, type MailProject, type MailState, type SiteEmail } from './mail-shared'
 import { stageIndex } from './stages'
 
 /**
@@ -189,8 +190,18 @@ function parse(m: GMessage, own: string) {
   return msg
 }
 
-/** The list: each client's newest message, unread count, and who it's waiting on. Clients with no mail have no `last`. */
+/** The list: each client's newest message (a site email counts), unread count, and who it's waiting on. Clients with no mail have no `last`. */
 export async function listConversations(fresh = false): Promise<ConversationRow[]> {
+  const [rows, site] = await Promise.all([gmailRows(fresh), latestSentEmails().catch((e) => (console.error('[emails] site emails failed', e), new Map<string, SiteEmail>()))])
+  return rows
+    .map((r) => {
+      const s = site.get(r.clientId)
+      return s && (!r.last || s.at > r.last.at) ? { ...r, last: { at: s.at, snippet: siteEmailLine(s), fromName: 'You', mine: true } } : r
+    })
+    .sort((a, b) => (b.last?.at ?? '').localeCompare(a.last?.at ?? ''))
+}
+
+async function gmailRows(fresh: boolean): Promise<ConversationRow[]> {
   if (adminSampleMode()) return (await import('./mail-samples')).sampleRows(await mailDirectory())
   const dir = (await mailDirectory(fresh)).filter((c) => c.people.length)
   const own = await ownAddress()
@@ -211,11 +222,23 @@ export async function listConversations(fresh = false): Promise<ConversationRow[
   })
 }
 
-/** One client's conversation: every message with its people, oldest first. */
+/**
+ * One client's conversation: every Gmail message with its people, and every email the site sent them (as cards),
+ * oldest first. Site emails are read fresh each time so the webhook's Delivered / Opened shows straight away.
+ */
 export async function getConversation(clientId: string, fresh = false): Promise<Conversation | null> {
   const dir = await mailDirectory(fresh)
   const c = dir.find((x) => x.id === clientId)
   if (!c) return null
+  const [mail, siteEmails] = await Promise.all([gmailConversation(c, fresh), listSentEmails(clientId).catch((e) => (console.error('[emails] site emails failed', e), [] as SiteEmail[]))])
+  // Projects a site email was about, when they're no longer open (paid, archived), still get a filter chip.
+  const projects = [...mail.projects]
+  for (const s of siteEmails) if (s.projectId && !projects.some((p) => p.id === s.projectId)) projects.push({ id: s.projectId, title: s.projectTitle || 'Project', href: `/admin/projects/${encodeURIComponent(s.projectId)}` })
+  return { ...mail, projects, siteEmails }
+}
+
+async function gmailConversation(c: DirClient, fresh: boolean): Promise<Omit<Conversation, 'siteEmails'>> {
+  const clientId = c.id
   if (adminSampleMode()) return (await import('./mail-samples')).sampleConversation(c)
   const own = await ownAddress()
   return cached(`conv|${clientId}`, fresh, async () => {

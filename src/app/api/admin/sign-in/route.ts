@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     if (!(await accessOf(email))) return
     const link = `${SITE_URL}/admin/auth?token=${encodeURIComponent(await signAdminLink(email))}`
     try {
-      await sendEmail({ to: [email], ...adminSignInEmail({ link, code }) })
+      await sendEmail({ to: [email], ...adminSignInEmail({ link, code }) }, false)
     } catch (e) {
       console.error('[admin] sign-in email failed', e)
     }
