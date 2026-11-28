@@ -3,20 +3,27 @@ import '../../../../css/admin-pages.css'
 import '../../../../css/admin-simple-a.css'
 import '../../../../css/admin-simple-b.css'
 import '../../../../css/admin-simple-c.css'
+import '../../../../css/admin-emails.css'
 import { notFound, redirect } from 'next/navigation'
 import { requireAdmin } from '@/admin/auth'
 import { Breadcrumb } from '@/admin/ui/breadcrumb'
 import { quoteStatus } from '@/admin/board-data'
 import { getProject } from '@/admin/data'
-import { composerSetup } from '@/admin/email-templates'
+import { googleOAuthReady } from '@/admin/config'
+import { blockTokens } from '@/admin/email-blocks-shared'
+import { composerSetup, getEmailTemplates } from '@/admin/email-templates'
+import { mailState } from '@/admin/gmail'
+import { getPortalSettings } from '@/portal/data'
+import { r2Ready } from '@/portal/r2'
 import { daysSince, today, TZ, ymd, fmtDate } from '@/admin/dates'
 import { budgetTitle, fmtTime, isContactLog, isSalesStage, LOST_REASONS, typeTitle } from '@/admin/lead'
 import { getPeople } from '@/admin/people'
 import { tagsFor } from '@/admin/people-shared'
 import { emailTrack } from '@/admin/email-templates-shared'
 import { EmailComposer } from '@/admin/ui/email'
+import { ClientThread } from '@/admin/ui/emails'
 import { HelpTip } from '@/admin/ui/help-tip'
-import { LeadActivity, LeadArchive, LeadFields, LeadSteps, type LeadLogEntry } from '@/admin/ui/lead'
+import { LeadActions, LeadActivity, LeadArchive, LeadFields, LeadSteps, type LeadLogEntry } from '@/admin/ui/lead'
 import { Chip } from '@/admin/ui/viz'
 import { DaysChip } from '@/admin/ui/viz-c'
 
@@ -47,7 +54,11 @@ function firstName(name?: string) {
 
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('en-CA', { timeZone: TZ, hour: 'numeric', minute: '2-digit' })
 
-/** One lead: where they are, what's next, their details and every contact so far. Booked projects have the project page. */
+/**
+ * One lead, and the place to talk to them: where they are and what's next, one row of actions (Reply, Log a call,
+ * the quote, Start onboarding, Mark lost), their emails as a thread with a reply box, then their details and every
+ * contact so far. Booked projects have the project page.
+ */
 export default async function LeadPage({ params, searchParams }: Props) {
   const admin = await requireAdmin()
   const [{ id }, sp] = await Promise.all([params, searchParams])
@@ -66,7 +77,11 @@ export default async function LeadPage({ params, searchParams }: Props) {
   const callThem = firstName(name) ?? 'them'
   const projectPage = `/admin/projects/${encodeURIComponent(p._id)}`
   const compose = admin.viewOnly ? null : await composerSetup(p, { name, email })
-  const writeInNextUp = p.pipelineStage === 'lead' || p.pipelineStage === 'call'
+  // Their emails, from Gmail, as on the Emails page. Owner only, like that page.
+  const threadOn = !admin.viewOnly && Boolean(p.client._id)
+  const [mail, templates, settings] = threadOn
+    ? await Promise.all([mailState(), getEmailTemplates().catch(() => ({ templates: [] })), getPortalSettings().catch(() => null)])
+    : [null, { templates: [] }, null]
 
   const log = [...(p.office.log ?? [])].sort((a, b) => b.at.localeCompare(a.at))
   // One communications timeline: the log, plus each email sent from the composer with its open status.
@@ -92,10 +107,16 @@ export default async function LeadPage({ params, searchParams }: Props) {
   // The full line for hover and screen readers; the chip shows the date only.
   const lastContactText = lastContact ? `Last contact: ${lastContact.text}, ${day(ymd(new Date(lastContact.at)))}` : log[0] ? `No contact logged yet. Latest activity: ${log[0].text}, ${day(ymd(new Date(log[0].at)))}` : 'No contact logged yet'
   const reason = LOST_REASONS.find((r) => r.value === lead.lostReason)?.title
+  // The quote step: build one, send the one that's drafted, or open the one that's out.
+  const quoteAction = p.quote?.sharedAt
+    ? { label: 'Open the quote', href: `${projectPage}?tab=documents` }
+    : p.quote
+      ? { label: 'Send quote', href: `${projectPage}?tab=documents`, primary: true }
+      : { label: 'Build quote', href: '/admin/proposals/new', primary: p.pipelineStage === 'proposal' }
 
   return (
     <div className="a-page">
-      <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }]} />
+      <Breadcrumb trail={[{ label: 'Leads & Quotes', href: '/admin/leads' }]} />
 
       <header className="a-head">
         <div className="stack ap-gap-2 ap-minw0">
@@ -108,16 +129,21 @@ export default async function LeadPage({ params, searchParams }: Props) {
         </div>
         <div className="btn-row">
           <Link className="text-link small" href={projectPage}>Open project page</Link>
-          {/* Before the quote the composer lives in Next up instead, so there's one way to write to them. */}
-          {compose && !writeInNextUp && <EmailComposer key={sp.email === '1' ? 'open' : 'closed'} projectId={p._id} {...compose} startOpen={sp.email === '1'} />}
-          {!p.archived && <LeadArchive projectId={p._id} name={title} />}
         </div>
       </header>
+
+      {!p.archived && (
+        <LeadActions projectId={p._id} projectTitle={p.title} canReply={threadOn} quote={quoteAction}>
+          {/* Site emails from a template (with open tracking); ?email=1 opens it, as from a board card. */}
+          {compose && <EmailComposer key={sp.email === '1' ? 'open' : 'closed'} projectId={p._id} {...compose} startOpen={sp.email === '1'} label={threadOn ? 'Email from a template' : `Write to ${callThem}`} />}
+          <LeadArchive projectId={p._id} name={title} label="Mark lost" />
+        </LeadActions>
+      )}
 
       {p.archived && (
         <div className="sc-chips" role="status">
           <Chip tone="muted" label={`Archived${reason ? `: ${reason}` : ''}`}>Archived{reason ? ` · ${reason}` : ''}</Chip>
-          <HelpTip label="About bringing a lead back">Bring them back from the Archive bar on the Pipeline.</HelpTip>
+          <HelpTip label="About bringing a lead back">Bring them back from Won and lost on <Link className="text-link" href="/admin/leads">Leads &amp; Quotes</Link>.</HelpTip>
         </div>
       )}
 
@@ -130,7 +156,7 @@ export default async function LeadPage({ params, searchParams }: Props) {
           <span className="eyebrow">Next up</span>
           <strong className="ld-next-title">{next.title}</strong>
           {/* Before the call the detail only repeats the button ("Write to them"), so it's left to the button. */}
-          {!(p.pipelineStage === 'lead' && email) && <span className="small">{next.detail}</span>}
+          <span className="small">{next.detail}</span>
           <span className="sc-chips">
             <DaysChip days={moved} />
             <span className="sa-chip sc-icon-chip" title={lastContactText}>
@@ -140,20 +166,26 @@ export default async function LeadPage({ params, searchParams }: Props) {
             </span>
           </span>
         </div>
-        {p.pipelineStage === 'proposal' && (
-          <div className="btn-row">
-            <Link className="btn btn-primary btn-sm" href="/admin/proposals/new">Open the quote builder</Link>
-            <Link className="btn btn-secondary btn-sm" href={`${projectPage}?tab=documents`}>Upload and send the quote</Link>
-          </div>
-        )}
-        {p.pipelineStage === 'quoted' && <Link className="btn btn-primary btn-sm" href={`${projectPage}?tab=documents`}>Open the quote</Link>}
-        {writeInNextUp && compose && (
-          // The page's one primary; ?email=1 still opens it.
-          <span className="ld-compose">
-            <EmailComposer primary key={sp.email === '1' ? 'open' : 'closed'} projectId={p._id} {...compose} startOpen={sp.email === '1'} label={p.pipelineStage === 'lead' ? `Write to ${callThem}` : 'Email about the call'} />
-          </span>
-        )}
+        {/* A quote made outside the builder is uploaded on the project page's Documents tab. */}
+        {p.pipelineStage === 'proposal' && !p.quote && <Link className="btn btn-secondary btn-sm" href={`${projectPage}?tab=documents`}>Upload and send a quote</Link>}
       </section>
+
+      {threadOn && mail && (
+        <section id="ld-thread" className="ld-thread stack ap-gap-2" aria-labelledby="ld-h-thread">
+          <div className="a-card-head">
+            <h2 id="ld-h-thread" className="a-h2">Emails with {company}</h2>
+            <Link className="text-link small" href={`/admin/emails?client=${encodeURIComponent(p.client._id)}`}>Open in Emails</Link>
+          </div>
+          <ClientThread
+            clientId={p.client._id}
+            state={mail}
+            templates={templates.templates.filter((t) => !blockTokens(t.body).length).map((t) => ({ key: t._key, name: t.name, subject: t.subject, body: t.body }))}
+            signOff={settings?.signOff ?? ''}
+            bigUploads={r2Ready() || mail === 'sample'}
+            canConnect={googleOAuthReady()}
+          />
+        </section>
+      )}
 
       {/* Details and Activity at equal weight, side by side; one column on a phone, or while Details is being edited. */}
       <div className="ld-pair">

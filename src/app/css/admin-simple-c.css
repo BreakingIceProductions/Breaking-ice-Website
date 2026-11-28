@@ -159,3 +159,24 @@
 .admin .sc-chead { align-items: center; }
 .admin .sc-chead .sc-title { column-gap: var(--space-4); }
 .admin .pj-tabs.sc-ctabs { align-self: center; -webkit-mask-image: none; mask-image: none; padding-right: 4px; }
+
+/* Leads & Quotes board (/admin/leads): person, company, what they want, budget, then when you last spoke.
+   The last line turns copper when it's your turn (they wrote last, or a follow-up is due). */
+.admin .bd-lead { gap: 2px; }
+.admin .bd-lead-co, .admin .bd-lead-want { font-size: var(--a-fs-sm); line-height: 1.45; color: var(--a-muted); }
+.admin .bd-lead-co { color: var(--a-text); }
+.admin .bd-lead .bd-amount { margin-top: 2px; }
+.admin .bd-spoke { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: var(--a-fs-sm); line-height: 1.4; color: var(--a-muted); }
+.admin .bd-spoke.is-waiting { color: var(--a-accent-text); font-weight: 600; }
+.admin .bd-spoke-dot { font-size: 8px; line-height: 1; }
+.admin .bd-sum-label { font-weight: 400; color: var(--a-muted); }
+.admin .bd-sum-none { font-weight: 400; color: var(--a-muted); }
+/* Won and lost, folded under the board. */
+.admin .ls-won { display: grid; gap: 0; margin: 0 0 var(--space-4); padding: 0; list-style: none; }
+.admin .ls-won li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--a-hairline); }
+.admin .ls-won li:first-child { border-top: 0; }
+.admin .ls-won .muted { font-size: var(--a-fs-sm); }
+/* The lead page: one row of clear actions, then the conversation. */
+.admin .ld-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin .ld-actions > * { flex: none; }
+.admin .ld-thread { scroll-margin-top: 80px; }

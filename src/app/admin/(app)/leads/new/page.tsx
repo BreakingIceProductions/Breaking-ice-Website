@@ -12,7 +12,7 @@ export default async function NewLead() {
   await requireAdmin()
   return (
     <div className="a-page ld-page-narrow">
-      <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }]} />
+      <Breadcrumb trail={[{ label: 'Leads & Quotes', href: '/admin/leads' }]} />
       <header className="a-head">
         <h1 className="a-h1">New lead</h1>
       </header>

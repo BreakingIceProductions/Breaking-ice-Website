@@ -388,6 +388,17 @@ export function LeadActivity({ projectId, today, entries, simple, tracked }: { p
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [all, setAll] = useState(false)
+  // "Log a call" at the top of the lead page opens the form here, set to a phone call.
+  const [opened, setOpened] = useState(0)
+  const kindRef = useRef<HTMLSelectElement>(null)
+  useEffect(() => {
+    const on = () => { setKind('phone'); setOpened((n) => n + 1) }
+    window.addEventListener('ld-log-call', on)
+    return () => window.removeEventListener('ld-log-call', on)
+  }, [])
+  useEffect(() => {
+    if (opened) kindRef.current?.focus()
+  }, [opened])
   const first = simple ? 8 : 5
   const shown = all ? entries : entries.slice(0, first)
   const earlier = entries.length - first
@@ -409,7 +420,7 @@ export function LeadActivity({ projectId, today, entries, simple, tracked }: { p
       {!simple && <span className="a-round-label">Log contact</span>}
       <div className="ld-log-row">
         <label><span className="sr-only">Kind of contact</span>
-          <select className="input" value={kind} onChange={(e) => setKind(e.target.value)}>
+          <select ref={kindRef} className="input" value={kind} onChange={(e) => setKind(e.target.value)}>
             {CONTACT_KINDS.map((k) => <option key={k.value} value={k.value}>{k.title}</option>)}
           </select>
         </label>
@@ -428,7 +439,7 @@ export function LeadActivity({ projectId, today, entries, simple, tracked }: { p
   )
 
   return (
-    <section className="p-card" aria-labelledby="ld-h-activity">
+    <section id="ld-activity" className="p-card ld-thread" aria-labelledby="ld-h-activity">
       {simple ? (
         <div className="a-card-head">
           <h2 id="ld-h-activity" className="a-h2">Activity</h2>
@@ -437,7 +448,7 @@ export function LeadActivity({ projectId, today, entries, simple, tracked }: { p
       ) : (
         <h2 id="ld-h-activity" className="a-h2">Activity</h2>
       )}
-      {simple ? <Reveal className="sc-log" label={<><span aria-hidden="true">+</span> Log contact</>} openLabel="Close">{form}</Reveal> : form}
+      {simple ? <Reveal key={opened} startOpen={opened > 0} className="sc-log" label={<><span aria-hidden="true">+</span> Log contact</>} openLabel="Close">{form}</Reveal> : form}
 
       {entries.length && simple ? (
         <Timeline label="Activity, newest first" items={shown.map((l) => (l.email ? mailItem(l, l.email) : { key: l.key, text: l.note ? l.text : activityText(l.text), sub: l.source, note: l.note, when: <>{l.date}{l.time && <><br />{l.time}</>}</> }))} />
@@ -463,9 +474,42 @@ export function LeadActivity({ projectId, today, entries, simple, tracked }: { p
   )
 }
 
+/* ── The lead page's actions ─────────────────────────────────────────── */
+
+const scrollTo = (el: Element | null) => el?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
+
+/**
+ * One row of what you can do with a lead: Reply (jumps to the reply box under their emails), Log a call (opens the
+ * log form in Activity), the quote step, Start onboarding (the usual stage preview for Onboarding: it shows what will
+ * run and asks first; once done the lead is a project) and any extra buttons passed in (the template composer, Mark lost).
+ */
+export function LeadActions({ projectId, projectTitle, canReply, quote, children }: { projectId: string; projectTitle: string; canReply: boolean; quote?: { label: string; href: string; primary?: boolean }; children?: React.ReactNode }) {
+  const [target, setTarget] = useState<Stage | null>(null)
+  const reply = () => {
+    const box = document.getElementById('ld-thread')
+    scrollTo(box)
+    const input = box?.querySelector<HTMLTextAreaElement>('textarea')
+    if (input) setTimeout(() => input.focus({ preventScroll: true }), 300)
+  }
+  const logCall = () => {
+    scrollTo(document.getElementById('ld-activity'))
+    window.dispatchEvent(new Event('ld-log-call'))
+  }
+  return (
+    <div className="ld-actions" role="group" aria-label="Actions">
+      {canReply && <button type="button" className="btn sa-copper btn-sm" onClick={reply}>Reply</button>}
+      <button type="button" className="btn btn-secondary btn-sm" onClick={logCall}>Log a call</button>
+      {quote && <a className={`btn btn-sm ${quote.primary && !canReply ? 'btn-primary' : 'btn-secondary'}`} href={quote.href}>{quote.label}</a>}
+      <button type="button" className="btn btn-secondary btn-sm" onClick={() => setTarget({ title: 'Onboarding', value: 'booked' })}>Start onboarding</button>
+      {children}
+      <StageDialog projectId={projectId} projectTitle={projectTitle} target={target} onClose={() => setTarget(null)} />
+    </div>
+  )
+}
+
 /* ── Archive, with a reason ──────────────────────────────────────────── */
 
-export function LeadArchive({ projectId, name }: { projectId: string; name: string }) {
+export function LeadArchive({ projectId, name, label = 'Archive' }: { projectId: string; name: string; /** The menu button's text. */ label?: string }) {
   const router = useRouter()
   const menu = useRef<HTMLDetailsElement>(null)
   const dialog = useRef<HTMLDialogElement>(null)
@@ -504,14 +548,14 @@ export function LeadArchive({ projectId, name }: { projectId: string; name: stri
     if (!r.ok) return setError(failed(r.status))
     dialog.current?.close()
     if (r.data.sample) return notify(SAMPLE)
-    router.push('/admin/pipeline')
+    router.push('/admin/leads')
     router.refresh()
   }
 
   return (
     <>
       <details className="ld-menu" ref={menu}>
-        <summary className="btn btn-secondary btn-sm">Archive</summary>
+        <summary className="btn btn-secondary btn-sm">{label}</summary>
         <ul aria-label="Why it’s being archived">
           {LOST_REASONS.map((r) => (
             <li key={r.value}>
@@ -527,7 +571,7 @@ export function LeadArchive({ projectId, name }: { projectId: string; name: stri
             <span className="eyebrow">Archive · {reason.title}</span>
             <h2 id="ld-archive-h" className="a-h2 a-h2-lg">Archive {name}?</h2>
             <p className="small m0">
-              They leave the board and stop counting in your pipeline and reminders. Nothing is sent to them, and you can bring them back from the Archive bar on the Pipeline.
+              They leave the board and stop counting in your pipeline and reminders. Nothing is sent to them, and you can bring them back from Won and lost on Leads & Quotes.
               {reason.declined && ' This one counts as declined in your win rate.'}
             </p>
             {error && <p className="err" role="alert">{error}</p>}
@@ -604,7 +648,7 @@ export function LeadForm() {
       {msg && <p id="nl-msg" ref={msgRef} tabIndex={-1} className={`m0 ${msg.bad ? 'err' : 'small'}`} role={msg.bad ? 'alert' : 'status'}>{msg.text}</p>}
       <div className="btn-row sc-form-foot">
         <button type="submit" className="btn sa-copper" disabled={busy}>{busy ? 'Adding…' : 'Add lead'}</button>
-        <a className="btn btn-secondary" href="/admin/pipeline">Cancel</a>
+        <a className="btn btn-secondary" href="/admin/leads">Cancel</a>
         <HelpTip label="About adding a lead">Adding a lead sends them nothing. A company you already have is matched by its name or by this email; otherwise a new client is made with this one contact. Leave the project title empty to call it “{defaultTitle}”.</HelpTip>
       </div>
     </form>

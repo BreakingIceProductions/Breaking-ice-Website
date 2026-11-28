@@ -6,6 +6,36 @@ import type { LeadDetails } from './types'
 export const SALES_STAGES = ['lead', 'call', 'proposal', 'quoted']
 export const isSalesStage = (stage: string) => SALES_STAGES.includes(stage)
 
+/**
+ * The Leads & Quotes board names the sales stages in plain words. Only these titles are new: the stored values,
+ * and the stage titles everywhere else (stage previews, the project page, Money), stay as they are.
+ */
+export const LEAD_COLUMNS = [
+  { value: 'lead', title: 'New', hint: 'Just got in touch. Reply and send a call link.' },
+  { value: 'call', title: 'Talking', hint: 'A call is booked or you are talking it through.' },
+  { value: 'proposal', title: 'Quoting', hint: 'Call done, quote to write.' },
+  { value: 'quoted', title: 'Quoted', hint: 'The quote is out with them.' },
+] as const
+export const leadColumnTitle = (stage: string) => LEAD_COLUMNS.find((c) => c.value === stage)?.title ?? stage
+
+/**
+ * Clients that are only prospects so far: every project they have (open, lost or archived) is still in a sales
+ * stage. Worked out from the projects each time; nothing is stored. A client with real work as well as open leads
+ * (a booked, finished or archived project) is a client, and a client with no projects at all (added by hand) is
+ * one too. Prospects and their leads show only on the Leads & Quotes board.
+ */
+export function prospectIds(projects: { client: { _id: string }; pipelineStage: string }[]): Set<string> {
+  const real = new Set<string>()
+  const leads = new Set<string>()
+  for (const p of projects) {
+    const id = p.client._id
+    if (!id) continue
+    if (isSalesStage(p.pipelineStage)) leads.add(id)
+    else real.add(id)
+  }
+  return new Set([...leads].filter((id) => !real.has(id)))
+}
+
 /** A lead opens its lead page; a booked project opens the full project page. */
 export const pageHref = (id: string, stage: string) => `/admin/${isSalesStage(stage) ? 'leads' : 'projects'}/${encodeURIComponent(id)}`
 

@@ -35,7 +35,7 @@ export default async function AdminReview({ params }: Props) {
 
   return (
     <div className="a-page">
-      <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }, { label: p.title, href: projectHref }]} />
+      <Breadcrumb trail={[{ label: 'Projects', href: '/admin/pipeline' }, { label: p.title, href: projectHref }]} />
       <header className="a-head">
         <div className="stack ap-gap-2 ap-minw0">
           <h1 className="a-h1">{d.title} <span className="muted">· {versionLabel(d)}</span></h1>

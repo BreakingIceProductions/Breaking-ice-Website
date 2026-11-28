@@ -8,15 +8,28 @@ import { requireAdmin } from '@/admin/auth'
 import { adminSampleMode } from '@/admin/config'
 import { r2Ready } from '@/portal/r2'
 import { listClients } from '@/admin/data'
+import { isSalesStage, prospectIds } from '@/admin/lead'
 import { stageTitle } from '@/admin/stages'
 import { AdminLibrary, type LibProject } from '@/admin/ui/library'
 import { ClientsTabs } from '@/admin/ui/clients-tabs'
 
 export const metadata = { title: 'Clients' }
 
-export default async function Clients() {
+type Props = { searchParams: Promise<{ at?: string | string[] }> }
+
+/**
+ * Clients and their projects. Leads stay on Leads & Quotes: clients that are only leads so far are left out, and so
+ * are leads of real clients. A link straight to one (a lead card's "Add a document") still opens it.
+ */
+export default async function Clients({ searchParams }: Props) {
   await requireAdmin()
-  const clients = await listClients()
+  const [all, sp] = await Promise.all([listClients(), searchParams])
+  const at = (Array.isArray(sp.at) ? sp.at[0] : sp.at ?? '').split('/').filter(Boolean).map((x) => { try { return decodeURIComponent(x) } catch { return x } })
+  const prospects = prospectIds(all.flatMap((c) => c.projects))
+  const asked = (clientId: string, p?: { slug?: string; _id: string }) => at[0] === clientId && (!p || at[1] === p.slug || at[1] === p._id)
+  const clients = all
+    .filter((c) => !prospects.has(c._id) || asked(c._id))
+    .map((c) => ({ ...c, projects: c.projects.filter((p) => !isSalesStage(p.pipelineStage) || asked(c._id, p)) }))
   const projects: LibProject[] = clients.flatMap((c) =>
     c.projects.map((p) => ({
       _id: p._id,

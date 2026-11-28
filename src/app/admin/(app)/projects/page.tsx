@@ -8,6 +8,7 @@ import '../../../css/admin-simple-c.css'
 import { requireAdmin } from '@/admin/auth'
 import { listProjects } from '@/admin/data'
 import { fmtDate } from '@/admin/dates'
+import { isSalesStage } from '@/admin/lead'
 import { cad } from '@/admin/insights'
 import { MILESTONE_LIST } from '@/admin/milestones'
 import { stageIndex } from '@/admin/stages'
@@ -31,13 +32,14 @@ function nextDate(p: Project) {
     .sort((a, b) => a.date.localeCompare(b.date))[0]
 }
 
-/** Every project in one flat table: filter by stage, switch to the archive, sort by a column. The board is on Pipeline. */
+/** Every booked project in one flat table: filter by stage, switch to the archive, sort by a column. The board is on Pipeline. */
 export default async function Projects({ searchParams }: Props) {
   await requireAdmin()
   const sp = await searchParams
-  // The board lives on the Pipeline page; only the list and archive live here.
+  // The board lives on the Projects board (/admin/pipeline); only the list and archive live here.
   if (sp.view !== 'list') redirect('/admin/pipeline')
-  const projects = await listProjects()
+  // Leads, open or lost, are on Leads & Quotes; this list is booked work.
+  const projects = (await listProjects()).filter((p) => !isSalesStage(p.pipelineStage))
   const archived = sp.show === 'archived'
   const stage = !archived && PIPELINE_STAGES.some((s) => s.value === sp.stage) ? sp.stage : undefined
   const sort: Sort = sp.sort && sp.sort in SORTS ? (sp.sort as Sort) : 'stage'
@@ -163,7 +165,7 @@ export default async function Projects({ searchParams }: Props) {
         <div className="p-card">
           <p className="a-empty m0">
             {!projects.length ? (
-              <>No projects yet. <Link className="text-link" href="/admin/leads/new">Add a lead</Link> to start one.</>
+              <>No projects yet. A lead becomes a project when its quote is signed; see <Link className="text-link" href="/admin/leads">Leads &amp; Quotes</Link>.</>
             ) : archived ? (
               'Nothing archived yet.'
             ) : (

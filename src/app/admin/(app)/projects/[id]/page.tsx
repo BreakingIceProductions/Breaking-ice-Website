@@ -244,7 +244,7 @@ export default async function ProjectPage({ params, searchParams }: Props) {
   return (
     <ProjectProgress projectId={p._id} projectTitle={p.title} checks={checklist(p)}>
       <div className="a-page sa">
-        <Breadcrumb trail={[{ label: 'Pipeline', href: '/admin/pipeline' }]} />
+        <Breadcrumb trail={sales ? [{ label: 'Leads & Quotes', href: '/admin/leads' }, { label: p.title, href: `/admin/leads/${encodeURIComponent(p._id)}` }] : [{ label: 'Projects', href: '/admin/pipeline' }]} />
 
         <header className="a-head sa-head">
           <div className="stack ap-minw0">

@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { requireAdmin } from '@/admin/auth'
 import { loadMoney } from '@/admin/money-data'
 import { needsYouCount } from '@/admin/needs-you'
-import { isSalesStage, pageHref } from '@/admin/lead'
+import { isSalesStage, leadColumnTitle, pageHref, prospectIds } from '@/admin/lead'
 import { getPeople } from '@/admin/people'
 import { FeedbackProvider } from '@/admin/ui/confirm'
 import { AdminSearch, SearchButton, type SearchItem } from '@/admin/ui/search'
@@ -24,14 +24,17 @@ export default async function AdminApp({ children }: { children: React.ReactNode
   // The same load as Today, so the nav badge counts exactly what Today's "Needs you" list shows.
   const [money, people] = await Promise.all([loadMoney().catch(() => ({ projects: [], payments: [], goals: {} })), getPeople().catch(() => null)])
   const projects = money.projects
-  const clients = new Map(projects.filter((p) => p.client._id).map((p) => [p.client._id, p.client.organizationName]))
+  // Leads (and clients that are only leads so far) are found under Leads, not Projects or Clients.
+  const prospects = prospectIds(projects)
+  const clients = new Map(projects.filter((p) => p.client._id && !prospects.has(p.client._id)).map((p) => [p.client._id, p.client.organizationName]))
   const search: SearchItem[] = [
     { group: 'Actions', label: 'New proposal', sub: 'Open the builder', href: '/admin/proposals/new' },
     { group: 'Actions', label: 'New lead', sub: 'Add someone who got in touch', href: '/admin/leads/new' },
     { group: 'Actions', label: 'New project', sub: 'Start a project for a client', href: '/admin/projects/new' },
     { group: 'Go to', label: 'Today', href: '/admin' },
     { group: 'Go to', label: 'Calendar', sub: 'Google, iCloud and project dates', href: '/admin/calendar' },
-    { group: 'Go to', label: 'Pipeline', sub: 'Leads and projects on one board', href: '/admin/pipeline' },
+    { group: 'Go to', label: 'Leads & Quotes', sub: 'Everyone who got in touch, until they sign', href: '/admin/leads' },
+    { group: 'Go to', label: 'Projects', sub: 'Booked work on one board', href: '/admin/pipeline' },
     { group: 'Go to', label: 'Emails', sub: 'Client conversations from Gmail', href: '/admin/emails' },
     { group: 'Go to', label: 'Client portals', sub: 'What each portal is waiting on', href: '/admin/portals' },
     { group: 'Go to', label: 'Projects list and archive', href: '/admin/projects?view=list' },
@@ -39,7 +42,8 @@ export default async function AdminApp({ children }: { children: React.ReactNode
     { group: 'Go to', label: 'People', sub: 'Everyone in one list: clients, crew, partners', href: '/admin/contacts' },
     { group: 'Go to', label: 'Library', sub: 'Documents to sign, client emails, out and signed', href: '/admin/library' },
     { group: 'Go to', label: 'Settings and connections', href: '/admin/settings' },
-    ...projects.map((p) => ({ group: 'Projects' as const, label: p.title, sub: `${p.client.organizationName}${isSalesStage(p.pipelineStage) ? ' · lead' : ''}${p.archived ? ' · archived' : ''}`, href: pageHref(p._id, p.pipelineStage) })),
+    ...projects.filter((p) => isSalesStage(p.pipelineStage)).map((p) => ({ group: 'Leads' as const, label: p.title, sub: `${p.client.organizationName} · ${p.archived ? 'lost or archived' : leadColumnTitle(p.pipelineStage)}`, href: pageHref(p._id, p.pipelineStage) })),
+    ...projects.filter((p) => !isSalesStage(p.pipelineStage)).map((p) => ({ group: 'Projects' as const, label: p.title, sub: `${p.client.organizationName}${p.archived ? ' · archived' : ''}`, href: pageHref(p._id, p.pipelineStage) })),
     ...[...clients].map(([id, name]) => ({ group: 'Clients' as const, label: name, href: `/admin/clients/${id}` })),
     // Contacts-only people: crew, vendors, partners. Client contacts are found through their company.
     ...(people?.people ?? []).map((p) => ({ group: 'People' as const, label: p.name, sub: [p.company, p.role, ...(p.tags ?? [])].filter(Boolean).join(' · ') || 'Contact', href: `/admin/contacts?person=${encodeURIComponent(`p:${p._key}`)}` })),

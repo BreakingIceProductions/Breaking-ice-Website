@@ -22,7 +22,7 @@ const inStage = (d: number | null) => (d == null ? '' : d === 0 ? 'Today in stag
  * to its new column at once and goes back if the move fails. Click a card for its checklist,
  * money and links. The columns sit in one row that scrolls sideways.
  */
-export function Board({ columns, cards, stages, empty, archive }: { columns: Column[]; cards: BoardCard[]; stages: Stage[]; empty: string; /** The archive bar. Dropping a card on it files the project away. */ archive?: React.ReactNode }) {
+export function Board({ columns, cards, stages, empty, archive, leads }: { columns: Column[]; cards: BoardCard[]; stages: Stage[]; empty: string; /** The archive bar. Dropping a card on it files the project away. */ archive?: React.ReactNode; /** The Leads & Quotes board: cards show the person, what they want, the budget and when you last spoke; column totals are quoted value. */ leads?: boolean }) {
   const router = useRouter()
   const [over, setOver] = useState<string | null>(null)
   const [move, setMove] = useState<{ card: BoardCard; to: Stage } | null>(null)
@@ -157,7 +157,9 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                   <h2 className="bd-col-title" tabIndex={-1}>{col.title}</h2>
                   <span className="bd-count">{list.length}</span>
                 </header>
-                {worth > 0 && <p className="bd-sum">{total(worth)}</p>}
+                {leads ? (
+                  <p className={`bd-sum${worth ? '' : ' bd-sum-none'}`} title="The total of the quote amounts on these cards. Cards with no quote total add nothing.">{worth ? <>{total(worth)} <span className="bd-sum-label">quoted</span></> : 'No quotes yet'}</p>
+                ) : worth > 0 && <p className="bd-sum">{total(worth)}</p>}
                 {folded ? (
                   list.length > 0 && <button type="button" className="linklike small" onClick={() => setShown((s) => [...s, col.value])}>Show {list.length}</button>
                 ) : (
@@ -166,10 +168,25 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                       const done = progress(c)
                       const onward = done === c.checks.length && !placed[c.id] ? stages[stages.findIndex((s) => s.value === c.stage) + 1] : undefined
                       return (
-                        <li key={c.id} data-card={c.id} className={`bd-card${c.cold ? ' is-cold' : ''}${placed[c.id] ? ' is-placed' : ''}`} aria-busy={placed[c.id] && moving === c.id ? true : undefined} draggable
+                        <li key={c.id} data-card={c.id} className={`bd-card${(leads ? c.spoke?.waiting : c.cold) ? ' is-cold' : ''}${placed[c.id] ? ' is-placed' : ''}`} aria-busy={placed[c.id] && moving === c.id ? true : undefined} draggable
                           onDragStart={(e) => { dragId.current = c.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.id) }}
                           onDragEnd={() => { dragId.current = null; setOver(null) }}>
                           {/* Client, title, money, then progress and age as small marks. The next step is on hover and in the card's window. */}
+                          {leads ? (
+                          <button type="button" className="bd-open sc-card-open bd-lead" title={`Next: ${nextOf(c)}`} onClick={() => open(c)}>
+                            <strong className="bd-title">{c.person || c.client}</strong>
+                            {c.person && <span className="bd-lead-co">{c.client}</span>}
+                            <span className="bd-lead-want">{c.type ?? c.title}</span>
+                            {(c.amount || c.budget) && <span className="bd-amount">{c.amount ? <><span className="sr-only">Quote </span>{money(c.amount)}</> : <><span className="sr-only">Budget </span>{c.budget}</>}</span>}
+                            {c.spoke && (
+                              <span className={`bd-spoke${c.spoke.waiting ? ' is-waiting' : ''}`} title={c.spoke.why}>
+                                {c.spoke.waiting && <span className="bd-spoke-dot" aria-hidden="true">●</span>}
+                                {c.spoke.text}
+                                {c.spoke.waiting && <span className="sr-only">. Waiting on you: {c.spoke.why}</span>}
+                              </span>
+                            )}
+                          </button>
+                          ) : (
                           <button type="button" className="bd-open sc-card-open" title={`Next: ${nextOf(c)}`} onClick={() => open(c)}>
                             <span className="a-client">{c.client}</span>
                             <strong className="bd-title">{c.title}</strong>
@@ -179,6 +196,7 @@ export function Board({ columns, cards, stages, empty, archive }: { columns: Col
                               <DaysChip days={c.days} cold={c.cold} />
                             </span>
                           </button>
+                          )}
                           {onward && (
                             <div className="bd-foot sc-card-foot">
                               <button type="button" className="bd-on" onClick={() => setMove({ card: c, to: onward })}>Move on<span className="sr-only"> to {onward.title}</span></button>

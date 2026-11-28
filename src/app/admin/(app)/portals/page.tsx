@@ -259,7 +259,7 @@ export default async function Portals({ searchParams }: Props) {
         ) : (
           <div className="p-card">
             <p className="a-empty"><strong>No live portals yet.</strong></p>
-            <p className="muted small a-empty">A project gets its portal when it reaches Onboarding. Move one there on the <Link className="text-link" href="/admin/pipeline">Pipeline</Link> and it shows up here.</p>
+            <p className="muted small a-empty">A project gets its portal when it reaches Onboarding. Move one there on <Link className="text-link" href="/admin/pipeline">Projects</Link>, or have its quote signed, and it shows up here.</p>
           </div>
         )}
         </div>

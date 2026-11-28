@@ -182,7 +182,9 @@ function card(p: OfficeProject, mine: Row[], theirs: Row[], payments: OpenPaymen
 const rank = (c: PortalCard) => (c.onYou.length ? 0 : c.onClient.length ? 1 : 2)
 const order = (a: PortalCard, b: PortalCard) => rank(a) - rank(b) || b.latest.localeCompare(a.latest)
 
-export function portalsOverview(all: OfficeProject[], payments: OpenPayment[]) {
+export function portalsOverview(everything: OfficeProject[], payments: OpenPayment[]) {
+  // Leads (open, lost or archived) have no portal yet and live on Leads & Quotes, so they're left out here.
+  const all = everything.filter((p) => !isSalesStage(p.pipelineStage))
   const open = all.filter((p) => !p.archived)
   const mine = needsAction(open)
   const theirs = waitingOnClients(open)

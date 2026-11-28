@@ -205,6 +205,10 @@
 @keyframes ml-pulse { 50% { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) { .admin .ml-skel { animation: none; } }
 
+/* ── One client's thread inside a lead page (ClientThread): a fixed-height box that scrolls on its own ── */
+.admin .ml-embed { height: min(680px, calc(100dvh - 140px)); min-height: 420px; }
+.admin .ml-embed.ml-conv-pad { height: auto; min-height: 0; }
+
 /* ── Phones and small tablets: one pane at a time, the page scrolls ── */
 @media (max-width: 899px) {
   .admin .ml-panes { display: block; height: auto; }
@@ -216,6 +220,11 @@
   .admin .ml-site-row { max-width: 92%; }
   /* The reply box stays at the bottom of the screen while the thread scrolls. */
   .admin .ml-conv-pane { overflow: visible; }
+  /* On a lead page the thread keeps its own scroll, so the details and activity under it stay close. */
+  .admin .ml-conv-pane.ml-embed { height: min(640px, 78dvh); min-height: 380px; overflow: hidden; }
+  .admin .ml-embed .ml-msgs { flex: 1; overflow-y: auto; }
+  .admin .ml-embed .ml-compose { position: static; }
+  .admin .ml-conv-pane.ml-embed.ml-conv-pad { height: auto; min-height: 0; }
   .admin .ml-thread-head { border-radius: 20px 20px 0 0; }
   .admin .ml-compose { position: sticky; bottom: 0; z-index: 2; padding: 8px 10px calc(10px + env(safe-area-inset-bottom)); border-radius: 0 0 20px 20px; }
   .admin .ml-field { flex-wrap: wrap; gap: 6px; }

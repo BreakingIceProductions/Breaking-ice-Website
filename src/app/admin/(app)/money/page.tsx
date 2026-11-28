@@ -623,7 +623,7 @@ function ReportsView({ data, range, forecast }: { data: Data; range: RangeKey; f
 
         <section className="sb-card" aria-labelledby="mn-pipe-h">
           <Head id="mn-pipe-h" title="Open pipeline right now" sub={`${plural(openLeads, 'lead')} in play`}>
-            <Link className="text-link mc-more" href="/admin/pipeline">Pipeline</Link>
+            <Link className="text-link mc-more" href="/admin/leads">Leads &amp; Quotes</Link>
           </Head>
           {openLeads ? (
             <ColChart

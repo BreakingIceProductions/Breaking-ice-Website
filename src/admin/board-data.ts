@@ -1,7 +1,7 @@
 import 'server-only'
 import { PIPELINE_STAGES, PROJECT_TYPES, REGIONS, type PipelineStage } from '@/sanity/portal/office-constants'
 import { addDays, daysBetween, daysSince, fmtDay, today } from './dates'
-import { budgetTitle, isSalesStage, pageHref } from './lead'
+import { budgetTitle, isContactLog, isSalesStage, pageHref } from './lead'
 import { MILESTONE_LIST } from './milestones'
 import { STAGE_TASKS, stageIndex } from './stages'
 import type { OfficeProject } from './types'
@@ -34,6 +34,10 @@ export type BoardCard = {
   invoices: { label: string; status: string; amount: number }[]
   links: { label: string; href: string }[]
   notes: { at: string; text: string }[]
+  /** Leads board only: the person who got in touch. */
+  person?: string
+  /** Leads board only: when you last spoke, and whether it's your turn (they wrote last, or a follow-up is due). */
+  spoke?: { text: string; waiting: boolean; why: string }
 }
 
 /** A stage's checklist: the same steps the stage sets up as tasks, ticked off here. */
@@ -147,4 +151,61 @@ export function pipelineTiles(projects: OfficeProject[]) {
     win: winRate(projects),
     shoots: nextTwoWeeks(projects).shoots,
   }
+}
+
+/** The newest Gmail message with a client's people, from the Emails list (mine: Josh sent it). */
+export type LastMail = { at: string; mine: boolean }
+
+const ago = (d: number) => (d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`)
+
+/**
+ * "Last spoke N days ago" for a lead card, and whether it's waiting on Josh: the last contact came from them (an
+ * email in Gmail), a new lead nobody has answered yet, or a follow-up is due. A follow-up is due after the same
+ * quiet spell that marks a card as going cold (new lead 3 days, talking or quoting 5, quoted 7), counted from the
+ * last contact rather than the stage move. Contact is what's on record: calls and messages logged on the lead,
+ * emails sent from the back office, and the newest Gmail message with the client's people.
+ */
+export function lastSpoke(p: OfficeProject, mail?: LastMail): NonNullable<BoardCard['spoke']> {
+  const touches: { at: string; inbound: boolean }[] = [
+    ...(p.office.log ?? []).filter((l) => isContactLog(l.kind)).map((l) => ({ at: l.at, inbound: false })),
+    ...(p.office.emails ?? []).map((e) => ({ at: e.at, inbound: false })),
+    ...(mail ? [{ at: mail.at, inbound: !mail.mine }] : []),
+  ].filter((t) => t.at)
+  const last = touches.sort((a, b) => b.at.localeCompare(a.at))[0]
+  const limit = COLD_AFTER[p.pipelineStage] ?? Infinity
+  if (!last) {
+    const cameIn = p.office.lead?.cameIn ?? [...(p.office.stageHistory ?? [])].map((h) => h.at).sort()[0] ?? p.office.stageChangedAt
+    const days = p.office.lead?.cameIn ? daysBetween(p.office.lead.cameIn, today()) : daysSince(cameIn)
+    if (p.pipelineStage === 'lead') return { text: days == null ? 'No reply yet' : `Came in ${ago(days)}, no reply yet`, waiting: true, why: 'They got in touch and haven’t had a reply on record' }
+    const due = (daysSince(p.office.stageChangedAt) ?? 0) >= limit
+    return { text: 'No contact logged', waiting: due, why: due ? 'Follow-up due: nothing on record for a while' : 'No calls or emails on record yet' }
+  }
+  const days = daysSince(last.at) ?? 0
+  const due = days >= limit
+  return {
+    text: `Last spoke ${ago(days)}`,
+    waiting: last.inbound || due,
+    why: last.inbound ? 'They wrote last: it’s your turn' : due ? 'Follow-up due' : 'You were last in touch',
+  }
+}
+
+/** A card on the Leads & Quotes board: the board card plus who they are and when you last spoke. */
+export function leadCard(p: OfficeProject, mail?: LastMail): BoardCard {
+  const lead = p.office.lead ?? {}
+  const contacts = p.client.contacts ?? []
+  const listed = lead.email ? contacts.find((c) => c.email?.toLowerCase() === lead.email!.toLowerCase()) : undefined
+  const person = listed?.name ?? lead.name ?? contacts[0]?.name
+  return { ...boardCard(p), person: person || undefined, spoke: lastSpoke(p, mail) }
+}
+
+/** Leads that became projects in the last 60 days: their first move from a sales stage to Onboarding or later. */
+export function recentlyWon(projects: OfficeProject[], days = 60) {
+  return projects
+    .filter((p) => !isSalesStage(p.pipelineStage))
+    .map((p) => {
+      const h = (p.office.stageHistory ?? []).filter((x) => x.to === 'booked').map((x) => x.at).sort()[0]
+      return { p, at: h ?? p.quote?.signature?.at }
+    })
+    .filter((x): x is { p: OfficeProject; at: string } => Boolean(x.at && daysBetween(x.at.slice(0, 10), today()) <= days))
+    .sort((a, b) => b.at.localeCompare(a.at))
 }

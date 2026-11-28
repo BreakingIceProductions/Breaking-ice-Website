@@ -7,6 +7,8 @@ import { useSideCollapsed } from './side-toggle'
 
 const ICONS: Record<string, React.ReactNode> = {
   dash: <><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></>,
+  // A funnel: everyone who got in touch, narrowing to the ones who sign.
+  leads: <path d="M3 4h18l-7 8.5V19l-4 2v-8.5Z" />,
   projects: <><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="11" rx="1" /><rect x="17" y="4" width="4" height="7" rx="1" /></>,
   clients: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 20a6.5 6.5 0 0 0-3-5.5" /></>,
   calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
@@ -105,7 +107,8 @@ export function AdminNav({ needs: initial = 0, id = 'a-nav' }: { needs?: number;
     {
       label: 'Work',
       items: [
-        { href: '/admin/pipeline', label: 'Pipeline', icon: 'projects', on: at('/admin/pipeline', '/admin/projects', '/admin/leads') },
+        { href: '/admin/leads', label: 'Leads & Quotes', icon: 'leads', on: at('/admin/leads') },
+        { href: '/admin/pipeline', label: 'Projects', icon: 'projects', on: at('/admin/pipeline', '/admin/projects') },
         { href: '/admin/emails', label: 'Emails', icon: 'mail', on: at('/admin/emails'), count: unreadMail, countLabel: 'unread' },
         { href: '/admin/money', label: 'Money', icon: 'money', on: at('/admin/money') },
         { href: '/admin/portals', label: 'Client portals', icon: 'portals', on: at('/admin/portals') },

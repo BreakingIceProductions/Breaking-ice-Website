@@ -3,9 +3,9 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
-export type SearchItem = { group: 'Actions' | 'Go to' | 'Projects' | 'Clients' | 'People'; label: string; sub?: string; href: string; external?: boolean }
+export type SearchItem = { group: 'Actions' | 'Go to' | 'Leads' | 'Projects' | 'Clients' | 'People'; label: string; sub?: string; href: string; external?: boolean }
 
-const GROUPS: SearchItem['group'][] = ['Actions', 'Go to', 'Projects', 'Clients', 'People']
+const GROUPS: SearchItem['group'][] = ['Actions', 'Go to', 'Leads', 'Projects', 'Clients', 'People']
 const OPEN_EVENT = 'bi-admin-search'
 
 /** Opens the search pop-up from anywhere (the sidebar button, the phone top bar). */

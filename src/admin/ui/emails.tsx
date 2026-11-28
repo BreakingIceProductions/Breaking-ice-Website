@@ -326,6 +326,56 @@ export function EmailsApp({ state: initialState, initialClient, templates, signO
   )
 }
 
+/* ── One client's thread inside another page ── */
+
+/**
+ * One client's conversation on its own, for the lead page: the same thread and reply box as this page, loading the
+ * same conversation (/api/admin/emails?client=). Opening it marks their unread messages read, as here.
+ */
+export function ClientThread({ clientId, state: initialState, templates, signOff, bigUploads, canConnect }: { clientId: string; state: MailState; templates: Template[]; signOff: string; bigUploads: boolean; canConnect: boolean }) {
+  const [state, setState] = useState<MailState>(initialState)
+  const [conv, setConv] = useState<Conversation | null>(null)
+  const [error, setError] = useState('')
+  const sample = state === 'sample'
+  const live = state === 'ready' || sample
+
+  const load = useCallback(async (fresh = false) => {
+    setError('')
+    const r = await call<{ conversation?: Conversation }>(`/api/admin/emails?client=${encodeURIComponent(clientId)}${fresh ? '&fresh=1' : ''}`)
+    if (r.data.state && r.data.state !== 'ready' && r.data.state !== 'sample') return setState(r.data.state)
+    if (!r.ok || !r.data.conversation) return setError(r.data.message || 'The conversation didn’t load.')
+    const c = { ...r.data.conversation, siteEmails: r.data.conversation.siteEmails ?? [] }
+    setConv((prev) => (sample && prev ? { ...c, messages: [...c.messages, ...prev.messages.filter((m) => !c.messages.some((x) => x.id === m.id))] } : c))
+    const unread = c.messages.filter((m) => m.unread).length
+    if (unread) {
+      window.dispatchEvent(new CustomEvent('a-emails-read', { detail: -unread }))
+      void post({ action: 'read', clientId })
+    }
+  }, [clientId, sample])
+
+  useEffect(() => {
+    if (live) void load()
+  }, [live, load])
+
+  if (!live) {
+    const t = STATE_TEXT[state] ?? STATE_TEXT['not-connected']!
+    return (
+      <div className="ml-conv-pane ml-embed ml-conv-pad">
+        <p className="m0"><strong>{t.title}</strong></p>
+        <p className="small m0">{t.body}</p>
+        {t.button && canConnect ? <a className="btn btn-secondary btn-sm" href="/api/admin/google/connect">{t.button}</a> : <Link className="btn btn-secondary btn-sm" href="/admin/settings">Open Settings</Link>}
+      </div>
+    )
+  }
+  if (error) return <div className="ml-conv-pane ml-embed ml-conv-pad"><p className="ml-error" role="alert">{error} <button type="button" className="btn btn-secondary btn-sm" onClick={() => void load(true)}>Try again</button></p></div>
+  if (!conv) return <div className="ml-conv-pane ml-embed ml-conv-pad" aria-busy="true"><div className="ml-skel ml-skel-lg" /></div>
+  return (
+    <div className="ml-conv-pane ml-embed">
+      <Thread embedded conv={conv} sample={sample} onSent={(m) => setConv((c) => (c ? { ...c, messages: [...c.messages, m] } : c))} templates={templates} signOff={signOff} bigUploads={bigUploads} />
+    </div>
+  )
+}
+
 /* ── The timeline: Gmail messages and site-email cards in one date order ── */
 
 type Item = { type: 'mail'; at: string; m: MailMessage; project?: string } | { type: 'site'; at: string; group: SiteEmail[] }
@@ -361,7 +411,7 @@ function projectsOf(messages: MailMessage[], projects: MailProject[]) {
   return (m: MailMessage) => byMsg.get(m.id) ?? byThread.get(m.threadId)
 }
 
-function Thread({ conv, sample, onBack, onSent, templates, signOff, bigUploads }: { conv: Conversation; sample: boolean; onBack: () => void; onSent: (m: MailMessage) => void; templates: Template[]; signOff: string; bigUploads: boolean }) {
+function Thread({ conv, sample, onBack, onSent, templates, signOff, bigUploads, embedded }: { conv: Conversation; sample: boolean; onBack?: () => void; onSent: (m: MailMessage) => void; templates: Template[]; signOff: string; bigUploads: boolean; /** Inside another page (a lead page): no back button, and the heading doesn't take focus. */ embedded?: boolean }) {
   const scroller = useRef<HTMLOListElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const [project, setProject] = useState<string | null>(null)
@@ -384,17 +434,17 @@ function Thread({ conv, sample, onBack, onSent, templates, signOff, bigUploads }
     el.scrollTop = el.scrollHeight
     // On a phone the list isn't its own scroller: bring the newest message into view instead
     // (a moment later, after the router has settled the page's own scroll for the new address).
-    if (el.scrollHeight <= el.clientHeight + 2 && window.matchMedia('(max-width: 899px)').matches) {
+    if (!embedded && el.scrollHeight <= el.clientHeight + 2 && window.matchMedia('(max-width: 899px)').matches) {
       const t = setTimeout(() => {
         const last = el.lastElementChild
         if (last) window.scrollTo({ top: Math.max(0, last.getBoundingClientRect().top + window.scrollY - 76), behavior: 'instant' })
       }, 80)
       return () => clearTimeout(t)
     }
-  }, [count, project])
+  }, [count, project, embedded])
   useEffect(() => {
-    if (window.matchMedia('(max-width: 899px)').matches) heading.current?.focus({ preventScroll: true })
-  }, [])
+    if (!embedded && window.matchMedia('(max-width: 899px)').matches) heading.current?.focus({ preventScroll: true })
+  }, [embedded])
 
   let lastDay = ''
   let lastSubject = ''
@@ -402,7 +452,7 @@ function Thread({ conv, sample, onBack, onSent, templates, signOff, bigUploads }
   return (
     <div className="ml-thread">
       <header className="ml-thread-head">
-        <button type="button" className="btn btn-secondary ml-back" onClick={onBack}>← Clients</button>
+        {onBack && <button type="button" className="btn btn-secondary ml-back" onClick={onBack}>← Clients</button>}
         <div className="ml-thread-title">
           <span className="ml-av ml-av-lg" aria-hidden="true">{initialsOf(conv.clientName)}</span>
           <div className="ml-thread-names">
