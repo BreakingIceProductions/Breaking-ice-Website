@@ -138,7 +138,7 @@
 .a-switch a[aria-current='page'], .a-switch a[aria-current='true'], .a-switch button[aria-pressed='true'], .a-switch button[aria-selected='true'], .pj-tabs a[aria-current='page'], .mn-range a[aria-current='true'], .bd-tabs button.on { background: var(--a-sel); color: var(--a-on-sel); font-weight: 600; }
 
 /* ── Sidebar: navy in both themes ───────────────────────── */
-.a-side { flex: 1 1 248px; max-width: 100%; background: var(--navy); color: var(--warm-white); padding: var(--space-6) 14px; display: flex; flex-direction: column; gap: var(--space-5); }
+.a-side { flex: 1 1 248px; max-width: 100%; background: var(--navy); color: var(--warm-white); padding: var(--space-6) 14px; padding-top: max(var(--space-6), env(safe-area-inset-top)); padding-left: max(14px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: var(--space-5); }
 :root[data-theme='dark'] .a-side { background: #141b28; border-right: 1px solid var(--a-hairline); }
 .a-logo { padding: var(--space-1) var(--space-3); }
 .a-side :focus-visible { outline-color: var(--copper-light); }
